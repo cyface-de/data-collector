@@ -1,0 +1,8 @@
+.classpath
+.editorconfig
+.project
+.settings
+.gradle
+bin
+build
+file-uploads
