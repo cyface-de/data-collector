@@ -24,13 +24,24 @@ import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
 import io.vertx.ext.web.RoutingContext;
 
+/**
+ * Handles all requests arriving at an unsupported endpoint.
+ * 
+ * @author Klemens Muthmann
+ * @version 1.0.0
+ * @since 2.0.0
+ */
 public final class DefaultHandler implements Handler<RoutingContext> {
 
+	/**
+	 * The logger used for objects of this class. You can change its configuration
+	 * by changing the appropriate values in
+	 * <code>src/main/resources/vertx-default-jul-logging.properties</code>.
+	 */
 	private static final Logger LOGGER = LoggerFactory.getLogger(DefaultHandler.class);
 
 	@Override
 	public void handle(RoutingContext context) {
-		LOGGER.info("#################Handle default call");
 		// This handler will be called for every request
 		HttpServerResponse response = context.response();
 		response.putHeader("content-type", "text/plain");

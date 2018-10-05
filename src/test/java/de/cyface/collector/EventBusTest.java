@@ -112,7 +112,7 @@ public class EventBusTest {
 			}
 		});
 		
-		eventBus.publish(EventBusAddresses.NEW_MEASUREMENT, new Measurement("some_device", "2", "9.0.0", "Pixel 2"));
+		eventBus.publish(EventBusAddresses.NEW_MEASUREMENT, new Measurement("some_device", "2", "9.0.0", "Pixel 2", Collections.EMPTY_LIST));
 		
 		async.await(5_000L);
 	}
