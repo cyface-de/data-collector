@@ -1,7 +1,15 @@
 package de.cyface.collector;
 
-import static de.cyface.collector.EventBusAddresses.NEW_MEASUREMENT;
 import static de.cyface.collector.EventBusAddresses.MEASUREMENT_SAVED;
+import static de.cyface.collector.EventBusAddresses.NEW_MEASUREMENT;
+
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+
+import com.mongodb.async.client.MongoDatabase;
+import com.mongodb.async.client.gridfs.AsyncInputStream;
+import com.mongodb.async.client.gridfs.GridFSBucket;
+import com.mongodb.async.client.gridfs.GridFSBuckets;
 
 import de.cyface.collector.model.Measurement;
 import io.vertx.core.AbstractVerticle;
@@ -35,10 +43,11 @@ public class SerializationVerticle extends AbstractVerticle implements Handler<M
 	@Override
 	public void handle(Message<Measurement> event) {
 		Measurement measurement = event.body();
+		LOGGER.debug("About to save: " + measurement.getFileUploads().size() + " Files.");
 		JsonObject measurementJson = measurement.toJson();
-		
-		mongoClient.insert("measurements",measurementJson, res -> {
-			if(res.succeeded()) {
+
+		mongoClient.insert("measurements", measurementJson, res -> {
+			if (res.succeeded()) {
 				String id = res.result();
 				LOGGER.debug("Inserted measurement with id " + id);
 				vertx.eventBus().publish(MEASUREMENT_SAVED, id);
@@ -46,7 +55,23 @@ public class SerializationVerticle extends AbstractVerticle implements Handler<M
 				res.cause().printStackTrace();
 			}
 		});
-		
+
+		MongoDatabase db = com.mongodb.async.client.MongoClients.create().getDatabase("cyface");
+		GridFSBucket gridFsBucket = GridFSBuckets.create(db);
+		measurement.getFileUploads().forEach(upload -> {
+
+			try {
+				FileInputStream fileInputStream = new FileInputStream(upload.getAbsolutePath());
+				AsyncInputStream asyncStream = com.mongodb.async.client.gridfs.helpers.AsyncStreamHelper
+						.toAsyncInputStream(fileInputStream);
+				gridFsBucket.uploadFromStream(upload.getName(), asyncStream, (result, throwable) -> {
+					LOGGER.debug("Saved file as object " + result);
+				});
+			} catch (FileNotFoundException e) {
+				throw new IllegalStateException(e);
+			}
+		});
+
 	}
 	
 	public static MongoClient createSharedMongoClient(final Vertx vertx, final JsonObject config) {

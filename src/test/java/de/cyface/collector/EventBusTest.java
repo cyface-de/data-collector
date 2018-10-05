@@ -1,6 +1,7 @@
 package de.cyface.collector;
 
 import java.io.IOException;
+import java.util.Collections;
 
 import org.junit.After;
 import org.junit.Before;
