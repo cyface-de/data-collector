@@ -33,12 +33,13 @@ public class MainVerticle extends AbstractVerticle {
 	private final static Logger LOGGER = LoggerFactory.getLogger(MainVerticle.class);
 
 	@Override
-	public void start(Future<Void> startFuture) throws Exception {
+	public void start(final Future<Void> startFuture) throws Exception {
+
 		prepareEventBus();
 
 		deployVerticles();
 
-		Router router = setupRoutes();
+		final Router router = setupRoutes();
 
 		startHttpServer(router, startFuture);
 	}
@@ -70,21 +71,19 @@ public class MainVerticle extends AbstractVerticle {
 					ir -> LOGGER.info("Identifier of new user id: " + ir));
 		});
 
-		Router mainRouter = Router.router(vertx);
-		Router v3ApiRouter = Router.router(vertx);
+		final Router mainRouter = Router.router(vertx);
+		final Router v2ApiRouter = Router.router(vertx);
 
-		mainRouter.route("/login").handler(BodyHandler.create()).handler(ctx -> {
+		v2ApiRouter.route("/login").handler(BodyHandler.create()).handler(ctx -> {
 			try {
 				JsonObject body = ctx.getBodyAsJson();
 				authProvider.authenticate(body, r -> {
 					if (r.succeeded()) {
 						LOGGER.info("Authentication successful!");
-						String generatedToken = jwtAuthProvider.generateToken(body, new JWTOptions().setExpiresInSeconds(60));
-						LOGGER.info("New JWT Token: "+generatedToken);
-						ctx.response()
-							.putHeader("Content-Type", "text/plain")
-							.setStatusCode(200)
-							.end(generatedToken);
+						String generatedToken = jwtAuthProvider.generateToken(body,
+								new JWTOptions().setExpiresInSeconds(60));
+						LOGGER.info("New JWT Token: " + generatedToken);
+						ctx.response().putHeader("Content-Type", "text/plain").setStatusCode(200).end(generatedToken);
 					} else {
 						ctx.response().setStatusCode(401).end();
 					}
@@ -95,13 +94,12 @@ public class MainVerticle extends AbstractVerticle {
 			}
 		});
 		mainRouter.route().handler(jwtAuthHandler);
-		// mainRouter.route().handler(authHandler);
 		mainRouter.route().last().handler(new DefaultHandler());
-		mainRouter.mountSubRouter("/api/v3", v3ApiRouter);
+		mainRouter.mountSubRouter("/api/v2", v2ApiRouter);
 
-		v3ApiRouter.post("/measurements").handler(BodyHandler.create().setDeleteUploadedFilesOnEnd(false))
+		v2ApiRouter.post("/measurements").handler(BodyHandler.create().setDeleteUploadedFilesOnEnd(false))
 				.handler(new MeasurementHandler());
-		v3ApiRouter.route().last().handler(new DefaultHandler());
+		v2ApiRouter.route().last().handler(new DefaultHandler());
 
 		return mainRouter;
 	}

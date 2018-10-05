@@ -1,5 +1,9 @@
 package de.cyface.collector.model;
 
+import java.io.File;
+import java.util.Collection;
+import java.util.HashSet;
+
 import de.cyface.collector.handler.FormAttributes;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.eventbus.MessageCodec;
