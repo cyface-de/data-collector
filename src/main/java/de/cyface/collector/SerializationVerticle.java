@@ -40,19 +40,39 @@ import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
 import io.vertx.ext.mongo.MongoClient;
 
+/**
+ * This <code>Verticle</code> listens for new measurements arriving in the
+ * system and stores the to the MongoDB for persistent storage.
+ * 
+ * @author Klemens Muthmann
+ * @version 1.0.0
+ * @since 2.0.0
+ */
 public class SerializationVerticle extends AbstractVerticle implements Handler<Message<Measurement>> {
+	/**
+	 * The <code>Logger</code> used for objects of this class. To configure it
+	 * change the settings in
+	 * <code>src/main/resources/vertx-default-jul-logging.properties</code>.
+	 */
 	private static final Logger LOGGER = LoggerFactory.getLogger(SerializationVerticle.class);
+	/**
+	 * Client wrapper for calls to the MongoDB used to store the measurement data.
+	 */
 	private MongoClient mongoClient;
-	
+
 	@Override
 	public void start() throws Exception {
 		super.start();
-		
+
 		mongoClient = createSharedMongoClient(vertx, config());
-		
+
 		registerForNewMeasurements();
 	}
-	
+
+	/**
+	 * Register this <code>Verticle</code> to receive messages about new
+	 * measurements arriving at the system.
+	 */
 	private void registerForNewMeasurements() {
 		EventBus eventBus = vertx.eventBus();
 		eventBus.consumer(NEW_MEASUREMENT, this);
@@ -91,13 +111,21 @@ public class SerializationVerticle extends AbstractVerticle implements Handler<M
 		});
 
 	}
-	
+
+	/**
+	 * Creates a shared Mongo database client for the provided configuration.
+	 * 
+	 * @param vertx  The <code>Vertx</code> instance to create the client from.
+	 * @param config Configuration of the newly created client. For further
+	 *               information refer to {@link Parameter#MONGO_DATA_DB} and
+	 *               {@link Parameter#MONGO_USER_DB}.
+	 * @return A <code>MongoClient</code> ready for usage.
+	 */
 	public static MongoClient createSharedMongoClient(final Vertx vertx, final JsonObject config) {
 		JsonObject mongoConfig = new JsonObject();
 		mongoConfig.put("db_name", config.getString("db_name","cyface"));
 		mongoConfig.put("connection_string", config.getString("mongodb://127.0.0.1:27017"));
 		return MongoClient.createShared(vertx, config);
 	}
-	
-	
+
 }

@@ -38,8 +38,23 @@ import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
 import io.vertx.ext.web.RoutingContext;
 
+/**
+ * A handler for receiving HTTP POST requests on the "measurements" endpoint.
+ * This endpoint is the core of this application and responsible for receiving
+ * new measurements from any measurement device and storing forwarding those
+ * measurements for persistent storage.
+ * 
+ * @author Klemens Muthmann
+ * @version 1.0.0
+ * @since 2.0.0
+ */
 public final class MeasurementHandler implements Handler<RoutingContext> {
-	
+
+	/**
+	 * The logger for objects of this class. You can change its configuration by
+	 * adapting the values in
+	 * <code>src/main/resources/vertx-default-jul-logging.properties</code>.
+	 */
 	private static final Logger LOGGER = LoggerFactory.getLogger(MeasurementHandler.class);
 
 	@Override
@@ -67,10 +82,17 @@ public final class MeasurementHandler implements Handler<RoutingContext> {
 		response.end();
 	}
 
+	/**
+	 * Informs the system about a new measurement that has arrived.
+	 * 
+	 * @param measurement The newly arrived measurement.
+	 * @param context     The routing context necessary to get access to the Vert.x
+	 *                    event bus.
+	 * @see EventBusAddresses#NEW_MEASUREMENT
+	 */
 	private void informAboutNew(final Measurement measurement, final RoutingContext context) {
 		EventBus eventBus = context.vertx().eventBus();
 		eventBus.publish(NEW_MEASUREMENT, measurement);
 	}
-	
 
 }

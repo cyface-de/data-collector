@@ -46,8 +46,21 @@ import io.vertx.ext.web.handler.AuthHandler;
 import io.vertx.ext.web.handler.BodyHandler;
 import io.vertx.ext.web.handler.JWTAuthHandler;
 
+/**
+ * This Verticle is the Cyface collectors main entry point. It orchestrates all
+ * other Verticles and configures the endpoints used to provide the REST-API.
+ * 
+ * @author Klemens Muthmann
+ * @since 2.0.0
+ * @version 1.0.0
+ */
 public class MainVerticle extends AbstractVerticle {
 
+	/**
+	 * The <code>Logger</code> used for objects of this class. Configure it by
+	 * changing the settings in
+	 * <code>src/main/resources/vertx-default-jul-logging.properties</codec>.
+	 */
 	private final static Logger LOGGER = LoggerFactory.getLogger(MainVerticle.class);
 
 	@Override
@@ -62,15 +75,25 @@ public class MainVerticle extends AbstractVerticle {
 		startHttpServer(router, startFuture);
 	}
 
+	/**
+	 * Prepares the Vertx event bus during startup of the application.
+	 */
 	private void prepareEventBus() {
 		vertx.eventBus().registerDefaultCodec(Measurement.class, Measurement.getCodec());
 	}
 
+	/**
+	 * Deploys all additional <code>Verticle</code> objects required by the
+	 * application.
+	 */
 	private void deployVerticles() {
 		DeploymentOptions options = new DeploymentOptions().setWorker(true);
 		vertx.deployVerticle(SerializationVerticle.class, options);
 	}
 
+	/**
+	 * @return The Vertx router used by this project.
+	 */
 	private Router setupRoutes() {
 		String keystorePath = this.getClass().getResource("/keystore.jceks").getFile();
 		JWTAuthOptions config = new JWTAuthOptions()
@@ -122,6 +145,15 @@ public class MainVerticle extends AbstractVerticle {
 		return mainRouter;
 	}
 
+	/**
+	 * Starts the HTTP server provided by this application. This server runs the
+	 * Cyface collector REST-API.
+	 * 
+	 * @param router      The router for all the endpoints the HTTP server should
+	 *                    serve.
+	 * @param startFuture Informs the caller about the successful or failed start of
+	 *                    the server.
+	 */
 	private void startHttpServer(final Router router, final Future<Void> startFuture) {
 		String certificateFile = this.getClass().getResource("/localhost.jks").getFile();
 		HttpServerOptions options = new HttpServerOptions().setSsl(true).setKeyStoreOptions(new JksOptions().setPath(certificateFile).setPassword("secret"));
@@ -130,7 +162,14 @@ public class MainVerticle extends AbstractVerticle {
 				serverStartup -> completeStartup(serverStartup, startFuture));
 	}
 
-	private void completeStartup(AsyncResult<HttpServer> serverStartup, Future<Void> future) {
+	/**
+	 * Finishes the <code>MainVerticle</code> startup process and informs all
+	 * interested parties about whether it has been successful or not.
+	 * 
+	 * @param serverStartup
+	 * @param future
+	 */
+	private void completeStartup(final AsyncResult<HttpServer> serverStartup, final Future<Void> future) {
 		if (serverStartup.succeeded()) {
 			future.complete();
 		} else {

@@ -23,100 +23,178 @@ import io.vertx.core.buffer.Buffer;
 import io.vertx.core.eventbus.MessageCodec;
 import io.vertx.core.json.JsonObject;
 
+/**
+ * A POJO representing a single measurement, which has arrived at the API and needs to be stored to persistent storage.
+ * 
+ * @author Klemens Muthmann
+ * @version 1.0.0
+ * @since 2.0.0
+ */
 public final class Measurement {
-	private final String deviceIdentifier;
-	private final String measurementIdentifier;
-	private final String operatingSystemVersion;
-	private final String deviceType;
-	
-	public Measurement(final String deviceIdentifier, final String measurementIdentifier, final String operatingSystemVersion, final String deviceType) {
-		this.deviceIdentifier = deviceIdentifier;
-		this.measurementIdentifier = measurementIdentifier;
-		this.operatingSystemVersion = operatingSystemVersion;
-		this.deviceType = deviceType;
-	}
-	
-	public String getDeviceIdentifier() {
-		return deviceIdentifier;
-	}
-	
-	public String getMeasurementIdentifier() {
-		return measurementIdentifier;
-	}
-	
-	public String getOperatingSystemVersion() {
-		return operatingSystemVersion;
-	}
-	
-	public String getDeviceType() {
-		return deviceType;
-	}
+    /**
+     * The world wide unique identifier of the device uploading the data.
+     */
+    private final String deviceIdentifier;
+    /**
+     * The device wide unique identifier of the uploaded measurement.
+     */
+    private final String measurementIdentifier;
+    /**
+     * The operating system version, such as Android 9.0.0 or iOS 11.2.
+     */
+    private final String operatingSystemVersion;
+    /**
+     * The type of device uploading the data, such as Pixel 3 or iPhone 6 Plus.
+     */
+    private final String deviceType;
+    /**
+     * A list of files uploaded together with the measurement. These files contain the actual data.
+     */
+    private final Collection<File> fileUploads;
 
-	public JsonObject toJson() {
-		JsonObject ret = new JsonObject();
-		
-		ret.put(FormAttributes.DEVICE_ID.getValue(), deviceIdentifier);
-		ret.put(FormAttributes.MEASUREMENT_ID.getValue(), measurementIdentifier);
-		ret.put(FormAttributes.OS_VERSION.getValue(), operatingSystemVersion);
-		ret.put(FormAttributes.DEVICE_TYPE.getValue(), deviceType);
-		
-		return ret;
-	}
-	
-	public static MessageCodec<Measurement,Measurement> getCodec() {
-		return new MessageCodec<Measurement, Measurement>() {
+    /**
+     * Creates a new completely initialized object of this class.
+     * 
+     * @param deviceIdentifier The world wide unique identifier of the device uploading the data.
+     * @param measurementIdentifier The device wide unique identifier of the uploaded measurement.
+     * @param operatingSystemVersion The operating system version, such as Android 9.0.0 or iOS 11.2.
+     * @param deviceType The type of device uploading the data, such as Pixel 3 or iPhone 6 Plus.
+     * @param fileUploads A list of files uploaded together with the measurement. These files contain the actual data.
+     */
+    public Measurement(final String deviceIdentifier, final String measurementIdentifier,
+            final String operatingSystemVersion, final String deviceType, final Collection<File> fileUploads) {
+        this.deviceIdentifier = deviceIdentifier;
+        this.measurementIdentifier = measurementIdentifier;
+        this.operatingSystemVersion = operatingSystemVersion;
+        this.deviceType = deviceType;
+        this.fileUploads = fileUploads;
+    }
 
-			@Override
-			public void encodeToWire(final Buffer buffer, final Measurement s) {
-				final String deviceIdentifier = s.getDeviceIdentifier();
-				final String measurementIdentifier = s.getMeasurementIdentifier();
-				final String deviceType = s.getDeviceType();
-				final String operatingSystemVersion = s.getOperatingSystemVersion();
-				
-				buffer.appendInt(deviceIdentifier.length());
-				buffer.appendInt(measurementIdentifier.length());
-				buffer.appendInt(deviceType.length());
-				buffer.appendInt(operatingSystemVersion.length());
-				buffer.appendString(deviceIdentifier);
-				buffer.appendString(measurementIdentifier);
-				buffer.appendString(deviceType);
-				buffer.appendString(operatingSystemVersion);
-			}
+    /**
+     * @return The world wide unique identifier of the device uploading the data.
+     */
+    public String getDeviceIdentifier() {
+        return deviceIdentifier;
+    }
 
-			@Override
-			public Measurement decodeFromWire(int pos, final Buffer buffer) {
-				int deviceIdentifierLength = buffer.getInt(0);
-				int measurementIdentifierLength = buffer.getInt(4);
-				int deviceTypeLength = buffer.getInt(8);
-				int operatingSystemVersionLength = buffer.getInt(12);
-				
-				int deviceIdentifierEnd = 16+deviceIdentifierLength;
-				final String deviceIdentifier = buffer.getString(16, deviceIdentifierEnd);
-				int measurementIdentifierEnd = deviceIdentifierEnd+measurementIdentifierLength;
-				final String measurementIdentifier = buffer.getString(deviceIdentifierEnd,measurementIdentifierEnd);
-				int deviceTypeEnd = measurementIdentifierEnd+deviceTypeLength;
-				final String deviceType = buffer.getString(measurementIdentifierEnd, deviceTypeEnd);
-				final String operatingSystemVersion = buffer.getString(deviceTypeEnd, deviceTypeEnd+operatingSystemVersionLength);
-				
-				return new Measurement(deviceIdentifier, measurementIdentifier, operatingSystemVersion, deviceType);
-			}
+    /**
+     * @return The device wide unique identifier of the uploaded measurement.
+     */
+    public String getMeasurementIdentifier() {
+        return measurementIdentifier;
+    }
 
-			@Override
-			public Measurement transform(final Measurement s) {
-				return s;
-			}
+    /**
+     * @return The operating system version, such as Android 9.0.0 or iOS 11.2.
+     */
+    public String getOperatingSystemVersion() {
+        return operatingSystemVersion;
+    }
 
-			@Override
-			public String name() {
-				return "Measurement";
-			}
+    /**
+     * @return The type of device uploading the data, such as Pixel 3 or iPhone 6 Plus.
+     */
+    public String getDeviceType() {
+        return deviceType;
+    }
 
-			@Override
-			public byte systemCodecID() {
-				return -1;
-			}
-		};
-		
-	}
+    /**
+     * @return A list of files uploaded together with the measurement. These files contain the actual data.
+     */
+    public Collection<File> getFileUploads() {
+        return fileUploads;
+    }
+
+    /**
+     * @return A JSON representation of this measurement.
+     */
+    public JsonObject toJson() {
+        JsonObject ret = new JsonObject();
+
+        ret.put(FormAttributes.DEVICE_ID.getValue(), deviceIdentifier);
+        ret.put(FormAttributes.MEASUREMENT_ID.getValue(), measurementIdentifier);
+        ret.put(FormAttributes.OS_VERSION.getValue(), operatingSystemVersion);
+        ret.put(FormAttributes.DEVICE_TYPE.getValue(), deviceType);
+
+        return ret;
+    }
+
+    /**
+     * @return A codec encoding and decoding this <code>Measurement</codec> for usage on the event bus.
+     */
+    public static MessageCodec<Measurement, Measurement> getCodec() {
+        return new MessageCodec<Measurement, Measurement>() {
+
+            @Override
+            public void encodeToWire(final Buffer buffer, final Measurement s) {
+                final String deviceIdentifier = s.getDeviceIdentifier();
+                final String measurementIdentifier = s.getMeasurementIdentifier();
+                final String deviceType = s.getDeviceType();
+                final String operatingSystemVersion = s.getOperatingSystemVersion();
+
+                buffer.appendInt(deviceIdentifier.length());
+                buffer.appendInt(measurementIdentifier.length());
+                buffer.appendInt(deviceType.length());
+                buffer.appendInt(operatingSystemVersion.length());
+                buffer.appendInt(s.getFileUploads().size());
+                buffer.appendString(deviceIdentifier);
+                buffer.appendString(measurementIdentifier);
+                buffer.appendString(deviceType);
+                buffer.appendString(operatingSystemVersion);
+                s.getFileUploads().forEach(fu -> {
+                    buffer.appendInt(fu.getAbsolutePath().length());
+                    buffer.appendString(fu.getAbsolutePath());
+                });
+            }
+
+            @Override
+            public Measurement decodeFromWire(int pos, final Buffer buffer) {
+                int deviceIdentifierLength = buffer.getInt(0);
+                int measurementIdentifierLength = buffer.getInt(4);
+                int deviceTypeLength = buffer.getInt(8);
+                int operatingSystemVersionLength = buffer.getInt(12);
+                int numberOfFileUploads = buffer.getInt(16);
+
+                int deviceIdentifierEnd = 16 + deviceIdentifierLength;
+                final String deviceIdentifier = buffer.getString(20, deviceIdentifierEnd);
+                int measurementIdentifierEnd = deviceIdentifierEnd + measurementIdentifierLength;
+                final String measurementIdentifier = buffer.getString(deviceIdentifierEnd, measurementIdentifierEnd);
+                int deviceTypeEnd = measurementIdentifierEnd + deviceTypeLength;
+                final String deviceType = buffer.getString(measurementIdentifierEnd, deviceTypeEnd);
+                int operationSystemVersionEnd = deviceTypeEnd + operatingSystemVersionLength;
+                final String operatingSystemVersion = buffer.getString(deviceTypeEnd, operationSystemVersionEnd);
+
+                Collection<File> fileUploads = new HashSet<>();
+                int iterationStartByte = operationSystemVersionEnd;
+                for (int i = 0; i < numberOfFileUploads; i++) {
+                    int entryLength = buffer.getInt(operationSystemVersionEnd);
+                    String fileName = buffer.getString(4 + iterationStartByte, 4 + iterationStartByte + entryLength);
+                    iterationStartByte += 4 + iterationStartByte + entryLength;
+
+                    File uploadFile = new File(fileName);
+                    fileUploads.add(uploadFile);
+                }
+
+                return new Measurement(deviceIdentifier, measurementIdentifier, operatingSystemVersion, deviceType,
+                        fileUploads);
+            }
+
+            @Override
+            public Measurement transform(final Measurement s) {
+                return s;
+            }
+
+            @Override
+            public String name() {
+                return "Measurement";
+            }
+
+            @Override
+            public byte systemCodecID() {
+                return -1;
+            }
+        };
+
+    }
 
 }

@@ -18,15 +18,48 @@
  */
 package de.cyface.collector.handler;
 
+/**
+ * Attributes supported by the APIs multipart form upload POST endpoint.
+ * 
+ * @author Klemens Muthmann
+ * @version 1.0.0
+ * @since 2.0.0
+ */
 public enum FormAttributes {
-	DEVICE_ID("deviceId"), MEASUREMENT_ID("measurementId"), DEVICE_TYPE("deviceType"), OS_VERSION("osVersion");
+	/**
+	 * The world wide unique identifier of the device uploading the data.
+	 */
+	DEVICE_ID("deviceId"), 
+	/**
+	 * The device wide unique identifier of the uploaded measurement.
+	 */
+	MEASUREMENT_ID("measurementId"), 
+	/**
+	 * The type of device uploading the data, such as Pixel 3 or iPhone 6 Plus.
+	 */
+	DEVICE_TYPE("deviceType"), 
+	/**
+	 * The operating system version, such as Android 9.0.0 or iOS 11.2.
+	 */
+	OS_VERSION("osVersion");
 
+	/**
+	 * The value identifying the attribute in the multipart form request.
+	 */
 	private String value;
 
+	/**
+	 * Creates a new completely initialized multipart form attribute.
+	 * 
+	 * @param value The value identifying the attribute in the multipart form request.
+	 */
 	private FormAttributes(final String value) {
 		this.value = value;
 	}
 
+	/**
+	 * @return The value identifying the attribute in the multipart form request.
+	 */
 	public String getValue() {
 		return value;
 	}

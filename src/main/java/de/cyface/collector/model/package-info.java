@@ -16,33 +16,11 @@
  *  You should have received a copy of the GNU General Public License
  *  along with the Cyface Data Collector.  If not, see <http://www.gnu.org/licenses/>.
  */
-package de.cyface.collector;
-
 /**
- * Utility class containing all the valid Vertx event bus addresses used in the
- * Cyface data collector.
+ * Contains all the data model files required by the Cyface data collector.
  * 
  * @author Klemens Muthmann
  * @version 1.0.0
  * @since 2.0.0
  */
-public class EventBusAddresses {
-
-	/**
-	 * Address used to inform the event bus about a new measurement, which has
-	 * arrived.
-	 */
-	public static final String NEW_MEASUREMENT = "de.cyface.collector.measurement_new";
-	/**
-	 * Address used to inform the event bus about the successful storage of a
-	 * measurement.
-	 */
-	public static final String MEASUREMENT_SAVED = "de.cyface.collector.measurement_saved";
-
-	/**
-	 * Private constructor to prevent instantiation of utility classes.
-	 */
-	private EventBusAddresses() {
-		// Nothing to do here.
-	}
-}
+package de.cyface.collector.model;
