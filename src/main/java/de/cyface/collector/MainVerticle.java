@@ -87,7 +87,7 @@ public class MainVerticle extends AbstractVerticle {
 	 * application.
 	 */
 	private void deployVerticles() {
-		DeploymentOptions options = new DeploymentOptions().setWorker(true);
+		final DeploymentOptions options = new DeploymentOptions().setWorker(true).setConfig(Parameter.MONGO_DATA_DB.jsonValue(vertx, config()));
 		vertx.deployVerticle(SerializationVerticle.class, options);
 	}
 
@@ -95,18 +95,23 @@ public class MainVerticle extends AbstractVerticle {
 	 * @return The Vertx router used by this project.
 	 */
 	private Router setupRoutes() {
-		String keystorePath = this.getClass().getResource("/keystore.jceks").getFile();
-		JWTAuthOptions config = new JWTAuthOptions()
-				.setKeyStore(new KeyStoreOptions().setPath(keystorePath).setPassword("secret"));
+		final String keystorePath = this.getClass().getResource("/keystore.jceks").getFile();
+		String jwtKeystoreLocation = Parameter.JWT_KEYSTORE.stringValue(vertx, keystorePath);
+		final JWTAuthOptions config = new JWTAuthOptions()
+				.setKeyStore(new KeyStoreOptions().setPath(jwtKeystoreLocation).setPassword("secret"));
 
-		JWTAuth jwtAuthProvider = JWTAuth.create(vertx, config);
-		AuthHandler jwtAuthHandler = JWTAuthHandler.create(jwtAuthProvider, "/login");
+		final JWTAuth jwtAuthProvider = JWTAuth.create(vertx, config);
+		final AuthHandler jwtAuthHandler = JWTAuthHandler.create(jwtAuthProvider, "/api/v2/login");
 
-		MongoClient client = SerializationVerticle.createSharedMongoClient(vertx, config());
-		JsonObject authProperties = new JsonObject();
-		MongoAuth authProvider = MongoAuth.create(client, authProperties);
-		List<String> roles = new ArrayList<>();
-		List<String> permissions = new ArrayList<>();
+		final JsonObject mongoClientConfig = Parameter.MONGO_USER_DB.jsonValue(vertx, config());
+
+		final MongoClient client = SerializationVerticle.createSharedMongoClient(vertx, mongoClientConfig);
+		final JsonObject authProperties = new JsonObject();
+		final MongoAuth authProvider = MongoAuth.create(client, authProperties);
+		final List<String> roles = new ArrayList<>();
+		final List<String> permissions = new ArrayList<>();
+		// TODO: Remove before going into production Deletes all users and creates admin
+		// account
 		client.removeDocuments("user", new JsonObject(), r -> {
 			authProvider.insertUser("admin", "secret", roles, permissions,
 					ir -> LOGGER.info("Identifier of new user id: " + ir));
@@ -155,10 +160,14 @@ public class MainVerticle extends AbstractVerticle {
 	 *                    the server.
 	 */
 	private void startHttpServer(final Router router, final Future<Void> startFuture) {
-		String certificateFile = this.getClass().getResource("/localhost.jks").getFile();
-		HttpServerOptions options = new HttpServerOptions().setSsl(true).setKeyStoreOptions(new JksOptions().setPath(certificateFile).setPassword("secret"));
-		
-		vertx.createHttpServer(options).requestHandler(router::accept).listen(config().getInteger("http.port", 8080),
+		final int httpPort = Parameter.HTTP_PORT.intValue(vertx, 8080);
+		final String defaultCertificateFile = this.getClass().getResource("/localhost.jks").getFile();
+		final String certificateFile = Parameter.TLS_KEYSTORE.stringValue(vertx, defaultCertificateFile);
+
+		final HttpServerOptions options = new HttpServerOptions().setSsl(true)
+				.setKeyStoreOptions(new JksOptions().setPath(certificateFile).setPassword("secret"));
+
+		vertx.createHttpServer(options).requestHandler(router::accept).listen(httpPort,
 				serverStartup -> completeStartup(serverStartup, startFuture));
 	}
 
