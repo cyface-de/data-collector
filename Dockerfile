@@ -22,9 +22,11 @@ FROM openjdk:8-jre-slim
 WORKDIR /app
 
 COPY build/libs/collector-2.0.0-SNAPSHOT-fat.jar /app
+COPY entrypoint.sh /app
+RUN chmod +x /app/entrypoint.sh
 
 # Make port 8080 available to the world outside the container
 EXPOSE 8080
 
 # Run the collector when the container launches
-CMD ["java", "-jar", "collector-2.0.0-SNAPSHOT-fat.jar","-conf","{\"keystore.jwt\":\"keystore.jceks\",\"keystore.tls\":\"localhost.jks\",\"mongo.userdb\":{\"db_name\":\"cyface\",\"connection_string\":\"mongodb://mongo:27017\",\"data_source_name\":\"cyface\"},\"mongo.datadb\":{\"db_name\":\"cyface\",\"connection_string\":\"mongodb://mongo:27017\",\"data_source_name\":\"cyface\"}}"]
+CMD ["./entrypoint.sh"]

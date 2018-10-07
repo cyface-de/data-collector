@@ -6,3 +6,8 @@
 bin
 build
 file-uploads
+
+# Folders created by docker container
+data
+user-data
+secrets

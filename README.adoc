@@ -49,6 +49,7 @@ To run directly from within your IDE you need to use the https://vertx.io/docs/v
 Simply run `docker-compose up` inside the root of this project. This brings up a Mongo database container and a container running the Cyface data collector API.
 
 == TODO
+* Make image available via docker
 * Setup Cluster
 	* Vertx
 	* MongoDb

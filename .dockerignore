@@ -1,0 +1,16 @@
+Dockerfile
+bin
+src
+data
+user-data
+secrets
+COPYING
+build.gradle
+docker-compose.yml
+file-uploads
+gradle
+gradlew
+gradlew.bat
+settings.gradle
+README.adoc
+test.txt

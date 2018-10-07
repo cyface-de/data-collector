@@ -18,10 +18,19 @@
 version: "3"
 services:
     # Mongo Database Container
-    mongo:
+    mongo-data:
       image: mongo
       networks:
         - cyface
+      volumes:
+        - ./data:/data/db
+        
+    mongo-user:
+      image: mongo
+      networks:
+        - cyface
+      volumes:
+        - ./user-data:/data/db
 
     # The Cyface Collector API Container
     api:
@@ -30,6 +39,11 @@ services:
         - "8080:8080"
       networks:
         - cyface
+      volumes:
+        - ./secrets:/app/secrets
+      depends_on:
+        - mongo-data
+        - mongo-user
 
 networks:
     cyface:
