@@ -122,10 +122,8 @@ public class SerializationVerticle extends AbstractVerticle implements Handler<M
 	 * @return A <code>MongoClient</code> ready for usage.
 	 */
 	public static MongoClient createSharedMongoClient(final Vertx vertx, final JsonObject config) {
-		JsonObject mongoConfig = new JsonObject();
-		mongoConfig.put("db_name", config.getString("db_name","cyface"));
-		mongoConfig.put("connection_string", config.getString("mongodb://127.0.0.1:27017"));
-		return MongoClient.createShared(vertx, config);
+		final String dataSourceName = config.getString("data_source_name", "cyface");
+		return MongoClient.createShared(vertx, config, dataSourceName);
 	}
 
 }
