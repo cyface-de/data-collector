@@ -18,6 +18,7 @@
  */
 package de.cyface.collector.handler;
 
+import de.cyface.collector.MainVerticle;
 import io.vertx.core.Handler;
 import io.vertx.core.http.HttpServerResponse;
 import io.vertx.core.logging.Logger;
@@ -40,8 +41,13 @@ public final class DefaultHandler implements Handler<RoutingContext> {
 	 */
 	private static final Logger LOGGER = LoggerFactory.getLogger(DefaultHandler.class);
 
+
 	@Override
 	public void handle(RoutingContext context) {
+	    if(MainVerticle.metricsService!=null) {
+	        System.out.println(MainVerticle.metricsService.getMetricsSnapshot());
+	    }
+	    
 		// This handler will be called for every request
 		HttpServerResponse response = context.response();
 		response.putHeader("content-type", "text/plain");

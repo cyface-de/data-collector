@@ -63,7 +63,9 @@ public enum Parameter {
      * "https://vertx.io/docs/vertx-mongo-client/java/#_configuring_the_client">
      * https://vertx.io/docs/vertx-mongo-client/java/#_configuring_the_client</a>.
      */
-    MONGO_DATA_DB("mongo.datadb");
+    MONGO_DATA_DB("mongo.datadb"),
+    METRICS_ENABLED("metrics.enabled");
+    
 
     /**
      * The logger used for objects of this class. You can change its configuration

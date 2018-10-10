@@ -35,6 +35,7 @@ ext {
   vertxVersion = '3.6.0-SNAPSHOT'
   junitVersion = '4.12'
   flapdoodleVersion = '2.1.1'
+  micrometerVersion = '1.0.6'
 }
 
 repositories {
@@ -50,7 +51,7 @@ group = 'de.cyface'
 version = '2.0.0-SNAPSHOT'
 
 sourceCompatibility = '1.8'
-mainClassName = 'io.vertx.core.Launcher'
+mainClassName = 'de.cyface.collector.Application'
 
 def mainVerticleName = 'de.cyface.collector.MainVerticle'
 def watchForChange = 'src/**/*'
@@ -60,10 +61,17 @@ dependencies {
   implementation "io.vertx:vertx-core:$vertxVersion"
   implementation "io.vertx:vertx-web:$vertxVersion"
   implementation "io.vertx:vertx-mongo-client:$vertxVersion"
+  
+  // Authentication
   implementation "io.vertx:vertx-auth-common:$vertxVersion"
   implementation "io.vertx:vertx-auth-mongo:$vertxVersion"
   implementation "io.vertx:vertx-auth-jwt:$vertxVersion"
+  
+  // Monitoring + Metrics
+  implementation "io.vertx:vertx-micrometer-metrics:$vertxVersion"
+  implementation "io.micrometer:micrometer-core:$micrometerVersion"
 
+  // Test Dependencies
   testImplementation "io.vertx:vertx-unit:$vertxVersion"
   testImplementation "junit:junit:$junitVersion"
   testImplementation "io.vertx:vertx-web-client:$vertxVersion"

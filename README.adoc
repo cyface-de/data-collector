@@ -1,6 +1,7 @@
 = Collector
 
-image:https://img.shields.io/badge/vert.x-3.6.0--SNAPSHOT-purple.svg[link="https://vertx.io"]
+image:https://img.shields.io/badge/vert.x-3.6.0--SNAPSHOT-purple.svg[link="https://vertx.io"] image:https://img.shields.io/badge/mongo-4.1.3-purple.svg[link="https://prometheus.io/"]
+image:https://img.shields.io/badge/prometheus-2.4.3-purple.svg[link="https://prometheus.io/"]
 
 This application was generated using http://start.vertx.io
 
@@ -43,13 +44,19 @@ The Cyface data collector supports a few parameters to fine tune the runtime. Al
 * mongo.datadb: Settings for a Mongo database storing all data uploaded via the Cyface data collector. This defaults to a Mongo database available at `mongodb://127.0.0.1:27017`. The value of this should be a JSON object configured as described https://vertx.io/docs/vertx-mongo-client/java/#_configuring_the_client[here]. In addition, if you use two different Mongo databases for credentials and data you should provide different values for the JSON key `data_source_name`.
 
 === Running from IDE
-To run directly from within your IDE you need to use the https://vertx.io/docs/vertx-core/java/#_the_vert_x_launcher[Vert.x launcher]. Just specify it as the main class in your launch configuration with the program argument `run de.cyface.collector.MainVerticle`.
+To run directly from within your IDE you need to use the `de.cyface.collector.Application` class, which is a subclass of the https://vertx.io/docs/vertx-core/java/#_the_vert_x_launcher[Vert.x launcher]. Just specify it as the main class in your launch configuration with the program argument `run de.cyface.collector.MainVerticle`.
 
 === Running from Docker
-Simply run `docker-compose up` inside the root of this project. This brings up a Mongo database container and a container running the Cyface data collector API.
+Simply run `docker-compose up` inside the root of this project. This brings up two Mongo database containers and a container running the Cyface data collector API.
+
+To overwrite the default keystores used by the Cyface data collector just place them as `keystore.tls.jks` and `keystore.jwt.jceks` inside the folder `secrets` right next to the `docker-compose.yml`
+
+== Runtime Administration
+A running Cyface data collector publishes metrics to a running https://prometheus.io/docs/prometheus/latest/getting_started/[Prometheus] instance. If you have used the docker setup, this should happen automatically. Per default Prometheus is exposed on **http://localhost:9090/graph**.
+
 
 == TODO
-* Make image available via docker
+* Make image available via docker hub
 * Setup Cluster
 	* Vertx
 	* MongoDb
