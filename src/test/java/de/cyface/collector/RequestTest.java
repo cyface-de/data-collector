@@ -21,76 +21,173 @@ import java.util.Locale;
 import java.util.UUID;
 
 import org.junit.After;
+import org.junit.AfterClass;
 import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
+import de.cyface.collector.handler.DefaultHandler;
+import de.flapdoodle.embed.mongo.MongodExecutable;
+import de.flapdoodle.embed.mongo.MongodProcess;
+import de.flapdoodle.embed.mongo.MongodStarter;
+import de.flapdoodle.embed.mongo.config.IMongodConfig;
+import de.flapdoodle.embed.mongo.config.MongodConfigBuilder;
+import de.flapdoodle.embed.mongo.config.Net;
+import de.flapdoodle.embed.mongo.distribution.Version;
+import de.flapdoodle.embed.process.runtime.Network;
+import io.vertx.core.AsyncResult;
 import io.vertx.core.DeploymentOptions;
+import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.JsonObject;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
+import io.vertx.core.net.JksOptions;
 import io.vertx.ext.unit.Async;
 import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
 import io.vertx.ext.web.client.HttpRequest;
+import io.vertx.ext.web.client.HttpResponse;
 import io.vertx.ext.web.client.WebClient;
+import io.vertx.ext.web.client.WebClientOptions;
 import io.vertx.ext.web.multipart.MultipartForm;
 
+/**
+ * This tests the REST-API provided by the collector and used to upload the data to the server.
+ * 
+ * @author Klemens Muthmann
+ * @since 1.0.0
+ * @version 2.0.0
+ */
 @RunWith(VertxUnitRunner.class)
 public class RequestTest {
 
+    /**
+     * The test <code>Vertx</code> instance.
+     */
     private Vertx vertx;
+    /**
+     * The port running the test API under.
+     */
     private int port;
+    /**
+     * A <code>WebClient</code> to access the test API.
+     */
+    private WebClient client;
+    /**
+     * The test Mongo database.
+     */
+    private static MongodProcess MONGO;
+    /**
+     * Logger used for objects of this class. To change its configuration, set appropriate values in
+     * <code>vertx-default-jul-logging.properties</code>.
+     */
     private final static Logger LOGGER = LoggerFactory.getLogger(RequestTest.class);
 
+    /**
+     * Sets up the Mongo database used for the test instance.
+     * 
+     * @throws IOException Fails the test if anything unexpected goes wrong.
+     */
+    @BeforeClass
+    public static void setUpMongoDatabase() throws IOException {
+        MongodStarter starter = MongodStarter.getDefaultInstance();
+        IMongodConfig mongodConfig = new MongodConfigBuilder().version(Version.Main.PRODUCTION)
+                .net(new Net(TestUtils.MONGO_PORT, Network.localhostIsIPv6())).build();
+        MongodExecutable mongodExecutable = starter.prepare(mongodConfig);
+        MONGO = mongodExecutable.start();
+    }
+
+    /**
+     * Deploys the {@link MainVerticle} in a test context.
+     * 
+     * @param context The test context used to control the test <code>Vertx</code>.
+     * @throws IOException Fails the test if anything unexpected goes wrong.
+     */
     @Before
-    public void deployVerticle(TestContext testContext) throws IOException {
-        vertx = Vertx.vertx();
+    public void deployVerticle(final TestContext context) throws IOException {
 
         ServerSocket socket = new ServerSocket(0);
         port = socket.getLocalPort();
         socket.close();
 
-        DeploymentOptions options = new DeploymentOptions().setConfig(new JsonObject().put("http.port", port));
+        JsonObject mongoDbConfig = new JsonObject()
+                .put("connection_string", "mongodb://localhost:" + TestUtils.MONGO_PORT).put("db_name", "cyface");
 
-        vertx.deployVerticle(MainVerticle.class.getName(), options, testContext.asyncAssertSuccess());
+        JsonObject config = new JsonObject().put(Parameter.MONGO_DATA_DB.key(), mongoDbConfig)
+                .put(Parameter.MONGO_USER_DB.key(), mongoDbConfig).put(Parameter.HTTP_PORT.key(), port);
+        DeploymentOptions options = new DeploymentOptions().setConfig(config);
+
+        vertx = Vertx.vertx();
+        vertx.deployVerticle(MainVerticle.class.getName(), options, context.asyncAssertSuccess());
+
+        String truststorePath = this.getClass().getResource("/localhost.jks").getFile();
+
+        client = WebClient.create(vertx, new WebClientOptions().setSsl(true)
+                .setTrustStoreOptions(new JksOptions().setPath(truststorePath).setPassword("secret")));
     }
 
+    /**
+     * Stops the test <code>Vertx</code> instance.
+     * 
+     * @param context The test context for running <code>Vertx</code> under test.
+     */
     @After
-    public void stopVertx(TestContext context) {
+    public void stopVertx(final TestContext context) {
         vertx.close(context.asyncAssertSuccess());
     }
 
+    /**
+     * Stops the test Mongo database after all tests have been finished.
+     */
+    @AfterClass
+    public static void stopMongoDb() {
+        MONGO.stop();
+    }
+
+    /**
+     * Tests the correct workings of the general functionality using the {@link DefaultHandler}.
+     * 
+     * @param context The test context for running <code>Vertx</code> under test.
+     * @throws Throwable Fails the test if anything unexpected happens.
+     */
     @Test
-    public void testDefaultHandler(TestContext context) throws Throwable {
-        // This test is asynchronous, so get an async handler to inform the test when we
-        // are done.
+    public void testDefaultHandler(final TestContext context) throws Throwable {
         final Async async = context.async();
 
-        // We create a HTTP client and query our application. When we get the response
-        // we check it contains the 'Hello'
-        // message. Then, we call the `complete` method on the async handler to declare
-        // this async (and here the test) done.
-        // Notice that the assertions are made on the 'context' object and are not Junit
-        // assert. This ways it manage the
-        // async aspect of the test the right way.
-        WebClient client = WebClient.create(vertx);
-        client.get(port, "localhost", "/").ssl(true).send(response -> {
-            if (response.succeeded()) {
-                String body = response.result().bodyAsString();
-                context.assertTrue(body.contains("Cyface"));
+        authenticate(client, authResponse -> {
+            if (authResponse.succeeded()) {
+                context.assertEquals(authResponse.result().statusCode(), 200);
+                final String token = authResponse.result().bodyAsString();
+
+                client.get(port, "localhost", "/api/v2").putHeader("Authorization", "Bearer " + token).ssl(true)
+                        .send(response -> {
+                            if (response.succeeded()) {
+                                context.assertEquals(response.result().statusCode(), 200);
+                                final String body = response.result().bodyAsString();
+                                context.assertTrue(body.contains("Cyface"));
+                            } else {
+                                context.fail();
+                            }
+                            async.complete();
+                        });
             } else {
-                context.fail();
+                context.fail("Unable to authenticate");
             }
-            async.complete();
         });
+
+        async.await(3000L);
 
     }
 
-    // This test will only work with vertx 3.6.0 as multipart file uploads are not
-    // supported by the vertx client.
+    /**
+     * Tests uploading a file to the Vertx API.
+     * 
+     * @param context The test context for running <code>Vertx</code> under test.
+     * @throws Exception Fails the test if anything unexpected happens.
+     */
     @Test
     public void testPostFile(TestContext context) throws Exception {
         final Async async = context.async();
@@ -109,59 +206,42 @@ public class RequestTest {
                 String.format(Locale.US, "%s_%s.cyf", deviceIdentifier, measurementIdentifier),
                 testFileResource.getFile(), "application/octet-stream");
 
-        final WebClient client = WebClient.create(vertx);
-        final HttpRequest<Buffer> builder = client.post("somepath").ssl(true);
-        builder.sendMultipartForm(form, ar -> {
-            context.assertTrue(ar.succeeded());
-            context.assertNull(ar.cause());
-            async.complete();
+        authenticate(client, authResponse -> {
+            if (authResponse.succeeded()) {
+                context.assertEquals(authResponse.result().statusCode(), 200);
+                final String authToken = authResponse.result().bodyAsString();
+
+                final HttpRequest<Buffer> builder = client.post(port, "localhost", "/api/v2/measurements").ssl(true);
+                builder.putHeader("Authorization", "Bearer " + authToken);
+                builder.sendMultipartForm(form, ar -> {
+                    if (ar.succeeded()) {
+                        context.assertEquals(ar.result().statusCode(), 201);
+                        context.assertTrue(ar.succeeded());
+                        context.assertNull(ar.cause());
+                        async.complete();
+                    } else {
+                        context.fail(ar.cause());
+                    }
+                });
+            } else {
+                context.fail(authResponse.cause());
+            }
         });
 
         async.await(3000L);
+    }
 
-        /*
-         * Async async = context.async();
-         * final MultipartForm parts = MultipartForm.create();
-         * final String deviceIdentifier = UUID.randomUUID().toString();
-         * final String measurementIdentifier = String.valueOf(1L);
-         * parts.attribute("deviceId", deviceIdentifier);
-         * parts.attribute("measurementId", measurementIdentifier);
-         * parts.attribute("deviceType", "HTC Desire");
-         * parts.attribute("osVersion", "4.4.4");
-         * parts.binaryFileUpload("fileToUpload",
-         * String.format(Locale.US, "%s_%s.cyf", deviceIdentifier, measurementIdentifier),
-         * "/home/muthmann/Projekte/Cyface/collector/test.txt", "application/octet-stream");
-         * HttpClientRequest request = vertx.createHttpClient().post(port, "localhost", "/measurements")
-         * .handler(response -> {
-         * context.assertEquals(201, response.statusCode());
-         * }).endHandler(end -> {
-         * LOGGER.info("Request complete.");
-         * async.complete();
-         * }).exceptionHandler(t -> {
-         * LOGGER.error(t);
-         * context.fail();
-         * async.complete();
-         * });
-         * MultipartFormUpload upload = new MultipartFormUpload(vertx.getOrCreateContext(), parts, true);
-         * upload.run();
-         * upload.endHandler(e -> {
-         * LOGGER.info("Finished handling data.");
-         * // LOGGER.info("" + request.headers());
-         * // request.end();
-         * });
-         * upload.handler(data -> {
-         * LOGGER.info("Handling data: " + data);
-         * request.putHeader("Content-Length", String.valueOf(data.length()));
-         * request.putHeader("Content-Type", "multipart/form-data");
-         * request.write(data).end();
-         * });
-         * upload.exceptionHandler(t -> {
-         * LOGGER.error(t);
-         * context.fail();
-         * async.complete();
-         * });
-         * upload.resume();
-         * async.await(2000L);
-         */
+    /**
+     * Utility method used to get a new JWT token from the server.
+     * 
+     * @param client The client to use to access the server.
+     * @param handler <code>Handler</code> called when the response has returned.
+     */
+    void authenticate(final WebClient client, final Handler<AsyncResult<HttpResponse<Buffer>>> handler) {
+        JsonObject body = new JsonObject();
+        body.put("username", "admin");
+        body.put("password", "secret");
+
+        client.post(port, "localhost", "/api/v2/login").ssl(true).sendJsonObject(body, handler);
     }
 }

@@ -121,6 +121,7 @@ public class MainVerticle extends AbstractVerticle {
         v2ApiRouter.route("/login").handler(BodyHandler.create()).handler(ctx -> {
             try {
                 JsonObject body = ctx.getBodyAsJson();
+                LOGGER.info("Receiving authentication request: " + body);
                 authProvider.authenticate(body, r -> {
                     if (r.succeeded()) {
                         LOGGER.info("Authentication successful!");
