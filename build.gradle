@@ -28,7 +28,7 @@ plugins {
 }
 
 ext {
-  vertxVersion = '3.5.3'
+  vertxVersion = '3.6.0-SNAPSHOT'
   junitVersion = '4.12'
   flapdoodleVersion = '2.1.1'
 }
