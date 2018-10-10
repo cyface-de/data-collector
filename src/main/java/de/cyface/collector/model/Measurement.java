@@ -120,7 +120,7 @@ public final class Measurement {
     }
 
     /**
-     * @return A codec encoding and decoding this <code>Measurement</codec> for usage on the event bus.
+     * @return A codec encoding and decoding this <code>Measurement</code> for usage on the event bus.
      */
     public static MessageCodec<Measurement, Measurement> getCodec() {
         return new MessageCodec<Measurement, Measurement>() {

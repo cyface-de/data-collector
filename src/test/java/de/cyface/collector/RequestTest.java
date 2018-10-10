@@ -62,7 +62,7 @@ import io.vertx.ext.web.multipart.MultipartForm;
  * @version 2.0.0
  */
 @RunWith(VertxUnitRunner.class)
-public class RequestTest {
+public final class RequestTest {
 
     /**
      * The test <code>Vertx</code> instance.
@@ -79,12 +79,12 @@ public class RequestTest {
     /**
      * The test Mongo database.
      */
-    private static MongodProcess MONGO;
+    private static MongodProcess mongo;
     /**
      * Logger used for objects of this class. To change its configuration, set appropriate values in
      * <code>vertx-default-jul-logging.properties</code>.
      */
-    private final static Logger LOGGER = LoggerFactory.getLogger(RequestTest.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(RequestTest.class);
 
     /**
      * Sets up the Mongo database used for the test instance.
@@ -97,7 +97,7 @@ public class RequestTest {
         IMongodConfig mongodConfig = new MongodConfigBuilder().version(Version.Main.PRODUCTION)
                 .net(new Net(TestUtils.MONGO_PORT, Network.localhostIsIPv6())).build();
         MongodExecutable mongodExecutable = starter.prepare(mongodConfig);
-        MONGO = mongodExecutable.start();
+        mongo = mongodExecutable.start();
     }
 
     /**
@@ -144,7 +144,7 @@ public class RequestTest {
      */
     @AfterClass
     public static void stopMongoDb() {
-        MONGO.stop();
+        mongo.stop();
     }
 
     /**

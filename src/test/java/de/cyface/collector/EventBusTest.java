@@ -43,22 +43,49 @@ import io.vertx.ext.unit.Async;
 import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
 
+/**
+ * Tests individual verticles by sending appropriate messages using the Vert.x event bus.
+ * 
+ * @author Klemens Muthmann
+ * @version 1.0.0
+ * @since 2.0.0
+ */
 @RunWith(VertxUnitRunner.class)
-public class EventBusTest {
+public final class EventBusTest {
 
-    private MongodProcess MONGO;
+    /**
+     * Process providing a connection to the test Mongo database.
+     */
+    private MongodProcess mongo;
+    /**
+     * The <code>Vertx</code> used for testing the verticles.
+     */
     private Vertx vertx;
+    /**
+     * The configuration used for starting the Mongo database under test.
+     */
     private JsonObject mongoConfiguration;
 
+    /**
+     * Starts the Mongo database used for testing.
+     * 
+     * @throws IOException Fails the test if anything unexpected happens.
+     */
     @Before
     public void initialize() throws IOException {
         MongodStarter starter = MongodStarter.getDefaultInstance();
         IMongodConfig mongodConfig = new MongodConfigBuilder().version(Version.Main.PRODUCTION)
                 .net(new Net(TestUtils.MONGO_PORT, Network.localhostIsIPv6())).build();
         MongodExecutable mongodExecutable = starter.prepare(mongodConfig);
-        MONGO = mongodExecutable.start();
+        mongo = mongodExecutable.start();
     }
 
+    /**
+     * Deploys the {@link SerializationVerticle} for testing purposes.
+     * 
+     * @param context The Vert.x context used for testing.
+     * @throws IOException Fails the test if anything unexpected happens.
+     */
     @Before
     public void deployVerticle(final TestContext context) throws IOException {
         vertx = Vertx.vertx();
@@ -71,12 +98,22 @@ public class EventBusTest {
         vertx.deployVerticle(SerializationVerticle.class, options, context.asyncAssertSuccess());
     }
 
+    /**
+     * Finishes the test <code>Vertx</code> instance and stops the Mongo database.
+     * 
+     * @param context The Vert.x context used for testing.
+     */
     @After
     public void shutdown(final TestContext context) {
         vertx.close(context.asyncAssertSuccess());
-        MONGO.stop();
+        mongo.stop();
     }
 
+    /**
+     * Tests if the {@link SerializationVerticle} handles new measurements arriving in the system correctly.
+     * 
+     * @param context The Vert.x context used for testing.
+     */
     @Test
     public void test(final TestContext context) {
         final Async async = context.async();
@@ -109,7 +146,7 @@ public class EventBusTest {
         });
 
         eventBus.publish(EventBusAddresses.NEW_MEASUREMENT,
-                new Measurement("some_device", "2", "9.0.0", "Pixel 2", Collections.EMPTY_LIST));
+                new Measurement("some_device", "2", "9.0.0", "Pixel 2", Collections.emptyList()));
 
         async.await(5_000L);
     }

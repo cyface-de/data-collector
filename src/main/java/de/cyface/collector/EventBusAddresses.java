@@ -26,7 +26,7 @@ package de.cyface.collector;
  * @version 1.0.0
  * @since 2.0.0
  */
-public class EventBusAddresses {
+public final class EventBusAddresses {
 
 	/**
 	 * Address used to inform the event bus about a new measurement, which has

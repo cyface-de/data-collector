@@ -50,14 +50,14 @@ import io.vertx.ext.web.handler.JWTAuthHandler;
  * @since 2.0.0
  * @version 1.0.0
  */
-public class MainVerticle extends AbstractVerticle {
+public final class MainVerticle extends AbstractVerticle {
 
     /**
      * The <code>Logger</code> used for objects of this class. Configure it by
      * changing the settings in
-     * <code>src/main/resources/vertx-default-jul-logging.properties</codec>.
+     * <code>src/main/resources/vertx-default-jul-logging.properties</code>.
      */
-    private final static Logger LOGGER = LoggerFactory.getLogger(MainVerticle.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(MainVerticle.class);
 
     @Override
     public void start(final Future<Void> startFuture) throws Exception {
@@ -174,8 +174,8 @@ public class MainVerticle extends AbstractVerticle {
      * Finishes the <code>MainVerticle</code> startup process and informs all
      * interested parties about whether it has been successful or not.
      * 
-     * @param serverStartup
-     * @param future
+     * @param serverStartup The result of the server startup as provided by <code>Vertx</code>.
+     * @param future A future to call to inform all waiting parties about success or failure of the startup process.
      */
     private void completeStartup(final AsyncResult<HttpServer> serverStartup, final Future<Void> future) {
         if (serverStartup.succeeded()) {

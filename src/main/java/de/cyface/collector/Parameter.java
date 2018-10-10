@@ -52,14 +52,16 @@ public enum Parameter {
      * Detailed connection information about the Mongo user database. This database
      * stores all the credentials of users capable of logging in to the systems.
      * This should be a JSON object with supported parameters explained at: <a href=
-     * "https://vertx.io/docs/vertx-mongo-client/java/#_configuring_the_client">https://vertx.io/docs/vertx-mongo-client/java/#_configuring_the_client</a>.
+     * "https://vertx.io/docs/vertx-mongo-client/java/#_configuring_the_client">
+     * https://vertx.io/docs/vertx-mongo-client/java/#_configuring_the_client</a>.
      */
     MONGO_USER_DB("mongo.userdb"),
     /**
      * Detailed connection information about the Mongo data database. This database
      * stores all data received via the REST-API. This should be a JSON object with
      * supported parameters explained at: <a href=
-     * "https://vertx.io/docs/vertx-mongo-client/java/#_configuring_the_client">https://vertx.io/docs/vertx-mongo-client/java/#_configuring_the_client</a>.
+     * "https://vertx.io/docs/vertx-mongo-client/java/#_configuring_the_client">
+     * https://vertx.io/docs/vertx-mongo-client/java/#_configuring_the_client</a>.
      */
     MONGO_DATA_DB("mongo.datadb");
 
@@ -68,7 +70,7 @@ public enum Parameter {
      * by changing the values in
      * <code>src/main/resources/vertx-default-jul-logging.properties</code>.
      */
-    private final static Logger LOGGER = LoggerFactory.getLogger(Parameter.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(Parameter.class);
 
     /**
      * The parameter key used to load its value from the JSON configuration.
@@ -81,7 +83,7 @@ public enum Parameter {
      * @param key The parameter key used to load its value from the JSON
      *            configuration.
      */
-    private Parameter(final String key) {
+    Parameter(final String key) {
         this.key = key;
     }
 

@@ -11,7 +11,7 @@ final class TestUtils {
     /**
      * The port of the API endpoint providing access to the test Mongo database instance.
      */
-    final static int MONGO_PORT = 12345;
+    static final int MONGO_PORT = 12345;
 
     /**
      * Private constructor to avoid instantiation of static utility class.

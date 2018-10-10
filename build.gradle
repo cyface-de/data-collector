@@ -25,6 +25,9 @@ plugins {
   id 'java'
   id 'application'
   id 'com.github.johnrengelman.shadow' version '2.0.4'
+  id 'checkstyle'
+  id 'pmd'
+  id 'findbugs'
 }
 
 ext {
@@ -76,13 +79,6 @@ shadowJar {
   }
   mergeServiceFiles {
     include 'META-INF/services/io.vertx.core.spi.VerticleFactory'
-  }
-}
-
-test {
-  useJUnitPlatform()
-  testLogging {
-    events 'PASSED', 'FAILED', 'SKIPPED'
   }
 }
 
