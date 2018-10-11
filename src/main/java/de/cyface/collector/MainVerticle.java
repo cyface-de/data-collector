@@ -183,9 +183,6 @@ public final class MainVerticle extends AbstractVerticle {
             if (vertx.isMetricsEnabled()) {
                 HttpServer server = serverStartup.result();
                 metricsService = MetricsService.create(server);
-                
-                JsonObject metrics = metricsService.getMetricsSnapshot();
-                System.out.println(metrics);
             }
             future.complete();
         } else {

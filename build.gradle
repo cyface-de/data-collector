@@ -69,7 +69,7 @@ dependencies {
   
   // Monitoring + Metrics
   implementation "io.vertx:vertx-micrometer-metrics:$vertxVersion"
-  implementation "io.micrometer:micrometer-core:$micrometerVersion"
+  implementation "io.micrometer:micrometer-registry-prometheus:$micrometerVersion"
 
   // Test Dependencies
   testImplementation "io.vertx:vertx-unit:$vertxVersion"

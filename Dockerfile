@@ -17,6 +17,7 @@
 
 # Use the official JDK Repo for version 8 as target (use slim version to remove all UI stuff, and since we do only need to run software, we just use the JRE).
 FROM openjdk:8-jre-slim
+MAINTAINER Cyface GmbH <mail@cyface.de>
 
 # Set the working directory to /app
 WORKDIR /app
