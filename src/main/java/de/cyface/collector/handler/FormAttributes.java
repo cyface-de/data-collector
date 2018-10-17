@@ -53,7 +53,7 @@ public enum FormAttributes {
 	 * 
 	 * @param value The value identifying the attribute in the multipart form request.
 	 */
-	private FormAttributes(final String value) {
+	FormAttributes(final String value) {
 		this.value = value;
 	}
 

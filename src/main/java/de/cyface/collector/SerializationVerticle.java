@@ -48,7 +48,7 @@ import io.vertx.ext.mongo.MongoClient;
  * @version 1.0.0
  * @since 2.0.0
  */
-public class SerializationVerticle extends AbstractVerticle implements Handler<Message<Measurement>> {
+public final class SerializationVerticle extends AbstractVerticle implements Handler<Message<Measurement>> {
 	/**
 	 * The <code>Logger</code> used for objects of this class. To configure it
 	 * change the settings in

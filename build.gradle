@@ -25,10 +25,14 @@ plugins {
   id 'java'
   id 'application'
   id 'com.github.johnrengelman.shadow' version '2.0.4'
+  id 'checkstyle'
+  id 'pmd'
+  id 'findbugs'
 }
 
 ext {
-  vertxVersion = '3.5.3'
+  // We need to use the SNAPSHOT version, since testing of multipart form uploads is not supported with older versions.
+  vertxVersion = '3.6.0-SNAPSHOT'
   junitVersion = '4.12'
   flapdoodleVersion = '2.1.1'
 }
@@ -75,13 +79,6 @@ shadowJar {
   }
   mergeServiceFiles {
     include 'META-INF/services/io.vertx.core.spi.VerticleFactory'
-  }
-}
-
-test {
-  useJUnitPlatform()
-  testLogging {
-    events 'PASSED', 'FAILED', 'SKIPPED'
   }
 }
 
