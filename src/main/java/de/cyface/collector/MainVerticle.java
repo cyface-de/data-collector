@@ -41,6 +41,7 @@ import io.vertx.ext.web.Router;
 import io.vertx.ext.web.handler.AuthHandler;
 import io.vertx.ext.web.handler.BodyHandler;
 import io.vertx.ext.web.handler.JWTAuthHandler;
+import io.vertx.micrometer.MetricsService;
 
 /**
  * This Verticle is the Cyface collectors main entry point. It orchestrates all
@@ -179,10 +180,16 @@ public final class MainVerticle extends AbstractVerticle {
      */
     private void completeStartup(final AsyncResult<HttpServer> serverStartup, final Future<Void> future) {
         if (serverStartup.succeeded()) {
+            if (vertx.isMetricsEnabled()) {
+                HttpServer server = serverStartup.result();
+                metricsService = MetricsService.create(server);
+            }
             future.complete();
         } else {
             future.fail(serverStartup.cause());
         }
     }
+    
+    public static MetricsService metricsService;
 
 }

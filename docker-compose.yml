@@ -44,6 +44,16 @@ services:
       depends_on:
         - mongo-data
         - mongo-user
+        
+    # Prometheus Metrics tool
+    prometheus:
+      build: prometheus
+      ports:
+        - "9090:9090"
+      networks:
+        - cyface
+      volumes:
+        - ./prometheus/data:/prometheus
 
 networks:
     cyface:

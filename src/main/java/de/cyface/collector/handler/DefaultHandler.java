@@ -40,6 +40,7 @@ public final class DefaultHandler implements Handler<RoutingContext> {
 	 */
 	private static final Logger LOGGER = LoggerFactory.getLogger(DefaultHandler.class);
 
+
 	@Override
 	public void handle(RoutingContext context) {
 		// This handler will be called for every request

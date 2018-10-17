@@ -26,4 +26,4 @@ echo "Loading keystore for JWT from: $KEYSTORE_JWT"
 echo "Password for JWT keystore: $KEYSTORE_JWT_PASSWORD"
 
 
-java -jar collector-2.0.0-SNAPSHOT-fat.jar -conf "{\"keystore.jwt\":\"$KEYSTORE_JWT\",\"keystore.jwt.password\":\"$KEYSTORE_JWT_PASSWORD\",\"keystore.tls\":\"$KEYSTORE_TLS\",\"keystore.tls.password\":\"$KEYSTORE_TLS_PASSWORD\",\"mongo.userdb\":{\"db_name\":\"cyface-user\",\"connection_string\":\"mongodb://mongo-user:27017\",\"data_source_name\":\"cyface-user\"},\"mongo.datadb\":{\"db_name\":\"cyface-data\",\"connection_string\":\"mongodb://mongo-data:27017\",\"data_source_name\":\"cyface-data\"}}"
+java -jar collector-2.0.0-SNAPSHOT-fat.jar -conf "{\"keystore.jwt\":\"$KEYSTORE_JWT\",\"keystore.jwt.password\":\"$KEYSTORE_JWT_PASSWORD\",\"keystore.tls\":\"$KEYSTORE_TLS\",\"keystore.tls.password\":\"$KEYSTORE_TLS_PASSWORD\",\"metrics.enabled\":true,\"mongo.userdb\":{\"db_name\":\"cyface-user\",\"connection_string\":\"mongodb://mongo-user:27017\",\"data_source_name\":\"cyface-user\"},\"mongo.datadb\":{\"db_name\":\"cyface-data\",\"connection_string\":\"mongodb://mongo-data:27017\",\"data_source_name\":\"cyface-data\"}}"

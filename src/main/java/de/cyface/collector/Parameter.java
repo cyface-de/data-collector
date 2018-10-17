@@ -63,7 +63,11 @@ public enum Parameter {
      * "https://vertx.io/docs/vertx-mongo-client/java/#_configuring_the_client">
      * https://vertx.io/docs/vertx-mongo-client/java/#_configuring_the_client</a>.
      */
-    MONGO_DATA_DB("mongo.datadb");
+    MONGO_DATA_DB("mongo.datadb"), 
+    /**
+     * A parameter telling the system, whether it should publish metrics using Micrometer to Prometheus or not.
+     */
+    METRICS_ENABLED("metrics.enabled");
 
     /**
      * The logger used for objects of this class. You can change its configuration
@@ -105,8 +109,10 @@ public enum Parameter {
      *         <code>defaultValue</code>.
      */
     public String stringValue(final Vertx vertx, final String defaultValue) {
-        final String ret = vertx.getOrCreateContext().config().getString(key);
-        return ret == null ? defaultValue : ret;
+        String value = vertx.getOrCreateContext().config().getString(key);
+        final String ret = value == null ? defaultValue : value;
+        LOGGER.info("Using configuration value: " + ret + " for key: " + key + ".");
+        return ret;
     }
 
     /**
@@ -121,8 +127,10 @@ public enum Parameter {
      * @throws ClassCastException If the value was not an integer.
      */
     public int intValue(final Vertx vertx, final int defaultValue) {
-        final Integer ret = vertx.getOrCreateContext().config().getInteger(key);
-        return ret == null ? defaultValue : ret;
+        Integer value = vertx.getOrCreateContext().config().getInteger(key);
+        final Integer ret = value == null ? defaultValue : value;
+        LOGGER.info("Using configuration value: " + ret + " for key: " + key + ".");
+        return ret;
     }
 
     /**
@@ -136,8 +144,9 @@ public enum Parameter {
      *         <code>defaultValue</code>.
      */
     public JsonObject jsonValue(final Vertx vertx, JsonObject defaultValue) {
-        final JsonObject ret = vertx.getOrCreateContext().config().getJsonObject(key);
+        JsonObject value = vertx.getOrCreateContext().config().getJsonObject(key);
+        final JsonObject ret = value == null ? defaultValue : value;
         LOGGER.info("Read json value " + ret + " for key " + key);
-        return ret == null ? defaultValue : ret;
+        return ret;
     }
 }
