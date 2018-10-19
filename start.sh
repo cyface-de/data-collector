@@ -1,3 +1,4 @@
+#!/bin/bash
 # Copyright 2018 Cyface GmbH
 # 
 # This file is part of the Cyface Data Collector.
@@ -15,15 +16,5 @@
 #  You should have received a copy of the GNU General Public License
 #  along with the Cyface Data Collector.  If not, see <http://www.gnu.org/licenses/>.
 
-# Logging
-handlers = java.util.logging.FileHandler, java.util.logging.ConsoleHandler
-# Also Possible ALL, INFO, ...
-.level = INFO 
-
-# File Logging
-java.util.logging.FileHandler.pattern = %h/cyface-collector.log
-java.util.logging.FileHandler.formatter = java.util.logging.SimpleFormatter
-java.util.logging.FileHandler.level = INFO
-
-# Console Logging
-java.util.logging.ConsoleHandler.level = INFO
+export CURRENT_UID=$(id -u):$(id -g)
+docker-compose up -d

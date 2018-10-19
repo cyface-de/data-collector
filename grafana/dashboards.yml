@@ -15,22 +15,16 @@
 # You should have received a copy of the GNU General Public License
 # along with the Cyface Data Collector. If not, see <http://www.gnu.org/licenses/>.
 
-global:
-  scrape_interval:     15s # By default, scrape targets every 15 seconds.
+apiVersion: 1
 
-  # Attach these labels to any time series or alerts when communicating with
-  # external systems (federation, remote storage, Alertmanager).
-  # external_labels:
-    # monitor: 'codelab-monitor'
-
-# A scrape configuration containing exactly one endpoint to scrape:
-# Here it's Prometheus itself.
-scrape_configs:
-  # The job name is added as a label `job=<job_name>` to any timeseries scraped from this config.
-  - job_name: 'cyface-collector'
-
-    # Override the global default and scrape targets from this job every 5 seconds.
-    scrape_interval: 5s
-
-    static_configs:
-      - targets: ['api:8081']
+providers:
+  - name: 'Prometheus'
+    orgId: 1
+    folder: ''
+    type: file
+    disableDeletion: true
+    editable: true
+    # Usually updating will require rebuilding docker image, so updates every 10 hours should be sufficient.
+    updateIntervalSeconds: 10
+    options:
+      path: /dashboards
