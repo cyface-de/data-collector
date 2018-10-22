@@ -1,3 +1,4 @@
+#!/bin/bash
 # Copyright 2018 Cyface GmbH
 # 
 # This file is part of the Cyface Data Collector.
@@ -15,15 +16,26 @@
 #  You should have received a copy of the GNU General Public License
 #  along with the Cyface Data Collector.  If not, see <http://www.gnu.org/licenses/>.
 
-# Logging
-handlers = java.util.logging.FileHandler, java.util.logging.ConsoleHandler
-# Also Possible ALL, INFO, ...
-.level = INFO 
+export CURRENT_UID=$(id -u):$(id -g)
 
-# File Logging
-java.util.logging.FileHandler.pattern = %h/cyface-collector.log
-java.util.logging.FileHandler.formatter = java.util.logging.SimpleFormatter
-java.util.logging.FileHandler.level = INFO
+echo "Stopping running containers"
+docker-compose stop
 
-# Console Logging
-java.util.logging.ConsoleHandler.level = INFO
+echo "Deleting containers"
+docker rm collector_api_1
+docker rm collector_prometheus_1
+docker rm collector_mongo-user_1
+docker rm collector_mongo-data_1
+docker rm collector_grafana_1
+
+echo "Deleting custom images"
+docker rmi collector_api
+docker rmi collector_prometheus
+docker rmi collector_grafana
+
+echo "Removing data from volumes"
+rm -r ./grafana/data/*
+rm -r ./prometheus/data/*
+rm -r ./data/*
+rm -r ./file-uploads/*
+rm -r ./user-data/*

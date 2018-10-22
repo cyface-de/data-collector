@@ -19,18 +19,20 @@ version: "3"
 services:
     # Mongo Database Container
     mongo-data:
-      image: mongo
+      image: mongo:4.0.3
       networks:
         - cyface
       volumes:
         - ./data:/data/db
+      user: ${CURRENT_UID}
         
     mongo-user:
-      image: mongo
+      image: mongo:4.0.3
       networks:
         - cyface
       volumes:
         - ./user-data:/data/db
+      user: ${CURRENT_UID}
 
     # The Cyface Collector API Container
     api:
@@ -44,16 +46,31 @@ services:
       depends_on:
         - mongo-data
         - mongo-user
+      # user: ${CURRENT_UID} <-- Does not work. Whyever. ???
         
     # Prometheus Metrics tool
     prometheus:
       build: prometheus
-      ports:
-        - "9090:9090"
       networks:
         - cyface
       volumes:
         - ./prometheus/data:/prometheus
+      user: ${CURRENT_UID}
+        
+    # Grafana Dashboard on Prometheus Data
+    grafana:
+      build: grafana
+      ports:
+        - 3000:3000
+      networks:
+        - cyface
+      volumes:
+        - ./grafana/data:/var/lib/grafana
+        - ./grafana/logs:/var/log/grafana
+      environment:
+        - GF_SECURITY_ADMIN_USER=cyface-admin
+        - GF_SECURITY_ADMIN_PASSWORD=cyface-admin@grafana
+      user: ${CURRENT_UID}
 
 networks:
     cyface:

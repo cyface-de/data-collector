@@ -1,7 +1,9 @@
 = Collector
 
-image:https://img.shields.io/badge/vert.x-3.6.0--SNAPSHOT-purple.svg[link="https://vertx.io"] image:https://img.shields.io/badge/mongo-4.1.3-purple.svg[link="https://prometheus.io/"]
+image:https://img.shields.io/badge/vert.x-3.6.0--SNAPSHOT-purple.svg[link="https://vertx.io"] 
+image:https://img.shields.io/badge/mongo-4.0.3-purple.svg[link="https://mongodb.com/"]
 image:https://img.shields.io/badge/prometheus-2.4.3-purple.svg[link="https://prometheus.io/"]
+image:https://img.shields.io/badge/grafana-5.3.0.svg[link="https://grafana.com/"]
 
 This application was generated using http://start.vertx.io
 
@@ -42,13 +44,22 @@ The Cyface data collector supports a few parameters to fine tune the runtime. Al
 * **http.port:** The port the API  is available at. This defaults to `8080`.
 * **mongo.userdb:** Settings for a Mongo database storing credential information about all the users capable of logging into the system. This defaults to a Mongo database available at `mongodb://127.0.0.1:27017`. The value of this should be a JSON object configured as described https://vertx.io/docs/vertx-mongo-client/java/#_configuring_the_client[here]. In addition, if you use two different Mongo databases for credentials and data you should provide different values for the JSON key `data_source_name`.
 * **mongo.datadb:** Settings for a Mongo database storing all data uploaded via the Cyface data collector. This defaults to a Mongo database available at `mongodb://127.0.0.1:27017`. The value of this should be a JSON object configured as described https://vertx.io/docs/vertx-mongo-client/java/#_configuring_the_client[here]. In addition, if you use two different Mongo databases for credentials and data you should provide different values for the JSON key `data_source_name`.
-* **metrics.enabled:** Set to either `true` or `false`. If `true` the collector API publishes metrics using micrometer. These metrics are accessible by a https://prometheus.io/[Prometheus] server at port `8081`.
+* **metrics.enabled:** Set to either `true` or `false`. If `true` the collector API publishes metrics using micrometer. These metrics are accessible by a https://prometheus.io/[Prometheus] server (Which you either need to setup yourself or use the Docker setup explained further down) at port `8081`.
 
 === Running from IDE
 To run directly from within your IDE you need to use the `de.cyface.collector.Application` class, which is a subclass of the https://vertx.io/docs/vertx-core/java/#_the_vert_x_launcher[Vert.x launcher]. Just specify it as the main class in your launch configuration with the program argument `run de.cyface.collector.MainVerticle`.
 
 === Running from Docker
-Simply run `docker-compose up` inside the root of this project. This brings up two Mongo database containers and a container running the Cyface data collector API.
+Simply run `start.sh` inside the root of this project. This calls docker to bring up two Mongo database containers and a container running the Cyface data collector API. 
+In addition it starts https://prometheus.io/[Prometheus] and https://grafana.com/[Grafana] as monitoring tools for the running server. 
+Prometheus stores all the metrics data, while Grafana provides a dashboard for visualization. 
+Per default the Grafana dashboard is available via port 3000. 
+This means if you boot up everything using the default settings you can access Grafana via `http://localhost:3000`. 
+The default username is *cyface-admin* and the default password *cyface-admin@grafana*.
+
+There is also a script called `docker-clean.sh`. This stops all the Docker containers and deletes all the data. 
+**ATTENTION:** You will loose **ALL** data if you run this script and will have to start with a fresh installation.
+Only use this script if you are really sure and if you have a backup of all data you wish to keep.
 
 To overwrite the default keystores used by the Cyface data collector just place them as `keystore.tls.jks` and `keystore.jwt.jceks` inside the folder `secrets` right next to the `docker-compose.yml`
 
@@ -61,7 +72,6 @@ A running Cyface data collector publishes metrics to a running https://prometheu
 * Setup Cluster
 	* Vertx
 	* MongoDb
-* Finish multi part test
 
 == Licensing
 Copyright 2018 Cyface GmbH
