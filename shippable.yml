@@ -1,0 +1,9 @@
+language: java
+
+jdk:
+        - openjdk8
+
+
+build:
+        ci:
+                - gradle clean shadowJar check

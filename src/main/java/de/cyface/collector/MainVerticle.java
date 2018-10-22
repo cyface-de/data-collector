@@ -45,7 +45,6 @@ import io.vertx.ext.web.Router;
 import io.vertx.ext.web.handler.AuthHandler;
 import io.vertx.ext.web.handler.BodyHandler;
 import io.vertx.ext.web.handler.JWTAuthHandler;
-import io.vertx.micrometer.MetricsService;
 
 /**
  * This Verticle is the Cyface collectors main entry point. It orchestrates all

@@ -61,7 +61,7 @@ public class Application extends Launcher {
     }
 
     @Override
-    public void afterConfigParsed(final JsonObject config) {
+    public final void afterConfigParsed(final JsonObject config) {
         super.afterConfigParsed(config);
         if (config.containsKey(Parameter.METRICS_ENABLED.key())) {
             metricsEnabled = config.getBoolean(Parameter.METRICS_ENABLED.key());
@@ -69,7 +69,7 @@ public class Application extends Launcher {
     }
 
     @Override
-    public void beforeStartingVertx(final VertxOptions options) {
+    public final void beforeStartingVertx(final VertxOptions options) {
         if (metricsEnabled) {
             LOGGER.info("Enabling metrics capturing to prometheus!");
             options.setMetricsOptions(new MicrometerMetricsOptions()

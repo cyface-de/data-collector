@@ -131,8 +131,8 @@ public enum Parameter {
      * @throws ClassCastException If the value was not an integer.
      */
     public int intValue(final Vertx vertx, final int defaultValue) {
-        Integer value = vertx.getOrCreateContext().config().getInteger(key);
-        final Integer ret = value == null ? defaultValue : value;
+        final Integer value = vertx.getOrCreateContext().config().getInteger(key);
+        final int ret = value == null ? defaultValue : value;
         LOGGER.info("Using configuration value: " + ret + " for key: " + key + ".");
         return ret;
     }
