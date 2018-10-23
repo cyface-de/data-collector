@@ -13,3 +13,9 @@ build:
                 - cp -r build/jacoco shippable/codecoverage
                 - cp -r build/reports/jacoco shippable/codecoverage
                 - cp -r build/reports/jacocoHtml shippable/codecoverage
+
+integrations:
+  notifications:
+    - integrationName: Cyface Slack
+      type: slack
+      recipients: "#continuous-int"
