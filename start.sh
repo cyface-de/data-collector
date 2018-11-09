@@ -1,5 +1,6 @@
-#!/bin/bash
+#!/bin/bash -e
 # Copyright 2018 Cyface GmbH
+# version 1.0.0
 # 
 # This file is part of the Cyface Data Collector.
 #
@@ -17,4 +18,9 @@
 #  along with the Cyface Data Collector.  If not, see <http://www.gnu.org/licenses/>.
 
 export CURRENT_UID=$(id -u):$(id -g)
+	
+# Create volumne directories
+mkdir -p data user-data secrets prometheus/data grafana/data grafana/logs
+	
+# Start app
 docker-compose up -d
