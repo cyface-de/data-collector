@@ -1,5 +1,6 @@
 #!/bin/bash
 # Copyright 2018 Cyface GmbH
+# version 1.0.0
 # 
 # This file is part of the Cyface Data Collector.
 #
@@ -18,22 +19,22 @@
 
 export CURRENT_UID=$(id -u):$(id -g)
 
-echo "Stopping running containers"
+printf "\nStopping running containers\n"
 docker-compose stop
 
-echo "Deleting containers"
-docker rm collector_api_1
-docker rm collector_prometheus_1
-docker rm collector_mongo-user_1
-docker rm collector_mongo-data_1
-docker rm collector_grafana_1
+printf "\nDeleting containers\n"
+docker rm data-collector_api_1
+docker rm data-collector_prometheus_1
+docker rm data-collector_mongo-user_1
+docker rm data-collector_mongo-data_1
+docker rm data-collector_grafana_1
 
-echo "Deleting custom images"
-docker rmi collector_api
-docker rmi collector_prometheus
-docker rmi collector_grafana
+printf "\nDeleting custom images\n"
+docker rmi data-collector_api
+docker rmi data-collector_prometheus
+docker rmi data-collector_grafana
 
-echo "Removing data from volumes"
+printf "\nRemoving data from volumes\n"
 rm -r ./grafana/data/*
 rm -r ./prometheus/data/*
 rm -r ./data/*
