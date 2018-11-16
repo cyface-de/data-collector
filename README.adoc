@@ -38,8 +38,23 @@ The Collector API is accessable via `https://localhost:8080/api/v2`.
 To overwrite the default keystores used by the Cyface data collector just place them as `keystore.tls.jks` and
 `keystore.jwt.jceks` inside the folder `secrets` right next to the `docker-compose.yml`.
 
-To generate a keystore and truststore, see
-https://cyface.atlassian.net/wiki/spaces/IM/pages/590348308/Einrichtung+eines+Kunden-Servers+und+einer+Kunden-App[restricted Cyface Confluence].
+To generate a keystore and truststore using https://keystore-explorer.org/[Keystore Explorer]:
+
+* Create a *new KeyStore* (PKCS12)
+** Go to Tools/*Generate Key Pair*
+*** You can use the default setting on the first configuration screen
+*** Use the button next to the **name** field on the second screen to enter your hostname or IP address as CN
+*** You may use the CN value as alias on the next screen, too
+*** Define an encryption password for the private key
+** Right click on the newly generated Key Pair and select *Export/Certificate* (.cer)
+** Save the keystore as *keystore.tls.jks (keystore type is PKCS12)
+
+  The keystore file must be kept private and is copied to the data-collector/secret folder.
+
+* Go to *Tools/Import Trusted Certificate*, select the .cer file (overwrite: ok)
+** Use "save as" to export the certificate as "truststore" (truststore.jks) (type: PKCS12)
+
+  The truststore file is copied to the android-backend/res/raw folder.
 
 ==== docker-clean.sh
 
@@ -89,7 +104,6 @@ A running Cyface data collector publishes metrics to a running https://prometheu
 * Setup Cluster
 	* Vertx
 	* MongoDb
-* Move Certificate creation instructions to readme
 
 == Licensing
 Copyright 2018 Cyface GmbH
