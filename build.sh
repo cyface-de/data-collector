@@ -1,6 +1,5 @@
 #!/bin/bash -e
 # Copyright 2018 Cyface GmbH
-# version 1.0.0
 #
 # This file is part of the Cyface Data Collector.
 #
@@ -16,6 +15,8 @@
 #
 #  You should have received a copy of the GNU General Public License
 #  along with the Cyface Data Collector.  If not, see <http://www.gnu.org/licenses/>.
+#
+# version 1.0.0
 
 export CURRENT_UID=$(id -u):$(id -g)
 
