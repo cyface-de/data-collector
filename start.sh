@@ -21,4 +21,4 @@
 export CURRENT_UID=$(id -u):$(id -g)
 
 # Start app
-docker-compose up -d
+docker-compose -p 'collector' up -d
