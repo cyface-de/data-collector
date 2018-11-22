@@ -131,7 +131,7 @@ public final class MainVerticle extends AbstractVerticle {
                     if (r.succeeded()) {
                         LOGGER.info("Authentication successful!");
                         String generatedToken = jwtAuthProvider.generateToken(body,
-                                new JWTOptions().setExpiresInSeconds(60*60)); // FIXME: for testing 1h is easier
+                                new JWTOptions().setExpiresInSeconds(60));
                         LOGGER.info("New JWT Token: " + generatedToken);
                         // Returning the token as response body because the RequestTest fails to read the header
                         // Returning the token as response header because Android fails to read the response body
