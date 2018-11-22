@@ -1,3 +1,4 @@
+.idea
 .classpath
 .editorconfig
 .project
@@ -5,6 +6,7 @@
 .gradle
 bin
 build
+out
 file-uploads
 
 # Folders created by docker container

@@ -217,14 +217,14 @@ public final class RequestTest {
 
                 final HttpRequest<Buffer> builder = client.post(port, "localhost", "/api/v2/measurements").ssl(true);
                 builder.putHeader("Authorization", "Bearer " + authToken);
-                builder.sendMultipartForm(form, ar -> {
-                    if (ar.succeeded()) {
-                        context.assertEquals(ar.result().statusCode(), 201);
-                        context.assertTrue(ar.succeeded());
-                        context.assertNull(ar.cause());
+                builder.sendMultipartForm(form, asyncResult -> {
+                    if (asyncResult.succeeded()) {
+                        context.assertEquals(asyncResult.result().statusCode(), 201);
+                        context.assertTrue(asyncResult.succeeded());
+                        context.assertNull(asyncResult.cause());
                         async.complete();
                     } else {
-                        context.fail(ar.cause());
+                        context.fail(asyncResult.cause());
                     }
                 });
             } else {

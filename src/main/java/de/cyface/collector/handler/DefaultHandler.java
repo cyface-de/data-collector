@@ -42,6 +42,8 @@ public final class DefaultHandler implements Handler<RoutingContext> {
 
     @Override
     public void handle(RoutingContext context) {
+        LOGGER.info("Plain API called.");
+
         // This handler will be called for every request
         HttpServerResponse response = context.response();
         response.putHeader("content-type", "text/plain");

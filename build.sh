@@ -1,6 +1,5 @@
-#!/bin/bash
+#!/bin/bash -e
 # Copyright 2018 Cyface GmbH
-# version 1.0.0
 #
 # This file is part of the Cyface Data Collector.
 #
@@ -16,27 +15,16 @@
 #
 #  You should have received a copy of the GNU General Public License
 #  along with the Cyface Data Collector.  If not, see <http://www.gnu.org/licenses/>.
+#
+# version 1.0.0
 
 export CURRENT_UID=$(id -u):$(id -g)
 
-printf "\nStopping running containers\n"
-docker stop collector_api collector_prometheus collector_mongo-user collector_mongo-data collector_grafana
+# Create volume directories
+mkdir -p data user-data secrets prometheus/data grafana/data grafana/logs
 
-printf "\nDeleting containers\n"
-docker rm collector_api
-docker rm collector_prometheus
-docker rm collector_mongo-user
-docker rm collector_mongo-data
-docker rm collector_grafana
+# Build jar
+./gradlew clean assemble
 
-printf "\nDeleting custom images\n"
-docker rmi collector_api
-docker rmi collector_prometheus
-docker rmi collector_grafana
-
-printf "\nRemoving data from volumes\n"
-rm -r ./grafana/data/*
-rm -r ./prometheus/data/*
-rm -r ./data/*
-rm -r ./file-uploads/*
-rm -r ./user-data/*
+# Build docker container
+docker-compose -p 'collector' build

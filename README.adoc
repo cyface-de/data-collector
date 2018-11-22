@@ -7,7 +7,75 @@ image:https://img.shields.io/badge/grafana-5.3.0.svg[link="https://grafana.com/"
 
 This application was generated using http://start.vertx.io
 
+== Help
+
+* https://vertx.io/docs/[Vert.x Documentation]
+* https://stackoverflow.com/questions/tagged/vert.x?sort=newest&pageSize=15[Vert.x Stack Overflow]
+* https://groups.google.com/forum/?fromgroups#!forum/vertx[Vert.x User Group]
+* https://gitter.im/eclipse-vertx/vertx-users[Vert.x Gitter]
+
 == Building
+
+Simply run `build.sh` inside the root of this project. This builds the jar file which is then packed into the Docker
+container which is build afterwards. This script also makes sure all required subdirectories are created.
+
+== Execution
+This section describes how to execute the Cyface data collector.
+
+=== Running from Docker
+Simply run `start.sh` inside the root of this project. This calls docker to bring up two Mongo database containers and a container running the Cyface data collector API.
+In addition it starts https://prometheus.io/[Prometheus] and https://grafana.com/[Grafana] as monitoring tools for the running server.
+
+Prometheus stores all the metrics data, while Grafana provides a dashboard for visualization.
+Per default the Grafana dashboard is available via port 3000. The Collector API is by default available via port 8080.
+
+This means if you boot up everything using the default settings you can access Grafana via `http://localhost:3000`.
+The default username is *cyface-admin* and the default password *cyface-admin@grafana*.
+The Collector API is accessable via `https://localhost:8080/api/v2`.
+
+==== Certificates
+
+To overwrite the default keystores used by the Cyface data collector just place them as `keystore.tls.jks` and
+`keystore.jwt.jceks` inside the folder `secrets` right next to the `docker-compose.yml`.
+
+To generate a keystore and truststore using https://keystore-explorer.org/[Keystore Explorer]:
+
+* Create a *new KeyStore* (PKCS12)
+** Go to Tools/*Generate Key Pair*
+*** You can use the default setting on the first configuration screen
+*** Use the button next to the **name** field on the second screen to enter your hostname or IP address as CN
+*** You may use the CN value as alias on the next screen, too
+*** Define an encryption password for the private key
+** Right click on the newly generated Key Pair and select *Export/Certificate* (.cer)
+** Save the keystore as *keystore.tls.jks (keystore type is PKCS12)
+
+  The keystore file must be kept private and is copied to the data-collector/secret folder.
+
+* Go to *Tools/Import Trusted Certificate*, select the .cer file (overwrite: ok)
+** Use "save as" to export the certificate as "truststore" (truststore.jks) (type: PKCS12)
+
+  The truststore file is copied to the android-backend/res/raw folder.
+
+==== docker-clean.sh
+
+The script `docker-clean.sh` stops all the Docker containers and deletes all the data.
+
+**ATTENTION:** You will loose **ALL** data if you run this script and will have to start with a fresh installation.
+Only use this script if you are really sure and if you have a backup of all data you wish to keep.
+
+=== Command Line Arguments
+The Cyface data collector supports a few parameters to fine tune the runtime. All of these parameters also provide reasonable defaults for quick setup. In production you should change those values to fit your environment. The parameters are provided using the typical Vertx `-conf` parameter with a value in JSON notation. The following parameters are supported:
+
+* **keystore.jwt:** The path of the keystore used to sign JWT keys. This defaults to the keystore available under `src/main/resources/keystore.jceks`, which you should never use in production.
+* **keystore.jwt.password:** The password to access the JWT keystore file.
+* **keystore.tls:** The path of the keystore used to encrypt HTTPS communication. This defaults to the keystore for localhost available under `src/main/resources/localhost.jks`. The default one will only work for a server reached using `localhost`. In production you will require your own file.
+* **keystore.tls.password:** The password to access the keystore used for HTTPS communication.
+* **http.port:** The port the API  is available at. This defaults to `8080`.
+* **mongo.userdb:** Settings for a Mongo database storing credential information about all the users capable of logging into the system. This defaults to a Mongo database available at `mongodb://127.0.0.1:27017`. The value of this should be a JSON object configured as described https://vertx.io/docs/vertx-mongo-client/java/#_configuring_the_client[here]. In addition, if you use two different Mongo databases for credentials and data you should provide different values for the JSON key `data_source_name`.
+* **mongo.datadb:** Settings for a Mongo database storing all data uploaded via the Cyface data collector. This defaults to a Mongo database available at `mongodb://127.0.0.1:27017`. The value of this should be a JSON object configured as described https://vertx.io/docs/vertx-mongo-client/java/#_configuring_the_client[here]. In addition, if you use two different Mongo databases for credentials and data you should provide different values for the JSON key `data_source_name`.
+* **metrics.enabled:** Set to either `true` or `false`. If `true` the collector API publishes metrics using micrometer. These metrics are accessible by a https://prometheus.io/[Prometheus] server (Which you either need to setup yourself or use the Docker setup explained further down) at port `8081`.
+
+=== Running from Command Line
 
 To launch your tests:
 ```
@@ -24,44 +92,8 @@ To run your application:
 ./gradlew clean run
 ```
 
-== Help
-
-* https://vertx.io/docs/[Vert.x Documentation]
-* https://stackoverflow.com/questions/tagged/vert.x?sort=newest&pageSize=15[Vert.x Stack Overflow]
-* https://groups.google.com/forum/?fromgroups#!forum/vertx[Vert.x User Group]
-* https://gitter.im/eclipse-vertx/vertx-users[Vert.x Gitter]
-
-== Execution
-This section describes how to execute the Cyface data collector.
-
-=== Command Line Arguments
-The Cyface data collector supports a few parameters to fine tune the runtime. All of these parameters also provide reasonable defaults for quick setup. In production you should change those values to fit your environment. The parameters are provided using the typical Vertx `-conf` parameter with a value in JSON notation. The following parameters are supported:
-
-* **keystore.jwt:** The path of the keystore used to sign JWT keys. This defaults to the keystore available under `src/main/resources/keystore.jceks`, which you should never use in production.
-* **keystore.jwt.password:** The password to access the JWT keystore file.
-* **keystore.tls:** The path of the keystore used to encrypt HTTPS communication. This defaults to the keystore for localhost available under `src/main/resources/localhost.jks`. The default one will only work for a server reached using `localhost`. In production you will require your own file.
-* **keystore.tls.password:** The password to access the keystore used for HTTPS communication.
-* **http.port:** The port the API  is available at. This defaults to `8080`.
-* **mongo.userdb:** Settings for a Mongo database storing credential information about all the users capable of logging into the system. This defaults to a Mongo database available at `mongodb://127.0.0.1:27017`. The value of this should be a JSON object configured as described https://vertx.io/docs/vertx-mongo-client/java/#_configuring_the_client[here]. In addition, if you use two different Mongo databases for credentials and data you should provide different values for the JSON key `data_source_name`.
-* **mongo.datadb:** Settings for a Mongo database storing all data uploaded via the Cyface data collector. This defaults to a Mongo database available at `mongodb://127.0.0.1:27017`. The value of this should be a JSON object configured as described https://vertx.io/docs/vertx-mongo-client/java/#_configuring_the_client[here]. In addition, if you use two different Mongo databases for credentials and data you should provide different values for the JSON key `data_source_name`.
-* **metrics.enabled:** Set to either `true` or `false`. If `true` the collector API publishes metrics using micrometer. These metrics are accessible by a https://prometheus.io/[Prometheus] server (Which you either need to setup yourself or use the Docker setup explained further down) at port `8081`.
-
 === Running from IDE
 To run directly from within your IDE you need to use the `de.cyface.collector.Application` class, which is a subclass of the https://vertx.io/docs/vertx-core/java/#_the_vert_x_launcher[Vert.x launcher]. Just specify it as the main class in your launch configuration with the program argument `run de.cyface.collector.MainVerticle`.
-
-=== Running from Docker
-Simply run `start.sh` inside the root of this project. This calls docker to bring up two Mongo database containers and a container running the Cyface data collector API. 
-In addition it starts https://prometheus.io/[Prometheus] and https://grafana.com/[Grafana] as monitoring tools for the running server. 
-Prometheus stores all the metrics data, while Grafana provides a dashboard for visualization. 
-Per default the Grafana dashboard is available via port 3000. 
-This means if you boot up everything using the default settings you can access Grafana via `http://localhost:3000`. 
-The default username is *cyface-admin* and the default password *cyface-admin@grafana*.
-
-There is also a script called `docker-clean.sh`. This stops all the Docker containers and deletes all the data. 
-**ATTENTION:** You will loose **ALL** data if you run this script and will have to start with a fresh installation.
-Only use this script if you are really sure and if you have a backup of all data you wish to keep.
-
-To overwrite the default keystores used by the Cyface data collector just place them as `keystore.tls.jks` and `keystore.jwt.jceks` inside the folder `secrets` right next to the `docker-compose.yml`
 
 == Runtime Administration
 A running Cyface data collector publishes metrics to a running https://prometheus.io/docs/prometheus/latest/getting_started/[Prometheus] instance. If you have used the docker setup, this should happen automatically. Per default Prometheus is exposed on **http://localhost:9090/graph**.

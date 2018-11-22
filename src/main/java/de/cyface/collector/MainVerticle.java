@@ -1,20 +1,16 @@
 /*
  * Copyright 2018 Cyface GmbH
- * 
  * This file is part of the Cyface Data Collector.
- *
- *  The Cyface Data Collector is free software: you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License as published by
- *  the Free Software Foundation, either version 3 of the License, or
- *  (at your option) any later version.
- *  
- *  The Cyface Data Collector is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU General Public License for more details.
- *
- *  You should have received a copy of the GNU General Public License
- *  along with the Cyface Data Collector.  If not, see <http://www.gnu.org/licenses/>.
+ * The Cyface Data Collector is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ * The Cyface Data Collector is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ * You should have received a copy of the GNU General Public License
+ * along with the Cyface Data Collector. If not, see <http://www.gnu.org/licenses/>.
  */
 package de.cyface.collector;
 
@@ -49,10 +45,11 @@ import io.vertx.ext.web.handler.JWTAuthHandler;
 /**
  * This Verticle is the Cyface collectors main entry point. It orchestrates all
  * other Verticles and configures the endpoints used to provide the REST-API.
- * 
+ *
  * @author Klemens Muthmann
- * @since 2.0.0
+ * @author Armin Schnabel
  * @version 1.0.0
+ * @since 2.0.0
  */
 public final class MainVerticle extends AbstractVerticle {
 
@@ -96,6 +93,8 @@ public final class MainVerticle extends AbstractVerticle {
      * @return The Vertx router used by this project.
      */
     private Router setupRoutes() {
+
+        // Set up authentication check
         final String keystorePath = this.getClass().getResource("/keystore.jceks").getFile();
         String jwtKeystoreLocation = Parameter.JWT_KEYSTORE.stringValue(vertx, keystorePath);
         final JWTAuthOptions config = new JWTAuthOptions()
@@ -105,8 +104,8 @@ public final class MainVerticle extends AbstractVerticle {
         final JWTAuth jwtAuthProvider = JWTAuth.create(vertx, config);
         final AuthHandler jwtAuthHandler = JWTAuthHandler.create(jwtAuthProvider, "/api/v2/login");
 
+        // Create test users
         final JsonObject mongoClientConfig = Parameter.MONGO_USER_DB.jsonValue(vertx, config());
-
         final MongoClient client = SerializationVerticle.createSharedMongoClient(vertx, mongoClientConfig);
         final JsonObject authProperties = new JsonObject();
         final MongoAuth authProvider = MongoAuth.create(client, authProperties);
@@ -119,9 +118,11 @@ public final class MainVerticle extends AbstractVerticle {
                     ir -> LOGGER.info("Identifier of new user id: " + ir));
         });
 
+        // Routing
         final Router mainRouter = Router.router(vertx);
         final Router v2ApiRouter = Router.router(vertx);
 
+        // Set up authentication route
         v2ApiRouter.route("/login").handler(BodyHandler.create()).handler(ctx -> {
             try {
                 JsonObject body = ctx.getBodyAsJson();
@@ -132,7 +133,10 @@ public final class MainVerticle extends AbstractVerticle {
                         String generatedToken = jwtAuthProvider.generateToken(body,
                                 new JWTOptions().setExpiresInSeconds(60));
                         LOGGER.info("New JWT Token: " + generatedToken);
-                        ctx.response().putHeader("Content-Type", "text/plain").setStatusCode(200).end(generatedToken);
+                        // Returning the token as response body because the RequestTest fails to read the header
+                        // Returning the token as response header because Android fails to read the response body
+                        ctx.response().putHeader("Authorization", generatedToken).setStatusCode(200)
+                                .end(generatedToken);
                     } else {
                         ctx.response().setStatusCode(401).end();
                     }
@@ -142,12 +146,17 @@ public final class MainVerticle extends AbstractVerticle {
                 ctx.response().setStatusCode(404).end();
             }
         });
+
+        // Set up default routes
         mainRouter.route().handler(jwtAuthHandler);
         mainRouter.route().last().handler(new DefaultHandler());
         mainRouter.mountSubRouter("/api/v2", v2ApiRouter);
 
+        // Set up Data Collector route
         v2ApiRouter.post("/measurements").handler(BodyHandler.create().setDeleteUploadedFilesOnEnd(false))
                 .handler(new MeasurementHandler());
+
+        // Handle unsupported routes
         v2ApiRouter.route().last().handler(new DefaultHandler());
 
         return mainRouter;
@@ -156,7 +165,7 @@ public final class MainVerticle extends AbstractVerticle {
     /**
      * Starts the HTTP server provided by this application. This server runs the
      * Cyface collector REST-API.
-     * 
+     *
      * @param router The router for all the endpoints the HTTP server should
      *            serve.
      * @param startFuture Informs the caller about the successful or failed start of
@@ -177,7 +186,7 @@ public final class MainVerticle extends AbstractVerticle {
     /**
      * Finishes the <code>MainVerticle</code> startup process and informs all
      * interested parties about whether it has been successful or not.
-     * 
+     *
      * @param serverStartup The result of the server startup as provided by <code>Vertx</code>.
      * @param future A future to call to inform all waiting parties about success or failure of the startup process.
      */

@@ -14,11 +14,14 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with the Cyface Data Collector. If not, see <http://www.gnu.org/licenses/>.
+#
+# version 1.0.0
 
 version: "3"
 services:
     # Mongo Database Container
     mongo-data:
+      container_name: collector_mongo-data
       image: mongo:4.0.3
       networks:
         - cyface
@@ -27,6 +30,7 @@ services:
       user: ${CURRENT_UID}
         
     mongo-user:
+      container_name: collector_mongo-user
       image: mongo:4.0.3
       networks:
         - cyface
@@ -36,9 +40,10 @@ services:
 
     # The Cyface Collector API Container
     api:
+      container_name: collector_api
       build: .
       ports:
-        - "8080:8080"
+        - "127.0.0.1:8080:8080" # 127.0.0.1 avoids the manipulation of the host's ip-tables
       networks:
         - cyface
       volumes:
@@ -50,6 +55,7 @@ services:
         
     # Prometheus Metrics tool
     prometheus:
+      container_name: collector_prometheus
       build: prometheus
       networks:
         - cyface
@@ -59,9 +65,10 @@ services:
         
     # Grafana Dashboard on Prometheus Data
     grafana:
+      container_name: collector_grafana
       build: grafana
       ports:
-        - 3000:3000
+        - "127.0.0.1:3000:3000" # 127.0.0.1 avoids the manipulation of the host's ip-tables
       networks:
         - cyface
       volumes:
