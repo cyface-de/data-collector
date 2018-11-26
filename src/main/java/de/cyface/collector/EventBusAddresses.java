@@ -23,7 +23,7 @@ package de.cyface.collector;
  * Cyface data collector.
  * 
  * @author Klemens Muthmann
- * @version 1.0.0
+ * @version 1.1.0
  * @since 2.0.0
  */
 public final class EventBusAddresses {
@@ -38,6 +38,11 @@ public final class EventBusAddresses {
 	 * measurement.
 	 */
 	public static final String MEASUREMENT_SAVED = "de.cyface.collector.measurement_saved";
+	
+	/**
+	 * Address used to inform the event bus about the failure of saving a measurement.
+	 */
+	public static final String SAVING_MEASUREMENT_FAILED = "de.cyface.collector.saving_measurement_failed";
 
 	/**
 	 * Private constructor to prevent instantiation of utility classes.
