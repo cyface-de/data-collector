@@ -29,6 +29,8 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
+import org.apache.commons.lang3.Validate;
+
 import com.mongodb.ConnectionString;
 import com.mongodb.async.client.MongoDatabase;
 import com.mongodb.async.client.gridfs.AsyncInputStream;
@@ -37,6 +39,7 @@ import com.mongodb.async.client.gridfs.GridFSBuckets;
 
 import de.cyface.collector.model.Measurement;
 import io.vertx.core.AbstractVerticle;
+import io.vertx.core.AsyncResult;
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
@@ -91,8 +94,54 @@ public final class SerializationVerticle extends AbstractVerticle implements Han
 		Measurement measurement = event.body();
 		LOGGER.debug("About to save: " + measurement.getFileUploads().size() + " Files.");
 		JsonObject measurementJson = measurement.toJson();
+		SerializationHandler serializationHandler = new SerializationHandler(measurement);
 
-		mongoClient.insert("measurements", measurementJson, res -> {
+		mongoClient.insert("measurements", measurementJson, serializationHandler);
+	}
+
+	/**
+	 * Creates a shared Mongo database client for the provided configuration.
+	 * 
+	 * @param vertx  The <code>Vertx</code> instance to create the client from.
+	 * @param config Configuration of the newly created client. For further
+	 *               information refer to {@link Parameter#MONGO_DATA_DB} and
+	 *               {@link Parameter#MONGO_USER_DB}.
+	 * @return A <code>MongoClient</code> ready for usage.
+	 */
+	public static MongoClient createSharedMongoClient(final Vertx vertx, final JsonObject config) {
+		final String dataSourceName = config.getString("data_source_name", "cyface");
+		return MongoClient.createShared(vertx, config, dataSourceName);
+	}
+
+	/**
+	 * A handler called when a measurement has been created in the Mongo database.
+	 * This handler saves the measurement data and send a message to
+	 * {@link EventBusAddresses#MEASUREMENT_SAVED} upon success or
+	 * {@link EventBusAddresses#SAVING_MEASUREMENT_FAILED} on failure.
+	 * 
+	 * @author Klemens Muthmann
+	 * @version 1.0.0
+	 * @since 2.0.0
+	 */
+	class SerializationHandler implements Handler<AsyncResult<String>> {
+
+		/**
+		 * The measurement that was saved.
+		 */
+		private final Measurement measurement;
+
+		/**
+		 * Creates a new completely initialized handler.
+		 * 
+		 * @param measurement The measurement that was saved.
+		 */
+		public SerializationHandler(final Measurement measurement) {
+			Validate.notNull(measurement);
+			this.measurement = measurement;
+		}
+
+		@Override
+		public void handle(AsyncResult<String> res) {
 			if (res.succeeded()) {
 				String id = res.result();
 				LOGGER.debug("Inserted measurement with id " + id);
@@ -105,6 +154,7 @@ public final class SerializationVerticle extends AbstractVerticle implements Han
 				GridFSBucket gridFsBucket = GridFSBuckets.create(db);
 
 				Collection<File> filesToUpload = measurement.getFileUploads();
+				@SuppressWarnings("rawtypes")
 				List<Future> fileUploadFutures = new ArrayList<>(filesToUpload.size());
 
 				filesToUpload.forEach(upload -> {
@@ -128,32 +178,28 @@ public final class SerializationVerticle extends AbstractVerticle implements Han
 					if (result.succeeded()) {
 						vertx.eventBus().publish(MEASUREMENT_SAVED, id);
 					} else {
-						LOGGER.error("Unable to save measurement with id {}", result.cause(),
-								measurement.getMeasurementIdentifier());
-						vertx.eventBus().publish(SAVING_MEASUREMENT_FAILED, result.cause().getMessage());
+						fail(res);
 					}
 				});
-
 			} else {
-				LOGGER.error("Unable to save measurement with id {}", res.cause(),
-						measurement.getMeasurementIdentifier());
-				vertx.eventBus().publish(SAVING_MEASUREMENT_FAILED, res.cause().getMessage());
+				fail(res);
 			}
-		});
-	}
 
-	/**
-	 * Creates a shared Mongo database client for the provided configuration.
-	 * 
-	 * @param vertx  The <code>Vertx</code> instance to create the client from.
-	 * @param config Configuration of the newly created client. For further
-	 *               information refer to {@link Parameter#MONGO_DATA_DB} and
-	 *               {@link Parameter#MONGO_USER_DB}.
-	 * @return A <code>MongoClient</code> ready for usage.
-	 */
-	public static MongoClient createSharedMongoClient(final Vertx vertx, final JsonObject config) {
-		final String dataSourceName = config.getString("data_source_name", "cyface");
-		return MongoClient.createShared(vertx, config, dataSourceName);
+		}
+
+		/**
+		 * Fails saving the measurement by sending an appropriate message over the event
+		 * bus.
+		 * 
+		 * @param res The result to fail for. This contains further information about
+		 *            the reason the serialization failed.
+		 * @see EventBusAddresses#SAVING_MEASUREMENT_FAILED
+		 */
+		private void fail(final AsyncResult<String> res) {
+			LOGGER.error("Unable to save measurement with id {}", res.cause(), measurement.getMeasurementIdentifier());
+			vertx.eventBus().publish(SAVING_MEASUREMENT_FAILED, res.cause().getMessage());
+		}
+
 	}
 
 }

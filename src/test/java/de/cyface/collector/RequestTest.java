@@ -22,26 +22,14 @@ import java.io.IOException;
 import java.net.ServerSocket;
 
 import org.junit.After;
-import org.junit.AfterClass;
 import org.junit.Before;
-import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
 import de.cyface.collector.handler.DefaultHandler;
-import de.flapdoodle.embed.mongo.MongodExecutable;
-import de.flapdoodle.embed.mongo.MongodProcess;
-import de.flapdoodle.embed.mongo.MongodStarter;
-import de.flapdoodle.embed.mongo.config.IMongodConfig;
-import de.flapdoodle.embed.mongo.config.MongodConfigBuilder;
-import de.flapdoodle.embed.mongo.config.Net;
-import de.flapdoodle.embed.mongo.distribution.Version;
-import de.flapdoodle.embed.process.runtime.Network;
 import io.vertx.core.DeploymentOptions;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
-import io.vertx.core.logging.Logger;
-import io.vertx.core.logging.LoggerFactory;
 import io.vertx.core.net.JksOptions;
 import io.vertx.ext.unit.Async;
 import io.vertx.ext.unit.TestContext;
@@ -49,7 +37,6 @@ import io.vertx.ext.unit.junit.VertxUnitRunner;
 import io.vertx.ext.web.client.WebClient;
 import io.vertx.ext.web.client.WebClientOptions;
 
-// TODO: Use mongo lifecycle management from Upload Test.
 /**
  * This tests the REST-API provided by the collector and used to upload the data
  * to the server.
@@ -59,12 +46,16 @@ import io.vertx.ext.web.client.WebClientOptions;
  * @version 2.0.0
  */
 @RunWith(VertxUnitRunner.class)
-public final class RequestTest {
-
+public final class RequestTest extends MongoTest {
 	/**
 	 * The test <code>Vertx</code> instance.
 	 */
 	private Vertx vertx;
+	/**
+	 * A Mongo database lifecycle handler. This provides the test with the
+	 * capabilities to run and shutdown a Mongo database for testing purposes.
+	 */
+	private MongoTest mongoTest;
 	/**
 	 * The port running the test API under.
 	 */
@@ -73,29 +64,7 @@ public final class RequestTest {
 	 * A <code>WebClient</code> to access the test API.
 	 */
 	private WebClient client;
-	/**
-	 * The test Mongo database.
-	 */
-	private static MongodProcess mongo;
-	/**
-	 * Logger used for objects of this class. To change its configuration, set
-	 * appropriate values in <code>vertx-default-jul-logging.properties</code>.
-	 */
-	private static final Logger LOGGER = LoggerFactory.getLogger(RequestTest.class);
-
-	/**
-	 * Sets up the Mongo database used for the test instance.
-	 * 
-	 * @throws IOException Fails the test if anything unexpected goes wrong.
-	 */
-	@BeforeClass
-	public static void setUpMongoDatabase() throws IOException {
-		MongodStarter starter = MongodStarter.getDefaultInstance();
-		IMongodConfig mongodConfig = new MongodConfigBuilder().version(Version.Main.PRODUCTION)
-				.net(new Net(TestUtils.MONGO_PORT, Network.localhostIsIPv6())).build();
-		MongodExecutable mongodExecutable = starter.prepare(mongodConfig);
-		mongo = mongodExecutable.start();
-	}
+	
 
 	/**
 	 * Deploys the {@link MainVerticle} in a test context.
@@ -105,13 +74,16 @@ public final class RequestTest {
 	 */
 	@Before
 	public void deployVerticle(final TestContext context) throws IOException {
+		
+		mongoTest = new MongoTest();
+		mongoTest.setUpMongoDatabase();
 
 		ServerSocket socket = new ServerSocket(0);
 		port = socket.getLocalPort();
 		socket.close();
 
 		JsonObject mongoDbConfig = new JsonObject()
-				.put("connection_string", "mongodb://localhost:" + TestUtils.MONGO_PORT).put("db_name", "cyface");
+				.put("connection_string", "mongodb://localhost:" + MongoTest.MONGO_PORT).put("db_name", "cyface");
 
 		JsonObject config = new JsonObject().put(Parameter.MONGO_DATA_DB.key(), mongoDbConfig)
 				.put(Parameter.MONGO_USER_DB.key(), mongoDbConfig).put(Parameter.HTTP_PORT.key(), port);
@@ -134,14 +106,7 @@ public final class RequestTest {
 	@After
 	public void stopVertx(final TestContext context) {
 		vertx.close(context.asyncAssertSuccess());
-	}
-
-	/**
-	 * Stops the test Mongo database after all tests have been finished.
-	 */
-	@AfterClass
-	public static void stopMongoDb() {
-		mongo.stop();
+		mongoTest.stopMongoDb();
 	}
 
 	/**

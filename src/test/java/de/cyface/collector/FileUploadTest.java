@@ -25,22 +25,10 @@ import java.util.Locale;
 import java.util.UUID;
 
 import org.junit.After;
-import org.junit.AfterClass;
 import org.junit.Before;
-import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
-import de.flapdoodle.embed.mongo.MongodExecutable;
-import de.flapdoodle.embed.mongo.MongodProcess;
-import de.flapdoodle.embed.mongo.MongodStarter;
-import de.flapdoodle.embed.mongo.config.IMongodConfig;
-import de.flapdoodle.embed.mongo.config.MongodConfigBuilder;
-import de.flapdoodle.embed.mongo.config.Net;
-import de.flapdoodle.embed.mongo.distribution.Version;
-import de.flapdoodle.embed.process.runtime.Network;
 import io.vertx.core.DeploymentOptions;
 import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
@@ -65,11 +53,15 @@ import io.vertx.ext.web.multipart.MultipartForm;
 @RunWith(VertxUnitRunner.class)
 public final class FileUploadTest {
 
-	private final static Logger LOGGER = LoggerFactory.getLogger(FileUploadTest.class);
 	/**
 	 * The test <code>Vertx</code> instance.
 	 */
 	private Vertx vertx;
+	/**
+	 * A Mongo database lifecycle handler. This provides the test with the
+	 * capabilities to run and shutdown a Mongo database for testing purposes.
+	 */
+	private MongoTest mongoTest;
 	/**
 	 * The port running the test API under.
 	 */
@@ -78,31 +70,18 @@ public final class FileUploadTest {
 	 * A <code>WebClient</code> to access the test API.
 	 */
 	private WebClient client;
+	/**
+	 * A globally unqiue identifier of the simulated upload device. The actual value
+	 * does not really matter.
+	 */
 	private String deviceIdentifier = UUID.randomUUID().toString();
+	/**
+	 * The measurement identifier used for the test measurement. The actual value
+	 * does not matter that much. It simulates a device wide unique identifier.
+	 */
 	private String measurementIdentifier = String.valueOf(1L);
 
 	private MultipartForm form = MultipartForm.create();
-	/**
-	 * The test Mongo database.
-	 */
-	private static MongodProcess mongo;
-	private static MongodExecutable mongodExecutable;
-
-	/**
-	 * Sets up the Mongo database used for the test instance.
-	 * 
-	 * @throws IOException Fails the test if anything unexpected goes wrong.
-	 */
-	@BeforeClass
-	public static void setUpMongoDatabase() throws IOException {
-		LOGGER.info("Begin setUpMongoDatabase");
-		MongodStarter starter = MongodStarter.getDefaultInstance();
-		IMongodConfig mongodConfig = new MongodConfigBuilder().version(Version.Main.PRODUCTION)
-				.net(new Net("localhost", TestUtils.MONGO_PORT, Network.localhostIsIPv6())).build();
-		mongodExecutable = starter.prepare(mongodConfig);
-		mongo = mongodExecutable.start();
-		LOGGER.info("End setUpMongoDatabase with {}", mongo);
-	}
 
 	/**
 	 * Deploys the {@link MainVerticle} in a test context.
@@ -111,14 +90,12 @@ public final class FileUploadTest {
 	 * @throws IOException Fails the test if anything unexpected goes wrong.
 	 */
 	private void deployVerticle(final TestContext context) throws IOException {
-		LOGGER.info("Begin deployVerticle");
-
 		ServerSocket socket = new ServerSocket(0);
 		port = socket.getLocalPort();
 		socket.close();
 
 		JsonObject mongoDbConfig = new JsonObject()
-				.put("connection_string", "mongodb://localhost:" + TestUtils.MONGO_PORT).put("db_name", "cyface");
+				.put("connection_string", "mongodb://localhost:" + MongoTest.MONGO_PORT).put("db_name", "cyface");
 
 		JsonObject config = new JsonObject().put(Parameter.MONGO_DATA_DB.key(), mongoDbConfig)
 				.put(Parameter.MONGO_USER_DB.key(), mongoDbConfig).put(Parameter.HTTP_PORT.key(), port);
@@ -131,12 +108,20 @@ public final class FileUploadTest {
 
 		client = WebClient.create(vertx, new WebClientOptions().setSsl(true)
 				.setTrustStoreOptions(new JksOptions().setPath(truststorePath).setPassword("secret")));
-		LOGGER.info("End deployVerticle");
 	}
 
+	/**
+	 * Initializes the environment for each test case with a mock Mongo Database and
+	 * a Vert.x set up for testing.
+	 * 
+	 * @param context The context of the test Vert.x.
+	 * @throws IOException Fails the test on unexpected exceptions.
+	 */
 	@Before
 	public void setUp(final TestContext context) throws IOException {
-		LOGGER.info("Begin setUp");
+		mongoTest = new MongoTest();
+		mongoTest.setUpMongoDatabase();
+
 		deployVerticle(context);
 
 		this.deviceIdentifier = UUID.randomUUID().toString();
@@ -147,8 +132,6 @@ public final class FileUploadTest {
 		form.attribute("measurementId", measurementIdentifier);
 		form.attribute("deviceType", "HTC Desire");
 		form.attribute("osVersion", "4.4.4");
-
-		LOGGER.info("End setUp");
 	}
 
 	/**
@@ -158,18 +141,8 @@ public final class FileUploadTest {
 	 */
 	@After
 	public void stopVertx(final TestContext context) {
-		LOGGER.info("Stopping vertx. Running mongo is {}", mongo);
 		vertx.close(context.asyncAssertSuccess());
-	}
-
-	/**
-	 * Stops the test Mongo database after all tests have been finished.
-	 */
-	@AfterClass
-	public static void stopMongoDb() {
-		LOGGER.info("Stopping mongo db {}", mongo);
-		mongo.stop();
-		mongodExecutable.stop();
+		mongoTest.stopMongoDb();
 	}
 
 	/**
@@ -180,9 +153,7 @@ public final class FileUploadTest {
 	 */
 	@Test
 	public void testPostFile(final TestContext context) throws Exception {
-		LOGGER.info("Begin testPostFile");
 		uploadAndCheckForSuccess(context, "/test.bin");
-		LOGGER.info("End testPostFile");
 	}
 
 	/**
@@ -192,11 +163,17 @@ public final class FileUploadTest {
 	 */
 	@Test
 	public void testPostLargeFile(final TestContext context) {
-		LOGGER.info("Begin testPostLargeFile");
 		uploadAndCheckForSuccess(context, "/iphone-neu.ccyf");
-		LOGGER.info("End testPostLargeFile");
 	}
 
+	/**
+	 * Uploads a file identified by a test resource location and checks that it was
+	 * uploaded successfully.
+	 * 
+	 * @param context              The Vert.x test context to use to upload the
+	 *                             file.
+	 * @param testFileResourceName A resource name of a file to upload for testing.
+	 */
 	private void uploadAndCheckForSuccess(final TestContext context, final String testFileResourceName) {
 		Async async = context.async();
 		final URL testFileResource = this.getClass().getResource(testFileResourceName);
@@ -207,7 +184,6 @@ public final class FileUploadTest {
 
 		EventBus eventBus = vertx.eventBus();
 		eventBus.consumer(EventBusAddresses.MEASUREMENT_SAVED, message -> {
-			LOGGER.debug("I have received a message: " + message.body());
 			async.complete();
 		});
 		eventBus.consumer(EventBusAddresses.SAVING_MEASUREMENT_FAILED, message -> {
@@ -226,7 +202,6 @@ public final class FileUploadTest {
 						context.assertEquals(ar.result().statusCode(), 201);
 						context.assertTrue(ar.succeeded());
 						context.assertNull(ar.cause());
-//						async.complete();
 					} else {
 						context.fail(ar.cause());
 					}
