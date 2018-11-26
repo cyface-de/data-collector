@@ -1,25 +1,10 @@
-/*
- * Copyright 2018 Cyface GmbH
- * 
- * This file is part of the Cyface Data Collector.
- *
- * The Cyface Data Collector is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- * 
- * The Cyface Data Collector is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with the Cyface Data Collector. If not, see <http://www.gnu.org/licenses/>.
- */
 package de.cyface.collector;
 
 import java.io.IOException;
 import java.net.ServerSocket;
+import java.net.URL;
+import java.util.Locale;
+import java.util.UUID;
 
 import org.junit.After;
 import org.junit.AfterClass;
@@ -27,8 +12,9 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import de.cyface.collector.handler.DefaultHandler;
 import de.flapdoodle.embed.mongo.MongodExecutable;
 import de.flapdoodle.embed.mongo.MongodProcess;
 import de.flapdoodle.embed.mongo.MongodStarter;
@@ -39,27 +25,21 @@ import de.flapdoodle.embed.mongo.distribution.Version;
 import de.flapdoodle.embed.process.runtime.Network;
 import io.vertx.core.DeploymentOptions;
 import io.vertx.core.Vertx;
+import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.JsonObject;
-import io.vertx.core.logging.Logger;
-import io.vertx.core.logging.LoggerFactory;
 import io.vertx.core.net.JksOptions;
 import io.vertx.ext.unit.Async;
 import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
+import io.vertx.ext.web.client.HttpRequest;
 import io.vertx.ext.web.client.WebClient;
 import io.vertx.ext.web.client.WebClientOptions;
+import io.vertx.ext.web.multipart.MultipartForm;
 
-// TODO: Use mongo lifecycle management from Upload Test.
-/**
- * This tests the REST-API provided by the collector and used to upload the data to the server.
- * 
- * @author Klemens Muthmann
- * @since 1.0.0
- * @version 2.0.0
- */
 @RunWith(VertxUnitRunner.class)
-public final class RequestTest {
+public final class FileUploadTest {
 
+    private final static Logger LOGGER = LoggerFactory.getLogger(FileUploadTest.class);
     /**
      * The test <code>Vertx</code> instance.
      */
@@ -72,15 +52,15 @@ public final class RequestTest {
      * A <code>WebClient</code> to access the test API.
      */
     private WebClient client;
+    private String deviceIdentifier = UUID.randomUUID().toString();
+    private String measurementIdentifier = String.valueOf(1L);
+
+    private MultipartForm form = MultipartForm.create();
     /**
      * The test Mongo database.
      */
     private static MongodProcess mongo;
-    /**
-     * Logger used for objects of this class. To change its configuration, set appropriate values in
-     * <code>vertx-default-jul-logging.properties</code>.
-     */
-    private static final Logger LOGGER = LoggerFactory.getLogger(RequestTest.class);
+    private static MongodExecutable mongodExecutable;
 
     /**
      * Sets up the Mongo database used for the test instance.
@@ -89,11 +69,13 @@ public final class RequestTest {
      */
     @BeforeClass
     public static void setUpMongoDatabase() throws IOException {
+        LOGGER.info("Begin setUpMongoDatabase");
         MongodStarter starter = MongodStarter.getDefaultInstance();
         IMongodConfig mongodConfig = new MongodConfigBuilder().version(Version.Main.PRODUCTION)
-                .net(new Net(TestUtils.MONGO_PORT, Network.localhostIsIPv6())).build();
-        MongodExecutable mongodExecutable = starter.prepare(mongodConfig);
+                .net(new Net("localhost", TestUtils.MONGO_PORT, Network.localhostIsIPv6())).build();
+        mongodExecutable = starter.prepare(mongodConfig);
         mongo = mongodExecutable.start();
+        LOGGER.info("End setUpMongoDatabase with {}", mongo);
     }
 
     /**
@@ -102,8 +84,8 @@ public final class RequestTest {
      * @param context The test context used to control the test <code>Vertx</code>.
      * @throws IOException Fails the test if anything unexpected goes wrong.
      */
-    @Before
-    public void deployVerticle(final TestContext context) throws IOException {
+    private void deployVerticle(final TestContext context) throws IOException {
+        LOGGER.info("Begin deployVerticle");
 
         ServerSocket socket = new ServerSocket(0);
         port = socket.getLocalPort();
@@ -123,6 +105,24 @@ public final class RequestTest {
 
         client = WebClient.create(vertx, new WebClientOptions().setSsl(true)
                 .setTrustStoreOptions(new JksOptions().setPath(truststorePath).setPassword("secret")));
+        LOGGER.info("End deployVerticle");
+    }
+
+    @Before
+    public void setUp(final TestContext context) throws IOException {
+        LOGGER.info("Begin setUp");
+        deployVerticle(context);
+
+        this.deviceIdentifier = UUID.randomUUID().toString();
+        this.measurementIdentifier = String.valueOf(1L);
+
+        this.form = MultipartForm.create();
+        form.attribute("deviceId", deviceIdentifier);
+        form.attribute("measurementId", measurementIdentifier);
+        form.attribute("deviceType", "HTC Desire");
+        form.attribute("osVersion", "4.4.4");
+
+        LOGGER.info("End setUp");
     }
 
     /**
@@ -132,6 +132,7 @@ public final class RequestTest {
      */
     @After
     public void stopVertx(final TestContext context) {
+        LOGGER.info("Stopping vertx. Running mongo is {}", mongo);
         vertx.close(context.asyncAssertSuccess());
     }
 
@@ -140,41 +141,64 @@ public final class RequestTest {
      */
     @AfterClass
     public static void stopMongoDb() {
+        LOGGER.info("Stopping mongo db {}", mongo);
         mongo.stop();
+        mongodExecutable.stop();
     }
 
     /**
-     * Tests the correct workings of the general functionality using the {@link DefaultHandler}.
+     * Tests uploading a file to the Vertx API.
      * 
      * @param context The test context for running <code>Vertx</code> under test.
-     * @throws Throwable Fails the test if anything unexpected happens.
+     * @throws Exception Fails the test if anything unexpected happens.
      */
     @Test
-    public void testDefaultHandler(final TestContext context) throws Throwable {
-        final Async async = context.async();
+    public void testPostFile(final TestContext context) throws Exception {
+        LOGGER.info("Begin testPostFile");
+         uploadAndCheckForSuccess(context, "/test.bin");
+        LOGGER.info("End testPostFile");
+    }
+
+    /**
+     * @param context
+     */
+    @Test
+    public void testPostLargeFile(final TestContext context) {
+        LOGGER.info("Begin testPostLargeFile");
+         uploadAndCheckForSuccess(context, "/iphone-neu.ccyf");
+        LOGGER.info("End testPostLargeFile");
+    }
+
+    private void uploadAndCheckForSuccess(final TestContext context, final String testFileResourceName) {
+        Async async = context.async();
+        final URL testFileResource = this.getClass().getResource(testFileResourceName);
+
+        form.binaryFileUpload("fileToUpload",
+                String.format(Locale.US, "%s_%s.cyf", deviceIdentifier, measurementIdentifier),
+                testFileResource.getFile(), "application/octet-stream");
 
         TestUtils.authenticate(client, authResponse -> {
             if (authResponse.succeeded()) {
                 context.assertEquals(authResponse.result().statusCode(), 200);
-                final String token = authResponse.result().bodyAsString();
+                final String authToken = authResponse.result().bodyAsString();
 
-                client.get(port, "localhost", "/api/v2").putHeader("Authorization", "Bearer " + token).ssl(true)
-                        .send(response -> {
-                            if (response.succeeded()) {
-                                context.assertEquals(response.result().statusCode(), 200);
-                                final String body = response.result().bodyAsString();
-                                context.assertTrue(body.contains("Cyface"));
-                            } else {
-                                context.fail();
-                            }
-                            async.complete();
-                        });
+                final HttpRequest<Buffer> builder = client.post(port, "localhost", "/api/v2/measurements").ssl(true);
+                builder.putHeader("Authorization", "Bearer " + authToken);
+                builder.sendMultipartForm(form, ar -> {
+                    if (ar.succeeded()) {
+                        context.assertEquals(ar.result().statusCode(), 201);
+                        context.assertTrue(ar.succeeded());
+                        context.assertNull(ar.cause());
+                        async.complete();
+                    } else {
+                        context.fail(ar.cause());
+                    }
+                });
             } else {
-                context.fail("Unable to authenticate");
+                context.fail(authResponse.cause());
             }
         }, port);
 
         async.await(3000L);
-
     }
 }

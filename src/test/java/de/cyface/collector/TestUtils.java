@@ -18,6 +18,13 @@
  */
 package de.cyface.collector;
 
+import io.vertx.core.AsyncResult;
+import io.vertx.core.Handler;
+import io.vertx.core.buffer.Buffer;
+import io.vertx.core.json.JsonObject;
+import io.vertx.ext.web.client.HttpResponse;
+import io.vertx.ext.web.client.WebClient;
+
 /**
  * Class providing static utility functionality used by the whole test suite.
  * 
@@ -36,6 +43,21 @@ final class TestUtils {
      */
     private TestUtils() {
         // Nothing to do here.
+    }
+    
+    /**
+     * Utility method used to get a new JWT token from the server.
+     * 
+     * @param client The client to use to access the server.
+     * @param handler <code>Handler</code> called when the response has returned.
+     * @param port The port running the test server on localhost to authenticate against.
+     */
+    static void authenticate(final WebClient client, final Handler<AsyncResult<HttpResponse<Buffer>>> handler, final int port) {
+        JsonObject body = new JsonObject();
+        body.put("username", "admin");
+        body.put("password", "secret");
+
+        client.post(port, "localhost", "/api/v2/login").ssl(true).sendJsonObject(body, handler);
     }
 
 }
