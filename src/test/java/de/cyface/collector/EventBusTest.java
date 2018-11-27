@@ -28,14 +28,6 @@ import org.junit.runner.RunWith;
 
 import de.cyface.collector.handler.FormAttributes;
 import de.cyface.collector.model.Measurement;
-import de.flapdoodle.embed.mongo.MongodExecutable;
-import de.flapdoodle.embed.mongo.MongodProcess;
-import de.flapdoodle.embed.mongo.MongodStarter;
-import de.flapdoodle.embed.mongo.config.IMongodConfig;
-import de.flapdoodle.embed.mongo.config.MongodConfigBuilder;
-import de.flapdoodle.embed.mongo.config.Net;
-import de.flapdoodle.embed.mongo.distribution.Version;
-import de.flapdoodle.embed.process.runtime.Network;
 import io.vertx.core.DeploymentOptions;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
@@ -51,7 +43,7 @@ import io.vertx.ext.unit.junit.VertxUnitRunner;
  * Tests individual verticles by sending appropriate messages using the Vert.x event bus.
  * 
  * @author Klemens Muthmann
- * @version 1.0.0
+ * @version 1.0.1
  * @since 2.0.0
  */
 @RunWith(VertxUnitRunner.class)
@@ -60,7 +52,7 @@ public final class EventBusTest {
     /**
      * Process providing a connection to the test Mongo database.
      */
-    private MongodProcess mongo;
+    private MongoTest mongoTest;
     /**
      * The <code>Vertx</code> used for testing the verticles.
      */
@@ -71,20 +63,6 @@ public final class EventBusTest {
     private JsonObject mongoConfiguration;
 
     /**
-     * Starts the Mongo database used for testing.
-     * 
-     * @throws IOException Fails the test if anything unexpected happens.
-     */
-    @Before
-    public void initialize() throws IOException {
-        MongodStarter starter = MongodStarter.getDefaultInstance();
-        IMongodConfig mongodConfig = new MongodConfigBuilder().version(Version.Main.PRODUCTION)
-                .net(new Net(TestUtils.MONGO_PORT, Network.localhostIsIPv6())).build();
-        MongodExecutable mongodExecutable = starter.prepare(mongodConfig);
-        mongo = mongodExecutable.start();
-    }
-
-    /**
      * Deploys the {@link SerializationVerticle} for testing purposes.
      * 
      * @param context The Vert.x context used for testing.
@@ -92,10 +70,13 @@ public final class EventBusTest {
      */
     @Before
     public void deployVerticle(final TestContext context) throws IOException {
+    	mongoTest = new MongoTest();
+    	mongoTest.setUpMongoDatabase();
+    	
         vertx = Vertx.vertx();
 
         mongoConfiguration = new JsonObject().put("db_name", "cyface").put("connection_string",
-                "mongodb://localhost:" + TestUtils.MONGO_PORT);
+                "mongodb://localhost:" + MongoTest.MONGO_PORT);
 
         DeploymentOptions options = new DeploymentOptions().setConfig(mongoConfiguration);
 
@@ -110,7 +91,7 @@ public final class EventBusTest {
     @After
     public void shutdown(final TestContext context) {
         vertx.close(context.asyncAssertSuccess());
-        mongo.stop();
+        mongoTest.stopMongoDb();
     }
 
     /**

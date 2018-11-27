@@ -37,6 +37,8 @@ ext {
   junitVersion = '4.12'
   flapdoodleVersion = '2.1.1'
   micrometerVersion = '1.0.6'
+  logbackVersion = '1.0.1'
+  commonsLangVersion = '3.8.1'
 }
 
 repositories {
@@ -71,6 +73,13 @@ dependencies {
   // Monitoring + Metrics
   implementation "io.vertx:vertx-micrometer-metrics:$vertxVersion"
   implementation "io.micrometer:micrometer-registry-prometheus:$micrometerVersion"
+  
+  // Logging
+  implementation "ch.qos.logback:logback-classic:$logbackVersion"
+  implementation "ch.qos.logback:logback-core:$logbackVersion"
+  
+  // Utility
+  implementation "org.apache.commons:commons-lang3:$commonsLangVersion"
 
   // Test Dependencies
   testImplementation "io.vertx:vertx-unit:$vertxVersion"
