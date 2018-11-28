@@ -37,7 +37,7 @@ ext {
   junitVersion = '4.12'
   flapdoodleVersion = '2.1.1'
   micrometerVersion = '1.0.6'
-  logbackVersion = '1.0.1'
+  logbackVersion = '1.2.3'
   commonsLangVersion = '3.8.1'
 }
 
