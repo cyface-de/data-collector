@@ -35,8 +35,8 @@ docker rmi collector_prometheus
 docker rmi collector_grafana
 
 printf "\nRemoving data from volumes\n"
-rm -r ./grafana/data/*
-rm -r ./prometheus/data/*
-rm -r ./data/*
-rm -r ./file-uploads/*
-rm -r ./user-data/*
+rm -r ./grafana/data
+rm -r ./grafana/logs
+rm -r ./prometheus/data
+rm -r ./data
+rm -r ./user-data
