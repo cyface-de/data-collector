@@ -29,5 +29,9 @@ RUN chmod +x /app/entrypoint.sh
 # Make port 8080 available to the world outside the container
 EXPOSE 8080
 
+# Install tooling required to check for running Mongo Database in entrypoint.sh
+RUN apt-get update && apt-get install -y \
+        netcat-openbsd
+
 # Run the collector when the container launches
 CMD ["./entrypoint.sh"]
