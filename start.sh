@@ -18,7 +18,12 @@
 #
 # version 1.0.0
 
-export CURRENT_UID=$(id -u):$(id -g)
+if [ -d "data" ] && [ -d "user-data" ] && [ -d "secrets" ] && [ -d "prometheus/data" ] && [ -d "grafana/data" ] && [ -d "grafana/logs" ]; then
+  # Control will enter here if $DIRECTORY exists.
+  export CURRENT_UID=$(id -u):$(id -g)
 
-# Start app
-docker-compose -p 'collector' up -d
+  # Start app
+  docker-compose -p 'collector' up -d
+else
+  echo "It seems you did not run the build script. Please call build.sh once prior to calling start.sh!"
+fi

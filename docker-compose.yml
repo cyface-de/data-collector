@@ -17,14 +17,12 @@
 #
 # version 1.0.0
 
-version: "3"
+version: "3.5"
 services:
     # Mongo Database Container
     mongo-data:
       container_name: collector_mongo-data
       image: mongo:4.0.3
-      networks:
-        - cyface
       volumes:
         - ./data:/data/db
       user: ${CURRENT_UID}
@@ -32,8 +30,6 @@ services:
     mongo-user:
       container_name: collector_mongo-user
       image: mongo:4.0.3
-      networks:
-        - cyface
       volumes:
         - ./user-data:/data/db
       user: ${CURRENT_UID}
@@ -44,8 +40,6 @@ services:
       build: .
       ports:
         - "127.0.0.1:8080:8080" # 127.0.0.1 avoids the manipulation of the host's ip-tables
-      networks:
-        - cyface
       volumes:
         - ./secrets:/app/secrets
       depends_on:
@@ -57,8 +51,6 @@ services:
     prometheus:
       container_name: collector_prometheus
       build: prometheus
-      networks:
-        - cyface
       volumes:
         - ./prometheus/data:/prometheus
       user: ${CURRENT_UID}
@@ -69,8 +61,6 @@ services:
       build: grafana
       ports:
         - "127.0.0.1:3000:3000" # 127.0.0.1 avoids the manipulation of the host's ip-tables
-      networks:
-        - cyface
       volumes:
         - ./grafana/data:/var/lib/grafana
         - ./grafana/logs:/var/log/grafana
@@ -80,4 +70,5 @@ services:
       user: ${CURRENT_UID}
 
 networks:
-    cyface:
+    default:
+        name: cyface

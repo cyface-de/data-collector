@@ -23,7 +23,7 @@ container which is build afterwards. This script also makes sure all required su
 This section describes how to execute the Cyface data collector.
 
 === Running from Docker
-Simply run `start.sh` inside the root of this project. This calls docker to bring up two Mongo database containers and a container running the Cyface data collector API.
+After you did build the system (see Building above) simply run `start.sh` inside the root of this project. This calls docker to bring up two Mongo database containers and a container running the Cyface data collector API.
 In addition it starts https://prometheus.io/[Prometheus] and https://grafana.com/[Grafana] as monitoring tools for the running server.
 
 Prometheus stores all the metrics data, while Grafana provides a dashboard for visualization.
@@ -98,6 +98,8 @@ To run directly from within your IDE you need to use the `de.cyface.collector.Ap
 == Runtime Administration
 A running Cyface data collector publishes metrics to a running https://prometheus.io/docs/prometheus/latest/getting_started/[Prometheus] instance. If you have used the docker setup, this should happen automatically. Per default Prometheus is exposed on **http://localhost:9090/graph**.
 
+=== Mongo Database Setup
+The following is not strictly necessary but advised if you run in production or if you encounter strange problems related to data persistence. Consider reading the https://docs.mongodb.com/manual/administration/[Mongo Database Administration Guide] and follow the advice mentioned there.
 
 == TODO
 * Make image available via docker hub
