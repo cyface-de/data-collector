@@ -45,7 +45,7 @@ import io.vertx.ext.web.RoutingContext;
  * measurements for persistent storage.
  * 
  * @author Klemens Muthmann
- * @version 1.0.0
+ * @version 1.0.1
  * @since 2.0.0
  */
 public final class MeasurementHandler implements Handler<RoutingContext> {
@@ -53,29 +53,29 @@ public final class MeasurementHandler implements Handler<RoutingContext> {
     /**
      * The logger for objects of this class. You can change its configuration by
      * adapting the values in
-     * <code>src/main/resources/vertx-default-jul-logging.properties</code>.
+     * <code>src/main/resources/logback.xml</code>.
      */
     private static final Logger LOGGER = LoggerFactory.getLogger(MeasurementHandler.class);
 
     @Override
-    public void handle(final RoutingContext context) {
+    public void handle(final RoutingContext ctx) {
         LOGGER.info("Received new measurement request.");
-        HttpServerRequest request = context.request();
+        HttpServerRequest request = ctx.request();
         String deviceId = request.getFormAttribute(DEVICE_ID.getValue());
         String deviceType = request.getFormAttribute(DEVICE_TYPE.getValue());
         String measurementId = request.getFormAttribute(MEASUREMENT_ID.getValue());
         String osVersion = request.getFormAttribute(OS_VERSION.getValue());
 
         Set<File> uploads = new HashSet<>();
-        context.fileUploads().forEach(upload -> uploads.add(new File(upload.uploadedFileName())));
+        ctx.fileUploads().forEach(upload -> uploads.add(new File(upload.uploadedFileName())));
 
-        HttpServerResponse response = context.response();
+        HttpServerResponse response = ctx.response();
 
         if (deviceId == null || deviceType == null || measurementId == null || osVersion == null
                 || uploads.size() == 0) {
-            response.setStatusCode(400);
+            ctx.fail(422);
         } else {
-            informAboutNew(new Measurement(deviceId, measurementId, osVersion, deviceType, uploads), context);
+            informAboutNew(new Measurement(deviceId, measurementId, osVersion, deviceType, uploads), ctx);
             response.setStatusCode(201);
         }
 

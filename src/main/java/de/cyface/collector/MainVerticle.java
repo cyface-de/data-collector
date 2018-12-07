@@ -17,16 +17,18 @@ package de.cyface.collector;
 import java.util.ArrayList;
 import java.util.List;
 
+import de.cyface.collector.handler.AuthenticationHandler;
 import de.cyface.collector.handler.DefaultHandler;
+import de.cyface.collector.handler.FailureHandler;
 import de.cyface.collector.handler.MeasurementHandler;
 import de.cyface.collector.model.Measurement;
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.DeploymentOptions;
 import io.vertx.core.Future;
+import io.vertx.core.http.HttpMethod;
 import io.vertx.core.http.HttpServer;
 import io.vertx.core.http.HttpServerOptions;
-import io.vertx.core.json.DecodeException;
 import io.vertx.core.json.JsonObject;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
@@ -35,7 +37,6 @@ import io.vertx.ext.auth.KeyStoreOptions;
 import io.vertx.ext.auth.jwt.JWTAuth;
 import io.vertx.ext.auth.jwt.JWTAuthOptions;
 import io.vertx.ext.auth.mongo.MongoAuth;
-import io.vertx.ext.jwt.JWTOptions;
 import io.vertx.ext.mongo.MongoClient;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.handler.AuthHandler;
@@ -56,13 +57,12 @@ public final class MainVerticle extends AbstractVerticle {
     /**
      * The <code>Logger</code> used for objects of this class. Configure it by
      * changing the settings in
-     * <code>src/main/resources/vertx-default-jul-logging.properties</code>.
+     * <code>src/main/resources/logback.xml</code>.
      */
     private static final Logger LOGGER = LoggerFactory.getLogger(MainVerticle.class);
 
     @Override
     public void start(final Future<Void> startFuture) throws Exception {
-
         prepareEventBus();
 
         deployVerticles();
@@ -96,7 +96,7 @@ public final class MainVerticle extends AbstractVerticle {
 
         // Set up authentication check
         final String keystorePath = this.getClass().getResource("/keystore.jceks").getFile();
-        String jwtKeystoreLocation = Parameter.JWT_KEYSTORE.stringValue(vertx, keystorePath);
+        final String jwtKeystoreLocation = Parameter.JWT_KEYSTORE.stringValue(vertx, keystorePath);
         final JWTAuthOptions config = new JWTAuthOptions()
                 .setKeyStore(new KeyStoreOptions().setPath(jwtKeystoreLocation)
                         .setPassword(Parameter.JWT_KEYSTORE_PASSWORD.stringValue(vertx, "secret")));
@@ -122,36 +122,15 @@ public final class MainVerticle extends AbstractVerticle {
         final Router mainRouter = Router.router(vertx);
         final Router v2ApiRouter = Router.router(vertx);
 
-        // Set up authentication route
-        v2ApiRouter.route("/login").handler(BodyHandler.create()).handler(ctx -> {
-            try {
-                JsonObject body = ctx.getBodyAsJson();
-                LOGGER.info("Receiving authentication request: " + body);
-                authProvider.authenticate(body, r -> {
-                    if (r.succeeded()) {
-                        LOGGER.info("Authentication successful!");
-                        String generatedToken = jwtAuthProvider.generateToken(body,
-                                new JWTOptions().setExpiresInSeconds(60));
-                        LOGGER.info("New JWT Token: " + generatedToken);
-                        // Returning the token as response body because the RequestTest fails to read the header
-                        // Returning the token as response header because Android fails to read the response body
-                        ctx.response().putHeader("Authorization", generatedToken).setStatusCode(200)
-                                .end(generatedToken);
-                    } else {
-                        ctx.response().setStatusCode(401).end();
-                    }
-                });
-            } catch (DecodeException e) {
-                LOGGER.error("Unable to decode body!", e);
-                ctx.response().setStatusCode(404).end();
-            }
-        });
-
         // Set up default routes
         mainRouter.route().handler(jwtAuthHandler);
-        mainRouter.route().last().handler(new DefaultHandler());
+        mainRouter.route().method(HttpMethod.GET).last().handler(new DefaultHandler());
+        mainRouter.route().failureHandler(new FailureHandler());
         mainRouter.mountSubRouter("/api/v2", v2ApiRouter);
 
+        // Set up v2 API
+        // Set up authentication route
+        v2ApiRouter.route("/login").handler(BodyHandler.create()).handler(new AuthenticationHandler(authProvider, jwtAuthProvider));
         // Set up Data Collector route
         v2ApiRouter.post("/measurements").handler(BodyHandler.create().setDeleteUploadedFilesOnEnd(false))
                 .handler(new MeasurementHandler());

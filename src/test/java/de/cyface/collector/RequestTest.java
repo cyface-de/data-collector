@@ -47,101 +47,127 @@ import io.vertx.ext.web.client.WebClientOptions;
  */
 @RunWith(VertxUnitRunner.class)
 public final class RequestTest extends MongoTest {
-	/**
-	 * The test <code>Vertx</code> instance.
-	 */
-	private Vertx vertx;
-	/**
-	 * A Mongo database lifecycle handler. This provides the test with the
-	 * capabilities to run and shutdown a Mongo database for testing purposes.
-	 */
-	private MongoTest mongoTest;
-	/**
-	 * The port running the test API under.
-	 */
-	private int port;
-	/**
-	 * A <code>WebClient</code> to access the test API.
-	 */
-	private WebClient client;
-	
+    /**
+     * The test <code>Vertx</code> instance.
+     */
+    private Vertx vertx;
+    /**
+     * A Mongo database lifecycle handler. This provides the test with the
+     * capabilities to run and shutdown a Mongo database for testing purposes.
+     */
+    private MongoTest mongoTest;
+    /**
+     * The port running the test API under.
+     */
+    private int port;
+    /**
+     * A <code>WebClient</code> to access the test API.
+     */
+    private WebClient client;
 
-	/**
-	 * Deploys the {@link MainVerticle} in a test context.
-	 * 
-	 * @param context The test context used to control the test <code>Vertx</code>.
-	 * @throws IOException Fails the test if anything unexpected goes wrong.
-	 */
-	@Before
-	public void deployVerticle(final TestContext context) throws IOException {
-		
-		mongoTest = new MongoTest();
-		mongoTest.setUpMongoDatabase();
+    /**
+     * Deploys the {@link MainVerticle} in a test context.
+     * 
+     * @param context The test context used to control the test <code>Vertx</code>.
+     * @throws IOException Fails the test if anything unexpected goes wrong.
+     */
+    @Before
+    public void deployVerticle(final TestContext context) throws IOException {
 
-		ServerSocket socket = new ServerSocket(0);
-		port = socket.getLocalPort();
-		socket.close();
+        mongoTest = new MongoTest();
+        mongoTest.setUpMongoDatabase();
 
-		JsonObject mongoDbConfig = new JsonObject()
-				.put("connection_string", "mongodb://localhost:" + MongoTest.MONGO_PORT).put("db_name", "cyface");
+        ServerSocket socket = new ServerSocket(0);
+        port = socket.getLocalPort();
+        socket.close();
 
-		JsonObject config = new JsonObject().put(Parameter.MONGO_DATA_DB.key(), mongoDbConfig)
-				.put(Parameter.MONGO_USER_DB.key(), mongoDbConfig).put(Parameter.HTTP_PORT.key(), port);
-		DeploymentOptions options = new DeploymentOptions().setConfig(config);
+        JsonObject mongoDbConfig = new JsonObject()
+                .put("connection_string", "mongodb://localhost:" + MongoTest.MONGO_PORT).put("db_name", "cyface");
 
-		vertx = Vertx.vertx();
-		vertx.deployVerticle(MainVerticle.class.getName(), options, context.asyncAssertSuccess());
+        JsonObject config = new JsonObject().put(Parameter.MONGO_DATA_DB.key(), mongoDbConfig)
+                .put(Parameter.MONGO_USER_DB.key(), mongoDbConfig).put(Parameter.HTTP_PORT.key(), port);
+        DeploymentOptions options = new DeploymentOptions().setConfig(config);
 
-		String truststorePath = this.getClass().getResource("/localhost.jks").getFile();
+        vertx = Vertx.vertx();
+        vertx.deployVerticle(MainVerticle.class.getName(), options, context.asyncAssertSuccess());
 
-		client = WebClient.create(vertx, new WebClientOptions().setSsl(true)
-				.setTrustStoreOptions(new JksOptions().setPath(truststorePath).setPassword("secret")));
-	}
+        String truststorePath = this.getClass().getResource("/localhost.jks").getFile();
 
-	/**
-	 * Stops the test <code>Vertx</code> instance.
-	 * 
-	 * @param context The test context for running <code>Vertx</code> under test.
-	 */
-	@After
-	public void stopVertx(final TestContext context) {
-		vertx.close(context.asyncAssertSuccess());
-		mongoTest.stopMongoDb();
-	}
+        client = WebClient.create(vertx, new WebClientOptions().setSsl(true)
+                .setTrustStoreOptions(new JksOptions().setPath(truststorePath).setPassword("secret")));
+    }
 
-	/**
-	 * Tests the correct workings of the general functionality using the
-	 * {@link DefaultHandler}.
-	 * 
-	 * @param context The test context for running <code>Vertx</code> under test.
-	 * @throws Throwable Fails the test if anything unexpected happens.
-	 */
-	@Test
-	public void testDefaultHandler(final TestContext context) throws Throwable {
-		final Async async = context.async();
+    /**
+     * Stops the test <code>Vertx</code> instance.
+     * 
+     * @param context The test context for running <code>Vertx</code> under test.
+     */
+    @After
+    public void stopVertx(final TestContext context) {
+        vertx.close(context.asyncAssertSuccess());
+        mongoTest.stopMongoDb();
+    }
 
-		TestUtils.authenticate(client, authResponse -> {
-			if (authResponse.succeeded()) {
-				context.assertEquals(authResponse.result().statusCode(), 200);
-				final String token = authResponse.result().bodyAsString();
+    /**
+     * Tests the correct workings of the general functionality using the
+     * {@link DefaultHandler}.
+     * 
+     * @param context The test context for running <code>Vertx</code> under test.
+     * @throws Throwable Fails the test if anything unexpected happens.
+     */
+    @Test
+    public void testDefaultHandler(final TestContext context) throws Throwable {
+        final Async async = context.async();
 
-				client.get(port, "localhost", "/api/v2").putHeader("Authorization", "Bearer " + token).ssl(true)
-						.send(response -> {
-							if (response.succeeded()) {
-								context.assertEquals(response.result().statusCode(), 200);
-								final String body = response.result().bodyAsString();
-								context.assertTrue(body.contains("Cyface"));
-							} else {
-								context.fail();
-							}
-							async.complete();
-						});
-			} else {
-				context.fail("Unable to authenticate");
-			}
-		}, port);
+        TestUtils.authenticate(client, authResponse -> {
+            if (authResponse.succeeded()) {
+                context.assertEquals(authResponse.result().statusCode(), 200);
+                final String token = authResponse.result().bodyAsString();
 
-		async.await(3000L);
+                client.get(port, "localhost", "/api/v2").putHeader("Authorization", "Bearer " + token).ssl(true)
+                        .send(response -> {
+                            if (response.succeeded()) {
+                                context.assertEquals(response.result().statusCode(), 200);
+                                final String body = response.result().bodyAsString();
+                                context.assertTrue(body.contains("Cyface"));
+                            } else {
+                                context.fail();
+                            }
+                            async.complete();
+                        });
+            } else {
+                context.fail("Unable to authenticate");
+            }
+        }, port);
 
-	}
+        async.await(3000L);
+
+    }
+
+    /**
+     * Tests that the default error handler correctly returns 404 status as response for a non valid
+     * request.
+     * 
+     * @param ctx The test context for running <code>Vertx</code> under test.
+     * @throws Throwable Fails the test if anything unexpected happens.
+     */
+    @Test
+    public void testErrorHandler(final TestContext ctx) throws Throwable {
+        final Async async = ctx.async();
+
+        TestUtils.authenticate(client, authResponse -> {
+            if (authResponse.succeeded()) {
+                ctx.assertEquals(authResponse.result().statusCode(), 200);
+                final String token = authResponse.result().bodyAsString();
+                client.post(port, "localhost", "/api/v2/measurements").putHeader("Authorization", "Bearer " + token)
+                        .ssl(true).send(response -> {
+                            ctx.assertEquals(404, response.result().statusCode());
+                            async.complete();
+                        });
+            } else {
+                ctx.fail("Unable to authenticate");
+            }
+        }, port);
+        async.await(3000L);
+    }
 }
