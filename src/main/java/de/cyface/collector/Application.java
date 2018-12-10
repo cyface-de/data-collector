@@ -35,14 +35,14 @@ import io.vertx.micrometer.VertxPrometheusOptions;
  * You may also provide additional parameters in JSON format as described in the <code>README.md</code> file.
  * 
  * @author Klemens Muthmann
- * @version 1.0.0
+ * @version 1.0.1
  * @since 2.0.0
  */
 public class Application extends Launcher {
 
     /**
      * The logger used for objects of this class. Change its configuration using
-     * <code>src/main/resources/vertx-default-jul-logging.properties</code>.
+     * <code>src/main/resources/logback.xml</code>.
      */
     private static final Logger LOGGER = LoggerFactory.getLogger(Application.class);
     /**

@@ -28,7 +28,7 @@ import io.vertx.ext.web.RoutingContext;
  * Handles all requests arriving at an unsupported endpoint.
  * 
  * @author Klemens Muthmann
- * @version 1.0.0
+ * @version 1.0.1
  * @since 2.0.0
  */
 public final class DefaultHandler implements Handler<RoutingContext> {
@@ -36,7 +36,7 @@ public final class DefaultHandler implements Handler<RoutingContext> {
     /**
      * The logger used for objects of this class. You can change its configuration
      * by changing the appropriate values in
-     * <code>src/main/resources/vertx-default-jul-logging.properties</code>.
+     * <code>src/main/resources/logback.xml</code>.
      */
     private static final Logger LOGGER = LoggerFactory.getLogger(DefaultHandler.class);
 

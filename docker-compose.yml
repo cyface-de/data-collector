@@ -71,4 +71,4 @@ services:
 
 networks:
     default:
-        name: cyface
+        name: cyface-collector
