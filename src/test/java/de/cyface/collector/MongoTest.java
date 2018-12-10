@@ -34,44 +34,54 @@ import de.flapdoodle.embed.process.runtime.Network;
  * The database is reinitialized after each restart.
  * 
  * @author Klemens Muthmann
- * @version 1.0.0
+ * @version 2.0.0
  * @since 2.0.0
  */
 class MongoTest {
-	/**
-	 * The port of the API endpoint providing access to the test Mongo database
-	 * instance.
-	 */
-	static final int MONGO_PORT = 12345;
-	/**
-	 * The test Mongo database. This must be shut down after finishing this Mongo
-	 * database run.
-	 */
-	private MongodProcess mongo;
-	/**
-	 * The executable running the <code>MongodProcess</code>. This must be shut down
-	 * after finishing this Mongo database run.
-	 */
-	private MongodExecutable mongodExecutable;
+    /**
+     * The test Mongo database. This must be shut down after finishing this Mongo
+     * database run.
+     */
+    private MongodProcess mongo;
+    /**
+     * The executable running the <code>MongodProcess</code>. This must be shut down
+     * after finishing this Mongo database run.
+     */
+    private MongodExecutable mongodExecutable;
 
-	/**
-	 * Sets up the Mongo database used for the test instance.
-	 * 
-	 * @throws IOException Fails the test if anything unexpected goes wrong.
-	 */
-	public void setUpMongoDatabase() throws IOException {
-		MongodStarter starter = MongodStarter.getDefaultInstance();
-		IMongodConfig mongodConfig = new MongodConfigBuilder().version(Version.Main.PRODUCTION)
-				.net(new Net("localhost", MONGO_PORT, Network.localhostIsIPv6())).build();
-		mongodExecutable = starter.prepare(mongodConfig);
-		mongo = mongodExecutable.start();
-	}
+    /**
+     * The port to run the test Mongo database under.
+     */
+    private int mongoPort;
 
-	/**
-	 * Stops the test Mongo database after all tests have been finished.
-	 */
-	public void stopMongoDb() {
-		mongo.stop();
-		mongodExecutable.stop();
-	}
+    /**
+     * @return The port to run the test Mongo database under.
+     */
+    public int getMongoPort() {
+        return mongoPort;
+    }
+
+    /**
+     * Sets up the Mongo database used for the test instance.
+     * 
+     * @param mongoPort The port to run the test Mongo database under.
+     * @throws IOException Fails the test if anything unexpected goes wrong.
+     */
+    public void setUpMongoDatabase(final int mongoPort) throws IOException {
+        this.mongoPort = mongoPort;
+        MongodStarter starter = MongodStarter.getDefaultInstance();
+        IMongodConfig mongodConfig = new MongodConfigBuilder().version(Version.Main.PRODUCTION)
+                .net(new Net("localhost", mongoPort, Network.localhostIsIPv6())).build();
+        mongodExecutable = starter.prepare(mongodConfig);
+        mongo = mongodExecutable.start();
+    }
+
+    /**
+     * Stops the test Mongo database after all tests have been finished and waits a little so that a new test may
+     * restart the database, without intererence.
+     */
+    public void stopMongoDb() {
+        mongo.stop();
+        mongodExecutable.stop();
+    }
 }

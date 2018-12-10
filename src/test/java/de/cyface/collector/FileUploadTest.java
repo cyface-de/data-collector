@@ -25,192 +25,197 @@ import java.util.Locale;
 import java.util.UUID;
 
 import org.junit.After;
+import org.junit.AfterClass;
 import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
-import io.vertx.core.DeploymentOptions;
 import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.eventbus.EventBus;
-import io.vertx.core.json.JsonObject;
-import io.vertx.core.net.JksOptions;
 import io.vertx.ext.unit.Async;
 import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
 import io.vertx.ext.web.client.HttpRequest;
 import io.vertx.ext.web.client.WebClient;
-import io.vertx.ext.web.client.WebClientOptions;
 import io.vertx.ext.web.multipart.MultipartForm;
 
 /**
  * Tests that uploading measurements to the Cyface API works as expected.
  * 
  * @author Klemens Muthmann
- * @version 1.0.0
+ * @version 2.0.0
  * @since 2.0.0
  */
 @RunWith(VertxUnitRunner.class)
 public final class FileUploadTest {
 
-	/**
-	 * The test <code>Vertx</code> instance.
-	 */
-	private Vertx vertx;
-	/**
-	 * A Mongo database lifecycle handler. This provides the test with the
-	 * capabilities to run and shutdown a Mongo database for testing purposes.
-	 */
-	private MongoTest mongoTest;
-	/**
-	 * The port running the test API under.
-	 */
-	private int port;
-	/**
-	 * A <code>WebClient</code> to access the test API.
-	 */
-	private WebClient client;
-	/**
-	 * A globally unqiue identifier of the simulated upload device. The actual value
-	 * does not really matter.
-	 */
-	private String deviceIdentifier = UUID.randomUUID().toString();
-	/**
-	 * The measurement identifier used for the test measurement. The actual value
-	 * does not matter that much. It simulates a device wide unique identifier.
-	 */
-	private String measurementIdentifier = String.valueOf(1L);
+    /**
+     * The test <code>Vertx</code> instance.
+     */
+    private Vertx vertx;
+    /**
+     * A Mongo database lifecycle handler. This provides the test with the
+     * capabilities to run and shutdown a Mongo database for testing purposes.
+     */
+    private static MongoTest mongoTest;
+    /**
+     * A client used to connect with the Cyface Data Collector.
+     */
+    private DataCollectorClient collectorClient;
+    /**
+     * A <code>WebClient</code> to access the test API.
+     */
+    private WebClient client;
+    /**
+     * A globally unqiue identifier of the simulated upload device. The actual value
+     * does not really matter.
+     */
+    private String deviceIdentifier = UUID.randomUUID().toString();
+    /**
+     * The measurement identifier used for the test measurement. The actual value
+     * does not matter that much. It simulates a device wide unique identifier.
+     */
+    private String measurementIdentifier = String.valueOf(1L);
 
-	private MultipartForm form = MultipartForm.create();
+    /**
+     * The Vert.x multipart form to upload.
+     */
+    private MultipartForm form = MultipartForm.create();
 
-	/**
-	 * Deploys the {@link MainVerticle} in a test context.
-	 * 
-	 * @param context The test context used to control the test <code>Vertx</code>.
-	 * @throws IOException Fails the test if anything unexpected goes wrong.
-	 */
-	private void deployVerticle(final TestContext context) throws IOException {
-		ServerSocket socket = new ServerSocket(0);
-		port = socket.getLocalPort();
-		socket.close();
+    /**
+     * Deploys the {@link MainVerticle} in a test context.
+     * 
+     * @param ctx The test context used to control the test <code>Vertx</code>.
+     * @throws IOException Fails the test if anything unexpected goes wrong.
+     */
+    private void deployVerticle(final TestContext ctx) throws IOException {
+        collectorClient = new DataCollectorClient();
+        vertx = Vertx.vertx();
+        client = collectorClient.createWebClient(vertx, ctx, mongoTest.getMongoPort());
+    }
 
-		JsonObject mongoDbConfig = new JsonObject()
-				.put("connection_string", "mongodb://localhost:" + MongoTest.MONGO_PORT).put("db_name", "cyface");
+    /**
+     * Boots the Mongo database before this test starts.
+     * 
+     * @throws IOException If no socket was available for the Mongo database.
+     */
+    @BeforeClass
+    public static void setUpMongoDatabase() throws IOException {
+        mongoTest = new MongoTest();
+        ServerSocket socket = new ServerSocket(0);
+        int mongoPort = socket.getLocalPort();
+        socket.close();
+        mongoTest.setUpMongoDatabase(mongoPort);
+    }
 
-		JsonObject config = new JsonObject().put(Parameter.MONGO_DATA_DB.key(), mongoDbConfig)
-				.put(Parameter.MONGO_USER_DB.key(), mongoDbConfig).put(Parameter.HTTP_PORT.key(), port);
-		DeploymentOptions options = new DeploymentOptions().setConfig(config);
+    /**
+     * Initializes the environment for each test case with a mock Mongo Database and
+     * a Vert.x set up for testing.
+     * 
+     * @param context The context of the test Vert.x.
+     * @throws IOException Fails the test on unexpected exceptions.
+     */
+    @Before
+    public void setUp(final TestContext context) throws IOException {
+        deployVerticle(context);
 
-		vertx = Vertx.vertx();
-		vertx.deployVerticle(MainVerticle.class.getName(), options, context.asyncAssertSuccess());
+        this.deviceIdentifier = UUID.randomUUID().toString();
+        this.measurementIdentifier = String.valueOf(1L);
 
-		String truststorePath = this.getClass().getResource("/localhost.jks").getFile();
+        this.form = MultipartForm.create();
+        form.attribute("deviceId", deviceIdentifier);
+        form.attribute("measurementId", measurementIdentifier);
+        form.attribute("deviceType", "HTC Desire");
+        form.attribute("osVersion", "4.4.4");
+    }
 
-		client = WebClient.create(vertx, new WebClientOptions().setSsl(true)
-				.setTrustStoreOptions(new JksOptions().setPath(truststorePath).setPassword("secret")));
-	}
+    /**
+     * Stops the test <code>Vertx</code> instance.
+     * 
+     * @param context The test context for running <code>Vertx</code> under test.
+     */
+    @After
+    public void stopVertx(final TestContext context) {
+        vertx.close(context.asyncAssertSuccess());
+    }
 
-	/**
-	 * Initializes the environment for each test case with a mock Mongo Database and
-	 * a Vert.x set up for testing.
-	 * 
-	 * @param context The context of the test Vert.x.
-	 * @throws IOException Fails the test on unexpected exceptions.
-	 */
-	@Before
-	public void setUp(final TestContext context) throws IOException {
-		mongoTest = new MongoTest();
-		mongoTest.setUpMongoDatabase();
+    /**
+     * Finishes the mongo database after this test has finished.
+     */
+    @AfterClass
+    public static void stopMongoDatabase() {
+        mongoTest.stopMongoDb();
+    }
 
-		deployVerticle(context);
+    /**
+     * Tests uploading a file to the Vertx API.
+     * 
+     * @param context The test context for running <code>Vertx</code> under test.
+     * @throws Exception Fails the test if anything unexpected happens.
+     */
+    @Test
+    public void testPostFile(final TestContext context) throws Exception {
+        uploadAndCheckForSuccess(context, "/test.bin");
+    }
 
-		this.deviceIdentifier = UUID.randomUUID().toString();
-		this.measurementIdentifier = String.valueOf(1L);
+    /**
+     * Tests that uploading a larger file works as expected.
+     * 
+     * @param context The test context for running <code>Vertx</code> under test.
+     */
+    @Test
+    public void testPostLargeFile(final TestContext context) {
+        uploadAndCheckForSuccess(context, "/iphone-neu.ccyf");
+    }
 
-		this.form = MultipartForm.create();
-		form.attribute("deviceId", deviceIdentifier);
-		form.attribute("measurementId", measurementIdentifier);
-		form.attribute("deviceType", "HTC Desire");
-		form.attribute("osVersion", "4.4.4");
-	}
+    /**
+     * Uploads a file identified by a test resource location and checks that it was
+     * uploaded successfully.
+     * 
+     * @param context The Vert.x test context to use to upload the
+     *            file.
+     * @param testFileResourceName A resource name of a file to upload for testing.
+     */
+    private void uploadAndCheckForSuccess(final TestContext context, final String testFileResourceName) {
+        Async async = context.async();
+        final URL testFileResource = this.getClass().getResource(testFileResourceName);
 
-	/**
-	 * Stops the test <code>Vertx</code> instance.
-	 * 
-	 * @param context The test context for running <code>Vertx</code> under test.
-	 */
-	@After
-	public void stopVertx(final TestContext context) {
-		vertx.close(context.asyncAssertSuccess());
-		mongoTest.stopMongoDb();
-	}
+        form.binaryFileUpload("fileToUpload",
+                String.format(Locale.US, "%s_%s.cyf", deviceIdentifier, measurementIdentifier),
+                testFileResource.getFile(), "application/octet-stream");
 
-	/**
-	 * Tests uploading a file to the Vertx API.
-	 * 
-	 * @param context The test context for running <code>Vertx</code> under test.
-	 * @throws Exception Fails the test if anything unexpected happens.
-	 */
-	@Test
-	public void testPostFile(final TestContext context) throws Exception {
-		uploadAndCheckForSuccess(context, "/test.bin");
-	}
+        EventBus eventBus = vertx.eventBus();
+        eventBus.consumer(EventBusAddresses.MEASUREMENT_SAVED, message -> {
+            async.complete();
+        });
+        eventBus.consumer(EventBusAddresses.SAVING_MEASUREMENT_FAILED, message -> {
+            context.fail("Unable to save measurement " + message.body());
+        });
 
-	/**
-	 * Tests that uploading a larger file works as expected.
-	 * 
-	 * @param context The test context for running <code>Vertx</code> under test.
-	 */
-	@Test
-	public void testPostLargeFile(final TestContext context) {
-		uploadAndCheckForSuccess(context, "/iphone-neu.ccyf");
-	}
+        TestUtils.authenticate(client, authResponse -> {
+            if (authResponse.succeeded()) {
+                context.assertEquals(authResponse.result().statusCode(), 200);
+                final String authToken = authResponse.result().bodyAsString();
 
-	/**
-	 * Uploads a file identified by a test resource location and checks that it was
-	 * uploaded successfully.
-	 * 
-	 * @param context              The Vert.x test context to use to upload the
-	 *                             file.
-	 * @param testFileResourceName A resource name of a file to upload for testing.
-	 */
-	private void uploadAndCheckForSuccess(final TestContext context, final String testFileResourceName) {
-		Async async = context.async();
-		final URL testFileResource = this.getClass().getResource(testFileResourceName);
+                final HttpRequest<Buffer> builder = client
+                        .post(collectorClient.getPort(), "localhost", "/api/v2/measurements").ssl(true);
+                builder.putHeader("Authorization", "Bearer " + authToken);
+                builder.sendMultipartForm(form, ar -> {
+                    if (ar.succeeded()) {
+                        context.assertEquals(ar.result().statusCode(), 201);
+                        context.assertTrue(ar.succeeded());
+                        context.assertNull(ar.cause());
+                    } else {
+                        context.fail(ar.cause());
+                    }
+                });
+            } else {
+                context.fail(authResponse.cause());
+            }
+        }, collectorClient.getPort());
 
-		form.binaryFileUpload("fileToUpload",
-				String.format(Locale.US, "%s_%s.cyf", deviceIdentifier, measurementIdentifier),
-				testFileResource.getFile(), "application/octet-stream");
-
-		EventBus eventBus = vertx.eventBus();
-		eventBus.consumer(EventBusAddresses.MEASUREMENT_SAVED, message -> {
-			async.complete();
-		});
-		eventBus.consumer(EventBusAddresses.SAVING_MEASUREMENT_FAILED, message -> {
-			context.fail("Unable to save measurement " + message.body());
-		});
-
-		TestUtils.authenticate(client, authResponse -> {
-			if (authResponse.succeeded()) {
-				context.assertEquals(authResponse.result().statusCode(), 200);
-				final String authToken = authResponse.result().bodyAsString();
-
-				final HttpRequest<Buffer> builder = client.post(port, "localhost", "/api/v2/measurements").ssl(true);
-				builder.putHeader("Authorization", "Bearer " + authToken);
-				builder.sendMultipartForm(form, ar -> {
-					if (ar.succeeded()) {
-						context.assertEquals(ar.result().statusCode(), 201);
-						context.assertTrue(ar.succeeded());
-						context.assertNull(ar.cause());
-					} else {
-						context.fail(ar.cause());
-					}
-				});
-			} else {
-				context.fail(authResponse.cause());
-			}
-		}, port);
-
-		async.await(3000L);
-	}
+        async.await(3000L);
+    }
 }

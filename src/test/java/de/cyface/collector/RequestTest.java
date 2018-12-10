@@ -22,20 +22,20 @@ import java.io.IOException;
 import java.net.ServerSocket;
 
 import org.junit.After;
+import org.junit.AfterClass;
 import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
 import de.cyface.collector.handler.DefaultHandler;
-import io.vertx.core.DeploymentOptions;
 import io.vertx.core.Vertx;
-import io.vertx.core.json.JsonObject;
-import io.vertx.core.net.JksOptions;
+import io.vertx.core.logging.Logger;
+import io.vertx.core.logging.LoggerFactory;
 import io.vertx.ext.unit.Async;
 import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
 import io.vertx.ext.web.client.WebClient;
-import io.vertx.ext.web.client.WebClientOptions;
 
 /**
  * This tests the REST-API provided by the collector and used to upload the data
@@ -47,6 +47,8 @@ import io.vertx.ext.web.client.WebClientOptions;
  */
 @RunWith(VertxUnitRunner.class)
 public final class RequestTest extends MongoTest {
+
+    private final Logger LOGGER = LoggerFactory.getLogger(RequestTest.class);
     /**
      * The test <code>Vertx</code> instance.
      */
@@ -55,46 +57,43 @@ public final class RequestTest extends MongoTest {
      * A Mongo database lifecycle handler. This provides the test with the
      * capabilities to run and shutdown a Mongo database for testing purposes.
      */
-    private MongoTest mongoTest;
+    private static MongoTest mongoTest;
     /**
-     * The port running the test API under.
+     * A client used to connect with the Cyface Data Collector.
      */
-    private int port;
+    private DataCollectorClient collectorClient;
     /**
      * A <code>WebClient</code> to access the test API.
      */
     private WebClient client;
 
     /**
+     * Boots the Mongo database before this test starts.
+     * 
+     * @throws IOException If no socket was available for the Mongo database.
+     */
+    @BeforeClass
+    public static void setupMongoDatabase() throws IOException {
+        mongoTest = new MongoTest();
+        ServerSocket socket = new ServerSocket(0);
+        int mongoPort = socket.getLocalPort();
+        socket.close();
+        mongoTest.setUpMongoDatabase(mongoPort);
+    }
+
+    /**
      * Deploys the {@link MainVerticle} in a test context.
      * 
-     * @param context The test context used to control the test <code>Vertx</code>.
+     * @param ctx The test context used to control the test <code>Vertx</code>.
      * @throws IOException Fails the test if anything unexpected goes wrong.
      */
     @Before
-    public void deployVerticle(final TestContext context) throws IOException {
-
-        mongoTest = new MongoTest();
-        mongoTest.setUpMongoDatabase();
-
-        ServerSocket socket = new ServerSocket(0);
-        port = socket.getLocalPort();
-        socket.close();
-
-        JsonObject mongoDbConfig = new JsonObject()
-                .put("connection_string", "mongodb://localhost:" + MongoTest.MONGO_PORT).put("db_name", "cyface");
-
-        JsonObject config = new JsonObject().put(Parameter.MONGO_DATA_DB.key(), mongoDbConfig)
-                .put(Parameter.MONGO_USER_DB.key(), mongoDbConfig).put(Parameter.HTTP_PORT.key(), port);
-        DeploymentOptions options = new DeploymentOptions().setConfig(config);
+    public void deployVerticle(final TestContext ctx) throws IOException {
 
         vertx = Vertx.vertx();
-        vertx.deployVerticle(MainVerticle.class.getName(), options, context.asyncAssertSuccess());
 
-        String truststorePath = this.getClass().getResource("/localhost.jks").getFile();
-
-        client = WebClient.create(vertx, new WebClientOptions().setSsl(true)
-                .setTrustStoreOptions(new JksOptions().setPath(truststorePath).setPassword("secret")));
+        collectorClient = new DataCollectorClient();
+        client = collectorClient.createWebClient(vertx, ctx, mongoTest.getMongoPort());
     }
 
     /**
@@ -105,6 +104,13 @@ public final class RequestTest extends MongoTest {
     @After
     public void stopVertx(final TestContext context) {
         vertx.close(context.asyncAssertSuccess());
+    }
+
+    /**
+     * Finishes the mongo database after this test has finished.
+     */
+    @AfterClass
+    public static void stopMongoDatabase() {
         mongoTest.stopMongoDb();
     }
 
@@ -123,9 +129,11 @@ public final class RequestTest extends MongoTest {
             if (authResponse.succeeded()) {
                 context.assertEquals(authResponse.result().statusCode(), 200);
                 final String token = authResponse.result().bodyAsString();
+                LOGGER.info("Auth token was {}", token);
+                LOGGER.info("{}", authResponse.result().headers().get("Authorization"));
 
-                client.get(port, "localhost", "/api/v2").putHeader("Authorization", "Bearer " + token).ssl(true)
-                        .send(response -> {
+                client.get(collectorClient.getPort(), "localhost", "/api/v2/")
+                        .putHeader("Authorization", "Bearer " + token).ssl(true).send(response -> {
                             if (response.succeeded()) {
                                 context.assertEquals(response.result().statusCode(), 200);
                                 final String body = response.result().bodyAsString();
@@ -138,7 +146,7 @@ public final class RequestTest extends MongoTest {
             } else {
                 context.fail("Unable to authenticate");
             }
-        }, port);
+        }, collectorClient.getPort());
 
         async.await(3000L);
 
@@ -159,15 +167,15 @@ public final class RequestTest extends MongoTest {
             if (authResponse.succeeded()) {
                 ctx.assertEquals(authResponse.result().statusCode(), 200);
                 final String token = authResponse.result().bodyAsString();
-                client.post(port, "localhost", "/api/v2/measurements").putHeader("Authorization", "Bearer " + token)
-                        .ssl(true).send(response -> {
+                client.post(collectorClient.getPort(), "localhost", "/api/v2/garbage")
+                        .putHeader("Authorization", "Bearer " + token).ssl(true).send(response -> {
                             ctx.assertEquals(404, response.result().statusCode());
                             async.complete();
                         });
             } else {
                 ctx.fail("Unable to authenticate");
             }
-        }, port);
+        }, collectorClient.getPort());
         async.await(3000L);
     }
 }

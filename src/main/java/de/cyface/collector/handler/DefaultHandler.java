@@ -28,7 +28,7 @@ import io.vertx.ext.web.RoutingContext;
  * Handles all requests arriving at an unsupported endpoint.
  * 
  * @author Klemens Muthmann
- * @version 1.0.1
+ * @version 1.0.2
  * @since 2.0.0
  */
 public final class DefaultHandler implements Handler<RoutingContext> {
@@ -49,7 +49,7 @@ public final class DefaultHandler implements Handler<RoutingContext> {
         response.putHeader("content-type", "text/plain");
 
         // Write to the response and end it
-        response.end("Cyface Data Collector");
+        response.setStatusCode(200).end("Cyface Data Collector");
     }
 
 }

@@ -19,6 +19,7 @@
 package de.cyface.collector;
 
 import java.io.IOException;
+import java.net.ServerSocket;
 import java.util.Collections;
 
 import org.junit.After;
@@ -43,7 +44,7 @@ import io.vertx.ext.unit.junit.VertxUnitRunner;
  * Tests individual verticles by sending appropriate messages using the Vert.x event bus.
  * 
  * @author Klemens Muthmann
- * @version 1.0.1
+ * @version 1.0.2
  * @since 2.0.0
  */
 @RunWith(VertxUnitRunner.class)
@@ -70,13 +71,16 @@ public final class EventBusTest {
      */
     @Before
     public void deployVerticle(final TestContext context) throws IOException {
-    	mongoTest = new MongoTest();
-    	mongoTest.setUpMongoDatabase();
-    	
+        mongoTest = new MongoTest();
+        ServerSocket socket = new ServerSocket(0);
+        int mongoPort = socket.getLocalPort();
+        socket.close();
+        mongoTest.setUpMongoDatabase(mongoPort);
+
         vertx = Vertx.vertx();
 
         mongoConfiguration = new JsonObject().put("db_name", "cyface").put("connection_string",
-                "mongodb://localhost:" + MongoTest.MONGO_PORT);
+                "mongodb://localhost:" + mongoPort);
 
         DeploymentOptions options = new DeploymentOptions().setConfig(mongoConfiguration);
 

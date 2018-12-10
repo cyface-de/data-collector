@@ -20,20 +20,18 @@ if [ -z $KEYSTORE_TLS_PASSWORD ]; then
     KEYSTORE_TLS_PASSWORD="secret"
 fi
 
-if [ -z $KEYSTORE_JWT_PASSWORD ]; then
-    KEYSTORE_JWT_PASSWORD="secret"
-fi
-
 if [ -e /app/secrets/keystore.tls.jks ]; then
     KEYSTORE_TLS="/app/secrets/keystore.tls.jks"
 else 
     KEYSTORE_TLS="localhost.jks"	
 fi
 
-if [ -e /app/secrets/keystore.jwt.jceks ]; then
-    KEYSTORE_JWT="/app/secrets/keystore.jwt.jceks"
-else 
-    KEYSTORE_JWT="keystore.jceks"
+if [ -z $JWT_PRIVATE_KEY_FILE_PATH ]; then
+    JWT_PRIVATE_KEY_FILE_PATH="/app/secrets/jwt/private_key.pem"
+fi
+
+if [  -z $JWT_PUBLIC_KEY_FILE_PATH ]; then
+	JWT_PUBLIC_KEY_FILE_PATH="/app/secrets/jwt/public.pem"
 fi
 
 echo "Loading keystore for TLS from: $KEYSTORE_TLS"
@@ -63,4 +61,4 @@ if [ $COUNTER -ge 10 ]; then
 fi
 
 echo "Starting API"
-java -Dvertx.cacheDirBase=/tmp/vertx-cache -jar collector-2.0.0-SNAPSHOT-fat.jar -conf "{\"keystore.jwt\":\"$KEYSTORE_JWT\",\"keystore.jwt.password\":\"$KEYSTORE_JWT_PASSWORD\",\"keystore.tls\":\"$KEYSTORE_TLS\",\"keystore.tls.password\":\"$KEYSTORE_TLS_PASSWORD\",\"metrics.enabled\":true,\"mongo.userdb\":{\"db_name\":\"cyface-user\",\"connection_string\":\"mongodb://mongo-user:27017\",\"data_source_name\":\"cyface-user\"},\"mongo.datadb\":{\"db_name\":\"cyface-data\",\"connection_string\":\"mongodb://mongo-data:27017\",\"data_source_name\":\"cyface-data\"}}"
+java -Dvertx.cacheDirBase=/tmp/vertx-cache -jar collector-2.0.0-SNAPSHOT-fat.jar -conf "{\"jwt.private\":\"$JWT_PRIVATE_KEY_FILE_PATH\",\"jwt.public\":\"$JWT_PUBLIC_KEY_FILE_PATH\",\"keystore.tls\":\"$KEYSTORE_TLS\",\"keystore.tls.password\":\"$KEYSTORE_TLS_PASSWORD\",\"metrics.enabled\":true,\"mongo.userdb\":{\"db_name\":\"cyface-user\",\"connection_string\":\"mongodb://mongo-user:27017\",\"data_source_name\":\"cyface-user\"},\"mongo.datadb\":{\"db_name\":\"cyface-data\",\"connection_string\":\"mongodb://mongo-data:27017\",\"data_source_name\":\"cyface-data\"}}"
