@@ -87,6 +87,12 @@ dependencies {
   testImplementation "io.vertx:vertx-web-client:$vertxVersion"
   // This is required to run an embedded Mongo instance for integration testing.
   testImplementation "de.flapdoodle.embed:de.flapdoodle.embed.mongo:$flapdoodleVersion"
+  testImplementation "guru.nidi.raml:raml-tester:0.8.4", {
+  	exclude group: 'com.fasterxml.jackson.core', module: 'jackson-core'
+  	exclude group: 'com.fasterxml.jackson.core', module: 'jackson-databind'
+  }
+  testImplementation "org.jboss.resteasy:resteasy-client:3.6.2.Final"
+  testImplementation "org.jboss.resteasy:resteasy-multipart-provider:3.6.2.Final"
 }
 
 
