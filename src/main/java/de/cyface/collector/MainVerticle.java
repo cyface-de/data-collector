@@ -14,8 +14,14 @@
  */
 package de.cyface.collector;
 
+import java.io.BufferedReader;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.InputStreamReader;
 import java.util.ArrayList;
-import java.util.List;
+
+import org.apache.commons.lang3.Validate;
 
 import de.cyface.collector.handler.AuthenticationHandler;
 import de.cyface.collector.handler.DefaultHandler;
@@ -24,22 +30,22 @@ import de.cyface.collector.handler.MeasurementHandler;
 import de.cyface.collector.model.Measurement;
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.AsyncResult;
+import io.vertx.core.CompositeFuture;
 import io.vertx.core.DeploymentOptions;
 import io.vertx.core.Future;
-import io.vertx.core.http.HttpMethod;
 import io.vertx.core.http.HttpServer;
 import io.vertx.core.http.HttpServerOptions;
 import io.vertx.core.json.JsonObject;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
 import io.vertx.core.net.JksOptions;
-import io.vertx.ext.auth.KeyStoreOptions;
+import io.vertx.ext.auth.PubSecKeyOptions;
 import io.vertx.ext.auth.jwt.JWTAuth;
 import io.vertx.ext.auth.jwt.JWTAuthOptions;
+import io.vertx.ext.auth.mongo.HashAlgorithm;
 import io.vertx.ext.auth.mongo.MongoAuth;
 import io.vertx.ext.mongo.MongoClient;
 import io.vertx.ext.web.Router;
-import io.vertx.ext.web.handler.AuthHandler;
 import io.vertx.ext.web.handler.BodyHandler;
 import io.vertx.ext.web.handler.JWTAuthHandler;
 
@@ -49,7 +55,7 @@ import io.vertx.ext.web.handler.JWTAuthHandler;
  *
  * @author Klemens Muthmann
  * @author Armin Schnabel
- * @version 1.0.0
+ * @version 1.1.0
  * @since 2.0.0
  */
 public final class MainVerticle extends AbstractVerticle {
@@ -61,15 +67,55 @@ public final class MainVerticle extends AbstractVerticle {
      */
     private static final Logger LOGGER = LoggerFactory.getLogger(MainVerticle.class);
 
+    /**
+     * The hashing algorithm used for public and private keys to generate and check JWT tokens.
+     */
+    public static final String JWT_HASH_ALGORITHM = "RS256";
+
     @Override
     public void start(final Future<Void> startFuture) throws Exception {
         prepareEventBus();
 
-        deployVerticles();
+        JsonObject mongoDatabaseConfiguration = Parameter.MONGO_DATA_DB.jsonValue(vertx, config());
+        deployVerticles(mongoDatabaseConfiguration);
 
-        final Router router = setupRoutes();
+        final String publicKey = extractKey(Parameter.JWT_PUBLIC_KEY_FILE_PATH);
+        Validate.notNull(publicKey,
+                "Unable to load public key for JWT authentication. Did you provide a valid PEM file using the parameter "
+                        + Parameter.JWT_PUBLIC_KEY_FILE_PATH.key() + ".");
+        final String privateKey = extractKey(Parameter.JWT_PRIVATE_KEY_FILE_PATH);
+        Validate.notNull(privateKey,
+                "Unable to load private key for JWT authentication. Did you provide a valid PEM file using the parameter "
+                        + Parameter.JWT_PRIVATE_KEY_FILE_PATH.key() + ".");
+        final JsonObject mongoUserDatabaseConfiguration = Parameter.MONGO_USER_DB.jsonValue(vertx, config());
+        final MongoAuth authProvider = buildMongoAuthProvider(mongoUserDatabaseConfiguration);
+        final Router router = setupRoutes(publicKey, privateKey, authProvider);
 
-        startHttpServer(router, startFuture);
+        final int httpPort = Parameter.HTTP_PORT.intValue(vertx, 8080);
+        final String defaultCertificateFile = this.getClass().getResource("/localhost.jks").getFile();
+        final String certificateFile = Parameter.TLS_KEYSTORE.stringValue(vertx, defaultCertificateFile);
+        final String certificateFilePassword = Parameter.TLS_KEYSTORE_PASSWORD.stringValue(vertx, "secret");
+        final Future<Void> serverStartFuture = Future.future();
+        startHttpServer(router, serverStartFuture, httpPort, certificateFile, certificateFilePassword);
+
+        // TODO: Remove before going into production Deletes all users and creates admin
+        // account
+        final Future<Void> defaultUserCreatedFuture = Future.future();
+        final MongoClient client = SerializationVerticle.createSharedMongoClient(vertx, mongoUserDatabaseConfiguration);
+        client.removeDocuments("user", new JsonObject(), r -> {
+            authProvider.insertUser("admin", "secret", new ArrayList<>(), new ArrayList<>(), ir -> {
+                LOGGER.info("Identifier of new user id: " + ir);
+                defaultUserCreatedFuture.complete();
+            });
+        });
+        final CompositeFuture startUpFinishedFuture = CompositeFuture.all(serverStartFuture, defaultUserCreatedFuture);
+        startUpFinishedFuture.setHandler(r -> {
+            if (r.succeeded()) {
+                startFuture.complete();
+            } else {
+                startFuture.fail(r.cause());
+            }
+        });
     }
 
     /**
@@ -82,81 +128,84 @@ public final class MainVerticle extends AbstractVerticle {
     /**
      * Deploys all additional <code>Verticle</code> objects required by the
      * application.
+     * 
+     * @param mongoDatabaseConfiguration The JSON configuration for the mongo database to store the uploaded data to.
      */
-    private void deployVerticles() {
-        final DeploymentOptions options = new DeploymentOptions().setWorker(true)
-                .setConfig(Parameter.MONGO_DATA_DB.jsonValue(vertx, config()));
+    private void deployVerticles(final JsonObject mongoDatabaseConfiguration) {
+        final DeploymentOptions options = new DeploymentOptions().setWorker(true).setConfig(mongoDatabaseConfiguration);
         vertx.deployVerticle(SerializationVerticle.class, options);
     }
 
     /**
+     * Initializes all the routes available via the Cyface Data Collector.
+     * 
+     * @param publicKey The public key used to check the validity of JWT tokens used for authentication.
+     * @param privateKey The private key used to issue new valid JWT tokens.
+     * @param mongoAuthProvider Authentication provider used to check for valid user accounts used to generate new JWT
+     *            token.
      * @return The Vertx router used by this project.
      */
-    private Router setupRoutes() {
+    private Router setupRoutes(final String publicKey, final String privateKey, final MongoAuth mongoAuthProvider) {
 
         // Set up authentication check
-        final String keystorePath = this.getClass().getResource("/keystore.jceks").getFile();
-        final String jwtKeystoreLocation = Parameter.JWT_KEYSTORE.stringValue(vertx, keystorePath);
-        final JWTAuthOptions config = new JWTAuthOptions()
-                .setKeyStore(new KeyStoreOptions().setPath(jwtKeystoreLocation)
-                        .setPassword(Parameter.JWT_KEYSTORE_PASSWORD.stringValue(vertx, "secret")));
-
+        PubSecKeyOptions keyOptions = new PubSecKeyOptions().setAlgorithm(JWT_HASH_ALGORITHM).setPublicKey(publicKey)
+                .setSecretKey(privateKey);
+        final JWTAuthOptions config = new JWTAuthOptions().addPubSecKey(keyOptions);
         final JWTAuth jwtAuthProvider = JWTAuth.create(vertx, config);
-        final AuthHandler jwtAuthHandler = JWTAuthHandler.create(jwtAuthProvider, "/api/v2/login");
-
-        // Create test users
-        final JsonObject mongoClientConfig = Parameter.MONGO_USER_DB.jsonValue(vertx, config());
-        final MongoClient client = SerializationVerticle.createSharedMongoClient(vertx, mongoClientConfig);
-        final JsonObject authProperties = new JsonObject();
-        final MongoAuth authProvider = MongoAuth.create(client, authProperties);
-        final List<String> roles = new ArrayList<>();
-        final List<String> permissions = new ArrayList<>();
-        // TODO: Remove before going into production Deletes all users and creates admin
-        // account
-        client.removeDocuments("user", new JsonObject(), r -> {
-            authProvider.insertUser("admin", "secret", roles, permissions,
-                    ir -> LOGGER.info("Identifier of new user id: " + ir));
-        });
 
         // Routing
         final Router mainRouter = Router.router(vertx);
         final Router v2ApiRouter = Router.router(vertx);
 
         // Set up default routes
-        mainRouter.route().handler(jwtAuthHandler);
-        mainRouter.route().method(HttpMethod.GET).last().handler(new DefaultHandler());
+        mainRouter.route().handler(JWTAuthHandler.create(jwtAuthProvider, "/api/v2/login"));
         mainRouter.route().failureHandler(new FailureHandler());
         mainRouter.mountSubRouter("/api/v2", v2ApiRouter);
 
         // Set up v2 API
+        v2ApiRouter.route("/").last().handler(new DefaultHandler());
         // Set up authentication route
-        v2ApiRouter.route("/login").handler(BodyHandler.create()).handler(new AuthenticationHandler(authProvider, jwtAuthProvider));
-        // Set up Data Collector route
+        v2ApiRouter.route("/login").handler(BodyHandler.create())
+                .handler(new AuthenticationHandler(mongoAuthProvider, jwtAuthProvider));
+        // Set up data collector route
         v2ApiRouter.post("/measurements").handler(BodyHandler.create().setDeleteUploadedFilesOnEnd(false))
                 .handler(new MeasurementHandler());
-
-        // Handle unsupported routes
-        v2ApiRouter.route().last().handler(new DefaultHandler());
 
         return mainRouter;
     }
 
     /**
+     * @param mongoUserDatabaseConfiguration The database configuration for the Mongo database containing the user
+     *            accounts available on this Cyface Data Collector.
+     * @return Authentication provider used to check for valid user accounts used to generate new JWT
+     *            token.
+     */
+    private MongoAuth buildMongoAuthProvider(final JsonObject mongoUserDatabaseConfiguration) {
+        final MongoClient client = SerializationVerticle.createSharedMongoClient(vertx, mongoUserDatabaseConfiguration);
+        final JsonObject authProperties = new JsonObject();
+        final MongoAuth authProvider = MongoAuth.create(client, authProperties);
+        authProvider.setHashAlgorithm(HashAlgorithm.SHA512);
+
+        return authProvider;
+    }
+
+    /**
      * Starts the HTTP server provided by this application. This server runs the
-     * Cyface collector REST-API.
+     * Cyface Collector REST-API.
      *
      * @param router The router for all the endpoints the HTTP server should
      *            serve.
      * @param startFuture Informs the caller about the successful or failed start of
      *            the server.
+     * @param httpPort The HTTP port to run the server at.
+     * @param certificateFile The file used to encrypt communication using HTTPS for every request to this server.
+     * @param certificateFilePassword The password securing the file specified by <code>certificateFile</code>.
      */
-    private void startHttpServer(final Router router, final Future<Void> startFuture) {
-        final int httpPort = Parameter.HTTP_PORT.intValue(vertx, 8080);
-        final String defaultCertificateFile = this.getClass().getResource("/localhost.jks").getFile();
-        final String certificateFile = Parameter.TLS_KEYSTORE.stringValue(vertx, defaultCertificateFile);
+    private void startHttpServer(final Router router, final Future<Void> startFuture, final int httpPort,
+            final String certificateFile, final String certificateFilePassword) {
 
-        final HttpServerOptions options = new HttpServerOptions().setSsl(true).setKeyStoreOptions(new JksOptions()
-                .setPath(certificateFile).setPassword(Parameter.TLS_KEYSTORE_PASSWORD.stringValue(vertx, "secret")));
+        final HttpServerOptions options = new HttpServerOptions().setSsl(true)
+                .setKeyStoreOptions(new JksOptions().setPath(certificateFile).setPassword(certificateFilePassword));
 
         vertx.createHttpServer(options).requestHandler(router::accept).listen(httpPort,
                 serverStartup -> completeStartup(serverStartup, startFuture));
@@ -175,5 +224,37 @@ public final class MainVerticle extends AbstractVerticle {
         } else {
             future.fail(serverStartup.cause());
         }
+    }
+
+    /**
+     * Extracts a key from a PEM keyfile.
+     * 
+     * @param keyParameter The Vertx configuration parameter specifying the location of the file containing the key.
+     * @return The extracted key.
+     * @throws FileNotFoundException If the key file was not found.
+     * @throws IOException If the key file was not accessible.
+     */
+    private String extractKey(final Parameter keyParameter) throws FileNotFoundException, IOException {
+        final String keyFilePath = keyParameter.stringValue(vertx, null);
+        if (keyFilePath == null) {
+            return null;
+        }
+
+        final StringBuilder keyBuilder = new StringBuilder();
+        try (BufferedReader keyFileInput = new BufferedReader(
+                new InputStreamReader(new FileInputStream(keyFilePath), "UTF-8"));) {
+
+            String line = keyFileInput.readLine();
+            while (line != null) {
+                line = keyFileInput.readLine();
+                if (line == null || line.startsWith("-----") || line.isEmpty()) {
+                    continue;
+                } else {
+                    keyBuilder.append(line);
+                }
+            }
+
+        }
+        return keyBuilder.toString();
     }
 }

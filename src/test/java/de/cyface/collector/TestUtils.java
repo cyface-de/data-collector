@@ -54,5 +54,4 @@ final class TestUtils {
 
         client.post(port, "localhost", "/api/v2/login").ssl(true).sendJsonObject(body, handler);
     }
-
 }

@@ -56,7 +56,7 @@ import io.vertx.ext.mongo.MongoClient;
  * system and stores the to the MongoDB for persistent storage.
  * 
  * @author Klemens Muthmann
- * @version 1.1.0
+ * @version 1.1.1
  * @since 2.0.0
  */
 public final class SerializationVerticle extends AbstractVerticle implements Handler<Message<Measurement>> {
@@ -170,6 +170,7 @@ public final class SerializationVerticle extends AbstractVerticle implements Han
                             future.complete();
                         });
                     } catch (FileNotFoundException e) {
+                        LOGGER.error("Error during serialization.", e);
                         future.fail(e);
                     }
                 });
@@ -178,10 +179,12 @@ public final class SerializationVerticle extends AbstractVerticle implements Han
                     if (result.succeeded()) {
                         vertx.eventBus().publish(MEASUREMENT_SAVED, id);
                     } else {
+                        LOGGER.error("Error during serialization.", res.cause());
                         fail(res);
                     }
                 });
             } else {
+                LOGGER.error("Error during serialization.", res.cause());
                 fail(res);
             }
 

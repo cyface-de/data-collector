@@ -3,18 +3,18 @@
  * 
  * This file is part of the Cyface Data Collector.
  *
- *  The Cyface Data Collector is free software: you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License as published by
- *  the Free Software Foundation, either version 3 of the License, or
- *  (at your option) any later version.
- *  
- *  The Cyface Data Collector is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU General Public License for more details.
+ * The Cyface Data Collector is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ * 
+ * The Cyface Data Collector is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
  *
- *  You should have received a copy of the GNU General Public License
- *  along with the Cyface Data Collector.  If not, see <http://www.gnu.org/licenses/>.
+ * You should have received a copy of the GNU General Public License
+ * along with the Cyface Data Collector. If not, see <http://www.gnu.org/licenses/>.
  */
 package de.cyface.collector;
 
@@ -28,18 +28,18 @@ import io.vertx.core.logging.LoggerFactory;
  * to configure the application.
  * 
  * @author Klemens Muthmann
- * @version 1.1.0
+ * @version 2.0.0
  * @since 2.0.0
  */
 public enum Parameter {
     /**
-     * The location of the keystore used to sign JWT tokens.
+     * The location of the PEM file containing the private key to issue new JWT tokens.
      */
-    JWT_KEYSTORE("keystore.jwt"),
+    JWT_PRIVATE_KEY_FILE_PATH("jwt.private"),
     /**
-     * The parameter used to provide the keystore password for the JWT keystore.
+     * The location of the PEM file containing the public key to check JWT tokens for validity.
      */
-    JWT_KEYSTORE_PASSWORD("keystore.jwt.password"),
+    JWT_PUBLIC_KEY_FILE_PATH("jwt.public"),
     /**
      * The server port the API shall be available at.
      */
@@ -67,7 +67,7 @@ public enum Parameter {
      * "https://vertx.io/docs/vertx-mongo-client/java/#_configuring_the_client">
      * https://vertx.io/docs/vertx-mongo-client/java/#_configuring_the_client</a>.
      */
-    MONGO_DATA_DB("mongo.datadb"), 
+    MONGO_DATA_DB("mongo.datadb"),
     /**
      * A parameter telling the system, whether it should publish metrics using Micrometer to Prometheus or not.
      */
@@ -115,6 +115,20 @@ public enum Parameter {
     public String stringValue(final Vertx vertx, final String defaultValue) {
         String value = vertx.getOrCreateContext().config().getString(key);
         final String ret = value == null ? defaultValue : value;
+        LOGGER.info("Using configuration value: " + ret + " for key: " + key + ".");
+        return ret;
+    }
+
+    /**
+     * Provides the string value of this parameter from the Vert.x configuration or
+     * the <code>null</code> if there was none.
+     * 
+     * @param vertx The <code>Vertx</code> instance containing the
+     *            configuration.
+     * @return Either the value of the parameter as a <code>String</code> or <code>null</code>.
+     */
+    public String stringValue(final Vertx vertx) {
+        String ret = vertx.getOrCreateContext().config().getString(key);
         LOGGER.info("Using configuration value: " + ret + " for key: " + key + ".");
         return ret;
     }

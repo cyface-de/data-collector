@@ -2,6 +2,7 @@ package de.cyface.collector.handler;
 
 import org.apache.commons.lang3.Validate;
 
+import de.cyface.collector.MainVerticle;
 import io.vertx.core.Handler;
 import io.vertx.core.json.DecodeException;
 import io.vertx.core.json.JsonObject;
@@ -18,7 +19,7 @@ import io.vertx.ext.web.RoutingContext;
  * can then be used to transmit the actual request.
  * 
  * @author Klemens Muthmann
- * @version 1.0.0
+ * @version 1.0.1
  * @since 2.0.0
  */
 public class AuthenticationHandler implements Handler<RoutingContext> {
@@ -47,8 +48,9 @@ public class AuthenticationHandler implements Handler<RoutingContext> {
             authProvider.authenticate(body, r -> {
                 if (r.succeeded()) {
                     LOGGER.info("Authentication successful!");
+                    LOGGER.info(body);
                     String generatedToken = jwtAuthProvider.generateToken(body,
-                            new JWTOptions().setExpiresInSeconds(60));
+                            new JWTOptions().setExpiresInSeconds(60).setAlgorithm(MainVerticle.JWT_HASH_ALGORITHM));
                     LOGGER.info("New JWT Token: " + generatedToken);
                     // Returning the token as response body because the RequestTest fails to read the header
                     // Returning the token as response header because Android fails to read the response body

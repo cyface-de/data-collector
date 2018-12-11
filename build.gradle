@@ -35,7 +35,7 @@ ext {
   // We need to use the SNAPSHOT version, since testing of multipart form uploads is not supported with older versions.
   vertxVersion = '3.6.0'
   junitVersion = '4.12'
-  flapdoodleVersion = '2.1.1'
+  flapdoodleVersion = '2.2.0'
   micrometerVersion = '1.0.6'
   logbackVersion = '1.2.3'
   commonsLangVersion = '3.8.1'
