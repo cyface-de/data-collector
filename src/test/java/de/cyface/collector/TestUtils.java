@@ -29,7 +29,7 @@ import io.vertx.ext.web.client.WebClient;
  * Class providing static utility functionality used by the whole test suite.
  * 
  * @author Klemens Muthmann
- * @version 2.0.0
+ * @version 2.1.0
  * @since 2.0.0
  */
 final class TestUtils {
@@ -52,6 +52,6 @@ final class TestUtils {
         body.put("username", "admin");
         body.put("password", "secret");
 
-        client.post(port, "localhost", "/api/v2/login").ssl(true).sendJsonObject(body, handler);
+        client.post(port, "localhost", "/api/v2/login").sendJsonObject(body, handler);
     }
 }

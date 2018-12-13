@@ -22,22 +22,25 @@ services:
     # Mongo Database Container
     mongo-data:
       container_name: collector_mongo-data
-      image: mongo:4.0.3
+      image: mongo:4.0.4
       volumes:
-        - ./data:/data/db
-      user: ${CURRENT_UID}
+        - type: volume
+          source: mongo-data-db
+          target: /data/db
         
     mongo-user:
       container_name: collector_mongo-user
-      image: mongo:4.0.3
+      image: mongo:4.0.4
       volumes:
-        - ./user-data:/data/db
-      user: ${CURRENT_UID}
+        - type: volume
+          source: mongo-user-db 
+          target: /data/db
 
     # The Cyface Collector API Container
     api:
       container_name: collector_api
       build: .
+      image: cyfacede/collector:2.0.0
       ports:
         - "127.0.0.1:8080:8080" # 127.0.0.1 avoids the manipulation of the host's ip-tables
       volumes:
@@ -45,29 +48,41 @@ services:
       depends_on:
         - mongo-data
         - mongo-user
-      # user: ${CURRENT_UID} <-- Does not work. Whyever. ???
         
     # Prometheus Metrics tool
     prometheus:
       container_name: collector_prometheus
       build: prometheus
+      image: cyfacede/prometheus:1.0.0
       volumes:
-        - ./prometheus/data:/prometheus
-      user: ${CURRENT_UID}
+        - type: volume
+          source: prometheus-data
+          target: /prometheus
         
     # Grafana Dashboard on Prometheus Data
     grafana:
       container_name: collector_grafana
       build: grafana
+      image: cyfacede/grafana:1.0.0
       ports:
         - "127.0.0.1:3000:3000" # 127.0.0.1 avoids the manipulation of the host's ip-tables
       volumes:
-        - ./grafana/data:/var/lib/grafana
-        - ./grafana/logs:/var/log/grafana
+        - type: volume
+          source: grafana-logs
+          target: /var/log/grafana
+        - type: volume
+          source: grafana-data
+          target: /var/lib/grafana
       environment:
         - GF_SECURITY_ADMIN_USER=cyface-admin
         - GF_SECURITY_ADMIN_PASSWORD=cyface-admin@grafana
-      user: ${CURRENT_UID}
+
+volumes:
+    mongo-data-db:
+    mongo-user-db:
+    prometheus-data:
+    grafana-data:
+    grafana-logs:
 
 networks:
     default:

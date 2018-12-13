@@ -34,11 +34,9 @@ import io.vertx.core.CompositeFuture;
 import io.vertx.core.DeploymentOptions;
 import io.vertx.core.Future;
 import io.vertx.core.http.HttpServer;
-import io.vertx.core.http.HttpServerOptions;
 import io.vertx.core.json.JsonObject;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
-import io.vertx.core.net.JksOptions;
 import io.vertx.ext.auth.PubSecKeyOptions;
 import io.vertx.ext.auth.jwt.JWTAuth;
 import io.vertx.ext.auth.jwt.JWTAuthOptions;
@@ -55,7 +53,7 @@ import io.vertx.ext.web.handler.JWTAuthHandler;
  *
  * @author Klemens Muthmann
  * @author Armin Schnabel
- * @version 1.1.0
+ * @version 1.2.0
  * @since 2.0.0
  */
 public final class MainVerticle extends AbstractVerticle {
@@ -92,11 +90,8 @@ public final class MainVerticle extends AbstractVerticle {
         final Router router = setupRoutes(publicKey, privateKey, authProvider);
 
         final int httpPort = Parameter.HTTP_PORT.intValue(vertx, 8080);
-        final String defaultCertificateFile = this.getClass().getResource("/localhost.jks").getFile();
-        final String certificateFile = Parameter.TLS_KEYSTORE.stringValue(vertx, defaultCertificateFile);
-        final String certificateFilePassword = Parameter.TLS_KEYSTORE_PASSWORD.stringValue(vertx, "secret");
         final Future<Void> serverStartFuture = Future.future();
-        startHttpServer(router, serverStartFuture, httpPort, certificateFile, certificateFilePassword);
+        startHttpServer(router, serverStartFuture, httpPort);
 
         // TODO: Remove before going into production Deletes all users and creates admin
         // account
@@ -178,7 +173,7 @@ public final class MainVerticle extends AbstractVerticle {
      * @param mongoUserDatabaseConfiguration The database configuration for the Mongo database containing the user
      *            accounts available on this Cyface Data Collector.
      * @return Authentication provider used to check for valid user accounts used to generate new JWT
-     *            token.
+     *         token.
      */
     private MongoAuth buildMongoAuthProvider(final JsonObject mongoUserDatabaseConfiguration) {
         final MongoClient client = SerializationVerticle.createSharedMongoClient(vertx, mongoUserDatabaseConfiguration);
@@ -198,16 +193,9 @@ public final class MainVerticle extends AbstractVerticle {
      * @param startFuture Informs the caller about the successful or failed start of
      *            the server.
      * @param httpPort The HTTP port to run the server at.
-     * @param certificateFile The file used to encrypt communication using HTTPS for every request to this server.
-     * @param certificateFilePassword The password securing the file specified by <code>certificateFile</code>.
      */
-    private void startHttpServer(final Router router, final Future<Void> startFuture, final int httpPort,
-            final String certificateFile, final String certificateFilePassword) {
-
-        final HttpServerOptions options = new HttpServerOptions().setSsl(true)
-                .setKeyStoreOptions(new JksOptions().setPath(certificateFile).setPassword(certificateFilePassword));
-
-        vertx.createHttpServer(options).requestHandler(router::accept).listen(httpPort,
+    private void startHttpServer(final Router router, final Future<Void> startFuture, final int httpPort) {
+        vertx.createHttpServer().requestHandler(router::accept).listen(httpPort,
                 serverStartup -> completeStartup(serverStartup, startFuture));
     }
 

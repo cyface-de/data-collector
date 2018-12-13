@@ -16,28 +16,16 @@
 #  You should have received a copy of the GNU General Public License
 #  along with the Cyface Data Collector.  If not, see <http://www.gnu.org/licenses/>.
 
-if [ -z $KEYSTORE_TLS_PASSWORD ]; then
-    KEYSTORE_TLS_PASSWORD="secret"
-fi
-
-if [ -e /app/secrets/keystore.tls.jks ]; then
-    KEYSTORE_TLS="/app/secrets/keystore.tls.jks"
-else 
-    KEYSTORE_TLS="localhost.jks"	
-fi
-
 if [ -z $JWT_PRIVATE_KEY_FILE_PATH ]; then
     JWT_PRIVATE_KEY_FILE_PATH="/app/secrets/jwt/private_key.pem"
 fi
 
 if [  -z $JWT_PUBLIC_KEY_FILE_PATH ]; then
-	JWT_PUBLIC_KEY_FILE_PATH="/app/secrets/jwt/public.pem"
+    JWT_PUBLIC_KEY_FILE_PATH="/app/secrets/jwt/public.pem"
 fi
 
-echo "Loading keystore for TLS from: $KEYSTORE_TLS"
-echo "Password for TLS keystore: $KEYSTORE_TLS_PASSWORD"
-echo "Loading keystore for JWT from: $KEYSTORE_JWT"
-echo "Password for JWT keystore: $KEYSTORE_JWT_PASSWORD"
+echo "Loading private key for JWT from: $JWT_PRIVATE_KEY_FILE_PATH"
+echo "Loading public key for JWT from: $JWT_PUBLIC_KEY_FILE_PATH"
 
 echo "Waiting for Database to start!"
 
@@ -61,4 +49,4 @@ if [ $COUNTER -ge 10 ]; then
 fi
 
 echo "Starting API"
-java -Dvertx.cacheDirBase=/tmp/vertx-cache -jar collector-2.0.0-SNAPSHOT-fat.jar -conf "{\"jwt.private\":\"$JWT_PRIVATE_KEY_FILE_PATH\",\"jwt.public\":\"$JWT_PUBLIC_KEY_FILE_PATH\",\"keystore.tls\":\"$KEYSTORE_TLS\",\"keystore.tls.password\":\"$KEYSTORE_TLS_PASSWORD\",\"metrics.enabled\":true,\"mongo.userdb\":{\"db_name\":\"cyface-user\",\"connection_string\":\"mongodb://mongo-user:27017\",\"data_source_name\":\"cyface-user\"},\"mongo.datadb\":{\"db_name\":\"cyface-data\",\"connection_string\":\"mongodb://mongo-data:27017\",\"data_source_name\":\"cyface-data\"}}"
+java -Dvertx.cacheDirBase=/tmp/vertx-cache -jar collector-2.0.0-SNAPSHOT-fat.jar -conf "{\"jwt.private\":\"$JWT_PRIVATE_KEY_FILE_PATH\",\"jwt.public\":\"$JWT_PUBLIC_KEY_FILE_PATH\",\"metrics.enabled\":true,\"mongo.userdb\":{\"db_name\":\"cyface-user\",\"connection_string\":\"mongodb://mongo-user:27017\",\"data_source_name\":\"cyface-user\"},\"mongo.datadb\":{\"db_name\":\"cyface-data\",\"connection_string\":\"mongodb://mongo-data:27017\",\"data_source_name\":\"cyface-data\"}}"

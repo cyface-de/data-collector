@@ -45,7 +45,7 @@ import io.vertx.ext.web.multipart.MultipartForm;
  * Tests that uploading measurements to the Cyface API works as expected.
  * 
  * @author Klemens Muthmann
- * @version 2.0.0
+ * @version 2.1.0
  * @since 2.0.0
  */
 @RunWith(VertxUnitRunner.class)
@@ -200,7 +200,7 @@ public final class FileUploadTest {
                 final String authToken = authResponse.result().bodyAsString();
 
                 final HttpRequest<Buffer> builder = client
-                        .post(collectorClient.getPort(), "localhost", "/api/v2/measurements").ssl(true);
+                        .post(collectorClient.getPort(), "localhost", "/api/v2/measurements");
                 builder.putHeader("Authorization", "Bearer " + authToken);
                 builder.sendMultipartForm(form, ar -> {
                     if (ar.succeeded()) {
