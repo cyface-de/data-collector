@@ -83,9 +83,7 @@ public final class AuthenticationHandler implements Handler<RoutingContext> {
                     final String generatedToken = jwtAuthProvider.generateToken(body,
                             jwtOptions.setAlgorithm(CollectorApiVerticle.JWT_HASH_ALGORITHM));
                     LOGGER.info("New JWT Token: " + generatedToken);
-                    // Returning the token as response body because the RequestTest fails to read the header
-                    // Returning the token as response header because Android fails to read the response body
-                    ctx.response().putHeader("Authorization", generatedToken).setStatusCode(200).end(generatedToken);
+                    ctx.response().putHeader("Authorization", generatedToken).setStatusCode(200).end();
                 } else {
                     ctx.fail(401);
                 }

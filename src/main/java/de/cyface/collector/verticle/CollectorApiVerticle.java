@@ -26,7 +26,6 @@ import org.apache.commons.lang3.Validate;
 import de.cyface.collector.Parameter;
 import de.cyface.collector.Utils;
 import de.cyface.collector.handler.AuthenticationHandler;
-import de.cyface.collector.handler.DefaultHandler;
 import de.cyface.collector.handler.FailureHandler;
 import de.cyface.collector.handler.MeasurementHandler;
 import de.cyface.collector.model.Measurement;
@@ -47,6 +46,7 @@ import io.vertx.ext.mongo.MongoClient;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.handler.BodyHandler;
 import io.vertx.ext.web.handler.JWTAuthHandler;
+import io.vertx.ext.web.handler.StaticHandler;
 
 /**
  * This Verticle is the Cyface collectors main entry point. It orchestrates all other Verticles and configures the
@@ -160,18 +160,21 @@ public final class CollectorApiVerticle extends AbstractVerticle {
         final Router v2ApiRouter = Router.router(vertx);
 
         // Set up default routes
-        mainRouter.route().handler(JWTAuthHandler.create(jwtAuthProvider, "/api/v2/login"));
-        mainRouter.route().failureHandler(new FailureHandler());
         mainRouter.mountSubRouter("/api/v2", v2ApiRouter);
 
         // Set up v2 API
-        v2ApiRouter.route("/").last().handler(new DefaultHandler());
+//        v2ApiRouter.route().failureHandler(new FailureHandler());
+        // v2ApiRouter.route("/").last().handler(new DefaultHandler());
         // Set up authentication route
         v2ApiRouter.route("/login").handler(BodyHandler.create())
                 .handler(new AuthenticationHandler(mongoAuthProvider, jwtAuthProvider));
         // Set up data collector route
-        v2ApiRouter.post("/measurements").handler(BodyHandler.create().setDeleteUploadedFilesOnEnd(false))
-                .handler(new MeasurementHandler());
+        v2ApiRouter.post("/measurements").handler(JWTAuthHandler.create(jwtAuthProvider))
+                .handler(BodyHandler.create().setDeleteUploadedFilesOnEnd(false)).handler(new MeasurementHandler());
+
+        v2ApiRouter.route("/*").handler(StaticHandler.create("src/main/resources/webroot"));
+
+        mainRouter.route().last().handler(new FailureHandler());
 
         return mainRouter;
     }

@@ -27,6 +27,7 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.xml.sax.helpers.DefaultHandler;
 
 import de.cyface.collector.handler.DefaultHandler;
 import de.cyface.collector.verticle.CollectorApiVerticle;
