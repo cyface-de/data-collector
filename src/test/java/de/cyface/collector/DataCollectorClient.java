@@ -6,16 +6,14 @@ import java.net.ServerSocket;
 import io.vertx.core.DeploymentOptions;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
-import io.vertx.core.net.JksOptions;
 import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.web.client.WebClient;
-import io.vertx.ext.web.client.WebClientOptions;
 
 /**
  * A client providing capabilities for tests to communicate with a Cyface Data Collector server.
  * 
  * @author Klemens Muthmann
- * @version 1.0.0
+ * @version 1.1.0
  * @since 2.0.0
  */
 final class DataCollectorClient {
@@ -47,20 +45,18 @@ final class DataCollectorClient {
         port = socket.getLocalPort();
         socket.close();
 
-        JsonObject mongoDbConfig = new JsonObject()
-                .put("connection_string", "mongodb://localhost:" + mongoPort).put("db_name", "cyface");
+        JsonObject mongoDbConfig = new JsonObject().put("connection_string", "mongodb://localhost:" + mongoPort)
+                .put("db_name", "cyface");
 
         JsonObject config = new JsonObject().put(Parameter.MONGO_DATA_DB.key(), mongoDbConfig)
                 .put(Parameter.MONGO_USER_DB.key(), mongoDbConfig).put(Parameter.HTTP_PORT.key(), port)
-                .put(Parameter.JWT_PRIVATE_KEY_FILE_PATH.key(), this.getClass().getResource("/private_key.pem").getFile())
+                .put(Parameter.JWT_PRIVATE_KEY_FILE_PATH.key(),
+                        this.getClass().getResource("/private_key.pem").getFile())
                 .put(Parameter.JWT_PUBLIC_KEY_FILE_PATH.key(), this.getClass().getResource("/public.pem").getFile());
         DeploymentOptions options = new DeploymentOptions().setConfig(config);
 
         vertx.deployVerticle(MainVerticle.class.getName(), options, ctx.asyncAssertSuccess());
 
-        String truststorePath = TestUtils.class.getResource("/localhost.jks").getFile();
-
-        return WebClient.create(vertx, new WebClientOptions().setSsl(true)
-                .setTrustStoreOptions(new JksOptions().setPath(truststorePath).setPassword("secret")));
+        return WebClient.create(vertx);
     }
 }

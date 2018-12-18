@@ -45,14 +45,6 @@ public enum Parameter {
      */
     HTTP_PORT("http.port"),
     /**
-     * The location of the keystore for HTTPS connections.
-     */
-    TLS_KEYSTORE("keystore.tls"),
-    /**
-     * The parameter used to provide the TLS keystore password.
-     */
-    TLS_KEYSTORE_PASSWORD("keystore.tls.password"),
-    /**
      * Detailed connection information about the Mongo user database. This database
      * stores all the credentials of users capable of logging in to the systems.
      * This should be a JSON object with supported parameters explained at: <a href=

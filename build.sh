@@ -18,13 +18,11 @@
 #
 # version 1.0.0
 
-export CURRENT_UID=$(id -u):$(id -g)
-
 # Create volume directories
-mkdir -p data user-data secrets prometheus/data grafana/data grafana/logs
+mkdir -p secrets
 
 # Build jar
-./gradlew clean assemble
+./gradlew clean shadowJar check
 
 # Build docker container
-docker-compose -p 'collector' build
+docker-compose build

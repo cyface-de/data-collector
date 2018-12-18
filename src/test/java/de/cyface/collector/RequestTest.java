@@ -43,7 +43,7 @@ import io.vertx.ext.web.client.WebClient;
  * 
  * @author Klemens Muthmann
  * @since 1.0.0
- * @version 2.0.0
+ * @version 2.1.0
  */
 @RunWith(VertxUnitRunner.class)
 public final class RequestTest extends MongoTest {
@@ -133,7 +133,7 @@ public final class RequestTest extends MongoTest {
                 LOGGER.info("{}", authResponse.result().headers().get("Authorization"));
 
                 client.get(collectorClient.getPort(), "localhost", "/api/v2/")
-                        .putHeader("Authorization", "Bearer " + token).ssl(true).send(response -> {
+                        .putHeader("Authorization", "Bearer " + token).send(response -> {
                             if (response.succeeded()) {
                                 context.assertEquals(response.result().statusCode(), 200);
                                 final String body = response.result().bodyAsString();
@@ -168,7 +168,7 @@ public final class RequestTest extends MongoTest {
                 ctx.assertEquals(authResponse.result().statusCode(), 200);
                 final String token = authResponse.result().bodyAsString();
                 client.post(collectorClient.getPort(), "localhost", "/api/v2/garbage")
-                        .putHeader("Authorization", "Bearer " + token).ssl(true).send(response -> {
+                        .putHeader("Authorization", "Bearer " + token).send(response -> {
                             ctx.assertEquals(404, response.result().statusCode());
                             async.complete();
                         });
