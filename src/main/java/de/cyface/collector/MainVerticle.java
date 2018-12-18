@@ -195,7 +195,7 @@ public final class MainVerticle extends AbstractVerticle {
      * @param httpPort The HTTP port to run the server at.
      */
     private void startHttpServer(final Router router, final Future<Void> startFuture, final int httpPort) {
-        vertx.createHttpServer().requestHandler(router::accept).listen(httpPort,
+        vertx.createHttpServer().requestHandler(router).listen(httpPort,
                 serverStartup -> completeStartup(serverStartup, startFuture));
     }
 

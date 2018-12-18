@@ -53,7 +53,7 @@ public class Application extends Launcher {
     /**
      * Starts the application.
      * 
-     * @param args See README.adoc and documenation of the Vert.x <code>Launcher</code> class, for further details about
+     * @param args See README.adoc and documentation of the Vert.x <code>Launcher</code> class, for further details about
      *            supported arguments.
      */
     public static void main(final String[] args) {

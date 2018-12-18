@@ -1,11 +1,17 @@
 = Collector
 
-image:https://img.shields.io/badge/vert.x-3.6.0-purple.svg[link="https://vertx.io"] 
-image:https://img.shields.io/badge/mongo-4.0.3-purple.svg[link="https://mongodb.com/"]
+image:https://img.shields.io/badge/vert.x-3.6.2-purple.svg[link="https://vertx.io"] 
+image:https://img.shields.io/badge/mongo-4.0.4-purple.svg[link="https://mongodb.com/"]
 image:https://img.shields.io/badge/prometheus-2.4.3-purple.svg[link="https://prometheus.io/"]
-image:https://img.shields.io/badge/grafana-5.3.0.svg[link="https://grafana.com/"]
+image:https://img.shields.io/badge/grafana-5.3.0-purple.svg[link="https://grafana.com/"]
 
-This application was generated using http://start.vertx.io
+image:https://img.shields.io/shippable/5bcd815dec335d0700da8fdb/dev.svg[link="https://app.shippable.com/github/cyface-de/data-collector/dashboard"]
+image:https://api.shippable.com/projects/5bcd815dec335d0700da8fdb/coverageBadge?branch=dev[link="https://app.shippable.com/github/cyface-de/data-collector/dashboard"]
+
+This application represents the https://cyface.de[Cyface] data collector software.
+It is used to collect traffic data from Cyface measurement devices, such as our sensor box or our smartphone application.
+Our smartphone SDK is available as GPL application for https://github.com/cyface-de/android-backend[Android] and https://github.com/cyface-de/ios-backend[iOS] (or as https://github.com/cyface-de/ios-podspecs[Podspec]) as well.
+If you require this software under a closed source license for you own projects, please https://www.cyface.de/#kontakt[contact us].
 
 == Help
 
@@ -22,6 +28,31 @@ container which is build afterwards. This script also makes sure all required su
 == Execution
 This section describes how to execute the Cyface data collector.
 
+It starts with an explanation on how to set up all the required certificates.
+This is a necessary prerequisite for all the following steps.
+So **DO NOT** skip it.
+
+Following the certificate setup is an explanation on how to run the Cyface data collector from a Docker environment.
+This is the recommended variant if you do not need to change the collector itself, but only need to develop against its API.
+
+The section continues with an explanation on the supported configuration parameters.
+If you are not using the Docker environment, you will probably have to set a few of them to the correct values, before running the Cyface data collector.
+
+The last two sections provide explanations on how to run the software directly from the terminal or from within an IDE such as Eclipse or IntelliJ.
+For these execution variants you need the parameters explained in the preceeding section.
+
+=== Certificates
+The Cyface Data Collector provides keys you may use for testing and during development. 
+Those keys are located in `src/test/resources`.
+To use them outside of Unit tests you need to copy them to an appropriate location.
+**ATTENTION: DO NOT USE THOSE KEYS IN A PRODUCTION ENVIRONMENT.** 
+Since they are in our repository, they are openly available to everyone on the internet, so everyone can compromise security on your server if you use the default keys.
+
+The Cyface Data Collector requires two keys to issue and authenticate JWT tokens for users trying to communicate with the service.
+Just place the appropriate files as `private_key.pem` and `public.pem` in `secrets/jwt`, right next to the `docker-compose.yml` file .
+
+To generate a new keys follow the instructions in the https://vertx.io/docs/vertx-auth-jwt/java/#_loading_keys[Vert.x documentation] for *Using RSA keys*.
+
 === Running from Docker
 After you did build the system (see Building above) simply run `docker-compose up` inside the root of this project. This calls docker to bring up two Mongo database containers and a container running the Cyface data collector API.
 In addition it starts https://prometheus.io/[Prometheus] and https://grafana.com/[Grafana] as monitoring tools for the running server.
@@ -33,17 +64,19 @@ This means if you boot up everything using the default settings you can access G
 The default username is *cyface-admin* and the default password *cyface-admin@grafana*.
 The Collector API is accessable via `http://localhost:8080/api/v2`.
 
-==== Certificates
-The Cyface Data Collector provides keys you may use for testing and during development. 
-Those keys are located in `src/test/resources`.
-To use them outside of Unit tests you need to copy them to an appropriate location.
-**ATTENTION: DO NOT USE THOSE KEYS IN A PRODUCTION ENVIRONMENT.** 
-Since they are in our repository, they are openly available to everyone on the internet, so everyone can compromise security on your server if you use the default keys.
+=== Data Collector Arguments
+The Cyface data collector supports a few parameters to fine tune the runtime. 
+Except for the security relevant parameters (i.e. *jwt.private* and *jwt.public*), all of these parameters also provide reasonable defaults for quick setup. 
+For how to set up *jwt.private* and *jwt.public* refer to the section on certificates above.
+In production you should change those values to fit your environment. 
+The parameters are provided using the typical https://vertx.io/docs/vertx-core/java/#_the_vertx_command_line[Vertx `-conf` parameter] with a value in JSON notation. The following parameters are supported:
 
-The Cyface Data Collector requires two keys to issue and authenticate JWT tokens for users trying to communicate with the service.
-Just place the appropriate files as `private_key.pem` and `public.pem` in `secrets/jwt`, right next to the `docker-compose.yml` file .
-
-To generate a new keys follow the instructions in the https://vertx.io/docs/vertx-auth-jwt/java/#_loading_keys[Vert.x documentation] for *Using RSA keys*.
+* **jwt.private:** The path of the file containing the private key used to sign JWT keys. This defaults to `secrets/private_key.pem`, which you should never use in production.
+* **jwt.public:** The path of the file containing the public key used to sign JWT keys. This defaults to `secrets/public.pem`, which you should never use in production.
+* **http.port:** The port the API  is available at. This defaults to `8080`.
+* **mongo.userdb:** Settings for a Mongo database storing credential information about all the users capable of logging into the system. This defaults to a Mongo database available at `mongodb://127.0.0.1:27017`. The value of this should be a JSON object configured as described https://vertx.io/docs/vertx-mongo-client/java/#_configuring_the_client[here]. In addition, if you use two different Mongo databases for credentials and data you should provide different values for the JSON key `data_source_name`.
+* **mongo.datadb:** Settings for a Mongo database storing all data uploaded via the Cyface data collector. This defaults to a Mongo database available at `mongodb://127.0.0.1:27017`. The value of this should be a JSON object configured as described https://vertx.io/docs/vertx-mongo-client/java/#_configuring_the_client[here]. In addition, if you use two different Mongo databases for credentials and data you should provide different values for the JSON key `data_source_name`.
+* **metrics.enabled:** Set to either `true` or `false`. If `true` the collector API publishes metrics using micrometer. These metrics are accessible by a https://prometheus.io/[Prometheus] server (Which you either need to setup yourself or use the Docker setup explained further down) at port `8081`.
 
 === Running from Command Line
 
@@ -61,16 +94,6 @@ To run your application:
 ```
 ./gradlew clean run
 ```
-
-==== Command Line Arguments
-The Cyface data collector supports a few parameters to fine tune the runtime. All of these parameters also provide reasonable defaults for quick setup. In production you should change those values to fit your environment. The parameters are provided using the typical Vertx `-conf` parameter with a value in JSON notation. The following parameters are supported:
-
-* **jwt.private:** The path of the file containing the private key used to sign JWT keys. This defaults to `secrets/private_key.pem`, which you should never use in production.
-* **jwt.public:** The path of the file containing the public key used to sign JWT keys. This defaults to `secrets/public.pem`, which you should never use in production.
-* **http.port:** The port the API  is available at. This defaults to `8080`.
-* **mongo.userdb:** Settings for a Mongo database storing credential information about all the users capable of logging into the system. This defaults to a Mongo database available at `mongodb://127.0.0.1:27017`. The value of this should be a JSON object configured as described https://vertx.io/docs/vertx-mongo-client/java/#_configuring_the_client[here]. In addition, if you use two different Mongo databases for credentials and data you should provide different values for the JSON key `data_source_name`.
-* **mongo.datadb:** Settings for a Mongo database storing all data uploaded via the Cyface data collector. This defaults to a Mongo database available at `mongodb://127.0.0.1:27017`. The value of this should be a JSON object configured as described https://vertx.io/docs/vertx-mongo-client/java/#_configuring_the_client[here]. In addition, if you use two different Mongo databases for credentials and data you should provide different values for the JSON key `data_source_name`.
-* **metrics.enabled:** Set to either `true` or `false`. If `true` the collector API publishes metrics using micrometer. These metrics are accessible by a https://prometheus.io/[Prometheus] server (Which you either need to setup yourself or use the Docker setup explained further down) at port `8081`.
 
 === Running from IDE
 To run directly from within your IDE you need to use the `de.cyface.collector.Application` class, which is a subclass of the https://vertx.io/docs/vertx-core/java/#_the_vert_x_launcher[Vert.x launcher]. Just specify it as the main class in your launch configuration with the program argument `run de.cyface.collector.MainVerticle`.
