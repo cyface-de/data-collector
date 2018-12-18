@@ -35,11 +35,13 @@ The Collector API is accessable via `http://localhost:8080/api/v2`.
 
 ==== Certificates
 The Cyface Data Collector provides keys you may use for testing and during development. 
+Those keys are located in `src/test/resources`.
+To use them outside of Unit tests you need to copy them to an appropriate location.
 **ATTENTION: DO NOT USE THOSE KEYS IN A PRODUCTION ENVIRONMENT.** 
 Since they are in our repository, they are openly available to everyone on the internet, so everyone can compromise security on your server if you use the default keys.
 
 The Cyface Data Collector requires two keys to issue and authenticate JWT tokens for users trying to communicate with the service.
-To overwrite the default JWT keys just place the appropriate files as `private_key.pem` and `public.pem` in `secrets/jwt`, right next to the `docker-compose.yml` file .
+Just place the appropriate files as `private_key.pem` and `public.pem` in `secrets/jwt`, right next to the `docker-compose.yml` file .
 
 To generate a new keys follow the instructions in the https://vertx.io/docs/vertx-auth-jwt/java/#_loading_keys[Vert.x documentation] for *Using RSA keys*.
 
