@@ -57,6 +57,14 @@ public enum Parameter {
      */
     MONGO_USER_DB("mongo.userdb"),
     /**
+     * The username of a default administration user created on system start.
+     */
+    ADMIN_USER_NAME("admin.user"),
+    /**
+     * The password for the default administration user created on system start.
+     */
+    ADMIN_PASSWORD("admin.password"),
+    /**
      * Detailed connection information about the Mongo data database. This database
      * stores all data received via the REST-API. This should be a JSON object with
      * supported parameters explained at: <a href=

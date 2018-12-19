@@ -97,14 +97,18 @@ public final class CollectorApiVerticle extends AbstractVerticle {
 		final Future<Void> serverStartFuture = Future.future();
 		startHttpServer(router, serverStartFuture, httpPort);
 
-		// TODO: Remove before going into production Deletes all users and creates admin
-		// account
+		final String adminUsername = Parameter.ADMIN_USER_NAME.stringValue(vertx, "admin");
+		final String adminPassword = Parameter.ADMIN_PASSWORD.stringValue(vertx, "secret");
 		final Future<Void> defaultUserCreatedFuture = Future.future();
-		client.removeDocuments("user", new JsonObject(), r -> {
-			authProvider.insertUser("admin", "secret", new ArrayList<>(), new ArrayList<>(), ir -> {
-				LOGGER.info("Identifier of new user id: " + ir);
+		client.findOne("user", new JsonObject().put("username", adminUsername), null, result -> {
+			if (result.result() == null) {
+				authProvider.insertUser(adminUsername, adminPassword, new ArrayList<>(), new ArrayList<>(), ir -> {
+					LOGGER.info("Identifier of new user id: " + ir);
+					defaultUserCreatedFuture.complete();
+				});
+			} else {
 				defaultUserCreatedFuture.complete();
-			});
+			}
 		});
 		final CompositeFuture startUpFinishedFuture = CompositeFuture.all(serverStartFuture, defaultUserCreatedFuture);
 		startUpFinishedFuture.setHandler(r -> {
@@ -132,7 +136,7 @@ public final class CollectorApiVerticle extends AbstractVerticle {
 	 */
 	private void deployVerticles(final JsonObject mongoDatabaseConfiguration) {
 		Validate.notNull(mongoDatabaseConfiguration);
-		
+
 		final DeploymentOptions options = new DeploymentOptions().setWorker(true).setConfig(mongoDatabaseConfiguration);
 		vertx.deployVerticle(SerializationVerticle.class, options);
 	}
