@@ -53,8 +53,8 @@ paths:
               schema:
                 type: integer
                 minimum: 0
-          '401':
-            description: The provided credentials where not correct
+        '401':
+          description: The provided credentials where not correct
             
   /measurements:
     post:
@@ -70,26 +70,26 @@ paths:
               type: object
               properties:
                 fileToUpload:
-                  description: The measured data in the Cyface binary format.
+                  #description: The measured data in the Cyface binary format.
                   type: string
                   format: binary
                   example:
                     summary: An example upload in Cyface data format
                     externalValue: 'data.ccyf'
                 deviceId:
-                  description: The world wide unique identifier of the device that uploaded the data.
+                  #description: The world wide unique identifier of the device that uploaded the data.
                   type: string
                   example: a
                 measurementId:
-                  description: The device wide unique identifier of the uploaded measurement.
+                  #description: The device wide unique identifier of the uploaded measurement.
                   type: string
                   example: 1
                 deviceType:
-                  description: The type of the device, that uploaded the data.
+                  #description: The type of the device, that uploaded the data.
                   type: string
                   example: HTC Desire
                 osVersion:
-                  description: The version of the device operating system.
+                  #description: The version of the device operating system.
                   type: string
                   example: 4.4.4
               required:
