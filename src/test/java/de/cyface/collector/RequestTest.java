@@ -29,6 +29,7 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 
 import de.cyface.collector.handler.DefaultHandler;
+import de.cyface.collector.verticle.CollectorApiVerticle;
 import io.vertx.core.Vertx;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
@@ -82,7 +83,7 @@ public final class RequestTest extends MongoTest {
     }
 
     /**
-     * Deploys the {@link MainVerticle} in a test context.
+     * Deploys the {@link CollectorApiVerticle} in a test context.
      * 
      * @param ctx The test context used to control the test <code>Vertx</code>.
      * @throws IOException Fails the test if anything unexpected goes wrong.

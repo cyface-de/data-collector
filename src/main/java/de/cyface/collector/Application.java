@@ -18,6 +18,7 @@
  */
 package de.cyface.collector;
 
+import de.cyface.collector.verticle.CollectorApiVerticle;
 import io.vertx.core.Launcher;
 import io.vertx.core.VertxOptions;
 import io.vertx.core.http.HttpServerOptions;
@@ -29,7 +30,7 @@ import io.vertx.micrometer.VertxPrometheusOptions;
 
 /**
  * An object of this class forms the entry point to the Cyface data collector application. It contains the
- * <code>main</code> method, which you can start to run everything. However you need to provide the {@link MainVerticle}
+ * <code>main</code> method, which you can start to run everything. However you need to provide the {@link CollectorApiVerticle}
  * as a parameter to this class using <code>run de.cyface.collector.MainVerticle</code>.
  * <p>
  * You may also provide additional parameters in JSON format as described in the <code>README.md</code> file.

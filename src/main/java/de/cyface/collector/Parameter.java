@@ -43,7 +43,11 @@ public enum Parameter {
     /**
      * The server port the API shall be available at.
      */
-    HTTP_PORT("http.port"),
+    COLLECTOR_HTTP_PORT("http.port"),
+    /**
+     * The server port the management interface for the API shall be available at.
+     */
+    MANAGEMENT_HTTP_PORT("http.port.management"),
     /**
      * Detailed connection information about the Mongo user database. This database
      * stores all the credentials of users capable of logging in to the systems.
@@ -154,9 +158,24 @@ public enum Parameter {
      *         <code>defaultValue</code>.
      */
     public JsonObject jsonValue(final Vertx vertx, JsonObject defaultValue) {
-        JsonObject value = vertx.getOrCreateContext().config().getJsonObject(key);
+    	JsonObject value = vertx.getOrCreateContext().config().getJsonObject(key);
         final JsonObject ret = value == null ? defaultValue : value;
         LOGGER.info("Read json value " + ret + " for key " + key);
         return ret;
+    }
+    
+    /**
+     * Provides the JSON value of this parameter from the Vert.x configuration or
+     * the <code>null</code> if there was none.
+     * 
+     * @param vertx The <code>Vertx</code> instance containing the
+     *            configuration.
+     * @return Either the value of the parameter as a JSON object or the
+     *         <code>defaultValue</code>.
+     */
+    public JsonObject jsonValue(final Vertx vertx) {
+        JsonObject value = vertx.getOrCreateContext().config().getJsonObject(key);
+        LOGGER.info("Read json value " + value + " for key " + key);
+        return value;
     }
 }

@@ -2,7 +2,7 @@ package de.cyface.collector.handler;
 
 import org.apache.commons.lang3.Validate;
 
-import de.cyface.collector.MainVerticle;
+import de.cyface.collector.verticle.CollectorApiVerticle;
 import io.vertx.core.Handler;
 import io.vertx.core.json.DecodeException;
 import io.vertx.core.json.JsonObject;
@@ -50,7 +50,7 @@ public class AuthenticationHandler implements Handler<RoutingContext> {
                     LOGGER.info("Authentication successful!");
                     LOGGER.info(body);
                     String generatedToken = jwtAuthProvider.generateToken(body,
-                            new JWTOptions().setExpiresInSeconds(60).setAlgorithm(MainVerticle.JWT_HASH_ALGORITHM));
+                            new JWTOptions().setExpiresInSeconds(60).setAlgorithm(CollectorApiVerticle.JWT_HASH_ALGORITHM));
                     LOGGER.info("New JWT Token: " + generatedToken);
                     // Returning the token as response body because the RequestTest fails to read the header
                     // Returning the token as response header because Android fails to read the response body

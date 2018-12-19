@@ -15,7 +15,7 @@
 /**
  * This package contains the top level classes used by the Cyface Data
  * Collector. Most important is the class {@link de.cyface.collector.Application},
- * which starts the whole application and the {@link de.cyface.collector.MainVerticle} that initializes the server.
+ * which starts the whole application and the {@link de.cyface.collector.verticle.CollectorApiVerticle} that initializes the server.
  * 
  * @author Klemens Muthmann
  * @version 1.0.0

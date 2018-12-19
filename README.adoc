@@ -74,6 +74,7 @@ The parameters are provided using the typical https://vertx.io/docs/vertx-core/j
 * **jwt.private:** The path of the file containing the private key used to sign JWT keys. This defaults to `secrets/private_key.pem`, which you should never use in production.
 * **jwt.public:** The path of the file containing the public key used to sign JWT keys. This defaults to `secrets/public.pem`, which you should never use in production.
 * **http.port:** The port the API  is available at. This defaults to `8080`.
+* **http.port.management:** The port the management API is available at. This defaults to `13371`.
 * **mongo.userdb:** Settings for a Mongo database storing credential information about all the users capable of logging into the system. This defaults to a Mongo database available at `mongodb://127.0.0.1:27017`. The value of this should be a JSON object configured as described https://vertx.io/docs/vertx-mongo-client/java/#_configuring_the_client[here]. In addition, if you use two different Mongo databases for credentials and data you should provide different values for the JSON key `data_source_name`.
 * **mongo.datadb:** Settings for a Mongo database storing all data uploaded via the Cyface data collector. This defaults to a Mongo database available at `mongodb://127.0.0.1:27017`. The value of this should be a JSON object configured as described https://vertx.io/docs/vertx-mongo-client/java/#_configuring_the_client[here]. In addition, if you use two different Mongo databases for credentials and data you should provide different values for the JSON key `data_source_name`.
 * **metrics.enabled:** Set to either `true` or `false`. If `true` the collector API publishes metrics using micrometer. These metrics are accessible by a https://prometheus.io/[Prometheus] server (Which you either need to setup yourself or use the Docker setup explained further down) at port `8081`.
@@ -96,7 +97,7 @@ To run your application:
 ```
 
 === Running from IDE
-To run directly from within your IDE you need to use the `de.cyface.collector.Application` class, which is a subclass of the https://vertx.io/docs/vertx-core/java/#_the_vert_x_launcher[Vert.x launcher]. Just specify it as the main class in your launch configuration with the program argument `run de.cyface.collector.MainVerticle`.
+To run directly from within your IDE you need to use the `de.cyface.collector.Application` class, which is a subclass of the https://vertx.io/docs/vertx-core/java/#_the_vert_x_launcher[Vert.x launcher]. Just specify it as the main class in your launch configuration with the program argument `run de.cyface.collector.verticle.MainVerticle`.
 
 == Runtime Administration
 A running Cyface data collector publishes metrics to a running https://prometheus.io/docs/prometheus/latest/getting_started/[Prometheus] instance. If you have used the docker setup, this should happen automatically. Per default Prometheus is exposed on **http://localhost:9090/graph**.

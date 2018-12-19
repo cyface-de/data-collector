@@ -29,6 +29,7 @@ import org.junit.runner.RunWith;
 
 import de.cyface.collector.handler.FormAttributes;
 import de.cyface.collector.model.Measurement;
+import de.cyface.collector.verticle.SerializationVerticle;
 import io.vertx.core.DeploymentOptions;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;

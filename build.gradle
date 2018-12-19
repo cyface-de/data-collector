@@ -56,7 +56,7 @@ version = '2.0.0-SNAPSHOT'
 sourceCompatibility = '1.8'
 mainClassName = 'de.cyface.collector.Application'
 
-def mainVerticleName = 'de.cyface.collector.MainVerticle'
+def mainVerticleName = 'de.cyface.collector.verticle.MainVerticle'
 def watchForChange = 'src/**/*'
 def doOnChange = './gradlew classes'
 
