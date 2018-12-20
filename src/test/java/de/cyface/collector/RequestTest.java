@@ -39,8 +39,7 @@ import io.vertx.ext.unit.junit.VertxUnitRunner;
 import io.vertx.ext.web.client.WebClient;
 
 /**
- * This tests the REST-API provided by the collector and used to upload the data
- * to the server.
+ * This tests the REST-API provided by the collector and used to upload the data to the server.
  * 
  * @author Klemens Muthmann
  * @since 1.0.0
@@ -49,14 +48,18 @@ import io.vertx.ext.web.client.WebClient;
 @RunWith(VertxUnitRunner.class)
 public final class RequestTest extends MongoTest {
 
-    private final Logger LOGGER = LoggerFactory.getLogger(RequestTest.class);
+    /**
+     * The logger used for objects of this class. Configure it by either changing values in
+     * <code>src/main/resources/logback.xml</code> or in <code>src/test/resources/logback-test.xml</code>.
+     */
+    private static final Logger LOGGER = LoggerFactory.getLogger(RequestTest.class);
     /**
      * The test <code>Vertx</code> instance.
      */
     private Vertx vertx;
     /**
-     * A Mongo database lifecycle handler. This provides the test with the
-     * capabilities to run and shutdown a Mongo database for testing purposes.
+     * A Mongo database lifecycle handler. This provides the test with the capabilities to run and shutdown a Mongo
+     * database for testing purposes.
      */
     private static MongoTest mongoTest;
     /**
@@ -116,8 +119,7 @@ public final class RequestTest extends MongoTest {
     }
 
     /**
-     * Tests the correct workings of the general functionality using the
-     * {@link DefaultHandler}.
+     * Tests the correct workings of the general functionality using the {@link DefaultHandler}.
      * 
      * @param context The test context for running <code>Vertx</code> under test.
      * @throws Throwable Fails the test if anything unexpected happens.
@@ -154,8 +156,7 @@ public final class RequestTest extends MongoTest {
     }
 
     /**
-     * Tests that the default error handler correctly returns 404 status as response for a non valid
-     * request.
+     * Tests that the default error handler correctly returns 404 status as response for a non valid request.
      * 
      * @param ctx The test context for running <code>Vertx</code> under test.
      * @throws Throwable Fails the test if anything unexpected happens.

@@ -40,16 +40,28 @@ import io.vertx.ext.web.RoutingContext;
  * @version 1.0.2
  * @since 2.0.0
  */
-public class AuthenticationHandler implements Handler<RoutingContext> {
+public final class AuthenticationHandler implements Handler<RoutingContext> {
 
     /**
      * The logger used by objects of this class. Configure it using <tt>src/main/resources/logback.xml</tt>.
      */
-    private final static Logger LOGGER = LoggerFactory.getLogger(AuthenticationHandler.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(AuthenticationHandler.class);
 
+    /**
+     * Authenticator that uses the Mongo user database to store and retrieve credentials.
+     */
     private final MongoAuth authProvider;
+    /**
+     * Authenticator that checks for valid authentications against Java Web Tokens.
+     */
     private final JWTAuth jwtAuthProvider;
 
+    /**
+     * Creates a new completely initialized <code>AuthenticationHandler</code>.
+     * 
+     * @param authProvider Authenticator that uses the Mongo user database to store and retrieve credentials.
+     * @param jwtAuthProvider Authenticator that checks for valid authentications against Java Web Tokens.
+     */
     public AuthenticationHandler(final MongoAuth authProvider, JWTAuth jwtAuthProvider) {
         Validate.notNull(authProvider);
         Validate.notNull(jwtAuthProvider);
@@ -59,16 +71,17 @@ public class AuthenticationHandler implements Handler<RoutingContext> {
     }
 
     @Override
-    public void handle(RoutingContext ctx) {
+    public void handle(final RoutingContext ctx) {
         try {
-            JsonObject body = ctx.getBodyAsJson();
+            final JsonObject body = ctx.getBodyAsJson();
             LOGGER.info("Receiving authentication request: " + body);
             authProvider.authenticate(body, r -> {
                 if (r.succeeded()) {
                     LOGGER.info("Authentication successful!");
                     LOGGER.info(body);
-                    String generatedToken = jwtAuthProvider.generateToken(body,
-                            new JWTOptions().setExpiresInSeconds(60).setAlgorithm(CollectorApiVerticle.JWT_HASH_ALGORITHM));
+                    final JWTOptions jwtOptions = new JWTOptions().setExpiresInSeconds(60);
+                    final String generatedToken = jwtAuthProvider.generateToken(body,
+                            jwtOptions.setAlgorithm(CollectorApiVerticle.JWT_HASH_ALGORITHM));
                     LOGGER.info("New JWT Token: " + generatedToken);
                     // Returning the token as response body because the RequestTest fails to read the header
                     // Returning the token as response header because Android fails to read the response body

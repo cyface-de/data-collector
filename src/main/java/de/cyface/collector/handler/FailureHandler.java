@@ -30,12 +30,12 @@ import io.vertx.ext.web.RoutingContext;
  * @version 1.0.1
  * @since 2.0.0
  */
-public class FailureHandler implements Handler<RoutingContext> {
+public final class FailureHandler implements Handler<RoutingContext> {
 
     /**
      * The logger used for objects of this class. Configure it using <code>src/main/resources/logback.xml</code>.
      */
-    private final static Logger LOGGER = LoggerFactory.getLogger(FailureHandler.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(FailureHandler.class);
 
     @Override
     public void handle(final RoutingContext ctx) {

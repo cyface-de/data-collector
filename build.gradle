@@ -120,3 +120,16 @@ jacocoTestReport {
         html.destination file("${buildDir}/reports/jacocoHtml")
     }
 }
+
+tasks.withType(FindBugs) {
+    reports {
+        xml.enabled false
+        html.enabled true
+    }
+}
+
+checkstyle {
+	// use one common config file for all subprojects
+	configFile = project(':').file('config/checkstyle/checkstyle.xml')
+	configProperties = [ "suppressionFile" : project(':').file('config/checkstyle/suppressions.xml')]
+}

@@ -122,7 +122,7 @@ public final class SerializationVerticle extends AbstractVerticle implements Han
          * 
          * @param measurement The measurement that was saved.
          */
-        public SerializationHandler(final Measurement measurement) {
+        SerializationHandler(final Measurement measurement) {
             Validate.notNull(measurement);
             this.measurement = measurement;
         }
