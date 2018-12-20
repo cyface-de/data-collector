@@ -17,12 +17,18 @@
  * along with the Cyface Data Collector. If not, see <http://www.gnu.org/licenses/>.
  */
 /**
- * This package contains the top level classes used by the Cyface Data
- * Collector. Most important is the class {@link de.cyface.collector.Application},
- * which starts the whole application and the {@link de.cyface.collector.verticle.CollectorApiVerticle} that initializes the server.
+ * This package contains the Vert.x Verticles steering the Cyface data collector. There is a <code>MainVerticle</code>
+ * as a central entrypoint. It deploys all the other necessary Verticles.
+ * <p>
+ * The {@link de.cyface.collector.verticle.CollectorApiVerticle} starts the collector API itself, while the
+ * {@link de.cyface.collector.verticle.ManagementApiVerticle} starts the management console on a different server using
+ * a different port.
+ * <p>
+ * The {@link de.cyface.collector.verticle.SerializationVerticle} is a worker, that is responsible to store arriving
+ * measurements to the Mongo database.
  * 
  * @author Klemens Muthmann
  * @version 1.0.0
  * @since 2.0.0
  */
-package de.cyface.collector;
+package de.cyface.collector.verticle;

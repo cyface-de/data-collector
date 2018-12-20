@@ -24,11 +24,10 @@ import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
 
 /**
- * An enumeration of parameters, that may be provided upon application startup,
- * to configure the application.
+ * An enumeration of parameters, that may be provided upon application startup, to configure the application.
  * 
  * @author Klemens Muthmann
- * @version 2.0.0
+ * @version 3.0.0
  * @since 2.0.0
  */
 public enum Parameter {
@@ -49,10 +48,9 @@ public enum Parameter {
      */
     MANAGEMENT_HTTP_PORT("http.port.management"),
     /**
-     * Detailed connection information about the Mongo user database. This database
-     * stores all the credentials of users capable of logging in to the systems.
-     * This should be a JSON object with supported parameters explained at: <a href=
-     * "https://vertx.io/docs/vertx-mongo-client/java/#_configuring_the_client">
+     * Detailed connection information about the Mongo user database. This database stores all the credentials of users
+     * capable of logging in to the systems. This should be a JSON object with supported parameters explained at:
+     * <a href= "https://vertx.io/docs/vertx-mongo-client/java/#_configuring_the_client">
      * https://vertx.io/docs/vertx-mongo-client/java/#_configuring_the_client</a>.
      */
     MONGO_USER_DB("mongo.userdb"),
@@ -65,10 +63,9 @@ public enum Parameter {
      */
     ADMIN_PASSWORD("admin.password"),
     /**
-     * Detailed connection information about the Mongo data database. This database
-     * stores all data received via the REST-API. This should be a JSON object with
-     * supported parameters explained at: <a href=
-     * "https://vertx.io/docs/vertx-mongo-client/java/#_configuring_the_client">
+     * Detailed connection information about the Mongo data database. This database stores all data received via the
+     * REST-API. This should be a JSON object with supported parameters explained at:
+     * <a href= "https://vertx.io/docs/vertx-mongo-client/java/#_configuring_the_client">
      * https://vertx.io/docs/vertx-mongo-client/java/#_configuring_the_client</a>.
      */
     MONGO_DATA_DB("mongo.datadb"),
@@ -78,8 +75,7 @@ public enum Parameter {
     METRICS_ENABLED("metrics.enabled");
 
     /**
-     * The logger used for objects of this class. You can change its configuration
-     * by changing the values in
+     * The logger used for objects of this class. You can change its configuration by changing the values in
      * <code>src/main/resources/vertx-default-jul-logging.properties</code>.
      */
     private static final Logger LOGGER = LoggerFactory.getLogger(Parameter.class);
@@ -92,8 +88,7 @@ public enum Parameter {
     /**
      * Creates a new completely initialized parameter.
      * 
-     * @param key The parameter key used to load its value from the JSON
-     *            configuration.
+     * @param key The parameter key used to load its value from the JSON configuration.
      */
     Parameter(final String key) {
         this.key = key;
@@ -107,14 +102,12 @@ public enum Parameter {
     }
 
     /**
-     * Provides the string value of this parameter from the Vert.x configuration or
-     * the <code>defaultValue</code> if there was none.
+     * Provides the string value of this parameter from the Vert.x configuration or the <code>defaultValue</code> if
+     * there was none.
      * 
-     * @param vertx The <code>Vertx</code> instance containing the
-     *            configuration.
+     * @param vertx The <code>Vertx</code> instance containing the configuration.
      * @param defaultValue A default value if the parameter was missing.
-     * @return Either the value of the parameter as a <code>String</code> or the
-     *         <code>defaultValue</code>.
+     * @return Either the value of the parameter as a <code>String</code> or the <code>defaultValue</code>.
      */
     public String stringValue(final Vertx vertx, final String defaultValue) {
         String value = vertx.getOrCreateContext().config().getString(key);
@@ -124,11 +117,10 @@ public enum Parameter {
     }
 
     /**
-     * Provides the string value of this parameter from the Vert.x configuration or
-     * the <code>null</code> if there was none.
+     * Provides the string value of this parameter from the Vert.x configuration or the <code>null</code> if there was
+     * none.
      * 
-     * @param vertx The <code>Vertx</code> instance containing the
-     *            configuration.
+     * @param vertx The <code>Vertx</code> instance containing the configuration.
      * @return Either the value of the parameter as a <code>String</code> or <code>null</code>.
      */
     public String stringValue(final Vertx vertx) {
@@ -138,14 +130,12 @@ public enum Parameter {
     }
 
     /**
-     * Provides the integer value of this parameter from the Vert.x configuration or
-     * the <code>defaultValue</code> if there was none.
+     * Provides the integer value of this parameter from the Vert.x configuration or the <code>defaultValue</code> if
+     * there was none.
      * 
-     * @param vertx The <code>Vertx</code> instance containing the
-     *            configuration.
+     * @param vertx The <code>Vertx</code> instance containing the configuration.
      * @param defaultValue A default value if the parameter was missing.
-     * @return Either the value of the parameter as an <code>int</code> or the
-     *         <code>defaultValue</code>.
+     * @return Either the value of the parameter as an <code>int</code> or the <code>defaultValue</code>.
      * @throws ClassCastException If the value was not an integer.
      */
     public int intValue(final Vertx vertx, final int defaultValue) {
@@ -156,30 +146,26 @@ public enum Parameter {
     }
 
     /**
-     * Provides the JSON value of this parameter from the Vert.x configuration or
-     * the <code>defaultValue</code> if there was none.
+     * Provides the JSON value of this parameter from the Vert.x configuration or the <code>defaultValue</code> if there
+     * was none.
      * 
-     * @param vertx The <code>Vertx</code> instance containing the
-     *            configuration.
+     * @param vertx The <code>Vertx</code> instance containing the configuration.
      * @param defaultValue A default value if the parameter was missing.
-     * @return Either the value of the parameter as a JSON object or the
-     *         <code>defaultValue</code>.
+     * @return Either the value of the parameter as a JSON object or the <code>defaultValue</code>.
      */
     public JsonObject jsonValue(final Vertx vertx, JsonObject defaultValue) {
-    	JsonObject value = vertx.getOrCreateContext().config().getJsonObject(key);
+        JsonObject value = vertx.getOrCreateContext().config().getJsonObject(key);
         final JsonObject ret = value == null ? defaultValue : value;
         LOGGER.info("Read json value " + ret + " for key " + key);
         return ret;
     }
-    
+
     /**
-     * Provides the JSON value of this parameter from the Vert.x configuration or
-     * the <code>null</code> if there was none.
+     * Provides the JSON value of this parameter from the Vert.x configuration or the <code>null</code> if there was
+     * none.
      * 
-     * @param vertx The <code>Vertx</code> instance containing the
-     *            configuration.
-     * @return Either the value of the parameter as a JSON object or the
-     *         <code>defaultValue</code>.
+     * @param vertx The <code>Vertx</code> instance containing the configuration.
+     * @return Either the value of the parameter as a JSON object or the <code>defaultValue</code>.
      */
     public JsonObject jsonValue(final Vertx vertx) {
         JsonObject value = vertx.getOrCreateContext().config().getJsonObject(key);
