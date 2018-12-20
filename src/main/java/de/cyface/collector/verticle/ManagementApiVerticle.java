@@ -30,6 +30,7 @@ import io.vertx.ext.auth.mongo.MongoAuth;
 import io.vertx.ext.mongo.MongoClient;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.handler.BodyHandler;
+import io.vertx.ext.web.handler.StaticHandler;
 
 /**
  * A verticle that starts up an endpoint that may be used to create new user accounts for the Cyface data collector.
@@ -71,6 +72,7 @@ public final class ManagementApiVerticle extends AbstractVerticle {
         Router router = Router.router(getVertx());
 
         router.post("/user").handler(BodyHandler.create()).blockingHandler(new UserCreationHandler(mongoAuth));
+        router.get("/*").handler(StaticHandler.create("webroot/management"));
 
         return router;
     }

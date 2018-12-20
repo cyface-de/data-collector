@@ -22,6 +22,7 @@ import java.io.InputStreamReader;
 import java.util.ArrayList;
 
 import org.apache.commons.lang3.Validate;
+import org.xml.sax.helpers.DefaultHandler;
 
 import de.cyface.collector.Parameter;
 import de.cyface.collector.Utils;
@@ -45,9 +46,9 @@ import io.vertx.ext.auth.jwt.JWTAuthOptions;
 import io.vertx.ext.auth.mongo.MongoAuth;
 import io.vertx.ext.mongo.MongoClient;
 import io.vertx.ext.web.Router;
-import io.vertx.ext.web.api.contract.openapi3.OpenAPI3RouterFactory;
 import io.vertx.ext.web.handler.BodyHandler;
 import io.vertx.ext.web.handler.JWTAuthHandler;
+import io.vertx.ext.web.handler.StaticHandler;
 
 /**
  * This Verticle is the Cyface collectors main entry point. It orchestrates all other Verticles and configures the
@@ -77,6 +78,7 @@ public final class CollectorApiVerticle extends AbstractVerticle {
 
         prepareEventBus();
 
+        final JsonObject mongoDatabaseConfiguration = Parameter.MONGO_DATA_DB.jsonValue(vertx);
         deployVerticles(mongoDatabaseConfiguration);
 
         final String publicKey = extractKey(Parameter.JWT_PUBLIC_KEY_FILE_PATH);
@@ -87,7 +89,7 @@ public final class CollectorApiVerticle extends AbstractVerticle {
         Validate.notNull(privateKey,
                 "Unable to load private key for JWT authentication. Did you provide a valid PEM file using the parameter "
                         + Parameter.JWT_PRIVATE_KEY_FILE_PATH.key() + ".");
-        final JsonObject mongoUserDatabaseConfiguration = Parameter.MONGO_USER_DB.jsonValue(vertx, config());
+        final JsonObject mongoUserDatabaseConfiguration = Parameter.MONGO_USER_DB.jsonValue(vertx);
         final MongoClient client = Utils.createSharedMongoClient(vertx, mongoUserDatabaseConfiguration);
         final MongoAuth authProvider = Utils.buildMongoAuthProvider(client);
 
@@ -151,7 +153,7 @@ public final class CollectorApiVerticle extends AbstractVerticle {
      * @param privateKey The private key used to issue new valid JWT tokens.
      * @param mongoAuthProvider Authentication provider used to check for valid user accounts used to generate new JWT
      *            token.
-     * @return The Vertx router used by this project.
+     * @param next The handler to call when the router has been created.
      */
     private void setupRoutes(final String publicKey, final String privateKey, final MongoAuth mongoAuthProvider,
             final Handler<AsyncResult<Router>> next) {
@@ -167,45 +169,49 @@ public final class CollectorApiVerticle extends AbstractVerticle {
         final JWTAuth jwtAuthProvider = JWTAuth.create(vertx, config);
 
         // Routing
-        OpenAPI3RouterFactory.create(vertx, this.getClass().getResource("/webroot/openapi.yml").getFile(), r -> {
-            if (r.succeeded()) {
-                OpenAPI3RouterFactory routerFactory = r.result();
-                routerFactory.setBodyHandler(BodyHandler.create().setDeleteUploadedFilesOnEnd(false));
-                routerFactory.addHandlerByOperationId("uploadMeasurement", new MeasurementHandler());
-                routerFactory.addHandlerByOperationId("login",
-                        new AuthenticationHandler(mongoAuthProvider, jwtAuthProvider));
-                routerFactory.addSecurityHandler("bearerAuth", JWTAuthHandler.create(jwtAuthProvider));
-                routerFactory.addFailureHandlerByOperationId("uploadMeasurement", new FailureHandler());
-                routerFactory.addFailureHandlerByOperationId("login", new FailureHandler());
-                routerFactory.setNotImplementedFailureHandler(result -> result.response().setStatusCode(501).end());
-                routerFactory.setValidationFailureHandler(result -> result.response().setStatusCode(400).end());
-                final Router router = routerFactory.getRouter();
-                next.handle(Future.succeededFuture(router));
-            } else {
-                LOGGER.error("Failed loading API specification!");
-                next.handle(Future.failedFuture(r.cause()));
-            }
-        });
-        // final Router mainRouter = Router.router(vertx);
-        // final Router v2ApiRouter = Router.router(vertx);
+        // OpenAPI3RouterFactory.create(vertx, this.getClass().getResource("/webroot/openapi.yml").getFile(), r -> {
+        // if (r.succeeded()) {
+        // OpenAPI3RouterFactory routerFactory = r.result();
+        // routerFactory.setBodyHandler(BodyHandler.create().setDeleteUploadedFilesOnEnd(false));
+        // routerFactory.addHandlerByOperationId("uploadMeasurement", new MeasurementHandler());
+        // routerFactory.addHandlerByOperationId("login",
+        // new AuthenticationHandler(mongoAuthProvider, jwtAuthProvider));
+        // routerFactory.addSecurityHandler("bearerAuth", JWTAuthHandler.create(jwtAuthProvider));
+        // routerFactory.addFailureHandlerByOperationId("uploadMeasurement", new FailureHandler());
+        // routerFactory.addFailureHandlerByOperationId("login", new FailureHandler());
+        // routerFactory.setNotImplementedFailureHandler(result -> result.response().setStatusCode(501).end());
+        // routerFactory.setValidationFailureHandler(result -> result.response().setStatusCode(400).end());
+        // final Router router = routerFactory.getRouter();
+        // next.handle(Future.succeededFuture(router));
+        // } else {
+        // LOGGER.error("Failed loading API specification!");
+        // next.handle(Future.failedFuture(r.cause()));
+        // }
+        // });
+        final Router mainRouter = Router.router(vertx);
+        final Router v2ApiRouter = Router.router(vertx);
 
         // Set up default routes
-        // mainRouter.mountSubRouter("/api/v2", v2ApiRouter);
+        mainRouter.mountSubRouter("/api/v2", v2ApiRouter);
 
         // Set up v2 API
-        // v2ApiRouter.route().failureHandler(new FailureHandler());
-        // v2ApiRouter.route("/").last().handler(new DefaultHandler());
+        v2ApiRouter.route().failureHandler(new FailureHandler());
         // Set up authentication route
-        // v2ApiRouter.route("/login").handler(BodyHandler.create())
-        // .handler(new AuthenticationHandler(mongoAuthProvider, jwtAuthProvider));
+        v2ApiRouter.route("/login").handler(BodyHandler.create())
+                .handler(new AuthenticationHandler(mongoAuthProvider, jwtAuthProvider));
         // Set up data collector route
-        // v2ApiRouter.post("/measurements").handler(JWTAuthHandler.create(jwtAuthProvider))
-        // .handler(BodyHandler.create().setDeleteUploadedFilesOnEnd(false)).handler(new MeasurementHandler());
+        v2ApiRouter.post("/measurements").handler(JWTAuthHandler.create(jwtAuthProvider))
+                .handler(BodyHandler.create().setDeleteUploadedFilesOnEnd(false)).handler(new MeasurementHandler());
 
-        // v2ApiRouter.route("/*").handler(StaticHandler.create("src/main/resources/webroot"));
+        v2ApiRouter.route("/*").handler(StaticHandler.create("webroot/api"));
 
-        // mainRouter.route().last().handler(new FailureHandler());
+        mainRouter.route().last().handler(new FailureHandler());
 
+        /*
+         * This implementation does not require a future since everything is synchronous but it will require this if we
+         * add the OpenApi generated route.
+         */
+        next.handle(Future.succeededFuture(mainRouter));
         // return mainRouter;
     }
 

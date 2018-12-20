@@ -8,6 +8,7 @@ bin
 build
 out
 file-uploads
+.vertx
 
 # Folders created by docker container
 data
