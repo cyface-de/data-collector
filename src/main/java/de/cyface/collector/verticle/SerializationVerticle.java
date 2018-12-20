@@ -16,7 +16,7 @@
  * You should have received a copy of the GNU General Public License
  * along with the Cyface Data Collector. If not, see <http://www.gnu.org/licenses/>.
  */
-package de.cyface.collector;
+package de.cyface.collector.verticle;
 
 import static de.cyface.collector.EventBusAddresses.MEASUREMENT_SAVED;
 import static de.cyface.collector.EventBusAddresses.NEW_MEASUREMENT;
@@ -37,13 +37,14 @@ import com.mongodb.async.client.gridfs.AsyncInputStream;
 import com.mongodb.async.client.gridfs.GridFSBucket;
 import com.mongodb.async.client.gridfs.GridFSBuckets;
 
+import de.cyface.collector.EventBusAddresses;
+import de.cyface.collector.Utils;
 import de.cyface.collector.model.Measurement;
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
-import io.vertx.core.Vertx;
 import io.vertx.core.eventbus.EventBus;
 import io.vertx.core.eventbus.Message;
 import io.vertx.core.json.JsonObject;
@@ -75,7 +76,7 @@ public final class SerializationVerticle extends AbstractVerticle implements Han
     public void start() throws Exception {
         super.start();
 
-        mongoClient = createSharedMongoClient(vertx, config());
+        mongoClient = Utils.createSharedMongoClient(vertx, config());
 
         registerForNewMeasurements();
     }
@@ -100,20 +101,6 @@ public final class SerializationVerticle extends AbstractVerticle implements Han
     }
 
     /**
-     * Creates a shared Mongo database client for the provided configuration.
-     * 
-     * @param vertx The <code>Vertx</code> instance to create the client from.
-     * @param config Configuration of the newly created client. For further
-     *            information refer to {@link Parameter#MONGO_DATA_DB} and
-     *            {@link Parameter#MONGO_USER_DB}.
-     * @return A <code>MongoClient</code> ready for usage.
-     */
-    public static MongoClient createSharedMongoClient(final Vertx vertx, final JsonObject config) {
-        final String dataSourceName = config.getString("data_source_name", "cyface");
-        return MongoClient.createShared(vertx, config, dataSourceName);
-    }
-
-    /**
      * A handler called when a measurement has been created in the Mongo database.
      * This handler saves the measurement data and send a message to
      * {@link EventBusAddresses#MEASUREMENT_SAVED} upon success or
@@ -135,7 +122,7 @@ public final class SerializationVerticle extends AbstractVerticle implements Han
          * 
          * @param measurement The measurement that was saved.
          */
-        public SerializationHandler(final Measurement measurement) {
+        SerializationHandler(final Measurement measurement) {
             Validate.notNull(measurement);
             this.measurement = measurement;
         }

@@ -13,3 +13,6 @@ file-uploads
 data
 user-data
 secrets
+
+# Ignore configuration file, since this is environment specific
+conf.json

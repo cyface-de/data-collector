@@ -39,7 +39,7 @@ final class TestUtils {
     private TestUtils() {
         // Nothing to do here.
     }
-    
+
     /**
      * Utility method used to get a new JWT token from the server.
      * 
@@ -47,7 +47,8 @@ final class TestUtils {
      * @param handler <code>Handler</code> called when the response has returned.
      * @param port The port running the test server on localhost to authenticate against.
      */
-    static void authenticate(final WebClient client, final Handler<AsyncResult<HttpResponse<Buffer>>> handler, final int port) {
+    static void authenticate(final WebClient client, final Handler<AsyncResult<HttpResponse<Buffer>>> handler,
+            final int port) {
         JsonObject body = new JsonObject();
         body.put("username", "admin");
         body.put("password", "secret");

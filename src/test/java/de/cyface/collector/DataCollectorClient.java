@@ -3,6 +3,7 @@ package de.cyface.collector;
 import java.io.IOException;
 import java.net.ServerSocket;
 
+import de.cyface.collector.verticle.CollectorApiVerticle;
 import io.vertx.core.DeploymentOptions;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
@@ -49,13 +50,13 @@ final class DataCollectorClient {
                 .put("db_name", "cyface");
 
         JsonObject config = new JsonObject().put(Parameter.MONGO_DATA_DB.key(), mongoDbConfig)
-                .put(Parameter.MONGO_USER_DB.key(), mongoDbConfig).put(Parameter.HTTP_PORT.key(), port)
+                .put(Parameter.MONGO_USER_DB.key(), mongoDbConfig).put(Parameter.COLLECTOR_HTTP_PORT.key(), port)
                 .put(Parameter.JWT_PRIVATE_KEY_FILE_PATH.key(),
                         this.getClass().getResource("/private_key.pem").getFile())
                 .put(Parameter.JWT_PUBLIC_KEY_FILE_PATH.key(), this.getClass().getResource("/public.pem").getFile());
         DeploymentOptions options = new DeploymentOptions().setConfig(config);
 
-        vertx.deployVerticle(MainVerticle.class.getName(), options, ctx.asyncAssertSuccess());
+        vertx.deployVerticle(CollectorApiVerticle.class.getName(), options, ctx.asyncAssertSuccess());
 
         return WebClient.create(vertx);
     }

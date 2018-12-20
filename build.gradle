@@ -18,7 +18,7 @@
  */
 /*
  * @author Klemens Muthmann
- * @version 1.0.0
+ * @version 1.0.1
  * @since 2.0.0
  */
 plugins {
@@ -56,7 +56,7 @@ version = '2.0.0-SNAPSHOT'
 sourceCompatibility = '1.8'
 mainClassName = 'de.cyface.collector.Application'
 
-def mainVerticleName = 'de.cyface.collector.MainVerticle'
+def mainVerticleName = 'de.cyface.collector.verticle.MainVerticle'
 def watchForChange = 'src/**/*'
 def doOnChange = './gradlew classes'
 
@@ -119,4 +119,17 @@ jacocoTestReport {
         csv.enabled true
         html.destination file("${buildDir}/reports/jacocoHtml")
     }
+}
+
+tasks.withType(FindBugs) {
+    reports {
+        xml.enabled false
+        html.enabled true
+    }
+}
+
+checkstyle {
+	// use one common config file for all subprojects
+	configFile = project(':').file('config/checkstyle/checkstyle.xml')
+	configProperties = [ "suppressionFile" : project(':').file('config/checkstyle/suppressions.xml')]
 }

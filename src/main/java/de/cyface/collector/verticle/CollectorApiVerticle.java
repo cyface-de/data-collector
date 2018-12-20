@@ -12,7 +12,7 @@
  * You should have received a copy of the GNU General Public License
  * along with the Cyface Data Collector. If not, see <http://www.gnu.org/licenses/>.
  */
-package de.cyface.collector;
+package de.cyface.collector.verticle;
 
 import java.io.BufferedReader;
 import java.io.FileInputStream;
@@ -23,6 +23,8 @@ import java.util.ArrayList;
 
 import org.apache.commons.lang3.Validate;
 
+import de.cyface.collector.Parameter;
+import de.cyface.collector.Utils;
 import de.cyface.collector.handler.AuthenticationHandler;
 import de.cyface.collector.handler.DefaultHandler;
 import de.cyface.collector.handler.FailureHandler;
@@ -40,7 +42,6 @@ import io.vertx.core.logging.LoggerFactory;
 import io.vertx.ext.auth.PubSecKeyOptions;
 import io.vertx.ext.auth.jwt.JWTAuth;
 import io.vertx.ext.auth.jwt.JWTAuthOptions;
-import io.vertx.ext.auth.mongo.HashAlgorithm;
 import io.vertx.ext.auth.mongo.MongoAuth;
 import io.vertx.ext.mongo.MongoClient;
 import io.vertx.ext.web.Router;
@@ -48,22 +49,21 @@ import io.vertx.ext.web.handler.BodyHandler;
 import io.vertx.ext.web.handler.JWTAuthHandler;
 
 /**
- * This Verticle is the Cyface collectors main entry point. It orchestrates all
- * other Verticles and configures the endpoints used to provide the REST-API.
+ * This Verticle is the Cyface collectors main entry point. It orchestrates all other Verticles and configures the
+ * endpoints used to provide the REST-API.
  *
  * @author Klemens Muthmann
  * @author Armin Schnabel
  * @version 1.2.0
  * @since 2.0.0
  */
-public final class MainVerticle extends AbstractVerticle {
+public final class CollectorApiVerticle extends AbstractVerticle {
 
     /**
-     * The <code>Logger</code> used for objects of this class. Configure it by
-     * changing the settings in
+     * The <code>Logger</code> used for objects of this class. Configure it by changing the settings in
      * <code>src/main/resources/logback.xml</code>.
      */
-    private static final Logger LOGGER = LoggerFactory.getLogger(MainVerticle.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(CollectorApiVerticle.class);
 
     /**
      * The hashing algorithm used for public and private keys to generate and check JWT tokens.
@@ -72,9 +72,11 @@ public final class MainVerticle extends AbstractVerticle {
 
     @Override
     public void start(final Future<Void> startFuture) throws Exception {
+        Validate.notNull(startFuture);
+
         prepareEventBus();
 
-        JsonObject mongoDatabaseConfiguration = Parameter.MONGO_DATA_DB.jsonValue(vertx, config());
+        JsonObject mongoDatabaseConfiguration = Parameter.MONGO_DATA_DB.jsonValue(vertx);
         deployVerticles(mongoDatabaseConfiguration);
 
         final String publicKey = extractKey(Parameter.JWT_PUBLIC_KEY_FILE_PATH);
@@ -85,23 +87,27 @@ public final class MainVerticle extends AbstractVerticle {
         Validate.notNull(privateKey,
                 "Unable to load private key for JWT authentication. Did you provide a valid PEM file using the parameter "
                         + Parameter.JWT_PRIVATE_KEY_FILE_PATH.key() + ".");
-        final JsonObject mongoUserDatabaseConfiguration = Parameter.MONGO_USER_DB.jsonValue(vertx, config());
-        final MongoAuth authProvider = buildMongoAuthProvider(mongoUserDatabaseConfiguration);
+        final JsonObject mongoUserDatabaseConfiguration = Parameter.MONGO_USER_DB.jsonValue(vertx);
+        final MongoClient client = Utils.createSharedMongoClient(vertx, mongoUserDatabaseConfiguration);
+        final MongoAuth authProvider = Utils.buildMongoAuthProvider(client);
         final Router router = setupRoutes(publicKey, privateKey, authProvider);
 
-        final int httpPort = Parameter.HTTP_PORT.intValue(vertx, 8080);
+        final int httpPort = Parameter.COLLECTOR_HTTP_PORT.intValue(vertx, 8080);
         final Future<Void> serverStartFuture = Future.future();
         startHttpServer(router, serverStartFuture, httpPort);
 
-        // TODO: Remove before going into production Deletes all users and creates admin
-        // account
+        final String adminUsername = Parameter.ADMIN_USER_NAME.stringValue(vertx, "admin");
+        final String adminPassword = Parameter.ADMIN_PASSWORD.stringValue(vertx, "secret");
         final Future<Void> defaultUserCreatedFuture = Future.future();
-        final MongoClient client = SerializationVerticle.createSharedMongoClient(vertx, mongoUserDatabaseConfiguration);
-        client.removeDocuments("user", new JsonObject(), r -> {
-            authProvider.insertUser("admin", "secret", new ArrayList<>(), new ArrayList<>(), ir -> {
-                LOGGER.info("Identifier of new user id: " + ir);
+        client.findOne("user", new JsonObject().put("username", adminUsername), null, result -> {
+            if (result.result() == null) {
+                authProvider.insertUser(adminUsername, adminPassword, new ArrayList<>(), new ArrayList<>(), ir -> {
+                    LOGGER.info("Identifier of new user id: " + ir);
+                    defaultUserCreatedFuture.complete();
+                });
+            } else {
                 defaultUserCreatedFuture.complete();
-            });
+            }
         });
         final CompositeFuture startUpFinishedFuture = CompositeFuture.all(serverStartFuture, defaultUserCreatedFuture);
         startUpFinishedFuture.setHandler(r -> {
@@ -121,12 +127,13 @@ public final class MainVerticle extends AbstractVerticle {
     }
 
     /**
-     * Deploys all additional <code>Verticle</code> objects required by the
-     * application.
+     * Deploys all additional <code>Verticle</code> objects required by the application.
      * 
      * @param mongoDatabaseConfiguration The JSON configuration for the mongo database to store the uploaded data to.
      */
     private void deployVerticles(final JsonObject mongoDatabaseConfiguration) {
+        Validate.notNull(mongoDatabaseConfiguration);
+
         final DeploymentOptions options = new DeploymentOptions().setWorker(true).setConfig(mongoDatabaseConfiguration);
         vertx.deployVerticle(SerializationVerticle.class, options);
     }
@@ -170,38 +177,20 @@ public final class MainVerticle extends AbstractVerticle {
     }
 
     /**
-     * @param mongoUserDatabaseConfiguration The database configuration for the Mongo database containing the user
-     *            accounts available on this Cyface Data Collector.
-     * @return Authentication provider used to check for valid user accounts used to generate new JWT
-     *         token.
-     */
-    private MongoAuth buildMongoAuthProvider(final JsonObject mongoUserDatabaseConfiguration) {
-        final MongoClient client = SerializationVerticle.createSharedMongoClient(vertx, mongoUserDatabaseConfiguration);
-        final JsonObject authProperties = new JsonObject();
-        final MongoAuth authProvider = MongoAuth.create(client, authProperties);
-        authProvider.setHashAlgorithm(HashAlgorithm.SHA512);
-
-        return authProvider;
-    }
-
-    /**
-     * Starts the HTTP server provided by this application. This server runs the
-     * Cyface Collector REST-API.
+     * Starts the HTTP server provided by this application. This server runs the Cyface Collector REST-API.
      *
-     * @param router The router for all the endpoints the HTTP server should
-     *            serve.
-     * @param startFuture Informs the caller about the successful or failed start of
-     *            the server.
+     * @param router The router for all the endpoints the HTTP server should serve.
+     * @param startFuture Informs the caller about the successful or failed start of the server.
      * @param httpPort The HTTP port to run the server at.
      */
     private void startHttpServer(final Router router, final Future<Void> startFuture, final int httpPort) {
-        vertx.createHttpServer().requestHandler(router::accept).listen(httpPort,
+        vertx.createHttpServer().requestHandler(router).listen(httpPort,
                 serverStartup -> completeStartup(serverStartup, startFuture));
     }
 
     /**
-     * Finishes the <code>MainVerticle</code> startup process and informs all
-     * interested parties about whether it has been successful or not.
+     * Finishes the <code>MainVerticle</code> startup process and informs all interested parties about whether it has
+     * been successful or not.
      *
      * @param serverStartup The result of the server startup as provided by <code>Vertx</code>.
      * @param future A future to call to inform all waiting parties about success or failure of the startup process.

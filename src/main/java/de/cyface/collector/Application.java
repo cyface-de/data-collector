@@ -18,6 +18,7 @@
  */
 package de.cyface.collector;
 
+import de.cyface.collector.verticle.MainVerticle;
 import io.vertx.core.Launcher;
 import io.vertx.core.VertxOptions;
 import io.vertx.core.http.HttpServerOptions;
@@ -30,12 +31,12 @@ import io.vertx.micrometer.VertxPrometheusOptions;
 /**
  * An object of this class forms the entry point to the Cyface data collector application. It contains the
  * <code>main</code> method, which you can start to run everything. However you need to provide the {@link MainVerticle}
- * as a parameter to this class using <code>run de.cyface.collector.MainVerticle</code>.
+ * as a parameter to this class using <code>run de.cyface.collector.verticle.MainVerticle</code>.
  * <p>
  * You may also provide additional parameters in JSON format as described in the <code>README.md</code> file.
  * 
  * @author Klemens Muthmann
- * @version 1.0.1
+ * @version 1.0.2
  * @since 2.0.0
  */
 public class Application extends Launcher {
@@ -53,8 +54,8 @@ public class Application extends Launcher {
     /**
      * Starts the application.
      * 
-     * @param args See README.adoc and documenation of the Vert.x <code>Launcher</code> class, for further details about
-     *            supported arguments.
+     * @param args See README.adoc and documentation of the Vert.x <code>Launcher</code> class, for further details
+     *            about supported arguments.
      */
     public static void main(final String[] args) {
         System.setProperty("vertx.logger-delegate-factory-class-name", "io.vertx.core.logging.SLF4JLogDelegateFactory");

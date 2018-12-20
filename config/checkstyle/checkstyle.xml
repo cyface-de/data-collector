@@ -42,7 +42,6 @@
         <module name="LocalFinalVariableName"/>
         <module name="LocalVariableName"/>
         <module name="MemberName"/>
-        <module name="MethodName"/>
         <module name="PackageName"/>
         <module name="ParameterName"/>
         <module name="StaticVariableName"/>
@@ -105,7 +104,13 @@
         <module name="LocalFinalVariableName"/>
         <module name="LocalVariableName"/>
         <module name="MemberName"/>
-        <module name="MethodName"/>
+        <module name="MethodName">
+      		<property name="id" value="MethodNameRegular"/>
+    	</module>
+    	<module name="MethodName">
+      		<property name="id" value="MethodNameTest"/>
+      		<property name="format" value="^[a-z][a-zA-Z0-9_]*$"/>
+    	</module>
         <module name="PackageName"/>
         <module name="StaticVariableName"/>
         <module name="TypecastParenPad">
@@ -120,4 +125,7 @@
     </module>
     <module name="Translation"/>
     <module name="FileLength"/>
+    <module name="SuppressionFilter">
+    <property name="file" value="${suppressionFile}" default="config/checkstyle/suppressions.xml"/>
+  </module>
 </module>
