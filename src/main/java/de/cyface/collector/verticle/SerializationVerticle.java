@@ -110,6 +110,10 @@ public final class SerializationVerticle extends AbstractVerticle implements Han
     class SerializationHandler implements Handler<AsyncResult<String>> {
 
         /**
+         * The default url to use to connect to a mongo database if none has been provided via Verticle configuration.
+         */
+        private static final String DEFAULT_MONGO_URL = "mongodb://localhost:27017";
+        /**
          * The measurement that was saved.
          */
         private final Measurement measurement;
@@ -132,7 +136,7 @@ public final class SerializationVerticle extends AbstractVerticle implements Han
                     LOGGER.debug("Inserted measurement with id " + id);
 
                     // Store to Mongo GridFs
-                    final String mongoConnectionString = config().getString("connection_string", "mongodb://localhost:27017");
+                    final String mongoConnectionString = config().getString("connection_string", DEFAULT_MONGO_URL);
                     final String mongoDatabaseName = config().getString("db_name", "test");
                     MongoDatabase db = com.mongodb.async.client.MongoClients
                             .create(new ConnectionString(mongoConnectionString)).getDatabase(mongoDatabaseName);

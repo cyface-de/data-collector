@@ -37,26 +37,29 @@ import io.vertx.core.logging.LoggerFactory;
  * @since 2.0.0
  */
 public final class MainVerticle extends AbstractVerticle {
-    
+
+    /**
+     * Logger used for objects of this class. Configure it using <code>/src/main/resource/logback.xml</code>.
+     */
     private static final Logger LOGGER = LoggerFactory.getLogger(MainVerticle.class);
-    
+
     @Override
     public void start(final Future<Void> startFuture) throws Exception {
 
         final String saltPath = Parameter.SALT_PATH.stringValue(vertx, "secrets/salt");
         vertx.fileSystem().exists(saltPath, result -> {
-            if(result.failed()) {
+            if (result.failed()) {
                 LOGGER.error(result.cause());
                 startFuture.fail(result.cause());
             }
-            
-            if(result.result()) {
+
+            if (result.result()) {
                 vertx.fileSystem().readFile(saltPath, readSaltResult -> {
-                    if(readSaltResult.failed()) {
+                    if (readSaltResult.failed()) {
                         LOGGER.error(result.cause());
                         startFuture.fail(result.cause());
                     }
-                    
+
                     final String salt = readSaltResult.result().toString(Charset.defaultCharset());
                     deploy(startFuture, salt);
                 });
@@ -67,7 +70,14 @@ public final class MainVerticle extends AbstractVerticle {
         });
 
     }
-    
+
+    /**
+     * Deploys all required Verticles and tells the system when deployment has finished via the provided
+     * <code>startFuture</code>.
+     * 
+     * @param startFuture The future to complete or fail, depending on the success or failure of Verticle deployment.
+     * @param salt Salt to use by all Verticles to encrypt and decrypt user passwords.
+     */
     private void deploy(final Future<Void> startFuture, final String salt) {
         // Create a few futures to synchronize the start up process
         final Future<Void> collectorApiFuture = Future.future();
@@ -76,7 +86,7 @@ public final class MainVerticle extends AbstractVerticle {
         final JsonObject config = config();
         config.put(Parameter.SALT.key(), salt);
         final DeploymentOptions verticleConfig = new DeploymentOptions().setConfig(config);
-        
+
         // Start the collector API as first verticle.
         vertx.deployVerticle(CollectorApiVerticle.class, verticleConfig, result -> {
             if (result.succeeded()) {
@@ -85,7 +95,7 @@ public final class MainVerticle extends AbstractVerticle {
                 collectorApiFuture.fail(result.cause());
             }
         });
-        
+
         // Start the management API as second verticle.
         vertx.deployVerticle(ManagementApiVerticle.class, verticleConfig, result -> {
             if (result.succeeded()) {
@@ -94,7 +104,7 @@ public final class MainVerticle extends AbstractVerticle {
                 managementApiFuture.fail(result.cause());
             }
         });
-        
+
         // As soon as both futures have a succeeded or one failed, finish the start up process.
         startUpProcessFuture.setHandler(result -> {
             if (result.succeeded()) {

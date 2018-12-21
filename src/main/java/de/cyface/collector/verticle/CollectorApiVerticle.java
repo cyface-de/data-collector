@@ -25,6 +25,7 @@ import org.apache.commons.lang3.Validate;
 
 import de.cyface.collector.Parameter;
 import de.cyface.collector.Utils;
+import de.cyface.collector.handler.AuthenticationFailureHandler;
 import de.cyface.collector.handler.AuthenticationHandler;
 import de.cyface.collector.handler.FailureHandler;
 import de.cyface.collector.handler.MeasurementHandler;
@@ -201,13 +202,14 @@ public final class CollectorApiVerticle extends AbstractVerticle {
         mainRouter.mountSubRouter("/api/v2", v2ApiRouter);
 
         // Set up v2 API
-        v2ApiRouter.route().failureHandler(new FailureHandler());
         // Set up authentication route
         v2ApiRouter.route("/login").handler(BodyHandler.create())
-                .handler(new AuthenticationHandler(mongoAuthProvider, jwtAuthProvider));
+                .handler(new AuthenticationHandler(mongoAuthProvider, jwtAuthProvider))
+                .failureHandler(new AuthenticationFailureHandler());
         // Set up data collector route
         v2ApiRouter.post("/measurements").handler(JWTAuthHandler.create(jwtAuthProvider))
-                .handler(BodyHandler.create().setDeleteUploadedFilesOnEnd(false)).handler(new MeasurementHandler());
+                .handler(BodyHandler.create().setDeleteUploadedFilesOnEnd(false)).handler(new MeasurementHandler())
+                .failureHandler(new FailureHandler());
 
         v2ApiRouter.route().handler(StaticHandler.create("webroot/api"));
 

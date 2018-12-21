@@ -45,20 +45,21 @@ public final class ManagementApiVerticle extends AbstractVerticle {
     public void start(final Future<Void> startFuture) throws Exception {
         Validate.notNull(startFuture);
 
-        final JsonObject mongoUserDatabaseConfiguration = Parameter.MONGO_USER_DB.jsonValue(getVertx(), new JsonObject());
-//        if (mongoUserDatabaseConfiguration == null) {
-//            startFuture.fail("There was no configuration to access a user database. Please provide one by setting "
-//                    + Parameter.MONGO_USER_DB.key()
-//                    + " to the correct value. Please refer to the README for further instructions.");
-//        } else {
-            final int port = Parameter.MANAGEMENT_HTTP_PORT.intValue(getVertx(), 13371);
-            final String salt = Parameter.SALT.stringValue(vertx,"cyface-salt");
+        final JsonObject mongoUserDatabaseConfiguration = Parameter.MONGO_USER_DB.jsonValue(getVertx(),
+                new JsonObject());
+        // if (mongoUserDatabaseConfiguration == null) {
+        // startFuture.fail("There was no configuration to access a user database. Please provide one by setting "
+        // + Parameter.MONGO_USER_DB.key()
+        // + " to the correct value. Please refer to the README for further instructions.");
+        // } else {
+        final int port = Parameter.MANAGEMENT_HTTP_PORT.intValue(getVertx(), 13371);
+        final String salt = Parameter.SALT.stringValue(vertx, "cyface-salt");
 
-            final MongoClient client = Utils.createSharedMongoClient(getVertx(), mongoUserDatabaseConfiguration);
-            final MongoAuth mongoAuth = Utils.buildMongoAuthProvider(client, salt);
-            final Router router = setupRouter(mongoAuth);
-            startHttpServer(startFuture, router, port);
-//        }
+        final MongoClient client = Utils.createSharedMongoClient(getVertx(), mongoUserDatabaseConfiguration);
+        final MongoAuth mongoAuth = Utils.buildMongoAuthProvider(client, salt);
+        final Router router = setupRouter(mongoAuth);
+        startHttpServer(startFuture, router, port);
+        // }
     }
 
     /**
