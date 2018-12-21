@@ -41,7 +41,7 @@ paths:
                 password: secret
       responses:
         '200':
-          description: Your credentials where correct. The Authorization header contains a JWT key that is valid for 60 seconds to upload data.
+          description: Your credentials were correct. The Authorization header contains a JWT key that is valid for 60 seconds to upload data.
           headers:
             Authorization:
               description: The generated JWT token.
@@ -54,7 +54,7 @@ paths:
                 type: integer
                 minimum: 0
         '401':
-          description: The provided credentials where not correct
+          description: The provided credentials were not correct
             
   /measurements:
     post:
