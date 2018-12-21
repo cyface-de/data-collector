@@ -19,7 +19,6 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.nio.charset.Charset;
 import java.util.ArrayList;
 
 import org.apache.commons.lang3.Validate;
@@ -109,11 +108,11 @@ public final class CollectorApiVerticle extends AbstractVerticle {
         final String adminPassword = Parameter.ADMIN_PASSWORD.stringValue(vertx, "secret");
         final Future<Void> defaultUserCreatedFuture = Future.future();
         client.findOne("user", new JsonObject().put("username", adminUsername), null, result -> {
-            if(result.failed()) {
+            if (result.failed()) {
                 defaultUserCreatedFuture.fail(result.cause());
                 return;
             }
-            
+
             if (result.result() == null) {
                 authProvider.insertUser(adminUsername, adminPassword, new ArrayList<>(), new ArrayList<>(), ir -> {
                     LOGGER.info("Identifier of new user id: " + ir);
