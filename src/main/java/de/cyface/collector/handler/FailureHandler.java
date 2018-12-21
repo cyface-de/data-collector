@@ -40,10 +40,11 @@ public final class FailureHandler implements Handler<RoutingContext> {
     @Override
     public void handle(final RoutingContext ctx) {
         LOGGER.error("You seem to have reached an invalid resource.");
+        LOGGER.error(ctx.failure());
         if (ctx.response().ended() || ctx.response().closed()) {
             LOGGER.error("Failure in closed response. Unable to inform client! ", ctx.failure());
         } else {
-            ctx.response().setStatusCode(404).end("You seem to have reached an invalid resource.");
+            ctx.response().setStatusCode(401).end("You seem to have reached an invalid resource.");
         }
     }
 

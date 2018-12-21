@@ -170,6 +170,24 @@ public final class FileUploadTest {
     public void testPostLargeFile(final TestContext context) {
         uploadAndCheckForSuccess(context, "/iphone-neu.ccyf");
     }
+    
+    @Test
+    public void uploadWithWrongCredentials_Returns401(final TestContext context) {
+        final Async async = context.async();
+        
+        final HttpRequest<Buffer> builder = client.post(collectorClient.getPort(), "localhost", "/api/v2/measurements");
+        builder.sendMultipartForm(form, ar -> {
+            if (ar.succeeded()) {
+                context.assertEquals(ar.result().statusCode(), 401);
+                context.assertTrue(ar.succeeded());
+            } else {
+                context.fail(ar.cause());
+            }
+            async.complete();
+        });
+        
+        async.await(3_000L);
+    }
 
     /**
      * Uploads a file identified by a test resource location and checks that it was
