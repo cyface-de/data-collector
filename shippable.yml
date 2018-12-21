@@ -31,9 +31,16 @@ build:
                 - cp -r build/jacoco shippable/codecoverage
                 - cp -r build/reports/jacoco shippable/codecoverage
                 - cp -r build/reports/jacocoHtml shippable/codecoverage
+        post_ci:
+                - if [ "$BRANCH" == "dev" ] && [ "$IS_PULL_REQUEST" != true ]; then docker build -t cyfacede/collector:latest; docker push cyfacede/collector:latest; fi
+                - if [ "$IS_GIT_TAG" == true ] && [ "$IS_PULL_REQUEST" != true ]; then docker build -t "cyfacede/collector:$GIT_TAG_NAME"; docker push "cyfacede/collector:$GIT_TAG_NAME"; fi
+
 
 integrations:
   notifications:
     - integrationName: Cyface Slack
       type: slack
       recipients: "#continuous-int"
+  hub:
+    - integrationName: Docker_Hub
+      type: dockerRegistryLogin

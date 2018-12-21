@@ -1,4 +1,4 @@
- Collector
+= Collector
 
 image:https://img.shields.io/badge/vert.x-3.6.2-purple.svg[link="https://vertx.io"] 
 image:https://img.shields.io/badge/mongo-4.0.4-purple.svg[link="https://mongodb.com/"]
@@ -64,7 +64,22 @@ This means if you boot up everything using the default settings you can access G
 The default username is *cyface-admin* and the default password *cyface-admin@grafana*.
 The Collector API is accessable via `http://localhost:8080/api/v2`.
 
-=== Data Collector Arguments
+=== Running without Docker
+Running the Cyface data collector without Docker, like for example from the terminal or from within your IDE is a little more complex. 
+It requires a few set up steps and command knowledge as explained in the following paragraphs.
+
+==== Running a Mongo Database for Data and User Storage
+Before you can run the Cyface data collector you need to set up a Mongo database.
+
+If you use the Docker environment as explained above, this is done for you.
+If you run the Cyface data collector on your own, you are responsible for providing a valid environment, including Mongo.
+
+The database is used to store the collected data and information about valid user accounts.
+For information on how to install and run a Mongo database on your machine please follow the https://docs.mongodb.com/manual/installation/#mongodb-community-edition[tutorial].
+If you take the default installation, the default settings of the Cyface data collector should be sufficient to connect to that instance.
+*However be aware that this is not recommended as a production environment.*
+
+==== Data Collector Arguments
 The Cyface data collector supports a few parameters to fine tune the runtime. 
 Except for the security relevant parameters (i.e. *jwt.private* and *jwt.public*), all of these parameters also provide reasonable defaults for quick setup. 
 For how to set up *jwt.private* and *jwt.public* refer to the section on certificates above.
@@ -79,7 +94,7 @@ The parameters are provided using the typical https://vertx.io/docs/vertx-core/j
 * **mongo.datadb:** Settings for a Mongo database storing all data uploaded via the Cyface data collector. This defaults to a Mongo database available at `mongodb://127.0.0.1:27017`. The value of this should be a JSON object configured as described https://vertx.io/docs/vertx-mongo-client/java/#_configuring_the_client[here]. In addition, if you use two different Mongo databases for credentials and data you should provide different values for the JSON key `data_source_name`.
 * **metrics.enabled:** Set to either `true` or `false`. If `true` the collector API publishes metrics using micrometer. These metrics are accessible by a https://prometheus.io/[Prometheus] server (Which you either need to setup yourself or use the Docker setup explained further down) at port `8081`.
 
-=== Running from Command Line
+==== Running from Command Line
 
 To launch your tests:
 ```
@@ -96,7 +111,7 @@ To run your application:
 ./gradlew clean run
 ```
 
-=== Running from IDE
+==== Running from IDE
 To run directly from within your IDE you need to use the `de.cyface.collector.Application` class, which is a subclass of the https://vertx.io/docs/vertx-core/java/#_the_vert_x_launcher[Vert.x launcher]. Just specify it as the main class in your launch configuration with the program argument `run de.cyface.collector.verticle.MainVerticle`.
 
 == Runtime Administration

@@ -1,0 +1,116 @@
+openapi: 3.0.2
+info:
+  title: Cyface Data Collector
+  description: This is a Cyface data collection endpoint, that receives traffic data from Cyface measurement devices, and stores them for further processing.
+  version: 2.0.0
+  
+servers:
+  - url: /api/v2
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      
+paths:
+  /login:
+    post:
+      summary: Login to retrieve a new valid JWT Auth Token
+      operationId: login
+      requestBody:
+        description: Valid credentials to log in to this Cyface Data Collector
+        required: true
+        content:
+          'application/json':
+            schema:
+              type: object
+              properties:
+                username:
+                  description: Name of a valid user within this instance of the Cyface data collector.
+                  type: string
+                password:
+                  description: Password belonging to the provided user used to identify the user with the system.
+                  type: string
+              required:
+                - username
+                - password
+              example:
+                username: admin
+                password: secret
+      responses:
+        '200':
+          description: Your credentials where correct. The Authorization header contains a JWT key that is valid for 60 seconds to upload data.
+          headers:
+            Authorization:
+              description: The generated JWT token.
+              schema:
+                type: string
+                format: jwt
+            content-length:
+              description: The length of the generated JWT token in byte.
+              schema:
+                type: integer
+                minimum: 0
+        '401':
+          description: The provided credentials where not correct
+            
+  /measurements:
+    post:
+      summary: Measurements currently collected by the API.
+      operationId: uploadMeasurement
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          'multipart/form-data':
+            schema:
+              type: object
+              properties:
+                fileToUpload:
+                  #description: The measured data in the Cyface binary format.
+                  type: string
+                  format: binary
+                  example:
+                    summary: An example upload in Cyface data format
+                    externalValue: 'data.ccyf'
+                deviceId:
+                  #description: The world wide unique identifier of the device that uploaded the data.
+                  type: string
+                  example: a
+                measurementId:
+                  #description: The device wide unique identifier of the uploaded measurement.
+                  type: string
+                  example: 1
+                deviceType:
+                  #description: The type of the device, that uploaded the data.
+                  type: string
+                  example: HTC Desire
+                osVersion:
+                  #description: The version of the device operating system.
+                  type: string
+                  example: 4.4.4
+              required:
+                - fileToUpload
+                - deviceId
+                - measurementId
+                - deviceType
+                - osVersion
+              
+      responses:
+        '201':
+          description: If the file was successfully uploaded.
+        '400':
+          description: Unknown error for example if Web server reports status -1 or the client experienced a synchronisation error.
+        '401':
+          description: No Authorization information provided. This request requires a valid JWT token to continue.
+        '403':
+          description: Authorization information was provided, but the authorized user has no permission to post measurements.
+        '409':
+          description: The measurement from the device already exists on the server.
+        '422':
+          description: The multipart request is erroneous. There for example is not exactly one file or a syntax error.
+        '500':
+          description: Reported on any internal server error, such as the storage layer was not accessible.

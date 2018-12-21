@@ -46,7 +46,7 @@ import io.vertx.ext.web.multipart.MultipartForm;
  * Tests that uploading measurements to the Cyface API works as expected.
  * 
  * @author Klemens Muthmann
- * @version 2.1.0
+ * @version 2.1.1
  * @since 2.0.0
  */
 @RunWith(VertxUnitRunner.class)
@@ -105,7 +105,7 @@ public final class FileUploadTest {
     @BeforeClass
     public static void setUpMongoDatabase() throws IOException {
         mongoTest = new MongoTest();
-        ServerSocket socket = new ServerSocket(0);
+        final ServerSocket socket = new ServerSocket(0);
         int mongoPort = socket.getLocalPort();
         socket.close();
         mongoTest.setUpMongoDatabase(mongoPort);
@@ -180,14 +180,14 @@ public final class FileUploadTest {
      * @param testFileResourceName A resource name of a file to upload for testing.
      */
     private void uploadAndCheckForSuccess(final TestContext context, final String testFileResourceName) {
-        Async async = context.async();
+        final Async async = context.async();
         final URL testFileResource = this.getClass().getResource(testFileResourceName);
 
         form.binaryFileUpload("fileToUpload",
                 String.format(Locale.US, "%s_%s.cyf", deviceIdentifier, measurementIdentifier),
                 testFileResource.getFile(), "application/octet-stream");
 
-        EventBus eventBus = vertx.eventBus();
+        final EventBus eventBus = vertx.eventBus();
         eventBus.consumer(EventBusAddresses.MEASUREMENT_SAVED, message -> {
             async.complete();
         });
@@ -198,7 +198,8 @@ public final class FileUploadTest {
         TestUtils.authenticate(client, authResponse -> {
             if (authResponse.succeeded()) {
                 context.assertEquals(authResponse.result().statusCode(), 200);
-                final String authToken = authResponse.result().bodyAsString();
+                final String authToken = authResponse.result().getHeader("Authorization");
+                context.assertNotNull(authToken);
 
                 final HttpRequest<Buffer> builder = client
                         .post(collectorClient.getPort(), "localhost", "/api/v2/measurements");

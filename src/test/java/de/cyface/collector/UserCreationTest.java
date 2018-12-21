@@ -25,7 +25,7 @@ import io.vertx.ext.web.client.WebClient;
  * Tests whether user creation via the management API works as expected.
  * 
  * @author Klemens Muthmann
- * @version 1.0.0
+ * @version 1.0.1
  * @since 2.0.0
  */
 @RunWith(VertxUnitRunner.class)
@@ -65,7 +65,7 @@ public final class UserCreationTest {
     @BeforeClass
     public static void setUpMongoDatabase() throws IOException {
         mongoTest = new MongoTest();
-        ServerSocket socket = new ServerSocket(0);
+        final ServerSocket socket = new ServerSocket(0);
         int mongoPort = socket.getLocalPort();
         socket.close();
         mongoTest.setUpMongoDatabase(mongoPort);
@@ -90,16 +90,16 @@ public final class UserCreationTest {
     public void setUp(final TestContext context) throws IOException {
         vertx = Vertx.vertx();
 
-        ServerSocket socket = new ServerSocket(0);
+        final ServerSocket socket = new ServerSocket(0);
         port = socket.getLocalPort();
         socket.close();
 
         mongoDbConfiguration = new JsonObject()
                 .put("connection_string", "mongodb://localhost:" + mongoTest.getMongoPort()).put("db_name", "cyface");
 
-        JsonObject config = new JsonObject().put(Parameter.MANAGEMENT_HTTP_PORT.key(), port)
+        final JsonObject config = new JsonObject().put(Parameter.MANAGEMENT_HTTP_PORT.key(), port)
                 .put(Parameter.MONGO_USER_DB.key(), mongoDbConfiguration);
-        DeploymentOptions options = new DeploymentOptions().setConfig(config);
+        final DeploymentOptions options = new DeploymentOptions().setConfig(config);
 
         vertx.deployVerticle(ManagementApiVerticle.class.getName(), options, context.asyncAssertSuccess());
 

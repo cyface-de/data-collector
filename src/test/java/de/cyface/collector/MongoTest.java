@@ -30,22 +30,21 @@ import de.flapdoodle.embed.mongo.distribution.Version;
 import de.flapdoodle.embed.process.runtime.Network;
 
 /**
- * A lifecycle handler for a Mongo database you can start and stop on the fly.
- * The database is reinitialized after each restart.
+ * A lifecycle handler for a Mongo database you can start and stop on the fly. The database is reinitialized after each
+ * restart.
  * 
  * @author Klemens Muthmann
- * @version 2.0.0
+ * @version 2.0.1
  * @since 2.0.0
  */
-class MongoTest {
+final class MongoTest {
     /**
-     * The test Mongo database. This must be shut down after finishing this Mongo
-     * database run.
+     * The test Mongo database. This must be shut down after finishing this Mongo database run.
      */
     private MongodProcess mongo;
     /**
-     * The executable running the <code>MongodProcess</code>. This must be shut down
-     * after finishing this Mongo database run.
+     * The executable running the <code>MongodProcess</code>. This must be shut down after finishing this Mongo database
+     * run.
      */
     private MongodExecutable mongodExecutable;
 
@@ -69,8 +68,8 @@ class MongoTest {
      */
     public void setUpMongoDatabase(final int mongoPort) throws IOException {
         this.mongoPort = mongoPort;
-        MongodStarter starter = MongodStarter.getDefaultInstance();
-        IMongodConfig mongodConfig = new MongodConfigBuilder().version(Version.Main.PRODUCTION)
+        final MongodStarter starter = MongodStarter.getDefaultInstance();
+        final IMongodConfig mongodConfig = new MongodConfigBuilder().version(Version.Main.PRODUCTION)
                 .net(new Net("localhost", mongoPort, Network.localhostIsIPv6())).build();
         mongodExecutable = starter.prepare(mongodConfig);
         mongo = mongodExecutable.start();

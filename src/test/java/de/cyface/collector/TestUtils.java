@@ -29,7 +29,7 @@ import io.vertx.ext.web.client.WebClient;
  * Class providing static utility functionality used by the whole test suite.
  * 
  * @author Klemens Muthmann
- * @version 2.1.0
+ * @version 2.1.1
  * @since 2.0.0
  */
 final class TestUtils {
@@ -49,7 +49,7 @@ final class TestUtils {
      */
     static void authenticate(final WebClient client, final Handler<AsyncResult<HttpResponse<Buffer>>> handler,
             final int port) {
-        JsonObject body = new JsonObject();
+        final JsonObject body = new JsonObject();
         body.put("username", "admin");
         body.put("password", "secret");
 

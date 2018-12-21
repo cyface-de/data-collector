@@ -1,0 +1,36 @@
+openapi: 3.0.2
+info:
+  title: Cyface Data Collector Management Interface
+  description: This is the internal endpoint to manage a Cyface Data Collector
+  version: 1.0.0
+      
+paths:
+  /user:
+    post:
+      summary: Create a new user for this Cyface data collector
+      operationId: user
+      requestBody:
+        description: The new users username and password.
+        required: true
+        content:
+          'application/json':
+            schema:
+              type: object
+              properties:
+                username:
+                  description: Name of the new user.
+                  type: string
+                password:
+                  description: Password for the new user.
+                  type: string
+              required:
+                - username
+                - password
+              example:
+                username: admin
+                password: secret
+      responses:
+        '201':
+          description: User was created successfully.
+        '400':
+          description: The reques was malformed.
