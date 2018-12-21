@@ -33,11 +33,11 @@ import io.vertx.ext.web.RoutingContext;
 
 /**
  * Handles authentication request on the Cyface Collector API. This is implemented with JSON Web Token (JWT). To get a
- * valid token, the user is required to authenticate using username and password, which issues a new token. This token
- * can then be used to transmit the actual request.
+ * valid token, the user is required to authenticate using username and password against the /login endpoint, which
+ * issues a new token. This token can then be used to transmit the actual request.
  * 
  * @author Klemens Muthmann
- * @version 1.0.2
+ * @version 1.0.3
  * @since 2.0.0
  */
 public final class AuthenticationHandler implements Handler<RoutingContext> {
@@ -74,15 +74,15 @@ public final class AuthenticationHandler implements Handler<RoutingContext> {
     public void handle(final RoutingContext ctx) {
         try {
             final JsonObject body = ctx.getBodyAsJson();
-            LOGGER.info("Receiving authentication request: " + body);
+            LOGGER.debug("Receiving authentication request: " + body);
             authProvider.authenticate(body, r -> {
                 if (r.succeeded()) {
-                    LOGGER.info("Authentication successful!");
-                    LOGGER.info(body);
+                    LOGGER.debug("Authentication successful!");
+                    LOGGER.trace(body);
                     final JWTOptions jwtOptions = new JWTOptions().setExpiresInSeconds(60);
                     final String generatedToken = jwtAuthProvider.generateToken(body,
                             jwtOptions.setAlgorithm(CollectorApiVerticle.JWT_HASH_ALGORITHM));
-                    LOGGER.info("New JWT Token: " + generatedToken);
+                    LOGGER.trace("New JWT Token: " + generatedToken);
                     ctx.response().putHeader("Authorization", generatedToken).setStatusCode(200).end();
                 } else {
                     ctx.fail(401);

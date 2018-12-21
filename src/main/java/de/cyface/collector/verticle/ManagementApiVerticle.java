@@ -37,7 +37,7 @@ import io.vertx.ext.web.handler.StaticHandler;
  * This is separated from the Upload API as we do not want to expose this unintentionally to the public.
  * 
  * @author Klemens Muthmann
- * @version 1.0.0
+ * @version 1.0.1
  * @since 2.0.0
  */
 public final class ManagementApiVerticle extends AbstractVerticle {

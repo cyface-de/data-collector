@@ -14,7 +14,7 @@ import io.vertx.ext.web.client.WebClient;
  * A client providing capabilities for tests to communicate with a Cyface Data Collector server.
  * 
  * @author Klemens Muthmann
- * @version 1.1.0
+ * @version 1.1.1
  * @since 2.0.0
  */
 final class DataCollectorClient {
@@ -42,19 +42,19 @@ final class DataCollectorClient {
      * @throws IOException If the server port could not be opened.
      */
     WebClient createWebClient(final Vertx vertx, final TestContext ctx, final int mongoPort) throws IOException {
-        ServerSocket socket = new ServerSocket(0);
+        final ServerSocket socket = new ServerSocket(0);
         port = socket.getLocalPort();
         socket.close();
 
-        JsonObject mongoDbConfig = new JsonObject().put("connection_string", "mongodb://localhost:" + mongoPort)
+        final JsonObject mongoDbConfig = new JsonObject().put("connection_string", "mongodb://localhost:" + mongoPort)
                 .put("db_name", "cyface");
 
-        JsonObject config = new JsonObject().put(Parameter.MONGO_DATA_DB.key(), mongoDbConfig)
+        final JsonObject config = new JsonObject().put(Parameter.MONGO_DATA_DB.key(), mongoDbConfig)
                 .put(Parameter.MONGO_USER_DB.key(), mongoDbConfig).put(Parameter.COLLECTOR_HTTP_PORT.key(), port)
                 .put(Parameter.JWT_PRIVATE_KEY_FILE_PATH.key(),
                         this.getClass().getResource("/private_key.pem").getFile())
                 .put(Parameter.JWT_PUBLIC_KEY_FILE_PATH.key(), this.getClass().getResource("/public.pem").getFile());
-        DeploymentOptions options = new DeploymentOptions().setConfig(config);
+        final DeploymentOptions options = new DeploymentOptions().setConfig(config);
 
         vertx.deployVerticle(CollectorApiVerticle.class.getName(), options, ctx.asyncAssertSuccess());
 

@@ -22,7 +22,6 @@ import java.io.InputStreamReader;
 import java.util.ArrayList;
 
 import org.apache.commons.lang3.Validate;
-import org.xml.sax.helpers.DefaultHandler;
 
 import de.cyface.collector.Parameter;
 import de.cyface.collector.Utils;
@@ -56,7 +55,7 @@ import io.vertx.ext.web.handler.StaticHandler;
  *
  * @author Klemens Muthmann
  * @author Armin Schnabel
- * @version 1.2.0
+ * @version 1.2.1
  * @since 2.0.0
  */
 public final class CollectorApiVerticle extends AbstractVerticle {
@@ -203,7 +202,7 @@ public final class CollectorApiVerticle extends AbstractVerticle {
         v2ApiRouter.post("/measurements").handler(JWTAuthHandler.create(jwtAuthProvider))
                 .handler(BodyHandler.create().setDeleteUploadedFilesOnEnd(false)).handler(new MeasurementHandler());
 
-        v2ApiRouter.route("/*").handler(StaticHandler.create("webroot/api"));
+        v2ApiRouter.route().handler(StaticHandler.create("webroot/api"));
 
         mainRouter.route().last().handler(new FailureHandler());
 

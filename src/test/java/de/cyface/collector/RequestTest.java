@@ -42,11 +42,11 @@ import io.vertx.ext.web.client.WebClient;
  * This tests the REST-API provided by the collector and used to upload the data to the server.
  * 
  * @author Klemens Muthmann
+ * @version 2.1.1
  * @since 1.0.0
- * @version 2.1.0
  */
 @RunWith(VertxUnitRunner.class)
-public final class RequestTest extends MongoTest {
+public final class RequestTest {
 
     /**
      * The logger used for objects of this class. Configure it by either changing values in
@@ -79,7 +79,7 @@ public final class RequestTest extends MongoTest {
     @BeforeClass
     public static void setupMongoDatabase() throws IOException {
         mongoTest = new MongoTest();
-        ServerSocket socket = new ServerSocket(0);
+        final ServerSocket socket = new ServerSocket(0);
         int mongoPort = socket.getLocalPort();
         socket.close();
         mongoTest.setUpMongoDatabase(mongoPort);
@@ -125,13 +125,14 @@ public final class RequestTest extends MongoTest {
      * @throws Throwable Fails the test if anything unexpected happens.
      */
     @Test
-    public void testDefaultHandler(final TestContext context) throws Throwable {
+    public void testGetRoot_returnsApiSpecification(final TestContext context) throws Throwable {
         final Async async = context.async();
 
         TestUtils.authenticate(client, authResponse -> {
             if (authResponse.succeeded()) {
                 context.assertEquals(authResponse.result().statusCode(), 200);
-                final String token = authResponse.result().bodyAsString();
+                final String token = authResponse.result().getHeader("Authorization");
+                context.assertNotNull(token);
                 LOGGER.info("Auth token was {}", token);
                 LOGGER.info("{}", authResponse.result().headers().get("Authorization"));
 
@@ -140,7 +141,7 @@ public final class RequestTest extends MongoTest {
                             if (response.succeeded()) {
                                 context.assertEquals(response.result().statusCode(), 200);
                                 final String body = response.result().bodyAsString();
-                                context.assertTrue(body.contains("Cyface"));
+                                context.assertTrue(body.contains("<title>Swagger UI</title>"));
                             } else {
                                 context.fail();
                             }
@@ -162,13 +163,14 @@ public final class RequestTest extends MongoTest {
      * @throws Throwable Fails the test if anything unexpected happens.
      */
     @Test
-    public void testErrorHandler(final TestContext ctx) throws Throwable {
+    public void testGetUnknownResource_Returns404(final TestContext ctx) throws Throwable {
         final Async async = ctx.async();
 
         TestUtils.authenticate(client, authResponse -> {
             if (authResponse.succeeded()) {
                 ctx.assertEquals(authResponse.result().statusCode(), 200);
-                final String token = authResponse.result().bodyAsString();
+                final String token = authResponse.result().getHeader("Authorization");
+                ctx.assertNotNull(token);
                 client.post(collectorClient.getPort(), "localhost", "/api/v2/garbage")
                         .putHeader("Authorization", "Bearer " + token).send(response -> {
                             ctx.assertEquals(404, response.result().statusCode());
