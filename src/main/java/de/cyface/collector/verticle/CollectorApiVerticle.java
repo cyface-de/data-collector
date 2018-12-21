@@ -19,6 +19,7 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.nio.charset.Charset;
 import java.util.ArrayList;
 
 import org.apache.commons.lang3.Validate;
@@ -77,7 +78,7 @@ public final class CollectorApiVerticle extends AbstractVerticle {
 
         prepareEventBus();
 
-        final JsonObject mongoDatabaseConfiguration = Parameter.MONGO_DATA_DB.jsonValue(vertx);
+        final JsonObject mongoDatabaseConfiguration = Parameter.MONGO_DATA_DB.jsonValue(vertx, new JsonObject());
         deployVerticles(mongoDatabaseConfiguration);
 
         final String publicKey = extractKey(Parameter.JWT_PUBLIC_KEY_FILE_PATH);
@@ -88,11 +89,13 @@ public final class CollectorApiVerticle extends AbstractVerticle {
         Validate.notNull(privateKey,
                 "Unable to load private key for JWT authentication. Did you provide a valid PEM file using the parameter "
                         + Parameter.JWT_PRIVATE_KEY_FILE_PATH.key() + ".");
-        final JsonObject mongoUserDatabaseConfiguration = Parameter.MONGO_USER_DB.jsonValue(vertx);
+        final JsonObject mongoUserDatabaseConfiguration = Parameter.MONGO_USER_DB.jsonValue(vertx, new JsonObject());
         final MongoClient client = Utils.createSharedMongoClient(vertx, mongoUserDatabaseConfiguration);
-        final MongoAuth authProvider = Utils.buildMongoAuthProvider(client);
-
         final int httpPort = Parameter.COLLECTOR_HTTP_PORT.intValue(vertx, 8080);
+        final String salt = Parameter.SALT.stringValue(vertx, "cyface-salt");
+
+        final MongoAuth authProvider = Utils.buildMongoAuthProvider(client, salt);
+
         final Future<Void> serverStartFuture = Future.future();
         setupRoutes(publicKey, privateKey, authProvider, result -> {
             if (result.succeeded()) {
@@ -102,11 +105,15 @@ public final class CollectorApiVerticle extends AbstractVerticle {
                 serverStartFuture.fail(result.cause());
             }
         });
-
         final String adminUsername = Parameter.ADMIN_USER_NAME.stringValue(vertx, "admin");
         final String adminPassword = Parameter.ADMIN_PASSWORD.stringValue(vertx, "secret");
         final Future<Void> defaultUserCreatedFuture = Future.future();
         client.findOne("user", new JsonObject().put("username", adminUsername), null, result -> {
+            if(result.failed()) {
+                defaultUserCreatedFuture.fail(result.cause());
+                return;
+            }
+            
             if (result.result() == null) {
                 authProvider.insertUser(adminUsername, adminPassword, new ArrayList<>(), new ArrayList<>(), ir -> {
                     LOGGER.info("Identifier of new user id: " + ir);
@@ -124,6 +131,7 @@ public final class CollectorApiVerticle extends AbstractVerticle {
                 startFuture.fail(r.cause());
             }
         });
+
     }
 
     /**
@@ -204,7 +212,7 @@ public final class CollectorApiVerticle extends AbstractVerticle {
 
         v2ApiRouter.route().handler(StaticHandler.create("webroot/api"));
 
-        mainRouter.route().last().handler(new FailureHandler());
+        mainRouter.route("/*").last().handler(new FailureHandler());
 
         /*
          * This implementation does not require a future since everything is synchronous but it will require this if we

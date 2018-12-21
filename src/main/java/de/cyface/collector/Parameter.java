@@ -63,6 +63,14 @@ public enum Parameter {
      */
     ADMIN_PASSWORD("admin.password"),
     /**
+     * Salt used by the Mongo authentication provider to encrypt all user passwords.
+     */
+    SALT("salt"),
+    /**
+     * Path to a file containing the salt used to encrypt passwords in the database.
+     */
+    SALT_PATH("salt.path"),
+    /**
      * Detailed connection information about the Mongo data database. This database stores all data received via the
      * REST-API. This should be a JSON object with supported parameters explained at:
      * <a href= "https://vertx.io/docs/vertx-mongo-client/java/#_configuring_the_client">

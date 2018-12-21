@@ -18,44 +18,83 @@
  */
 package de.cyface.collector.verticle;
 
+import java.nio.charset.Charset;
+
+import de.cyface.collector.Parameter;
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.DeploymentOptions;
 import io.vertx.core.Future;
+import io.vertx.core.json.JsonObject;
+import io.vertx.core.logging.Logger;
+import io.vertx.core.logging.LoggerFactory;
 
 /**
  * This Verticle starts the whole application, by deploying all required child Verticles.
  * 
  * @author Klemens Muthmann
- * @version 2.0.0
+ * @version 2.0.1
  * @since 2.0.0
  */
 public final class MainVerticle extends AbstractVerticle {
+    
+    private static final Logger LOGGER = LoggerFactory.getLogger(MainVerticle.class);
+    
     @Override
     public void start(final Future<Void> startFuture) throws Exception {
-        // Create a few futures to synchronize the start up process
-        Future<Void> collectorApiFuture = Future.future();
-        Future<Void> managementApiFuture = Future.future();
-        CompositeFuture startUpProcessFuture = CompositeFuture.all(collectorApiFuture, managementApiFuture);
 
+        final String saltPath = Parameter.SALT_PATH.stringValue(vertx, "secrets/salt");
+        vertx.fileSystem().exists(saltPath, result -> {
+            if(result.failed()) {
+                LOGGER.error(result.cause());
+                startFuture.fail(result.cause());
+            }
+            
+            if(result.result()) {
+                vertx.fileSystem().readFile(saltPath, readSaltResult -> {
+                    if(readSaltResult.failed()) {
+                        LOGGER.error(result.cause());
+                        startFuture.fail(result.cause());
+                    }
+                    
+                    final String salt = readSaltResult.result().toString(Charset.defaultCharset());
+                    deploy(startFuture, salt);
+                });
+            } else {
+                // Deploy with default salt.
+                deploy(startFuture, "cyface-salt");
+            }
+        });
+
+    }
+    
+    private void deploy(final Future<Void> startFuture, final String salt) {
+        // Create a few futures to synchronize the start up process
+        final Future<Void> collectorApiFuture = Future.future();
+        final Future<Void> managementApiFuture = Future.future();
+        final CompositeFuture startUpProcessFuture = CompositeFuture.all(collectorApiFuture, managementApiFuture);
+        final JsonObject config = config();
+        config.put(Parameter.SALT.key(), salt);
+        final DeploymentOptions verticleConfig = new DeploymentOptions().setConfig(config);
+        
         // Start the collector API as first verticle.
-        vertx.deployVerticle(CollectorApiVerticle.class, new DeploymentOptions().setConfig(config()), result -> {
+        vertx.deployVerticle(CollectorApiVerticle.class, verticleConfig, result -> {
             if (result.succeeded()) {
                 collectorApiFuture.complete();
             } else {
                 collectorApiFuture.fail(result.cause());
             }
         });
-
+        
         // Start the management API as second verticle.
-        vertx.deployVerticle(ManagementApiVerticle.class, new DeploymentOptions().setConfig(config()), result -> {
+        vertx.deployVerticle(ManagementApiVerticle.class, verticleConfig, result -> {
             if (result.succeeded()) {
                 managementApiFuture.complete();
             } else {
                 managementApiFuture.fail(result.cause());
             }
         });
-
+        
         // As soon as both futures have a succeeded or one failed, finish the start up process.
         startUpProcessFuture.setHandler(result -> {
             if (result.succeeded()) {
@@ -64,7 +103,6 @@ public final class MainVerticle extends AbstractVerticle {
                 startFuture.fail(result.cause());
             }
         });
-
     }
 
 }
