@@ -30,7 +30,7 @@ import io.vertx.ext.mongo.MongoClient;
  * This class provides basic static utility methods, used throughout the system.
  * 
  * @author Klemens Muthmann
- * @version 1.0.0
+ * @version 2.0.0
  * @since 2.0.0
  */
 public final class Utils {
