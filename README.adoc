@@ -22,21 +22,22 @@ If you require this software under a closed source license for you own projects,
 
 == Building
 
-Simply run `build.sh` inside the root of this project. This builds the jar file which is then packed into the Docker
-container which is build afterwards. This script also makes sure all required subdirectories are created.
+Simply run `build.sh` inside the root of this project. 
+This builds the jar file which is then packed into the Docker container which is build afterwards. 
+This script also makes sure all required subdirectories are created.
 
 == Execution
-This section describes how to execute the Cyface data collector.
+This section describes how to execute the Cyface Data Collector.
 
 It starts with an explanation on how to set up all the required certificates.
 This is a necessary prerequisite for all the following steps.
 So **DO NOT** skip it.
 
-Following the certificate setup is an explanation on how to run the Cyface data collector from a Docker environment.
+Following the certificate setup is an explanation on how to run the Cyface Data Collector from a Docker environment.
 This is the recommended variant if you do not need to change the collector itself, but only need to develop against its API.
 
 The section continues with an explanation on the supported configuration parameters.
-If you are not using the Docker environment, you will probably have to set a few of them to the correct values, before running the Cyface data collector.
+If you are not using the Docker environment, you will probably have to set a few of them to the correct values, before running the Cyface Data Collector.
 
 The last two sections provide explanations on how to run the software directly from the terminal or from within an IDE such as Eclipse or IntelliJ.
 For these execution variants you need the parameters explained in the preceeding section.
@@ -91,6 +92,9 @@ The parameters are provided using the typical https://vertx.io/docs/vertx-core/j
 * **http.port:** The port the API  is available at. This defaults to `8080`.
 * **http.port.management:** The port the management API is available at. This defaults to `13371`.
 * **mongo.userdb:** Settings for a Mongo database storing credential information about all the users capable of logging into the system. This defaults to a Mongo database available at `mongodb://127.0.0.1:27017`. The value of this should be a JSON object configured as described https://vertx.io/docs/vertx-mongo-client/java/#_configuring_the_client[here]. In addition, if you use two different Mongo databases for credentials and data you should provide different values for the JSON key `data_source_name`.
+* **admin.user:** The username of a default administration account which is created if it does not exist upon start up. This defaults to `admin`. **You must change this in a production environment**.
+* **admin.password:** The password for the default administration account. This defaults to `secret`. **You must change this in a production environment**.
+* **salt.path:** The path to a salt file used to encrypt passwords stored in the user database even stronger. This defaults to `secrets/salt`. If the file does not exist a default salt is used. **You should not do this in a production environment**.
 * **mongo.datadb:** Settings for a Mongo database storing all data uploaded via the Cyface data collector. This defaults to a Mongo database available at `mongodb://127.0.0.1:27017`. The value of this should be a JSON object configured as described https://vertx.io/docs/vertx-mongo-client/java/#_configuring_the_client[here]. In addition, if you use two different Mongo databases for credentials and data you should provide different values for the JSON key `data_source_name`.
 * **metrics.enabled:** Set to either `true` or `false`. If `true` the collector API publishes metrics using micrometer. These metrics are accessible by a https://prometheus.io/[Prometheus] server (Which you either need to setup yourself or use the Docker setup explained further down) at port `8081`.
 

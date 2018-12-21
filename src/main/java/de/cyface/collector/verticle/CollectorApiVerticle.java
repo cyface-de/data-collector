@@ -25,6 +25,7 @@ import org.apache.commons.lang3.Validate;
 
 import de.cyface.collector.Parameter;
 import de.cyface.collector.Utils;
+import de.cyface.collector.handler.AuthenticationFailureHandler;
 import de.cyface.collector.handler.AuthenticationHandler;
 import de.cyface.collector.handler.FailureHandler;
 import de.cyface.collector.handler.MeasurementHandler;
@@ -77,7 +78,7 @@ public final class CollectorApiVerticle extends AbstractVerticle {
 
         prepareEventBus();
 
-        final JsonObject mongoDatabaseConfiguration = Parameter.MONGO_DATA_DB.jsonValue(vertx);
+        final JsonObject mongoDatabaseConfiguration = Parameter.MONGO_DATA_DB.jsonValue(vertx, new JsonObject());
         deployVerticles(mongoDatabaseConfiguration);
 
         final String publicKey = extractKey(Parameter.JWT_PUBLIC_KEY_FILE_PATH);
@@ -88,11 +89,13 @@ public final class CollectorApiVerticle extends AbstractVerticle {
         Validate.notNull(privateKey,
                 "Unable to load private key for JWT authentication. Did you provide a valid PEM file using the parameter "
                         + Parameter.JWT_PRIVATE_KEY_FILE_PATH.key() + ".");
-        final JsonObject mongoUserDatabaseConfiguration = Parameter.MONGO_USER_DB.jsonValue(vertx);
+        final JsonObject mongoUserDatabaseConfiguration = Parameter.MONGO_USER_DB.jsonValue(vertx, new JsonObject());
         final MongoClient client = Utils.createSharedMongoClient(vertx, mongoUserDatabaseConfiguration);
-        final MongoAuth authProvider = Utils.buildMongoAuthProvider(client);
-
         final int httpPort = Parameter.COLLECTOR_HTTP_PORT.intValue(vertx, 8080);
+        final String salt = Parameter.SALT.stringValue(vertx, "cyface-salt");
+
+        final MongoAuth authProvider = Utils.buildMongoAuthProvider(client, salt);
+
         final Future<Void> serverStartFuture = Future.future();
         setupRoutes(publicKey, privateKey, authProvider, result -> {
             if (result.succeeded()) {
@@ -102,11 +105,15 @@ public final class CollectorApiVerticle extends AbstractVerticle {
                 serverStartFuture.fail(result.cause());
             }
         });
-
         final String adminUsername = Parameter.ADMIN_USER_NAME.stringValue(vertx, "admin");
         final String adminPassword = Parameter.ADMIN_PASSWORD.stringValue(vertx, "secret");
         final Future<Void> defaultUserCreatedFuture = Future.future();
         client.findOne("user", new JsonObject().put("username", adminUsername), null, result -> {
+            if (result.failed()) {
+                defaultUserCreatedFuture.fail(result.cause());
+                return;
+            }
+
             if (result.result() == null) {
                 authProvider.insertUser(adminUsername, adminPassword, new ArrayList<>(), new ArrayList<>(), ir -> {
                     LOGGER.info("Identifier of new user id: " + ir);
@@ -124,6 +131,7 @@ public final class CollectorApiVerticle extends AbstractVerticle {
                 startFuture.fail(r.cause());
             }
         });
+
     }
 
     /**
@@ -194,17 +202,18 @@ public final class CollectorApiVerticle extends AbstractVerticle {
         mainRouter.mountSubRouter("/api/v2", v2ApiRouter);
 
         // Set up v2 API
-        v2ApiRouter.route().failureHandler(new FailureHandler());
         // Set up authentication route
         v2ApiRouter.route("/login").handler(BodyHandler.create())
-                .handler(new AuthenticationHandler(mongoAuthProvider, jwtAuthProvider));
+                .handler(new AuthenticationHandler(mongoAuthProvider, jwtAuthProvider))
+                .failureHandler(new AuthenticationFailureHandler());
         // Set up data collector route
         v2ApiRouter.post("/measurements").handler(JWTAuthHandler.create(jwtAuthProvider))
-                .handler(BodyHandler.create().setDeleteUploadedFilesOnEnd(false)).handler(new MeasurementHandler());
+                .handler(BodyHandler.create().setDeleteUploadedFilesOnEnd(false)).handler(new MeasurementHandler())
+                .failureHandler(new FailureHandler());
 
         v2ApiRouter.route().handler(StaticHandler.create("webroot/api"));
 
-        mainRouter.route().last().handler(new FailureHandler());
+        mainRouter.route("/*").last().handler(new FailureHandler());
 
         /*
          * This implementation does not require a future since everything is synchronous but it will require this if we

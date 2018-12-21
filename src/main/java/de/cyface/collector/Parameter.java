@@ -27,7 +27,7 @@ import io.vertx.core.logging.LoggerFactory;
  * An enumeration of parameters, that may be provided upon application startup, to configure the application.
  * 
  * @author Klemens Muthmann
- * @version 3.0.0
+ * @version 3.1.0
  * @since 2.0.0
  */
 public enum Parameter {
@@ -62,6 +62,14 @@ public enum Parameter {
      * The password for the default administration user created on system start.
      */
     ADMIN_PASSWORD("admin.password"),
+    /**
+     * Salt used by the Mongo authentication provider to encrypt all user passwords.
+     */
+    SALT("salt"),
+    /**
+     * Path to a file containing the salt used to encrypt passwords in the database.
+     */
+    SALT_PATH("salt.path"),
     /**
      * Detailed connection information about the Mongo data database. This database stores all data received via the
      * REST-API. This should be a JSON object with supported parameters explained at:

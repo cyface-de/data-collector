@@ -31,6 +31,7 @@ import org.xml.sax.helpers.DefaultHandler;
 
 import de.cyface.collector.verticle.CollectorApiVerticle;
 import io.vertx.core.Vertx;
+import io.vertx.core.json.JsonObject;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
 import io.vertx.ext.unit.Async;
@@ -42,7 +43,7 @@ import io.vertx.ext.web.client.WebClient;
  * This tests the REST-API provided by the collector and used to upload the data to the server.
  * 
  * @author Klemens Muthmann
- * @version 2.1.1
+ * @version 2.2.0
  * @since 1.0.0
  */
 @RunWith(VertxUnitRunner.class)
@@ -152,7 +153,7 @@ public final class RequestTest {
             }
         }, collectorClient.getPort());
 
-        async.await(3000L);
+        async.await(3_000L);
 
     }
 
@@ -173,13 +174,31 @@ public final class RequestTest {
                 ctx.assertNotNull(token);
                 client.post(collectorClient.getPort(), "localhost", "/api/v2/garbage")
                         .putHeader("Authorization", "Bearer " + token).send(response -> {
-                            ctx.assertEquals(404, response.result().statusCode());
+                            ctx.assertEquals(response.result().statusCode(), 404);
                             async.complete();
                         });
             } else {
                 ctx.fail("Unable to authenticate");
             }
         }, collectorClient.getPort());
-        async.await(3000L);
+        async.await(3_000L);
+    }
+
+    /**
+     * Tests that the UI returns 401 if a login is attempted with invalid credentials.
+     * 
+     * @param context The test context for running <code>Vertx</code> under test.
+     */
+    @Test
+    public void testLoginWithWrongCredentials_Returns401(final TestContext context) {
+        final Async async = context.async();
+
+        client.post(collectorClient.getPort(), "localhost", "/api/v2/login")
+                .sendJson(new JsonObject().put("username", "unknown").put("password", "unknown"), result -> {
+                    context.assertEquals(result.result().statusCode(), 401);
+                    async.complete();
+                });
+
+        async.await(3_000L);
     }
 }

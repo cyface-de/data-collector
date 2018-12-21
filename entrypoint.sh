@@ -27,6 +27,14 @@ fi
 echo "Loading private key for JWT from: $JWT_PRIVATE_KEY_FILE_PATH"
 echo "Loading public key for JWT from: $JWT_PUBLIC_KEY_FILE_PATH"
 
+if [ -z $ADMIN_USER ]; then
+    ADMIN_USER="admin"
+fi
+
+if [ -z $ADMIN_PASSWORD ]; then
+    ADMIN_PASSWORD="secret"
+fi
+
 echo "Waiting for Database to start!"
 
 MONGO_STATUS="not running"
@@ -49,4 +57,4 @@ if [ $COUNTER -ge 10 ]; then
 fi
 
 echo "Starting API"
-java -Dvertx.cacheDirBase=/tmp/vertx-cache -jar collector-2.0.0-SNAPSHOT-fat.jar -conf "{\"jwt.private\":\"$JWT_PRIVATE_KEY_FILE_PATH\",\"jwt.public\":\"$JWT_PUBLIC_KEY_FILE_PATH\",\"metrics.enabled\":true,\"mongo.userdb\":{\"db_name\":\"cyface-user\",\"connection_string\":\"mongodb://mongo-user:27017\",\"data_source_name\":\"cyface-user\"},\"mongo.datadb\":{\"db_name\":\"cyface-data\",\"connection_string\":\"mongodb://mongo-data:27017\",\"data_source_name\":\"cyface-data\"}}"
+java -Dvertx.cacheDirBase=/tmp/vertx-cache -jar collector-2.0.0-SNAPSHOT-fat.jar -conf "{\"jwt.private\":\"$JWT_PRIVATE_KEY_FILE_PATH\",\"jwt.public\":\"$JWT_PUBLIC_KEY_FILE_PATH\",\"metrics.enabled\":true,\"mongo.userdb\":{\"db_name\":\"cyface-user\",\"connection_string\":\"mongodb://mongo-user:27017\",\"data_source_name\":\"cyface-user\"},\"mongo.datadb\":{\"db_name\":\"cyface-data\",\"connection_string\":\"mongodb://mongo-data:27017\",\"data_source_name\":\"cyface-data\"},\"admin.user\":\"$ADMIN_USER\",\"admin.password\":\"$ADMIN_PASSWORD\"}"
