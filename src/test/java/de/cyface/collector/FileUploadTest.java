@@ -35,6 +35,8 @@ import de.cyface.collector.verticle.CollectorApiVerticle;
 import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.eventbus.EventBus;
+import io.vertx.core.logging.Logger;
+import io.vertx.core.logging.LoggerFactory;
 import io.vertx.ext.unit.Async;
 import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
@@ -46,19 +48,22 @@ import io.vertx.ext.web.multipart.MultipartForm;
  * Tests that uploading measurements to the Cyface API works as expected.
  * 
  * @author Klemens Muthmann
- * @version 2.1.1
+ * @version 2.1.2
  * @since 2.0.0
  */
 @RunWith(VertxUnitRunner.class)
 public final class FileUploadTest {
-
+    /**
+     * Logger used to log messages from this class. Configure it using <tt>src/test/resource/logback-test.xml</tt>.
+     */
+    private final static Logger LOGGER = LoggerFactory.getLogger(FileUploadTest.class);
     /**
      * The test <code>Vertx</code> instance.
      */
     private Vertx vertx;
     /**
-     * A Mongo database lifecycle handler. This provides the test with the
-     * capabilities to run and shutdown a Mongo database for testing purposes.
+     * A Mongo database lifecycle handler. This provides the test with the capabilities to run and shutdown a Mongo
+     * database for testing purposes.
      */
     private static MongoTest mongoTest;
     /**
@@ -70,16 +75,14 @@ public final class FileUploadTest {
      */
     private WebClient client;
     /**
-     * A globally unqiue identifier of the simulated upload device. The actual value
-     * does not really matter.
+     * A globally unqiue identifier of the simulated upload device. The actual value does not really matter.
      */
     private String deviceIdentifier = UUID.randomUUID().toString();
     /**
-     * The measurement identifier used for the test measurement. The actual value
-     * does not matter that much. It simulates a device wide unique identifier.
+     * The measurement identifier used for the test measurement. The actual value does not matter that much. It
+     * simulates a device wide unique identifier.
      */
     private String measurementIdentifier = String.valueOf(1L);
-
     /**
      * The Vert.x multipart form to upload.
      */
@@ -112,8 +115,7 @@ public final class FileUploadTest {
     }
 
     /**
-     * Initializes the environment for each test case with a mock Mongo Database and
-     * a Vert.x set up for testing.
+     * Initializes the environment for each test case with a mock Mongo Database and a Vert.x set up for testing.
      * 
      * @param context The context of the test Vert.x.
      * @throws IOException Fails the test on unexpected exceptions.
@@ -170,11 +172,11 @@ public final class FileUploadTest {
     public void testPostLargeFile(final TestContext context) {
         uploadAndCheckForSuccess(context, "/iphone-neu.ccyf");
     }
-    
+
     @Test
     public void uploadWithWrongCredentials_Returns401(final TestContext context) {
         final Async async = context.async();
-        
+
         final HttpRequest<Buffer> builder = client.post(collectorClient.getPort(), "localhost", "/api/v2/measurements");
         builder.sendMultipartForm(form, ar -> {
             if (ar.succeeded()) {
@@ -185,7 +187,7 @@ public final class FileUploadTest {
             }
             async.complete();
         });
-        
+
         async.await(3_000L);
     }
 
@@ -213,6 +215,7 @@ public final class FileUploadTest {
             context.fail("Unable to save measurement " + message.body());
         });
 
+        LOGGER.debug("Sending authentication request!");
         TestUtils.authenticate(client, authResponse -> {
             if (authResponse.succeeded()) {
                 context.assertEquals(authResponse.result().statusCode(), 200);

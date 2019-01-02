@@ -56,7 +56,7 @@ import io.vertx.ext.web.handler.StaticHandler;
  *
  * @author Klemens Muthmann
  * @author Armin Schnabel
- * @version 1.2.1
+ * @version 1.2.2
  * @since 2.0.0
  */
 public final class CollectorApiVerticle extends AbstractVerticle {
@@ -203,13 +203,12 @@ public final class CollectorApiVerticle extends AbstractVerticle {
 
         // Set up v2 API
         // Set up authentication route
-        v2ApiRouter.route("/login").handler(BodyHandler.create())
-                .handler(new AuthenticationHandler(mongoAuthProvider, jwtAuthProvider))
+        v2ApiRouter.route("/login").handler(BodyHandler.create()).handler(new AuthenticationHandler(mongoAuthProvider, jwtAuthProvider))
                 .failureHandler(new AuthenticationFailureHandler());
         // Set up data collector route
-        v2ApiRouter.post("/measurements").handler(JWTAuthHandler.create(jwtAuthProvider))
-                .handler(BodyHandler.create().setDeleteUploadedFilesOnEnd(false)).handler(new MeasurementHandler())
-                .failureHandler(new FailureHandler());
+        v2ApiRouter.post("/measurements").handler(BodyHandler.create().setDeleteUploadedFilesOnEnd(false))
+                .handler(JWTAuthHandler.create(jwtAuthProvider)).handler(new MeasurementHandler())
+                .failureHandler(new AuthenticationFailureHandler());
 
         v2ApiRouter.route().handler(StaticHandler.create("webroot/api"));
 
@@ -249,8 +248,10 @@ public final class CollectorApiVerticle extends AbstractVerticle {
     private void completeStartup(final AsyncResult<HttpServer> serverStartup, final Future<Void> future) {
         if (serverStartup.succeeded()) {
             future.complete();
+            LOGGER.info("Successfully started Collector API!");
         } else {
             future.fail(serverStartup.cause());
+            LOGGER.info("Starting Collector API failed!");
         }
     }
 
