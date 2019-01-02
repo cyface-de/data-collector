@@ -22,7 +22,7 @@ MAINTAINER Cyface GmbH <mail@cyface.de>
 # Set the working directory to /app
 WORKDIR /app
 
-COPY build/libs/collector-2.0.0-SNAPSHOT-fat.jar /app
+COPY build/libs/collector-fat.jar /app
 COPY entrypoint.sh /app
 RUN chmod +x /app/entrypoint.sh
 
