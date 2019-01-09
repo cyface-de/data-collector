@@ -43,7 +43,7 @@ import io.vertx.ext.web.client.WebClient;
  * This tests the REST-API provided by the collector and used to upload the data to the server.
  * 
  * @author Klemens Muthmann
- * @version 2.2.0
+ * @version 2.3.0
  * @since 1.0.0
  */
 @RunWith(VertxUnitRunner.class)
@@ -120,7 +120,7 @@ public final class RequestTest {
     }
 
     /**
-     * Tests the correct workings of the general functionality using the {@link DefaultHandler}.
+     * Tests the correct workings of accessing the API specification.
      * 
      * @param context The test context for running <code>Vertx</code> under test.
      * @throws Throwable Fails the test if anything unexpected happens.
@@ -129,29 +129,16 @@ public final class RequestTest {
     public void testGetRoot_returnsApiSpecification(final TestContext context) throws Throwable {
         final Async async = context.async();
 
-        TestUtils.authenticate(client, authResponse -> {
-            if (authResponse.succeeded()) {
-                context.assertEquals(authResponse.result().statusCode(), 200);
-                final String token = authResponse.result().getHeader("Authorization");
-                context.assertNotNull(token);
-                LOGGER.info("Auth token was {}", token);
-                LOGGER.info("{}", authResponse.result().headers().get("Authorization"));
-
-                client.get(collectorClient.getPort(), "localhost", "/api/v2/")
-                        .putHeader("Authorization", "Bearer " + token).send(response -> {
-                            if (response.succeeded()) {
-                                context.assertEquals(response.result().statusCode(), 200);
-                                final String body = response.result().bodyAsString();
-                                context.assertTrue(body.contains("<title>Swagger UI</title>"));
-                            } else {
-                                context.fail();
-                            }
-                            async.complete();
-                        });
+        client.get(collectorClient.getPort(), "localhost", "/api/v2/").send(response -> {
+            if (response.succeeded()) {
+                context.assertEquals(response.result().statusCode(), 200);
+                final String body = response.result().bodyAsString();
+                context.assertTrue(body.contains("<title>Cyface Data Collector</title>"));
             } else {
-                context.fail("Unable to authenticate");
+                context.fail();
             }
-        }, collectorClient.getPort());
+            async.complete();
+        });
 
         async.await(3_000L);
 
@@ -167,20 +154,10 @@ public final class RequestTest {
     public void testGetUnknownResource_Returns404(final TestContext ctx) throws Throwable {
         final Async async = ctx.async();
 
-        TestUtils.authenticate(client, authResponse -> {
-            if (authResponse.succeeded()) {
-                ctx.assertEquals(authResponse.result().statusCode(), 200);
-                final String token = authResponse.result().getHeader("Authorization");
-                ctx.assertNotNull(token);
-                client.post(collectorClient.getPort(), "localhost", "/api/v2/garbage")
-                        .putHeader("Authorization", "Bearer " + token).send(response -> {
-                            ctx.assertEquals(response.result().statusCode(), 404);
-                            async.complete();
-                        });
-            } else {
-                ctx.fail("Unable to authenticate");
-            }
-        }, collectorClient.getPort());
+        client.post(collectorClient.getPort(), "localhost", "/api/v2/garbage").send(response -> {
+            ctx.assertEquals(response.result().statusCode(), 404);
+            async.complete();
+        });
         async.await(3_000L);
     }
 
@@ -196,6 +173,25 @@ public final class RequestTest {
         client.post(collectorClient.getPort(), "localhost", "/api/v2/login")
                 .sendJson(new JsonObject().put("username", "unknown").put("password", "unknown"), result -> {
                     context.assertEquals(result.result().statusCode(), 401);
+                    async.complete();
+                });
+
+        async.await(3_000L);
+    }
+
+    /**
+     * Tests that JWT token generation works as expected.
+     * 
+     * @param context The test context for running <code>Vertx</code> under test.
+     */
+    @Test
+    public void testLogin_HappyPath(final TestContext context) {
+        final Async async = context.async();
+
+        client.post(collectorClient.getPort(), "localhost", "/api/v2/login")
+                .sendJson(new JsonObject().put("username", "admin").put("password", "secret"), result -> {
+                    context.assertEquals(result.result().statusCode(), 200);
+                    context.assertTrue(result.result().headers().contains("Authorization"));
                     async.complete();
                 });
 

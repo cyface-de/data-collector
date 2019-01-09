@@ -25,6 +25,9 @@
       <pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{5} - %msg%n</pattern>
     </encoder>
   </appender>
+  
+  <!-- An appender throwing all messages away. This is used by default to supress logging in CI-->
+  <appender name="NO-OP" class="ch.qos.logback.core.helpers.NOPAppender" />
 
   <!--<logger name="com.lordofthejars.foo" level="INFO" additivity="false">-->
    <!--<appender-ref ref="STDOUT" />-->
@@ -33,7 +36,7 @@
   <!-- Strictly speaking, the level attribute is not necessary since -->
   <!-- the level of the root level is set to DEBUG by default.       -->
   <root level="DEBUG">          
-    <appender-ref ref="STDOUT" />
+    <appender-ref ref="NO-OP" />
   </root>  
   
 </configuration>

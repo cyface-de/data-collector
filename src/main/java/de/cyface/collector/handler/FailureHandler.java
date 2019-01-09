@@ -27,7 +27,7 @@ import io.vertx.ext.web.RoutingContext;
  * Default failure handler for all failures not directly handled by any of the other handlers.
  * 
  * @author Klemens Muthmann
- * @version 1.0.1
+ * @version 1.1.0
  * @since 2.0.0
  */
 public final class FailureHandler implements Handler<RoutingContext> {
@@ -40,6 +40,7 @@ public final class FailureHandler implements Handler<RoutingContext> {
     @Override
     public void handle(final RoutingContext ctx) {
         LOGGER.error("You seem to have reached an invalid resource.");
+        LOGGER.error(ctx.failure());
         if (ctx.response().ended() || ctx.response().closed()) {
             LOGGER.error("Failure in closed response. Unable to inform client! ", ctx.failure());
         } else {
