@@ -1,0 +1,90 @@
+# Copyright 2018 Cyface GmbH
+# 
+# This file is part of the Cyface Data Collector.
+# 
+# The Cyface Data Collector is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#  
+# The Cyface Data Collector is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with the Cyface Data Collector. If not, see <http://www.gnu.org/licenses/>.
+#
+# version 1.0.0
+
+version: "3.5"
+services:
+    # Mongo Database Container
+    mongo-data:
+      container_name: collector_mongo-data
+      image: mongo:4.0.4
+      volumes:
+        - type: volume
+          source: mongo-data-db
+          target: /data/db
+        
+    mongo-user:
+      container_name: collector_mongo-user
+      image: mongo:4.0.4
+      volumes:
+        - type: volume
+          source: mongo-user-db 
+          target: /data/db
+
+    # The Cyface Collector API Container
+    api:
+      container_name: collector_api
+      build: .
+      image: cyfacede/collector:2.0.0
+      ports:
+        - "127.0.0.1:8080:8080" # 127.0.0.1 avoids the manipulation of the host's ip-tables
+        - "127.0.0.1:13371:13371"
+      volumes:
+        - ./secrets:/app/secrets
+      depends_on:
+        - mongo-data
+        - mongo-user
+        
+    # Prometheus Metrics tool
+    prometheus:
+      container_name: collector_prometheus
+      build: prometheus
+      image: cyfacede/prometheus:1.0.0
+      volumes:
+        - type: volume
+          source: prometheus-data
+          target: /prometheus
+        
+    # Grafana Dashboard on Prometheus Data
+    grafana:
+      container_name: collector_grafana
+      build: grafana
+      image: cyfacede/grafana:1.0.0
+      ports:
+        - "127.0.0.1:3000:3000" # 127.0.0.1 avoids the manipulation of the host's ip-tables
+      volumes:
+        - type: volume
+          source: grafana-logs
+          target: /var/log/grafana
+        - type: volume
+          source: grafana-data
+          target: /var/lib/grafana
+      environment:
+        - GF_SECURITY_ADMIN_USER=cyface-admin
+        - GF_SECURITY_ADMIN_PASSWORD=cyface-admin@grafana
+
+volumes:
+    mongo-data-db:
+    mongo-user-db:
+    prometheus-data:
+    grafana-data:
+    grafana-logs:
+
+networks:
+    default:
+        name: cyface-collector

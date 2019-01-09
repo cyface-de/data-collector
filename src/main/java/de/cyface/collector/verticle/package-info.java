@@ -16,5 +16,19 @@
  * You should have received a copy of the GNU General Public License
  * along with the Cyface Data Collector. If not, see <http://www.gnu.org/licenses/>.
  */
-
-rootProject.name = 'collector'
+/**
+ * This package contains the Vert.x Verticles steering the Cyface data collector. There is a <code>MainVerticle</code>
+ * as a central entrypoint. It deploys all the other necessary Verticles.
+ * <p>
+ * The {@link de.cyface.collector.verticle.CollectorApiVerticle} starts the collector API itself, while the
+ * {@link de.cyface.collector.verticle.ManagementApiVerticle} starts the management console on a different server using
+ * a different port.
+ * <p>
+ * The {@link de.cyface.collector.verticle.SerializationVerticle} is a worker, that is responsible to store arriving
+ * measurements to the Mongo database.
+ * 
+ * @author Klemens Muthmann
+ * @version 1.0.0
+ * @since 2.0.0
+ */
+package de.cyface.collector.verticle;

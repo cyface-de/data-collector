@@ -16,5 +16,13 @@
  * You should have received a copy of the GNU General Public License
  * along with the Cyface Data Collector. If not, see <http://www.gnu.org/licenses/>.
  */
-
-rootProject.name = 'collector'
+/**
+ * This package contains the top level classes used by the Cyface Data Collector. Most important is the class
+ * {@link de.cyface.collector.Application}, which starts the whole application and the
+ * {@link de.cyface.collector.verticle.CollectorApiVerticle} that initializes the server.
+ * 
+ * @author Klemens Muthmann
+ * @version 1.0.0
+ * @since 2.0.0
+ */
+package de.cyface.collector;
