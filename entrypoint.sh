@@ -27,6 +27,18 @@ fi
 echo "Loading private key for JWT from: $JWT_PRIVATE_KEY_FILE_PATH"
 echo "Loading public key for JWT from: $JWT_PUBLIC_KEY_FILE_PATH"
 
+if [ -z $CYFACE_API_PORT ]; then
+	CYFACE_API_PORT="8080"
+fi
+
+echo "Running Cyface Collector API at port $CYFACE_API_PORT"
+
+if [ -z $CYFACE_MANAGEMENT_PORT ]; then
+	CYFACE_MANAGEMENT_PORT="13371"
+fi
+
+echo "Running Cyface Management API at port $CYFACE_MANAGEMENT_PORT"
+
 if [ -z $ADMIN_USER ]; then
     ADMIN_USER="admin"
 fi
@@ -57,4 +69,4 @@ if [ $COUNTER -ge 10 ]; then
 fi
 
 echo "Starting API"
-java -Dvertx.cacheDirBase=/tmp/vertx-cache -jar collector-2.0.0-SNAPSHOT-fat.jar -conf "{\"jwt.private\":\"$JWT_PRIVATE_KEY_FILE_PATH\",\"jwt.public\":\"$JWT_PUBLIC_KEY_FILE_PATH\",\"metrics.enabled\":true,\"mongo.userdb\":{\"db_name\":\"cyface-user\",\"connection_string\":\"mongodb://mongo-user:27017\",\"data_source_name\":\"cyface-user\"},\"mongo.datadb\":{\"db_name\":\"cyface-data\",\"connection_string\":\"mongodb://mongo-data:27017\",\"data_source_name\":\"cyface-data\"},\"admin.user\":\"$ADMIN_USER\",\"admin.password\":\"$ADMIN_PASSWORD\"}"
+java -Dvertx.cacheDirBase=/tmp/vertx-cache -jar collector-fat.jar -conf "{\"jwt.private\":\"$JWT_PRIVATE_KEY_FILE_PATH\",\"jwt.public\":\"$JWT_PUBLIC_KEY_FILE_PATH\",\"metrics.enabled\":true,\"mongo.userdb\":{\"db_name\":\"cyface-user\",\"connection_string\":\"mongodb://mongo-user:27017\",\"data_source_name\":\"cyface-user\"},\"mongo.datadb\":{\"db_name\":\"cyface-data\",\"connection_string\":\"mongodb://mongo-data:27017\",\"data_source_name\":\"cyface-data\"},\"admin.user\":\"$ADMIN_USER\",\"admin.password\":\"$ADMIN_PASSWORD\",\"http.port\":$CYFACE_API_PORT,\"http.port.management\":$CYFACE_MANAGEMENT_PORT}"
