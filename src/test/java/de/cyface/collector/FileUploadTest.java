@@ -56,7 +56,7 @@ public final class FileUploadTest {
     /**
      * Logger used to log messages from this class. Configure it using <tt>src/test/resource/logback-test.xml</tt>.
      */
-    private final static Logger LOGGER = LoggerFactory.getLogger(FileUploadTest.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(FileUploadTest.class);
     /**
      * The test <code>Vertx</code> instance.
      */
@@ -173,6 +173,11 @@ public final class FileUploadTest {
         uploadAndCheckForSuccess(context, "/iphone-neu.ccyf");
     }
 
+    /**
+     * Tests that trying to upload something using wrong credentials returns HTTP status code 401 as expected.
+     * 
+     * @param context The test context for running <code>Vertx</code> under test.
+     */
     @Test
     public void uploadWithWrongCredentials_Returns401(final TestContext context) {
         final Async async = context.async();

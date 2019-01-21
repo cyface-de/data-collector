@@ -203,7 +203,8 @@ public final class CollectorApiVerticle extends AbstractVerticle {
 
         // Set up v2 API
         // Set up authentication route
-        v2ApiRouter.route("/login").handler(BodyHandler.create()).handler(new AuthenticationHandler(mongoAuthProvider, jwtAuthProvider))
+        v2ApiRouter.route("/login").handler(BodyHandler.create())
+                .handler(new AuthenticationHandler(mongoAuthProvider, jwtAuthProvider))
                 .failureHandler(new AuthenticationFailureHandler());
         // Set up data collector route
         v2ApiRouter.post("/measurements").handler(BodyHandler.create().setDeleteUploadedFilesOnEnd(false))
