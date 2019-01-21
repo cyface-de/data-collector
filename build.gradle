@@ -51,7 +51,7 @@ repositories {
 }
 
 group = 'de.cyface'
-version = '2.0.1'
+version = '2.0.2'
 
 sourceCompatibility = '1.8'
 mainClassName = 'de.cyface.collector.Application'

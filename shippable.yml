@@ -32,7 +32,7 @@ build:
                 - cp -r build/reports/jacoco shippable/codecoverage
                 - cp -r build/reports/jacocoHtml shippable/codecoverage
         post_ci:
-                - if [ "$BRANCH" == "dev" ] && [ "$IS_PULL_REQUEST" != true ]; then docker build -t cyfacede/collector:latest .; docker push cyfacede/collector:latest; fi
+                - if [ "$BRANCH" == "master" ] && [ "$IS_PULL_REQUEST" != true ]; then docker build -t cyfacede/collector:latest .; docker push cyfacede/collector:latest; fi
                 - if [ "$IS_GIT_TAG" == true ] && [ "$IS_PULL_REQUEST" != true ]; then docker build -t "cyfacede/collector:$GIT_TAG_NAME" .; docker push "cyfacede/collector:$GIT_TAG_NAME"; fi
 
 
