@@ -31,7 +31,7 @@ import io.vertx.core.json.JsonObject;
  * A POJO representing a single measurement, which has arrived at the API and needs to be stored to persistent storage.
  * 
  * @author Klemens Muthmann
- * @version 1.0.0
+ * @version 2.0.0
  * @since 2.0.0
  */
 public final class Measurement {
@@ -52,6 +52,27 @@ public final class Measurement {
      */
     private final String deviceType;
     /**
+     * The version of the app that transmitted the measurement.
+     */
+    private final String applicationVersion;
+    /**
+     * The length of the measurement in meters.
+     */
+    private final double length;
+    /**
+     * The count of geo locations in the transmitted measurement.
+     */
+    private final long locationCount;
+    /**
+     * The geo location at the beginning of the track represented by the transmitted measurement.
+     */
+    private final String startLocation;
+    /**
+     * The geo location at the end of the track represented by the transmitted measurement.
+     */
+    private final String endLocation;
+
+    /**
      * A list of files uploaded together with the measurement. These files contain the actual data.
      */
     private final Collection<File> fileUploads;
@@ -63,14 +84,26 @@ public final class Measurement {
      * @param measurementIdentifier The device wide unique identifier of the uploaded measurement.
      * @param operatingSystemVersion The operating system version, such as Android 9.0.0 or iOS 11.2.
      * @param deviceType The type of device uploading the data, such as Pixel 3 or iPhone 6 Plus.
+     * @param applicationVersion The version of the app that transmitted the measurement.
+     * @param length The length of the measurement in meters.
+     * @param locationCount The count of geo locations in the transmitted measurement.
+     * @param startLocation The geo location at the beginning of the track represented by the transmitted measurement.
+     * @param endLocation The geo location at the end of the track represented by the transmitted measurement.
      * @param fileUploads A list of files uploaded together with the measurement. These files contain the actual data.
      */
     public Measurement(final String deviceIdentifier, final String measurementIdentifier,
-            final String operatingSystemVersion, final String deviceType, final Collection<File> fileUploads) {
+            final String operatingSystemVersion, final String deviceType, final String applicationVersion,
+            final double length, final long locationCount, final String startLocation, final String endLocation,
+            final Collection<File> fileUploads) {
         this.deviceIdentifier = deviceIdentifier;
         this.measurementIdentifier = measurementIdentifier;
         this.operatingSystemVersion = operatingSystemVersion;
         this.deviceType = deviceType;
+        this.applicationVersion = applicationVersion;
+        this.length = length;
+        this.locationCount = locationCount;
+        this.startLocation = startLocation;
+        this.endLocation = endLocation;
         this.fileUploads = fileUploads;
     }
 
@@ -110,15 +143,55 @@ public final class Measurement {
     }
 
     /**
+     * @return The version of the app that transmitted the measurement.
+     */
+    public String getApplicationVersion() {
+        return applicationVersion;
+    }
+
+    /**
+     * @return The length of the measurement in meters.
+     */
+    public double getLength() {
+        return length;
+    }
+
+    /**
+     * @return The count of geo locations in the transmitted measurement.
+     */
+    public long getLocationCount() {
+        return locationCount;
+    }
+
+    /**
+     * @return The geo location at the beginning of the track represented by the transmitted measurement.
+     */
+    public String getStartLocation() {
+        return startLocation;
+    }
+
+    /**
+     * @return The geo location at the end of the track represented by the transmitted measurement.
+     */
+    public String getEndLocation() {
+        return endLocation;
+    }
+
+    /**
      * @return A JSON representation of this measurement.
      */
     public JsonObject toJson() {
-        JsonObject ret = new JsonObject();
+        final JsonObject ret = new JsonObject();
 
         ret.put(FormAttributes.DEVICE_ID.getValue(), deviceIdentifier);
         ret.put(FormAttributes.MEASUREMENT_ID.getValue(), measurementIdentifier);
         ret.put(FormAttributes.OS_VERSION.getValue(), operatingSystemVersion);
         ret.put(FormAttributes.DEVICE_TYPE.getValue(), deviceType);
+        ret.put(FormAttributes.APPLICATION_VERSION.getValue(), applicationVersion);
+        ret.put(FormAttributes.LENGTH.getValue(), length);
+        ret.put(FormAttributes.LOCATION_COUNT.getValue(), locationCount);
+        ret.put(FormAttributes.START_LOCATION.getValue(), startLocation);
+        ret.put(FormAttributes.END_LOCATION.getValue(), endLocation);
 
         return ret;
     }
@@ -135,16 +208,29 @@ public final class Measurement {
                 final String measurementIdentifier = s.getMeasurementIdentifier();
                 final String deviceType = s.getDeviceType();
                 final String operatingSystemVersion = s.getOperatingSystemVersion();
+                final String applicationVersion = s.getApplicationVersion();
+                final double length = s.getLength();
+                final long locationCount = s.getLocationCount();
+                final String startLocation = s.getStartLocation();
+                final String endLocation = s.getEndLocation();
 
                 buffer.appendInt(deviceIdentifier.length());
                 buffer.appendInt(measurementIdentifier.length());
                 buffer.appendInt(deviceType.length());
                 buffer.appendInt(operatingSystemVersion.length());
+                buffer.appendInt(applicationVersion.length());
+                buffer.appendInt(startLocation.length());
+                buffer.appendInt(endLocation.length());
                 buffer.appendInt(s.getFileUploads().size());
                 buffer.appendString(deviceIdentifier);
                 buffer.appendString(measurementIdentifier);
                 buffer.appendString(deviceType);
                 buffer.appendString(operatingSystemVersion);
+                buffer.appendString(applicationVersion);
+                buffer.appendDouble(length);
+                buffer.appendLong(locationCount);
+                buffer.appendString(startLocation);
+                buffer.appendString(endLocation);
                 s.getFileUploads().forEach(fu -> {
                     buffer.appendInt(fu.getAbsolutePath().length());
                     buffer.appendString(fu.getAbsolutePath());
@@ -152,26 +238,39 @@ public final class Measurement {
             }
 
             @Override
-            public Measurement decodeFromWire(int pos, final Buffer buffer) {
-                int deviceIdentifierLength = buffer.getInt(0);
-                int measurementIdentifierLength = buffer.getInt(4);
-                int deviceTypeLength = buffer.getInt(8);
-                int operatingSystemVersionLength = buffer.getInt(12);
-                int numberOfFileUploads = buffer.getInt(16);
+            public Measurement decodeFromWire(final int pos, final Buffer buffer) {
+                final int deviceIdentifierLength = buffer.getInt(0 * Integer.BYTES);
+                final int measurementIdentifierLength = buffer.getInt(1 * Integer.BYTES);
+                final int deviceTypeLength = buffer.getInt(2 * Integer.BYTES);
+                final int operatingSystemVersionLength = buffer.getInt(3 * Integer.BYTES);
+                final int applicationVersionLength = buffer.getInt(4 * Integer.BYTES);
+                final int startLocationLength = buffer.getInt(5 * Integer.BYTES);
+                final int endLocationLength = buffer.getInt(6 * Integer.BYTES);
+                final int numberOfFileUploads = buffer.getInt(7 * Integer.BYTES);
 
-                int deviceIdentifierEnd = 16 + deviceIdentifierLength;
-                final String deviceIdentifier = buffer.getString(20, deviceIdentifierEnd);
-                int measurementIdentifierEnd = deviceIdentifierEnd + measurementIdentifierLength;
+                final int deviceIdentifierEnd = 8 * Integer.BYTES + deviceIdentifierLength;
+                final String deviceIdentifier = buffer.getString(8 * Integer.BYTES, deviceIdentifierEnd);
+                final int measurementIdentifierEnd = deviceIdentifierEnd + measurementIdentifierLength;
                 final String measurementIdentifier = buffer.getString(deviceIdentifierEnd, measurementIdentifierEnd);
-                int deviceTypeEnd = measurementIdentifierEnd + deviceTypeLength;
+                final int deviceTypeEnd = measurementIdentifierEnd + deviceTypeLength;
                 final String deviceType = buffer.getString(measurementIdentifierEnd, deviceTypeEnd);
-                int operationSystemVersionEnd = deviceTypeEnd + operatingSystemVersionLength;
+                final int operationSystemVersionEnd = deviceTypeEnd + operatingSystemVersionLength;
                 final String operatingSystemVersion = buffer.getString(deviceTypeEnd, operationSystemVersionEnd);
+                final int applicationVersionEnd = operationSystemVersionEnd + applicationVersionLength;
+                final String applicationVersion = buffer.getString(operationSystemVersionEnd, applicationVersionEnd);
+                final int lengthEnd = applicationVersionEnd + Double.BYTES;
+                final double length = buffer.getDouble(applicationVersionEnd);
+                final int locationCountEnd = lengthEnd + Long.BYTES;
+                final long locationCount = buffer.getLong(lengthEnd);
+                final int startLocationEnd = locationCountEnd + startLocationLength;
+                final String startLocation = buffer.getString(locationCountEnd, startLocationEnd);
+                final int endLocationEnd = startLocationEnd + endLocationLength;
+                final String endLocation = buffer.getString(startLocationEnd, endLocationEnd);
 
                 Collection<File> fileUploads = new HashSet<>();
-                int iterationStartByte = operationSystemVersionEnd;
+                int iterationStartByte = endLocationEnd;
                 for (int i = 0; i < numberOfFileUploads; i++) {
-                    int entryLength = buffer.getInt(operationSystemVersionEnd);
+                    int entryLength = buffer.getInt(iterationStartByte);
                     String fileName = buffer.getString(4 + iterationStartByte, 4 + iterationStartByte + entryLength);
                     iterationStartByte += 4 + iterationStartByte + entryLength;
 
@@ -180,7 +279,7 @@ public final class Measurement {
                 }
 
                 return new Measurement(deviceIdentifier, measurementIdentifier, operatingSystemVersion, deviceType,
-                        fileUploads);
+                        applicationVersion, length, locationCount, startLocation, endLocation, fileUploads);
             }
 
             @Override

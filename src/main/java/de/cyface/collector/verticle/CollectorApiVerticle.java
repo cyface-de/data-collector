@@ -240,7 +240,7 @@ public final class CollectorApiVerticle extends AbstractVerticle {
     }
 
     /**
-     * Finishes the <code>MainVerticle</code> startup process and informs all interested parties about whether it has
+     * Finishes the <code>CollectorApiVerticle</code> startup process and informs all interested parties about whether it has
      * been successful or not.
      *
      * @param serverStartup The result of the server startup as provided by <code>Vertx</code>.

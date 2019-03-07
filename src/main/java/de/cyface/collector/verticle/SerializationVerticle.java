@@ -130,69 +130,65 @@ public final class SerializationVerticle extends AbstractVerticle implements Han
 
         @Override
         public void handle(AsyncResult<String> res) {
-            if (res.succeeded()) {
-                try {
-                    String id = res.result();
-                    LOGGER.debug("Inserted measurement with id " + id);
-
-                    // Store to Mongo GridFs
-                    final String mongoConnectionString = config().getString("connection_string", DEFAULT_MONGO_URL);
-                    final String mongoDatabaseName = config().getString("db_name", "test");
-                    MongoDatabase db = com.mongodb.async.client.MongoClients
-                            .create(new ConnectionString(mongoConnectionString)).getDatabase(mongoDatabaseName);
-                    GridFSBucket gridFsBucket = GridFSBuckets.create(db);
-
-                    Collection<File> filesToUpload = measurement.getFileUploads();
-                    @SuppressWarnings("rawtypes")
-                    List<Future> fileUploadFutures = new ArrayList<>(filesToUpload.size());
-
-                    filesToUpload.forEach(upload -> {
-
-                        Future<String> future = Future.future();
-                        try {
-                            fileUploadFutures.add(future);
-                            FileInputStream fileInputStream = new FileInputStream(upload.getAbsolutePath());
-                            AsyncInputStream asyncStream = com.mongodb.async.client.gridfs.helpers.AsyncStreamHelper
-                                    .toAsyncInputStream(fileInputStream);
-                            gridFsBucket.uploadFromStream(upload.getName(), asyncStream, (result, throwable) -> {
-                                LOGGER.debug("Saved file as object " + result);
-                                future.complete();
-                            });
-                        } catch (FileNotFoundException e) {
-                            LOGGER.error("Error during serialization.", e);
-                            future.fail(e);
-                        }
-                    });
-
-                    CompositeFuture.all(fileUploadFutures).setHandler(result -> {
-                        if (result.succeeded()) {
-                            vertx.eventBus().publish(MEASUREMENT_SAVED, id);
-                        } else {
-                            LOGGER.error("Error during serialization.", res.cause());
-                            fail(res);
-                        }
-                    });
-                } catch (RuntimeException e) {
-                    LOGGER.error("Error during serialization!", e);
-                    vertx.eventBus().publish(SAVING_MEASUREMENT_FAILED, e.getMessage());
-                }
-            } else {
-                LOGGER.error("Error during serialization!", res.cause());
-                fail(res);
+            if (!res.succeeded()) {
+                fail(res.cause());
             }
 
+            try {
+                String id = res.result();
+                LOGGER.debug("Inserted measurement with id " + id);
+
+                // Store to Mongo GridFs
+                final String mongoConnectionString = config().getString("connection_string", DEFAULT_MONGO_URL);
+                final String mongoDatabaseName = config().getString("db_name", "test");
+                MongoDatabase db = com.mongodb.async.client.MongoClients
+                        .create(new ConnectionString(mongoConnectionString)).getDatabase(mongoDatabaseName);
+                GridFSBucket gridFsBucket = GridFSBuckets.create(db);
+
+                Collection<File> filesToUpload = measurement.getFileUploads();
+                @SuppressWarnings("rawtypes")
+                List<Future> fileUploadFutures = new ArrayList<>(filesToUpload.size());
+
+                filesToUpload.forEach(upload -> {
+
+                    Future<String> future = Future.future();
+                    try {
+                        fileUploadFutures.add(future);
+                        FileInputStream fileInputStream = new FileInputStream(upload.getAbsolutePath());
+                        AsyncInputStream asyncStream = com.mongodb.async.client.gridfs.helpers.AsyncStreamHelper
+                                .toAsyncInputStream(fileInputStream);
+                        gridFsBucket.uploadFromStream(upload.getName(), asyncStream, (result, throwable) -> {
+                            LOGGER.debug("Saved file as object " + result);
+                            future.complete();
+                        });
+                    } catch (FileNotFoundException e) {
+                        LOGGER.error("Error during serialization.", e);
+                        future.fail(e);
+                    }
+                });
+
+                CompositeFuture.all(fileUploadFutures).setHandler(result -> {
+                    if (result.succeeded()) {
+                        vertx.eventBus().publish(MEASUREMENT_SAVED, id);
+                    } else {
+                        fail(res.cause());
+                    }
+                });
+            } catch (RuntimeException e) {
+                fail(e);
+            }
         }
 
         /**
          * Fails saving the measurement by sending an appropriate message over the event bus.
          * 
-         * @param res The result to fail for. This contains further information about the reason the serialization
-         *            failed.
+         * @param res The <code>Throwable</code> causing the failure. This contains further information about the reason
+         *            the serialization failed.
          * @see EventBusAddresses#SAVING_MEASUREMENT_FAILED
          */
-        private void fail(final AsyncResult<String> res) {
-            LOGGER.error("Unable to save measurement with id {}", res.cause(), measurement.getMeasurementIdentifier());
-            vertx.eventBus().publish(SAVING_MEASUREMENT_FAILED, res.cause().getMessage());
+        private void fail(final Throwable res) {
+            LOGGER.error("Unable to save measurement with id {}", res, measurement.getMeasurementIdentifier());
+            vertx.eventBus().publish(SAVING_MEASUREMENT_FAILED, res.getMessage());
         }
 
     }

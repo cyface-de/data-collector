@@ -22,7 +22,7 @@ package de.cyface.collector.handler;
  * Attributes supported by the APIs multipart form upload POST endpoint.
  * 
  * @author Klemens Muthmann
- * @version 1.0.0
+ * @version 1.1.0
  * @since 2.0.0
  */
 public enum FormAttributes {
@@ -41,7 +41,27 @@ public enum FormAttributes {
     /**
      * The operating system version, such as Android 9.0.0 or iOS 11.2.
      */
-    OS_VERSION("osVersion");
+    OS_VERSION("osVersion"),
+    /**
+     * The version of the app that transmitted the measurement.
+     */
+    APPLICATION_VERSION("appVersion;"),
+    /**
+     * The length of the measurement in meters.
+     */
+    LENGTH("length"),
+    /**
+     * The count of geo locations in the transmitted measurement.
+     */
+    LOCATION_COUNT("locationCount"),
+    /**
+     * The geo location at the beginning of the track represented by the transmitted measurement.
+     */
+    START_LOCATION("startLocation"),
+    /**
+     * The geo location at the end of the track represented by the transmitted measurement.
+     */
+    END_LOCATION("endLocation");
 
     /**
      * The value identifying the attribute in the multipart form request.

@@ -23,6 +23,11 @@ import static de.cyface.collector.handler.FormAttributes.DEVICE_ID;
 import static de.cyface.collector.handler.FormAttributes.DEVICE_TYPE;
 import static de.cyface.collector.handler.FormAttributes.MEASUREMENT_ID;
 import static de.cyface.collector.handler.FormAttributes.OS_VERSION;
+import static de.cyface.collector.handler.FormAttributes.APPLICATION_VERSION;
+import static de.cyface.collector.handler.FormAttributes.LENGTH;
+import static de.cyface.collector.handler.FormAttributes.LOCATION_COUNT;
+import static de.cyface.collector.handler.FormAttributes.START_LOCATION;
+import static de.cyface.collector.handler.FormAttributes.END_LOCATION;
 
 import java.io.File;
 import java.util.HashSet;
@@ -65,6 +70,12 @@ public final class MeasurementHandler implements Handler<RoutingContext> {
         String deviceType = request.getFormAttribute(DEVICE_TYPE.getValue());
         String measurementId = request.getFormAttribute(MEASUREMENT_ID.getValue());
         String osVersion = request.getFormAttribute(OS_VERSION.getValue());
+        String applicationVersion = request.getFormAttribute(APPLICATION_VERSION.getValue());
+        // FIXME: Check that this is parseable.
+        double length = Double.valueOf(request.getFormAttribute(LENGTH.getValue()));
+        long locationCount = Long.valueOf(request.getFormAttribute(LOCATION_COUNT.getValue()));
+        String startLocation = request.getFormAttribute(START_LOCATION.getValue());
+        String endLocation = request.getFormAttribute(END_LOCATION.getValue());
 
         Set<File> uploads = new HashSet<>();
         ctx.fileUploads().forEach(upload -> uploads.add(new File(upload.uploadedFileName())));
@@ -75,7 +86,8 @@ public final class MeasurementHandler implements Handler<RoutingContext> {
                 || uploads.size() == 0) {
             ctx.fail(422);
         } else {
-            informAboutNew(new Measurement(deviceId, measurementId, osVersion, deviceType, uploads), ctx);
+            informAboutNew(new Measurement(deviceId, measurementId, osVersion, deviceType, applicationVersion, length,
+                    locationCount, startLocation, endLocation, uploads), ctx);
             response.setStatusCode(201);
         }
 
