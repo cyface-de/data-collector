@@ -57,7 +57,7 @@ import io.vertx.ext.mongo.MongoClient;
  * persistent storage.
  * 
  * @author Klemens Muthmann
- * @version 1.1.2
+ * @version 1.1.3
  * @since 2.0.0
  */
 public final class SerializationVerticle extends AbstractVerticle implements Handler<Message<Measurement>> {

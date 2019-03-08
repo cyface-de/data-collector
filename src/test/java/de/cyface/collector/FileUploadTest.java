@@ -31,16 +31,23 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
+import de.cyface.collector.handler.FormAttributes;
 import de.cyface.collector.verticle.CollectorApiVerticle;
+import io.vertx.core.AsyncResult;
+import io.vertx.core.CompositeFuture;
+import io.vertx.core.Future;
+import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.eventbus.EventBus;
+import io.vertx.core.eventbus.Message;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
 import io.vertx.ext.unit.Async;
 import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
 import io.vertx.ext.web.client.HttpRequest;
+import io.vertx.ext.web.client.HttpResponse;
 import io.vertx.ext.web.client.WebClient;
 import io.vertx.ext.web.multipart.MultipartForm;
 
@@ -48,7 +55,7 @@ import io.vertx.ext.web.multipart.MultipartForm;
  * Tests that uploading measurements to the Cyface API works as expected.
  * 
  * @author Klemens Muthmann
- * @version 2.1.2
+ * @version 3.0.0
  * @since 2.0.0
  */
 @RunWith(VertxUnitRunner.class)
@@ -57,6 +64,10 @@ public final class FileUploadTest {
      * Logger used to log messages from this class. Configure it using <tt>src/test/resource/logback-test.xml</tt>.
      */
     private static final Logger LOGGER = LoggerFactory.getLogger(FileUploadTest.class);
+    /**
+     * The endpoint to upload measurements to.
+     */
+    private static final String MEASUREMENTS_UPLOAD_ENDPOINT_PATH = "/api/v2/measurements";
     /**
      * The test <code>Vertx</code> instance.
      */
@@ -128,10 +139,15 @@ public final class FileUploadTest {
         this.measurementIdentifier = String.valueOf(1L);
 
         this.form = MultipartForm.create();
-        form.attribute("deviceId", deviceIdentifier);
-        form.attribute("measurementId", measurementIdentifier);
-        form.attribute("deviceType", "HTC Desire");
-        form.attribute("osVersion", "4.4.4");
+        form.attribute(FormAttributes.DEVICE_ID.getValue(), deviceIdentifier);
+        form.attribute(FormAttributes.MEASUREMENT_ID.getValue(), measurementIdentifier);
+        form.attribute(FormAttributes.DEVICE_TYPE.getValue(), "HTC Desire");
+        form.attribute(FormAttributes.OS_VERSION.getValue(), "4.4.4");
+        form.attribute(FormAttributes.APPLICATION_VERSION.getValue(), "4.0.0-alpha1");
+        form.attribute(FormAttributes.LENGTH.getValue(), "200.0");
+        form.attribute(FormAttributes.LOCATION_COUNT.getValue(), "10");
+        form.attribute(FormAttributes.START_LOCATION.getValue(), "lat: 10.0 lon: 10.0, timestamp: 10000");
+        form.attribute(FormAttributes.END_LOCATION.getValue(), "lat: 12.0 lon: 12.0, timestamp: 12000");
     }
 
     /**
@@ -182,16 +198,47 @@ public final class FileUploadTest {
     public void uploadWithWrongCredentials_Returns401(final TestContext context) {
         final Async async = context.async();
 
-        final HttpRequest<Buffer> builder = client.post(collectorClient.getPort(), "localhost", "/api/v2/measurements");
+        final HttpRequest<Buffer> builder = client.post(collectorClient.getPort(), "localhost",
+                MEASUREMENTS_UPLOAD_ENDPOINT_PATH);
         builder.sendMultipartForm(form, ar -> {
             if (ar.succeeded()) {
-                context.assertEquals(ar.result().statusCode(), 401);
+                context.assertEquals(401, ar.result().statusCode());
                 context.assertTrue(ar.succeeded());
             } else {
                 context.fail(ar.cause());
             }
             async.complete();
         });
+
+        async.await(3_000L);
+    }
+
+    @Test
+    public void testUploadWithUnparseableMetaData_Returns422(final TestContext context) {
+        final Async async = context.async();
+
+        // Set invalid value for a form attribute
+        this.form = MultipartForm.create();
+        form.attribute(FormAttributes.DEVICE_ID.getValue(), deviceIdentifier);
+        form.attribute(FormAttributes.MEASUREMENT_ID.getValue(), measurementIdentifier);
+        form.attribute(FormAttributes.DEVICE_TYPE.getValue(), "HTC Desire");
+        form.attribute(FormAttributes.OS_VERSION.getValue(), "4.4.4");
+        form.attribute(FormAttributes.APPLICATION_VERSION.getValue(), "4.0.0-alpha1");
+        form.attribute(FormAttributes.LENGTH.getValue(), "Sir! You are being hacked!");
+        form.attribute(FormAttributes.LOCATION_COUNT.getValue(), "10");
+        form.attribute(FormAttributes.START_LOCATION.getValue(), "lat: 10.0 lon: 10.0, timestamp: 10000");
+        form.attribute(FormAttributes.END_LOCATION.getValue(), "lat: 12.0 lon: 12.0, timestamp: 12000");
+
+        // Execute
+        upload(context, "/test.bin", ar -> {
+            if (ar.succeeded()) {
+                context.assertEquals(422, ar.result().statusCode());
+            } else {
+                context.fail(ar.cause());
+            }
+            async.complete();
+        }, result -> context.fail("No file should be saved in case of this error!"),
+                result -> context.fail("No file should be saved in case of this error!"));
 
         async.await(3_000L);
     }
@@ -206,6 +253,51 @@ public final class FileUploadTest {
      */
     private void uploadAndCheckForSuccess(final TestContext context, final String testFileResourceName) {
         final Async async = context.async();
+
+        final Future<Void> returnedRequestFuture = Future.future();
+        final Future<Void> measurementSavedFuture = Future.future();
+        CompositeFuture.all(returnedRequestFuture, measurementSavedFuture).setHandler(result -> {
+            if (result.succeeded()) {
+                async.complete();
+            } else {
+                context.fail("Unable to store measurement or send response!");
+            }
+        });
+
+        upload(context, testFileResourceName, ar -> {
+            if (ar.succeeded()) {
+                context.assertEquals(201, ar.result().statusCode());
+                context.assertTrue(ar.succeeded());
+                context.assertNull(ar.cause());
+            } else {
+                context.fail(ar.cause());
+            }
+            returnedRequestFuture.complete();
+        }, message -> {
+            measurementSavedFuture.complete();
+        }, message -> {
+            context.fail("Unable to save measurement " + message.body());
+            measurementSavedFuture.complete();
+        });
+
+        async.await(5_000L);
+    }
+
+    /**
+     * Uploads the provided file using an authenticated request. You may listen to the completion of this upload using
+     * any of the provided handlers.
+     * 
+     * @param context The test context to use.
+     * @param testFileResourceName The Java resource name of a file to upload.
+     * @param handler The handler called if the client received a response.
+     * @param measurementSavedHandler The handler called if the backend has saved the file successfully.
+     * @param measurementSavingFailedHandler The handler called if the file was not saved.
+     */
+    private void upload(final TestContext context, final String testFileResourceName,
+            final Handler<AsyncResult<HttpResponse<Buffer>>> handler,
+            final Handler<Message<Object>> measurementSavedHandler,
+            final Handler<Message<Object>> measurementSavingFailedHandler) {
+
         final URL testFileResource = this.getClass().getResource(testFileResourceName);
 
         form.binaryFileUpload("fileToUpload",
@@ -213,12 +305,8 @@ public final class FileUploadTest {
                 testFileResource.getFile(), "application/octet-stream");
 
         final EventBus eventBus = vertx.eventBus();
-        eventBus.consumer(EventBusAddresses.MEASUREMENT_SAVED, message -> {
-            async.complete();
-        });
-        eventBus.consumer(EventBusAddresses.SAVING_MEASUREMENT_FAILED, message -> {
-            context.fail("Unable to save measurement " + message.body());
-        });
+        eventBus.consumer(EventBusAddresses.MEASUREMENT_SAVED, measurementSavedHandler);
+        eventBus.consumer(EventBusAddresses.SAVING_MEASUREMENT_FAILED, measurementSavingFailedHandler);
 
         LOGGER.debug("Sending authentication request!");
         TestUtils.authenticate(client, authResponse -> {
@@ -227,23 +315,13 @@ public final class FileUploadTest {
                 final String authToken = authResponse.result().getHeader("Authorization");
                 context.assertNotNull(authToken);
 
-                final HttpRequest<Buffer> builder = client
-                        .post(collectorClient.getPort(), "localhost", "/api/v2/measurements");
+                final HttpRequest<Buffer> builder = client.post(collectorClient.getPort(), "localhost",
+                        MEASUREMENTS_UPLOAD_ENDPOINT_PATH);
                 builder.putHeader("Authorization", "Bearer " + authToken);
-                builder.sendMultipartForm(form, ar -> {
-                    if (ar.succeeded()) {
-                        context.assertEquals(ar.result().statusCode(), 201);
-                        context.assertTrue(ar.succeeded());
-                        context.assertNull(ar.cause());
-                    } else {
-                        context.fail(ar.cause());
-                    }
-                });
+                builder.sendMultipartForm(form, handler);
             } else {
                 context.fail(authResponse.cause());
             }
         }, collectorClient.getPort());
-
-        async.await(3000L);
     }
 }

@@ -45,7 +45,7 @@ public enum FormAttributes {
     /**
      * The version of the app that transmitted the measurement.
      */
-    APPLICATION_VERSION("appVersion;"),
+    APPLICATION_VERSION("appVersion"),
     /**
      * The length of the measurement in meters.
      */

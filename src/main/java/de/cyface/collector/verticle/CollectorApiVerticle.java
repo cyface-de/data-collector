@@ -56,7 +56,7 @@ import io.vertx.ext.web.handler.StaticHandler;
  *
  * @author Klemens Muthmann
  * @author Armin Schnabel
- * @version 1.2.2
+ * @version 1.2.3
  * @since 2.0.0
  */
 public final class CollectorApiVerticle extends AbstractVerticle {
@@ -208,8 +208,8 @@ public final class CollectorApiVerticle extends AbstractVerticle {
                 .failureHandler(new AuthenticationFailureHandler());
         // Set up data collector route
         v2ApiRouter.post("/measurements").handler(BodyHandler.create().setDeleteUploadedFilesOnEnd(false))
-                .handler(JWTAuthHandler.create(jwtAuthProvider)).handler(new MeasurementHandler())
-                .failureHandler(new AuthenticationFailureHandler());
+                .handler(JWTAuthHandler.create(jwtAuthProvider)).handler(new MeasurementHandler());
+                //.failureHandler(new AuthenticationFailureHandler());
 
         v2ApiRouter.route().handler(StaticHandler.create("webroot/api"));
 
@@ -220,7 +220,6 @@ public final class CollectorApiVerticle extends AbstractVerticle {
          * add the OpenApi generated route.
          */
         next.handle(Future.succeededFuture(mainRouter));
-        // return mainRouter;
     }
 
     /**

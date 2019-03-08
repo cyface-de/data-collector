@@ -22,7 +22,7 @@
  * events triggered by clients calling API endpoints.
  * 
  * @author Klemens Muthmann
- * @version 1.0.0
+ * @version 2.0.0
  * @since 2.0.0
  */
 package de.cyface.collector.handler;

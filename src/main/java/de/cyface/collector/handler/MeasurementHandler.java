@@ -46,11 +46,11 @@ import io.vertx.ext.web.RoutingContext;
 /**
  * A handler for receiving HTTP POST requests on the "measurements" endpoint.
  * This endpoint is the core of this application and responsible for receiving
- * new measurements from any measurement device and storing forwarding those
+ * new measurements from any measurement device and forwarding those
  * measurements for persistent storage.
  * 
  * @author Klemens Muthmann
- * @version 1.0.1
+ * @version 2.0.0
  * @since 2.0.0
  */
 public final class MeasurementHandler implements Handler<RoutingContext> {
@@ -65,33 +65,44 @@ public final class MeasurementHandler implements Handler<RoutingContext> {
     @Override
     public void handle(final RoutingContext ctx) {
         LOGGER.info("Received new measurement request.");
-        HttpServerRequest request = ctx.request();
-        String deviceId = request.getFormAttribute(DEVICE_ID.getValue());
-        String deviceType = request.getFormAttribute(DEVICE_TYPE.getValue());
-        String measurementId = request.getFormAttribute(MEASUREMENT_ID.getValue());
-        String osVersion = request.getFormAttribute(OS_VERSION.getValue());
-        String applicationVersion = request.getFormAttribute(APPLICATION_VERSION.getValue());
-        // FIXME: Check that this is parseable.
-        double length = Double.valueOf(request.getFormAttribute(LENGTH.getValue()));
-        long locationCount = Long.valueOf(request.getFormAttribute(LOCATION_COUNT.getValue()));
-        String startLocation = request.getFormAttribute(START_LOCATION.getValue());
-        String endLocation = request.getFormAttribute(END_LOCATION.getValue());
+        final HttpServerRequest request = ctx.request();
+        final HttpServerResponse response = ctx.response();
+        LOGGER.debug("FormAttributes: " + request.formAttributes());
 
-        Set<File> uploads = new HashSet<>();
-        ctx.fileUploads().forEach(upload -> uploads.add(new File(upload.uploadedFileName())));
+        try {
+            final String deviceId = request.getFormAttribute(DEVICE_ID.getValue());
+            final String deviceType = request.getFormAttribute(DEVICE_TYPE.getValue());
+            final String measurementId = request.getFormAttribute(MEASUREMENT_ID.getValue());
+            final String osVersion = request.getFormAttribute(OS_VERSION.getValue());
+            final String applicationVersion = request.getFormAttribute(APPLICATION_VERSION.getValue());
+            final double length = Double.parseDouble(request.getFormAttribute(LENGTH.getValue()));
+            final long locationCount = Long.parseLong(request.getFormAttribute(LOCATION_COUNT.getValue()));
+            final String startLocation = request.getFormAttribute(START_LOCATION.getValue());
+            final String endLocation = request.getFormAttribute(END_LOCATION.getValue());
 
-        HttpServerResponse response = ctx.response();
+            final Set<File> uploads = new HashSet<>();
+            ctx.fileUploads().forEach(upload -> uploads.add(new File(upload.uploadedFileName())));
 
-        if (deviceId == null || deviceType == null || measurementId == null || osVersion == null
-                || uploads.size() == 0) {
+            if (deviceId == null || deviceType == null || measurementId == null || osVersion == null
+                    || applicationVersion == null || startLocation == null || endLocation == null
+                    || uploads.size() == 0) {
+                LOGGER.debug("Data was deviceId: " + deviceId + ", deviceType: " + deviceType + ", measurementId: "
+                        + measurementId + ", osVersion: " + osVersion + ", applicationVersion: " + applicationVersion
+                        + ", startLocation: " + startLocation + ", endLocation: " + endLocation);
+                ctx.fail(422);
+            } else {
+                informAboutNew(new Measurement(deviceId, measurementId, osVersion, deviceType, applicationVersion,
+                        length, locationCount, startLocation, endLocation, uploads), ctx);
+
+                response.setStatusCode(201);
+                LOGGER.debug("Request was successful!");
+                response.end();
+            }
+        } catch (final NumberFormatException e) {
+            LOGGER.error("Data was not parseable!");
             ctx.fail(422);
-        } else {
-            informAboutNew(new Measurement(deviceId, measurementId, osVersion, deviceType, applicationVersion, length,
-                    locationCount, startLocation, endLocation, uploads), ctx);
-            response.setStatusCode(201);
         }
 
-        response.end();
     }
 
     /**
@@ -103,7 +114,7 @@ public final class MeasurementHandler implements Handler<RoutingContext> {
      * @see EventBusAddresses#NEW_MEASUREMENT
      */
     private void informAboutNew(final Measurement measurement, final RoutingContext context) {
-        EventBus eventBus = context.vertx().eventBus();
+        final EventBus eventBus = context.vertx().eventBus();
         eventBus.publish(NEW_MEASUREMENT, measurement);
     }
 
