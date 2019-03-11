@@ -23,6 +23,8 @@ services:
     mongo-data:
       container_name: collector_mongo-data
       image: mongo:4.0.4
+      ports:
+        - "27019:27017"
       volumes:
         - type: volume
           source: mongo-data-db
@@ -31,6 +33,8 @@ services:
     mongo-user:
       container_name: collector_mongo-user
       image: mongo:4.0.4
+      ports:
+        - "27018:27017"
       volumes:
         - type: volume
           source: mongo-user-db 
