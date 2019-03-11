@@ -36,6 +36,8 @@ import io.vertx.core.Vertx;
 import io.vertx.core.eventbus.EventBus;
 import io.vertx.core.eventbus.Message;
 import io.vertx.core.json.JsonObject;
+import io.vertx.core.logging.Logger;
+import io.vertx.core.logging.LoggerFactory;
 import io.vertx.ext.mongo.MongoClient;
 import io.vertx.ext.unit.Async;
 import io.vertx.ext.unit.TestContext;
@@ -45,12 +47,18 @@ import io.vertx.ext.unit.junit.VertxUnitRunner;
  * Tests individual verticles by sending appropriate messages using the Vert.x event bus.
  * 
  * @author Klemens Muthmann
- * @version 1.0.2
+ * @version 1.0.3
  * @since 2.0.0
  */
 @RunWith(VertxUnitRunner.class)
 public final class EventBusTest {
 
+    /**
+     * The logger used by objects of this class. Configure it using <tt>/src/test/resources/logback-test.xml</tt> and do
+     * not forget to set the Java property:
+     * <tt>-Dvertx.logger-delegate-factory-class-name=io.vertx.core.logging.SLF4JLogDelegateFactory</tt>.
+     */
+    private static final Logger LOGGER = LoggerFactory.getLogger(EventBusTest.class);
     /**
      * Process providing a connection to the test Mongo database.
      */
@@ -120,23 +128,41 @@ public final class EventBusTest {
                     context.assertTrue(object.succeeded());
 
                     JsonObject json = object.result();
-                    String deviceIdentifier = json.getString(FormAttributes.DEVICE_ID.getValue());
-                    String measurementIdentifier = json.getString(FormAttributes.MEASUREMENT_ID.getValue());
-                    String operatingSystemVersion = json.getString(FormAttributes.OS_VERSION.getValue());
-                    String deviceType = json.getString(FormAttributes.DEVICE_TYPE.getValue());
+                    try {
+                        String deviceIdentifier = json.getString(FormAttributes.DEVICE_ID.getValue());
+                        String measurementIdentifier = json.getString(FormAttributes.MEASUREMENT_ID.getValue());
+                        String operatingSystemVersion = json.getString(FormAttributes.OS_VERSION.getValue());
+                        String deviceType = json.getString(FormAttributes.DEVICE_TYPE.getValue());
+                        String applicationVersion = json.getString(FormAttributes.APPLICATION_VERSION.getValue());
+                        double length = json.getDouble(FormAttributes.LENGTH.getValue());
+                        long locationCount = json.getLong(FormAttributes.LOCATION_COUNT.getValue());
+                        String startLocation = json.getString(FormAttributes.START_LOCATION.getValue());
+                        String endLocation = json.getString(FormAttributes.END_LOCATION.getValue());
 
-                    context.assertEquals("some_device", deviceIdentifier);
-                    context.assertEquals("2", measurementIdentifier);
-                    context.assertEquals("9.0.0", operatingSystemVersion);
-                    context.assertEquals("Pixel 2", deviceType);
+                        context.assertEquals("some_device", deviceIdentifier);
+                        context.assertEquals("2", measurementIdentifier);
+                        context.assertEquals("9.0.0", operatingSystemVersion);
+                        context.assertEquals("Pixel 2", deviceType);
+                        context.assertEquals("4.0.0-alpha1", applicationVersion);
+                        context.assertEquals(200.0, length);
+                        context.assertEquals(10L, locationCount);
+                        context.assertEquals("lat: 10.0 lon: 10.0, timestamp: 10000", startLocation);
+                        context.assertEquals("lat: 12.0 lon: 12.0, timestamp: 12000", endLocation);
 
-                    async.complete();
+                    } catch (ClassCastException e) {
+                        LOGGER.error("Unable to parse JSON: \n" + json.encodePrettily());
+                        context.fail(e);
+                    } finally {
+                        async.complete();
+                    }
                 });
             }
         });
 
         eventBus.publish(EventBusAddresses.NEW_MEASUREMENT,
-                new Measurement("some_device", "2", "9.0.0", "Pixel 2", Collections.emptyList()));
+                new Measurement("some_device", "2", "9.0.0", "Pixel 2", "4.0.0-alpha1", 200.0, 10,
+                        "lat: 10.0 lon: 10.0, timestamp: 10000", "lat: 12.0 lon: 12.0, timestamp: 12000",
+                        Collections.emptyList()));
 
         async.await(5_000L);
     }

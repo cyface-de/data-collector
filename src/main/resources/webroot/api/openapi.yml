@@ -2,7 +2,7 @@ openapi: 3.0.2
 info:
   title: Cyface Data Collector
   description: This is a Cyface data collection endpoint, that receives traffic data from Cyface measurement devices, and stores them for further processing.
-  version: 2.0.0
+  version: 2.0.2
   
 servers:
   - url: /api/v2
@@ -92,12 +92,34 @@ paths:
                   #description: The version of the device operating system.
                   type: string
                   example: 4.4.4
+                appVersion:
+                  type: string
+                  example: 1.0.2
+                length:
+                  type: integer
+                  format: int64
+                  example: 468.429108633028
+                locationCount:
+                  type: number
+                  format: double
+                  example: 172
+                startLocation:
+                  type: string
+                  example: "lat: 51.05220494330958, lon: 13.729234272626908, time: 1551436825471"
+                endLocation:
+                  type: string
+                  example: "lat: 51.05209006932662, lon 13.728697160271674, time: 1551436996091"
               required:
                 - fileToUpload
                 - deviceId
                 - measurementId
                 - deviceType
                 - osVersion
+                - appVersion
+                - length
+                - locationCount
+                - startLocation
+                - endLocation
               
       responses:
         '201':

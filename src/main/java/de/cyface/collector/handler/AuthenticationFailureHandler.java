@@ -19,6 +19,8 @@
 package de.cyface.collector.handler;
 
 import io.vertx.core.Handler;
+import io.vertx.core.logging.Logger;
+import io.vertx.core.logging.LoggerFactory;
 import io.vertx.ext.web.RoutingContext;
 
 /**
@@ -26,16 +28,26 @@ import io.vertx.ext.web.RoutingContext;
  * authentication attempts.
  * 
  * @author Klemens Muthmann
- * @version 1.0.0
+ * @version 1.0.1
  * @since 2.0.0
  */
 public final class AuthenticationFailureHandler implements Handler<RoutingContext> {
 
+    /**
+     * Logger used by objects of this class. Configure it using <tt>src/main/resources/logback.xml</tt>.
+     */
+    private static final Logger LOGGER = LoggerFactory.getLogger(AuthenticationFailureHandler.class);
+
     @Override
     public void handle(final RoutingContext context) {
+        LOGGER.error("Received failure " + context.failed());
+        LOGGER.error(context.failure());
+
         final boolean closed = context.response().closed();
         final boolean ended = context.response().ended();
         if (!closed && !ended) {
+            LOGGER.error("Failing authentication request with 401 since response was closed: " + closed + ", ended: "
+                    + ended);
             context.response().setStatusCode(401).end();
         }
 
