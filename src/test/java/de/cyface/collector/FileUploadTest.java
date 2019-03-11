@@ -213,6 +213,11 @@ public final class FileUploadTest {
         async.await(3_000L);
     }
 
+    /**
+     * Tests that an upload with unparseable meta data returns a 422 error.
+     * 
+     * @param context The test context for running <code>Vertx</code> under test.
+     */
     @Test
     public void testUploadWithUnparseableMetaData_Returns422(final TestContext context) {
         final Async async = context.async();
