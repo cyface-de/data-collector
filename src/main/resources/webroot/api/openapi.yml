@@ -2,7 +2,7 @@ openapi: 3.0.2
 info:
   title: Cyface Data Collector
   description: This is a Cyface data collection endpoint, that receives traffic data from Cyface measurement devices, and stores them for further processing.
-  version: 2.0.0
+  version: 2.0.2
   
 servers:
   - url: /api/v2
