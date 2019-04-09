@@ -1,33 +1,29 @@
 /*
  * Copyright 2018 Cyface GmbH
- * 
  * This file is part of the Cyface Data Collector.
- *
  * The Cyface Data Collector is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
  * The Cyface Data Collector is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
  * GNU General Public License for more details.
- *
  * You should have received a copy of the GNU General Public License
  * along with the Cyface Data Collector. If not, see <http://www.gnu.org/licenses/>.
  */
 package de.cyface.collector.handler;
 
 import static de.cyface.collector.EventBusAddresses.NEW_MEASUREMENT;
+import static de.cyface.collector.handler.FormAttributes.APPLICATION_VERSION;
 import static de.cyface.collector.handler.FormAttributes.DEVICE_ID;
 import static de.cyface.collector.handler.FormAttributes.DEVICE_TYPE;
-import static de.cyface.collector.handler.FormAttributes.MEASUREMENT_ID;
-import static de.cyface.collector.handler.FormAttributes.OS_VERSION;
-import static de.cyface.collector.handler.FormAttributes.APPLICATION_VERSION;
+import static de.cyface.collector.handler.FormAttributes.END_LOCATION;
 import static de.cyface.collector.handler.FormAttributes.LENGTH;
 import static de.cyface.collector.handler.FormAttributes.LOCATION_COUNT;
+import static de.cyface.collector.handler.FormAttributes.MEASUREMENT_ID;
+import static de.cyface.collector.handler.FormAttributes.OS_VERSION;
 import static de.cyface.collector.handler.FormAttributes.START_LOCATION;
-import static de.cyface.collector.handler.FormAttributes.END_LOCATION;
 
 import java.io.File;
 import java.util.HashSet;
@@ -50,7 +46,7 @@ import io.vertx.ext.web.RoutingContext;
  * measurements for persistent storage.
  * 
  * @author Klemens Muthmann
- * @version 2.0.0
+ * @version 2.0.1
  * @since 2.0.0
  */
 public final class MeasurementHandler implements Handler<RoutingContext> {
@@ -84,9 +80,9 @@ public final class MeasurementHandler implements Handler<RoutingContext> {
             ctx.fileUploads().forEach(upload -> uploads.add(new File(upload.uploadedFileName())));
 
             if (deviceId == null || deviceType == null || measurementId == null || osVersion == null
-                    || applicationVersion == null || startLocation == null || endLocation == null
-                    || uploads.size() == 0) {
-                LOGGER.debug("Data was deviceId: " + deviceId + ", deviceType: " + deviceType + ", measurementId: "
+                    || applicationVersion == null
+                    || (locationCount > 0 && (startLocation == null || endLocation == null)) || uploads.size() == 0) {
+                LOGGER.error("Data was deviceId: " + deviceId + ", deviceType: " + deviceType + ", measurementId: "
                         + measurementId + ", osVersion: " + osVersion + ", applicationVersion: " + applicationVersion
                         + ", startLocation: " + startLocation + ", endLocation: " + endLocation);
                 ctx.fail(422);
