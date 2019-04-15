@@ -55,7 +55,8 @@ import io.vertx.ext.web.multipart.MultipartForm;
  * Tests that uploading measurements to the Cyface API works as expected.
  * 
  * @author Klemens Muthmann
- * @version 3.0.0
+ * @author Armin Schnabel
+ * @version 3.0.1
  * @since 2.0.0
  */
 @RunWith(VertxUnitRunner.class)
@@ -86,7 +87,7 @@ public final class FileUploadTest {
      */
     private WebClient client;
     /**
-     * A globally unqiue identifier of the simulated upload device. The actual value does not really matter.
+     * A globally unique identifier of the simulated upload device. The actual value does not really matter.
      */
     private String deviceIdentifier = UUID.randomUUID().toString();
     /**
@@ -146,8 +147,12 @@ public final class FileUploadTest {
         form.attribute(FormAttributes.APPLICATION_VERSION.getValue(), "4.0.0-alpha1");
         form.attribute(FormAttributes.LENGTH.getValue(), "200.0");
         form.attribute(FormAttributes.LOCATION_COUNT.getValue(), "10");
-        form.attribute(FormAttributes.START_LOCATION.getValue(), "lat: 10.0 lon: 10.0, timestamp: 10000");
-        form.attribute(FormAttributes.END_LOCATION.getValue(), "lat: 12.0 lon: 12.0, timestamp: 12000");
+        form.attribute(FormAttributes.START_LOCATION_LAT.getValue(), "10.0");
+        form.attribute(FormAttributes.START_LOCATION_LON.getValue(), "10.0");
+        form.attribute(FormAttributes.START_LOCATION_TS.getValue(), "10000");
+        form.attribute(FormAttributes.END_LOCATION_LAT.getValue(), "12.0");
+        form.attribute(FormAttributes.END_LOCATION_LON.getValue(), "12.0");
+        form.attribute(FormAttributes.END_LOCATION_TS.getValue(), "12000");
     }
 
     /**
@@ -214,12 +219,12 @@ public final class FileUploadTest {
     }
 
     /**
-     * Tests that an upload with unparseable meta data returns a 422 error.
+     * Tests that an upload with unparsable meta data returns a 422 error.
      * 
      * @param context The test context for running <code>Vertx</code> under test.
      */
     @Test
-    public void testUploadWithUnparseableMetaData_Returns422(final TestContext context) {
+    public void testUploadWithUnParsableMetaData_Returns422(final TestContext context) {
         final Async async = context.async();
 
         // Set invalid value for a form attribute
@@ -231,8 +236,12 @@ public final class FileUploadTest {
         form.attribute(FormAttributes.APPLICATION_VERSION.getValue(), "4.0.0-alpha1");
         form.attribute(FormAttributes.LENGTH.getValue(), "Sir! You are being hacked!");
         form.attribute(FormAttributes.LOCATION_COUNT.getValue(), "10");
-        form.attribute(FormAttributes.START_LOCATION.getValue(), "lat: 10.0 lon: 10.0, timestamp: 10000");
-        form.attribute(FormAttributes.END_LOCATION.getValue(), "lat: 12.0 lon: 12.0, timestamp: 12000");
+        form.attribute(FormAttributes.START_LOCATION_LAT.getValue(), "10.0");
+        form.attribute(FormAttributes.START_LOCATION_LON.getValue(), "10.0");
+        form.attribute(FormAttributes.START_LOCATION_TS.getValue(), "10000");
+        form.attribute(FormAttributes.END_LOCATION_LAT.getValue(), "12.0");
+        form.attribute(FormAttributes.END_LOCATION_LON.getValue(), "12.0");
+        form.attribute(FormAttributes.END_LOCATION_TS.getValue(), "12000");
 
         // Execute
         upload(context, "/test.bin", ar -> {

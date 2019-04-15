@@ -1,13 +1,13 @@
 /*
  * Copyright 2018 Cyface GmbH
- * 
+ *
  * This file is part of the Cyface Data Collector.
  *
  * The Cyface Data Collector is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * The Cyface Data Collector is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
@@ -22,7 +22,8 @@ package de.cyface.collector.handler;
  * Attributes supported by the APIs multipart form upload POST endpoint.
  * 
  * @author Klemens Muthmann
- * @version 1.1.0
+ * @author Armin Schnabel
+ * @version 2.0.0
  * @since 2.0.0
  */
 public enum FormAttributes {
@@ -54,6 +55,32 @@ public enum FormAttributes {
      * The count of geo locations in the transmitted measurement.
      */
     LOCATION_COUNT("locationCount"),
+    /**
+     * The latitude of the geo location at the beginning of the track represented by the transmitted measurement.
+     */
+    START_LOCATION_LAT("startLocLat"),
+    /**
+     * The longitude of the geo location at the beginning of the track represented by the transmitted measurement.
+     */
+    START_LOCATION_LON("startLocLon"),
+    /**
+     * The timestamp is milliseconds of the geo location at the beginning of the track represented by the transmitted
+     * measurement.
+     */
+    START_LOCATION_TS("startLocTS"),
+    /**
+     * The latitude of the geo location at the end of the track represented by the transmitted measurement.
+     */
+    END_LOCATION_LAT("endLocLat"),
+    /**
+     * The longitude of the geo location at the end of the track represented by the transmitted measurement.
+     */
+    END_LOCATION_LON("endLocLon"),
+    /**
+     * The timestamp is milliseconds of the geo end at the beginning of the track represented by the transmitted
+     * measurement.
+     */
+    END_LOCATION_TS("endLocTS"),
     /**
      * The geo location at the beginning of the track represented by the transmitted measurement.
      */
