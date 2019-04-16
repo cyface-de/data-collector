@@ -1,14 +1,18 @@
 /*
  * Copyright 2018 Cyface GmbH
+ *
  * This file is part of the Cyface Data Collector.
+ *
  * The Cyface Data Collector is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
+ *
  * The Cyface Data Collector is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
  * GNU General Public License for more details.
+ *
  * You should have received a copy of the GNU General Public License
  * along with the Cyface Data Collector. If not, see <http://www.gnu.org/licenses/>.
  */
@@ -18,12 +22,16 @@ import static de.cyface.collector.EventBusAddresses.NEW_MEASUREMENT;
 import static de.cyface.collector.handler.FormAttributes.APPLICATION_VERSION;
 import static de.cyface.collector.handler.FormAttributes.DEVICE_ID;
 import static de.cyface.collector.handler.FormAttributes.DEVICE_TYPE;
-import static de.cyface.collector.handler.FormAttributes.END_LOCATION;
+import static de.cyface.collector.handler.FormAttributes.END_LOCATION_LAT;
+import static de.cyface.collector.handler.FormAttributes.END_LOCATION_LON;
+import static de.cyface.collector.handler.FormAttributes.END_LOCATION_TS;
 import static de.cyface.collector.handler.FormAttributes.LENGTH;
 import static de.cyface.collector.handler.FormAttributes.LOCATION_COUNT;
 import static de.cyface.collector.handler.FormAttributes.MEASUREMENT_ID;
 import static de.cyface.collector.handler.FormAttributes.OS_VERSION;
-import static de.cyface.collector.handler.FormAttributes.START_LOCATION;
+import static de.cyface.collector.handler.FormAttributes.START_LOCATION_LAT;
+import static de.cyface.collector.handler.FormAttributes.START_LOCATION_LON;
+import static de.cyface.collector.handler.FormAttributes.START_LOCATION_TS;
 
 import java.io.File;
 import java.util.HashSet;
@@ -46,7 +54,8 @@ import io.vertx.ext.web.RoutingContext;
  * measurements for persistent storage.
  * 
  * @author Klemens Muthmann
- * @version 2.0.1
+ * @author Armin Schnabel
+ * @version 2.0.2
  * @since 2.0.0
  */
 public final class MeasurementHandler implements Handler<RoutingContext> {
@@ -73,18 +82,41 @@ public final class MeasurementHandler implements Handler<RoutingContext> {
             final String applicationVersion = request.getFormAttribute(APPLICATION_VERSION.getValue());
             final double length = Double.parseDouble(request.getFormAttribute(LENGTH.getValue()));
             final long locationCount = Long.parseLong(request.getFormAttribute(LOCATION_COUNT.getValue()));
-            final String startLocation = request.getFormAttribute(START_LOCATION.getValue());
-            final String endLocation = request.getFormAttribute(END_LOCATION.getValue());
+            // TODO [CY-4680]: This just makes the API compatible with the new Client request format. I did not want to
+            // change the internal code as I don't know how this effects other components (event bus and "behind")
+            String startLocation = null;
+            String endLocation = null;
+            if (locationCount > 0) {
+                try {
+                    final double startLocationLat = Double
+                            .parseDouble(request.getFormAttribute(START_LOCATION_LAT.getValue()));
+                    final double startLocationLon = Double
+                            .parseDouble(request.getFormAttribute(START_LOCATION_LON.getValue()));
+                    final double startLocationTs = Long
+                            .parseLong(request.getFormAttribute(START_LOCATION_TS.getValue()));
+                    final double endLocationLat = Double
+                            .parseDouble(request.getFormAttribute(END_LOCATION_LAT.getValue()));
+                    final double endLocationLon = Double
+                            .parseDouble(request.getFormAttribute(END_LOCATION_LON.getValue()));
+                    final double endLocationTs = Long.parseLong(request.getFormAttribute(END_LOCATION_TS.getValue()));
+                    startLocation = "lat: " + startLocationLat + ", lon: " + startLocationLon + ", time: "
+                            + startLocationTs;
+                    endLocation = "lat: " + endLocationLat + ", lon: " + endLocationLon + ", time: " + endLocationTs;
+                } catch (final NullPointerException e) {
+                    LOGGER.error("Data incomplete!");
+                    ctx.fail(422);
+                }
+            }
 
             final Set<File> uploads = new HashSet<>();
             ctx.fileUploads().forEach(upload -> uploads.add(new File(upload.uploadedFileName())));
 
             if (deviceId == null || deviceType == null || measurementId == null || osVersion == null
-                    || applicationVersion == null
-                    || (locationCount > 0 && (startLocation == null || endLocation == null)) || uploads.size() == 0) {
+                    || applicationVersion == null || uploads.size() == 0) {
                 LOGGER.error("Data was deviceId: " + deviceId + ", deviceType: " + deviceType + ", measurementId: "
                         + measurementId + ", osVersion: " + osVersion + ", applicationVersion: " + applicationVersion
-                        + ", startLocation: " + startLocation + ", endLocation: " + endLocation);
+                        + ", locationCount: " + locationCount + ", startLocation: " + startLocation + ", endLocation: "
+                        + endLocation);
                 ctx.fail(422);
             } else {
                 informAboutNew(new Measurement(deviceId, measurementId, osVersion, deviceType, applicationVersion,
@@ -95,7 +127,7 @@ public final class MeasurementHandler implements Handler<RoutingContext> {
                 response.end();
             }
         } catch (final NumberFormatException e) {
-            LOGGER.error("Data was not parseable!");
+            LOGGER.error("Data was not parsable!");
             ctx.fail(422);
         }
 
