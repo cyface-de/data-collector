@@ -23,7 +23,7 @@ package de.cyface.collector.handler;
  * 
  * @author Klemens Muthmann
  * @author Armin Schnabel
- * @version 2.0.0
+ * @version 3.0.0
  * @since 2.0.0
  */
 public enum FormAttributes {
@@ -56,39 +56,41 @@ public enum FormAttributes {
      */
     LOCATION_COUNT("locationCount"),
     /**
-     * The latitude of the geo location at the beginning of the track represented by the transmitted measurement.
+     * The latitude of the geo location at the beginning of the track represented by the transmitted measurement. This
+     * value is optional and may not be available for measurements without locations. For measurements with one location
+     * this equals the {@value #END_LOCATION_LAT}.
      */
     START_LOCATION_LAT("startLocLat"),
     /**
-     * The longitude of the geo location at the beginning of the track represented by the transmitted measurement.
+     * The longitude of the geo location at the beginning of the track represented by the transmitted measurement. This
+     * value is optional and may not be available for measurements without locations. For measurements with one location
+     * this equals the {@value #END_LOCATION_LON}.
      */
     START_LOCATION_LON("startLocLon"),
     /**
-     * The timestamp is milliseconds of the geo location at the beginning of the track represented by the transmitted
-     * measurement.
+     * The timestamp in milliseconds of the geo location at the beginning of the track represented by the transmitted
+     * measurement. This value is optional and may not be available for measurements without locations. For measurements
+     * with one location this equals the {@value #END_LOCATION_TS}.
      */
     START_LOCATION_TS("startLocTS"),
     /**
-     * The latitude of the geo location at the end of the track represented by the transmitted measurement.
+     * The latitude of the geo location at the end of the track represented by the transmitted measurement. This value
+     * is optional and may not be available for measurements without locations. For measurements
+     * with one location this equals the {@value #START_LOCATION_LAT}.
      */
     END_LOCATION_LAT("endLocLat"),
     /**
-     * The longitude of the geo location at the end of the track represented by the transmitted measurement.
+     * The longitude of the geo location at the end of the track represented by the transmitted measurement. This value
+     * is optional and may not be available for measurements without locations. For measurements
+     * with one location this equals the {@value #START_LOCATION_LON}.
      */
     END_LOCATION_LON("endLocLon"),
     /**
-     * The timestamp is milliseconds of the geo end at the beginning of the track represented by the transmitted
-     * measurement.
+     * The timestamp in milliseconds of the geo location at the end of the track represented by the transmitted
+     * measurement. This value is optional and may not be available for measurements without locations. For measurements
+     * with one location this equals the {@value #START_LOCATION_TS}.
      */
-    END_LOCATION_TS("endLocTS"),
-    /**
-     * The geo location at the beginning of the track represented by the transmitted measurement.
-     */
-    START_LOCATION("startLocation"),
-    /**
-     * The geo location at the end of the track represented by the transmitted measurement.
-     */
-    END_LOCATION("endLocation");
+    END_LOCATION_TS("endLocTS");
 
     /**
      * The value identifying the attribute in the multipart form request.

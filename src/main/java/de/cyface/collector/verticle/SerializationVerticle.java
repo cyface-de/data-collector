@@ -100,7 +100,7 @@ public final class SerializationVerticle extends AbstractVerticle implements Han
 
     /**
      * A handler called when a measurement has been created in the Mongo database. This handler saves the measurement
-     * data and send a message to {@link EventBusAddresses#MEASUREMENT_SAVED} upon success or
+     * data and sends a message to {@link EventBusAddresses#MEASUREMENT_SAVED} upon success or
      * {@link EventBusAddresses#SAVING_MEASUREMENT_FAILED} on failure.
      * 
      * @author Klemens Muthmann
@@ -110,7 +110,7 @@ public final class SerializationVerticle extends AbstractVerticle implements Han
     class SerializationHandler implements Handler<AsyncResult<String>> {
 
         /**
-         * The default url to use to connect to a mongo database if none has been provided via Verticle configuration.
+         * The default url to use to connect to a Mongo database if none has been provided via Verticle configuration.
          */
         private static final String DEFAULT_MONGO_URL = "mongodb://localhost:27017";
         /**

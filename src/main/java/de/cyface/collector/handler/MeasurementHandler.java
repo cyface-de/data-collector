@@ -38,6 +38,7 @@ import java.util.HashSet;
 import java.util.Set;
 
 import de.cyface.collector.EventBusAddresses;
+import de.cyface.collector.model.GeoLocation;
 import de.cyface.collector.model.Measurement;
 import io.vertx.core.Handler;
 import io.vertx.core.eventbus.EventBus;
@@ -48,14 +49,14 @@ import io.vertx.core.logging.LoggerFactory;
 import io.vertx.ext.web.RoutingContext;
 
 /**
- * A handler for receiving HTTP POST requests on the "measurements" endpoint.
- * This endpoint is the core of this application and responsible for receiving
+ * A handler for receiving HTTP POST requests on the "measurements" end point.
+ * This end point is the core of this application and responsible for receiving
  * new measurements from any measurement device and forwarding those
  * measurements for persistent storage.
  * 
  * @author Klemens Muthmann
  * @author Armin Schnabel
- * @version 2.0.2
+ * @version 3.0.0
  * @since 2.0.0
  */
 public final class MeasurementHandler implements Handler<RoutingContext> {
@@ -82,26 +83,23 @@ public final class MeasurementHandler implements Handler<RoutingContext> {
             final String applicationVersion = request.getFormAttribute(APPLICATION_VERSION.getValue());
             final double length = Double.parseDouble(request.getFormAttribute(LENGTH.getValue()));
             final long locationCount = Long.parseLong(request.getFormAttribute(LOCATION_COUNT.getValue()));
-            // TODO [CY-4680]: This just makes the API compatible with the new Client request format. I did not want to
-            // change the internal code as I don't know how this effects other components (event bus and "behind")
-            String startLocation = null;
-            String endLocation = null;
+            GeoLocation startLocation = null;
+            GeoLocation endLocation = null;
             if (locationCount > 0) {
                 try {
                     final double startLocationLat = Double
                             .parseDouble(request.getFormAttribute(START_LOCATION_LAT.getValue()));
                     final double startLocationLon = Double
                             .parseDouble(request.getFormAttribute(START_LOCATION_LON.getValue()));
-                    final double startLocationTs = Long
+                    final long startLocationTs = Long
                             .parseLong(request.getFormAttribute(START_LOCATION_TS.getValue()));
                     final double endLocationLat = Double
                             .parseDouble(request.getFormAttribute(END_LOCATION_LAT.getValue()));
                     final double endLocationLon = Double
                             .parseDouble(request.getFormAttribute(END_LOCATION_LON.getValue()));
-                    final double endLocationTs = Long.parseLong(request.getFormAttribute(END_LOCATION_TS.getValue()));
-                    startLocation = "lat: " + startLocationLat + ", lon: " + startLocationLon + ", time: "
-                            + startLocationTs;
-                    endLocation = "lat: " + endLocationLat + ", lon: " + endLocationLon + ", time: " + endLocationTs;
+                    final long endLocationTs = Long.parseLong(request.getFormAttribute(END_LOCATION_TS.getValue()));
+                    startLocation = new GeoLocation(startLocationLat, startLocationLon, startLocationTs);
+                    endLocation = new GeoLocation(endLocationLat, endLocationLon, endLocationTs);
                 } catch (final NullPointerException e) {
                     LOGGER.error("Data incomplete!");
                     ctx.fail(422);
