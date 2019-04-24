@@ -107,9 +107,14 @@ To run your application:
 ==== Running from IDE
 To run directly from within your IDE you need to use the `de.cyface.collector.Application` class, which is a subclass of the https://vertx.io/docs/vertx-core/java/#_the_vert_x_launcher[Vert.x launcher]. Just specify it as the main class in your launch configuration with the program argument `run de.cyface.collector.verticle.MainVerticle`.
 
-=== Mongo Database Setup
+=== Mongo Database
+
+==== Setup
 The following is not strictly necessary but advised if you run in production or if you encounter strange problems related to data persistence. 
 Consider reading the https://docs.mongodb.com/manual/administration/[Mongo Database Administration Guide] and follow the advice mentioned there.
+
+==== Administration
+To load files from the Mongo GridFS file storage use the https://docs.mongodb.com/manual/reference/program/mongofiles/[Mongofiles] tool.
 
 == TODO
 * Setup Cluster
