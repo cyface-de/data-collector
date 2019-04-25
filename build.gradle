@@ -18,13 +18,13 @@
  */
 /*
  * @author Klemens Muthmann
- * @version 1.0.1
+ * @version 1.0.2
  * @since 2.0.0
  */
 plugins {
   id 'java'
   id 'application'
-  id 'com.github.johnrengelman.shadow' version '2.0.4'
+  id 'com.github.johnrengelman.shadow' version '4.0.4'
   id 'checkstyle'
   id 'pmd'
   id 'findbugs'
@@ -33,7 +33,7 @@ plugins {
 
 ext {
   // We need to use the SNAPSHOT version, since testing of multipart form uploads is not supported with older versions.
-  vertxVersion = '3.6.2'
+  vertxVersion = '3.6.3'
   junitVersion = '4.12'
   flapdoodleVersion = '2.2.0'
   micrometerVersion = '1.0.6'
@@ -51,7 +51,7 @@ repositories {
 }
 
 group = 'de.cyface'
-version = '2.0.2'
+version = '3.0.0'
 
 sourceCompatibility = '1.8'
 mainClassName = 'de.cyface.collector.Application'

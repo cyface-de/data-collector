@@ -28,6 +28,7 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 
 import de.cyface.collector.handler.FormAttributes;
+import de.cyface.collector.model.GeoLocation;
 import de.cyface.collector.model.Measurement;
 import de.cyface.collector.verticle.SerializationVerticle;
 import io.vertx.core.DeploymentOptions;
@@ -36,6 +37,8 @@ import io.vertx.core.Vertx;
 import io.vertx.core.eventbus.EventBus;
 import io.vertx.core.eventbus.Message;
 import io.vertx.core.json.JsonObject;
+import io.vertx.core.logging.Logger;
+import io.vertx.core.logging.LoggerFactory;
 import io.vertx.ext.mongo.MongoClient;
 import io.vertx.ext.unit.Async;
 import io.vertx.ext.unit.TestContext;
@@ -45,12 +48,18 @@ import io.vertx.ext.unit.junit.VertxUnitRunner;
  * Tests individual verticles by sending appropriate messages using the Vert.x event bus.
  * 
  * @author Klemens Muthmann
- * @version 1.0.2
+ * @version 1.1.0
  * @since 2.0.0
  */
 @RunWith(VertxUnitRunner.class)
 public final class EventBusTest {
 
+    /**
+     * The logger used by objects of this class. Configure it using <tt>/src/test/resources/logback-test.xml</tt> and do
+     * not forget to set the Java property:
+     * <tt>-Dvertx.logger-delegate-factory-class-name=io.vertx.core.logging.SLF4JLogDelegateFactory</tt>.
+     */
+    private static final Logger LOGGER = LoggerFactory.getLogger(EventBusTest.class);
     /**
      * Process providing a connection to the test Mongo database.
      */
@@ -108,35 +117,124 @@ public final class EventBusTest {
     public void test(final TestContext context) {
         final Async async = context.async();
 
-        EventBus eventBus = vertx.eventBus();
+        final EventBus eventBus = vertx.eventBus();
         eventBus.registerDefaultCodec(Measurement.class, Measurement.getCodec());
         eventBus.consumer(EventBusAddresses.MEASUREMENT_SAVED, new Handler<Message<String>>() {
 
             @Override
             public void handle(Message<String> event) {
-                String generatedIdentifier = event.body();
-                MongoClient client = MongoClient.createShared(vertx, mongoConfiguration);
+                final String generatedIdentifier = event.body();
+                final MongoClient client = MongoClient.createShared(vertx, mongoConfiguration);
                 client.findOne("measurements", new JsonObject().put("_id", generatedIdentifier), null, object -> {
                     context.assertTrue(object.succeeded());
 
                     JsonObject json = object.result();
-                    String deviceIdentifier = json.getString(FormAttributes.DEVICE_ID.getValue());
-                    String measurementIdentifier = json.getString(FormAttributes.MEASUREMENT_ID.getValue());
-                    String operatingSystemVersion = json.getString(FormAttributes.OS_VERSION.getValue());
-                    String deviceType = json.getString(FormAttributes.DEVICE_TYPE.getValue());
+                    try {
+                        final String deviceIdentifier = json.getString(FormAttributes.DEVICE_ID.getValue());
+                        final String measurementIdentifier = json.getString(FormAttributes.MEASUREMENT_ID.getValue());
+                        final String operatingSystemVersion = json.getString(FormAttributes.OS_VERSION.getValue());
+                        final String deviceType = json.getString(FormAttributes.DEVICE_TYPE.getValue());
+                        final String applicationVersion = json.getString(FormAttributes.APPLICATION_VERSION.getValue());
+                        final double length = json.getDouble(FormAttributes.LENGTH.getValue());
+                        final long locationCount = json.getLong(FormAttributes.LOCATION_COUNT.getValue());
+                        final double startLocationLat = json.getDouble(FormAttributes.START_LOCATION_LAT.getValue());
+                        final double startLocationLon = json.getDouble(FormAttributes.START_LOCATION_LON.getValue());
+                        final long startLocationTimestamp = json.getLong(FormAttributes.START_LOCATION_TS.getValue());
+                        final double endLocationLat = json.getDouble(FormAttributes.END_LOCATION_LAT.getValue());
+                        final double endLocationLon = json.getDouble(FormAttributes.END_LOCATION_LON.getValue());
+                        final long endLocationTimestamp = json.getLong(FormAttributes.END_LOCATION_TS.getValue());
 
-                    context.assertEquals("some_device", deviceIdentifier);
-                    context.assertEquals("2", measurementIdentifier);
-                    context.assertEquals("9.0.0", operatingSystemVersion);
-                    context.assertEquals("Pixel 2", deviceType);
+                        context.assertEquals("some_device", deviceIdentifier);
+                        context.assertEquals("2", measurementIdentifier);
+                        context.assertEquals("9.0.0", operatingSystemVersion);
+                        context.assertEquals("Pixel 2", deviceType);
+                        context.assertEquals("4.0.0-alpha1", applicationVersion);
+                        context.assertEquals(200.0, length);
+                        context.assertEquals(10L, locationCount);
+                        context.assertEquals(10.0, startLocationLat);
+                        context.assertEquals(10.0, startLocationLon);
+                        context.assertEquals(10_000L, startLocationTimestamp);
+                        context.assertEquals(12.0, endLocationLat);
+                        context.assertEquals(12.0, endLocationLon);
+                        context.assertEquals(12_000L, endLocationTimestamp);
 
-                    async.complete();
+                    } catch (ClassCastException e) {
+                        LOGGER.error("Unable to parse JSON: \n" + json.encodePrettily());
+                        context.fail(e);
+                    } finally {
+                        async.complete();
+                    }
                 });
             }
         });
 
         eventBus.publish(EventBusAddresses.NEW_MEASUREMENT,
-                new Measurement("some_device", "2", "9.0.0", "Pixel 2", Collections.emptyList()));
+                new Measurement("some_device", "2", "9.0.0", "Pixel 2", "4.0.0-alpha1", 200.0, 10,
+                        new GeoLocation(10.0, 10.0, 10_000), new GeoLocation(12.0, 12.0, 12_000),
+                        Collections.emptyList()));
+
+        async.await(5_000L);
+    }
+
+    /**
+     * Tests that handling measurements without geo locations works as expected.
+     * 
+     * @param context The Vert.x context used for testing.
+     */
+    @Test
+    public void testPublishMeasurementWithNoGeoLocations_HappyPath(final TestContext context) {
+        final Async async = context.async();
+
+        final EventBus eventBus = vertx.eventBus();
+        eventBus.registerDefaultCodec(Measurement.class, Measurement.getCodec());
+        eventBus.consumer(EventBusAddresses.MEASUREMENT_SAVED, new Handler<Message<String>>() {
+
+            @Override
+            public void handle(Message<String> event) {
+                final String generatedIdentifier = event.body();
+                final MongoClient client = MongoClient.createShared(vertx, mongoConfiguration);
+                client.findOne("measurements", new JsonObject().put("_id", generatedIdentifier), null, object -> {
+                    context.assertTrue(object.succeeded());
+
+                    JsonObject json = object.result();
+                    try {
+                        final String deviceIdentifier = json.getString(FormAttributes.DEVICE_ID.getValue());
+                        final String measurementIdentifier = json.getString(FormAttributes.MEASUREMENT_ID.getValue());
+                        final String operatingSystemVersion = json.getString(FormAttributes.OS_VERSION.getValue());
+                        final String deviceType = json.getString(FormAttributes.DEVICE_TYPE.getValue());
+                        final String applicationVersion = json.getString(FormAttributes.APPLICATION_VERSION.getValue());
+                        final double length = json.getDouble(FormAttributes.LENGTH.getValue());
+                        final long locationCount = json.getLong(FormAttributes.LOCATION_COUNT.getValue());
+                        final Double startLocationLat = json.getDouble(FormAttributes.START_LOCATION_LAT.getValue());
+                        final Double startLocationLon = json.getDouble(FormAttributes.START_LOCATION_LON.getValue());
+                        final Long startLocationTimestamp = json.getLong(FormAttributes.START_LOCATION_TS.getValue());
+                        final Double endLocationLat = json.getDouble(FormAttributes.END_LOCATION_LAT.getValue());
+                        final Double endLocationLon = json.getDouble(FormAttributes.END_LOCATION_LON.getValue());
+                        final Long endLocationTimestamp = json.getLong(FormAttributes.END_LOCATION_TS.getValue());
+
+                        context.assertEquals("some_device", deviceIdentifier);
+                        context.assertEquals("2", measurementIdentifier);
+                        context.assertEquals("9.0.0", operatingSystemVersion);
+                        context.assertEquals("Pixel 2", deviceType);
+                        context.assertEquals("4.0.0-alpha1", applicationVersion);
+                        context.assertEquals(.0, length);
+                        context.assertEquals(0L, locationCount);
+                        context.assertNull(startLocationLat);
+                        context.assertNull(startLocationLon);
+                        context.assertNull(startLocationTimestamp);
+                        context.assertNull(endLocationLat);
+                        context.assertNull(endLocationLon);
+                        context.assertNull(endLocationTimestamp);
+                    } finally {
+                        async.complete();
+                    }
+                });
+
+            }
+        });
+
+        eventBus.publish(EventBusAddresses.NEW_MEASUREMENT, new Measurement("some_device", "2", "9.0.0", "Pixel 2",
+                "4.0.0-alpha1", .0, 0L, null, null, Collections.emptyList()));
 
         async.await(5_000L);
     }

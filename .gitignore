@@ -27,6 +27,8 @@ build
 out
 file-uploads
 .vertx
+collector.iml
+local.properties
 
 # Folders created by docker container
 data
