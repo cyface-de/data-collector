@@ -2,7 +2,7 @@ openapi: 3.0.2
 info:
   title: Cyface Data Collector
   description: This is a Cyface data collection endpoint, that receives traffic data from Cyface measurement devices, and stores them for further processing.
-  version: 2.0.2
+  version: 3.0.1
   
 servers:
   - url: /api/v2
@@ -74,7 +74,7 @@ paths:
                   type: string
                   format: binary
                   example:
-                    summary: An example upload in Cyface data format
+                    summary: An example upload in Cyface data format version 1
                     externalValue: 'data.ccyf'
                 deviceId:
                   #description: The world wide unique identifier of the device that uploaded the data.
@@ -103,12 +103,30 @@ paths:
                   type: number
                   format: double
                   example: 172
-                startLocation:
-                  type: string
-                  example: "lat: 51.05220494330958, lon: 13.729234272626908, time: 1551436825471"
-                endLocation:
-                  type: string
-                  example: "lat: 51.05209006932662, lon 13.728697160271674, time: 1551436996091"
+                startLocLat:
+                  type: number
+                  format: double
+                  example: 51.05220494330958
+                startLocLon:
+                  type: number
+                  format: double
+                  example: 13.729234272626908
+                startLocTS: 
+                  type: integer
+                  format: int64
+                  example: 1551436825471
+                endLocLat:
+                  type: number
+                  format: double
+                  example: 51.05209006932662
+                endLocLon:
+                  type: number
+                  format: double
+                  example: 13.728697160271674
+                endLocTS:
+                  type: integer
+                  format: int64
+                  example: 1551436996091
               required:
                 - fileToUpload
                 - deviceId
@@ -118,8 +136,12 @@ paths:
                 - appVersion
                 - length
                 - locationCount
-                - startLocation
-                - endLocation
+                - startLocLat
+                - startLocLon
+                - startLocTS
+                - endLocLat
+                - endLocLon
+                - endLocTS
               
       responses:
         '201':
