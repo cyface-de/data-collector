@@ -29,31 +29,28 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
-import org.apache.commons.lang3.Validate;
+import org.bson.Document;
 
 import com.mongodb.ConnectionString;
 import com.mongodb.async.client.MongoDatabase;
 import com.mongodb.async.client.gridfs.AsyncInputStream;
 import com.mongodb.async.client.gridfs.GridFSBucket;
 import com.mongodb.async.client.gridfs.GridFSBuckets;
+import com.mongodb.client.gridfs.model.GridFSUploadOptions;
 
 import de.cyface.collector.EventBusAddresses;
-import de.cyface.collector.Utils;
 import de.cyface.collector.model.Measurement;
 import io.vertx.core.AbstractVerticle;
-import io.vertx.core.AsyncResult;
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.eventbus.EventBus;
 import io.vertx.core.eventbus.Message;
-import io.vertx.core.json.JsonObject;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
-import io.vertx.ext.mongo.MongoClient;
 
 /**
- * This <code>Verticle</code> listens for new measurements arriving in the system and stores the to the MongoDB for
+ * This <code>Verticle</code> listens for new measurements arriving in the system and stores them to the MongoDB for
  * persistent storage.
  * 
  * @author Klemens Muthmann
@@ -67,15 +64,13 @@ public final class SerializationVerticle extends AbstractVerticle implements Han
      */
     private static final Logger LOGGER = LoggerFactory.getLogger(SerializationVerticle.class);
     /**
-     * Client wrapper for calls to the MongoDB used to store the measurement data.
+     * The default url to use to connect to a Mongo database if none has been provided via Verticle configuration.
      */
-    private MongoClient mongoClient;
+    private static final String DEFAULT_MONGO_URL = "mongodb://localhost:27017";
 
     @Override
     public void start() throws Exception {
         super.start();
-
-        mongoClient = Utils.createSharedMongoClient(vertx, config());
 
         registerForNewMeasurements();
     }
@@ -84,113 +79,70 @@ public final class SerializationVerticle extends AbstractVerticle implements Han
      * Register this <code>Verticle</code> to receive messages about new measurements arriving at the system.
      */
     private void registerForNewMeasurements() {
-        EventBus eventBus = vertx.eventBus();
+        final EventBus eventBus = vertx.eventBus();
         eventBus.consumer(NEW_MEASUREMENT, this);
     }
 
     @Override
     public void handle(Message<Measurement> event) {
-        Measurement measurement = event.body();
-        LOGGER.debug("About to save: " + measurement.getFileUploads().size() + " Files.");
-        JsonObject measurementJson = measurement.toJson();
-        SerializationHandler serializationHandler = new SerializationHandler(measurement);
+        final Measurement measurement = event.body();
+        LOGGER.debug("Inserted measurement with id {}:{}!", measurement.getDeviceIdentifier(),
+                measurement.getMeasurementIdentifier());
 
-        mongoClient.insert("measurements", measurementJson, serializationHandler);
+        // Store to Mongo GridFs
+        final String mongoConnectionString = config().getString("connection_string", DEFAULT_MONGO_URL);
+        final String mongoDatabaseName = config().getString("db_name", "test");
+        final MongoDatabase db = com.mongodb.async.client.MongoClients
+                .create(new ConnectionString(mongoConnectionString)).getDatabase(mongoDatabaseName);
+        final GridFSBucket gridFsBucket = GridFSBuckets.create(db);
+
+        final Collection<File> filesToUpload = measurement.getFileUploads();
+        @SuppressWarnings("rawtypes")
+        final List<Future> fileUploadFutures = new ArrayList<>(filesToUpload.size());
+
+        LOGGER.debug("About to save: " + measurement.getFileUploads().size() + " Files.");
+        filesToUpload.forEach(upload -> {
+
+            Future<String> future = Future.future();
+            try {
+                fileUploadFutures.add(future);
+                FileInputStream fileInputStream = new FileInputStream(upload.getAbsolutePath());
+                AsyncInputStream asyncStream = com.mongodb.async.client.gridfs.helpers.AsyncStreamHelper
+                        .toAsyncInputStream(fileInputStream);
+
+                final GridFSUploadOptions options = new GridFSUploadOptions()
+                        .metadata(Document.parse(measurement.toJson().toString()));
+
+                gridFsBucket.uploadFromStream(upload.getName(), asyncStream, options, (result, throwable) -> {
+                    LOGGER.debug("Saved file as object " + result);
+                    future.complete();
+                });
+            } catch (FileNotFoundException e) {
+                LOGGER.error("Error during serialization.", e);
+                future.fail(e);
+            }
+        });
+
+        CompositeFuture.all(fileUploadFutures).setHandler(result -> {
+            if (result.succeeded()) {
+                vertx.eventBus().publish(MEASUREMENT_SAVED, String.format("%s:%s", measurement.getDeviceIdentifier(),
+                        measurement.getMeasurementIdentifier()));
+            } else {
+                fail(result.cause(), measurement);
+            }
+        });
     }
 
     /**
-     * A handler called when a measurement has been created in the Mongo database. This handler saves the measurement
-     * data and sends a message to {@link EventBusAddresses#MEASUREMENT_SAVED} upon success or
-     * {@link EventBusAddresses#SAVING_MEASUREMENT_FAILED} on failure.
+     * Fails saving the measurement by sending an appropriate message over the event bus.
      * 
-     * @author Klemens Muthmann
-     * @version 1.0.0
-     * @since 2.0.0
+     * @param res The <code>Throwable</code> causing the failure. This contains further information about the reason
+     *            the serialization failed.
+     * @param measurement The measurement for which synchronization failed.
+     * @see EventBusAddresses#SAVING_MEASUREMENT_FAILED
      */
-    class SerializationHandler implements Handler<AsyncResult<String>> {
-
-        /**
-         * The default url to use to connect to a Mongo database if none has been provided via Verticle configuration.
-         */
-        private static final String DEFAULT_MONGO_URL = "mongodb://localhost:27017";
-        /**
-         * The measurement that was saved.
-         */
-        private final Measurement measurement;
-
-        /**
-         * Creates a new completely initialized handler.
-         * 
-         * @param measurement The measurement that was saved.
-         */
-        SerializationHandler(final Measurement measurement) {
-            Validate.notNull(measurement);
-            this.measurement = measurement;
-        }
-
-        @Override
-        public void handle(AsyncResult<String> res) {
-            if (!res.succeeded()) {
-                fail(res.cause());
-            }
-
-            try {
-                String id = res.result();
-                LOGGER.debug("Inserted measurement with id " + id);
-
-                // Store to Mongo GridFs
-                final String mongoConnectionString = config().getString("connection_string", DEFAULT_MONGO_URL);
-                final String mongoDatabaseName = config().getString("db_name", "test");
-                MongoDatabase db = com.mongodb.async.client.MongoClients
-                        .create(new ConnectionString(mongoConnectionString)).getDatabase(mongoDatabaseName);
-                GridFSBucket gridFsBucket = GridFSBuckets.create(db);
-
-                Collection<File> filesToUpload = measurement.getFileUploads();
-                @SuppressWarnings("rawtypes")
-                List<Future> fileUploadFutures = new ArrayList<>(filesToUpload.size());
-
-                filesToUpload.forEach(upload -> {
-
-                    Future<String> future = Future.future();
-                    try {
-                        fileUploadFutures.add(future);
-                        FileInputStream fileInputStream = new FileInputStream(upload.getAbsolutePath());
-                        AsyncInputStream asyncStream = com.mongodb.async.client.gridfs.helpers.AsyncStreamHelper
-                                .toAsyncInputStream(fileInputStream);
-                        gridFsBucket.uploadFromStream(upload.getName(), asyncStream, (result, throwable) -> {
-                            LOGGER.debug("Saved file as object " + result);
-                            future.complete();
-                        });
-                    } catch (FileNotFoundException e) {
-                        LOGGER.error("Error during serialization.", e);
-                        future.fail(e);
-                    }
-                });
-
-                CompositeFuture.all(fileUploadFutures).setHandler(result -> {
-                    if (result.succeeded()) {
-                        vertx.eventBus().publish(MEASUREMENT_SAVED, id);
-                    } else {
-                        fail(res.cause());
-                    }
-                });
-            } catch (RuntimeException e) {
-                fail(e);
-            }
-        }
-
-        /**
-         * Fails saving the measurement by sending an appropriate message over the event bus.
-         * 
-         * @param res The <code>Throwable</code> causing the failure. This contains further information about the reason
-         *            the serialization failed.
-         * @see EventBusAddresses#SAVING_MEASUREMENT_FAILED
-         */
-        private void fail(final Throwable res) {
-            LOGGER.error("Unable to save measurement with id {}", res, measurement.getMeasurementIdentifier());
-            vertx.eventBus().publish(SAVING_MEASUREMENT_FAILED, res.getMessage());
-        }
-
+    private void fail(final Throwable res, final Measurement measurement) {
+        LOGGER.error("Unable to save measurement with id {}", res, measurement.getMeasurementIdentifier());
+        vertx.eventBus().publish(SAVING_MEASUREMENT_FAILED, res.getMessage());
     }
-
 }
