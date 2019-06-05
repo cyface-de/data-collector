@@ -129,6 +129,10 @@ Consider reading the https://docs.mongodb.com/manual/administration/[Mongo Datab
 ==== Administration
 To load files from the Mongo GridFS file storage use the https://docs.mongodb.com/manual/reference/program/mongofiles/[Mongofiles] tool.
 
+* Showing files: `mongofiles --port 27019 -d cyface-data list`
+* Downloading files: `mongofiles --port 27019 -d cyface-data get f5823cbc-b8f5-4c80-a4b1-7bf28a3c7944`
+* Unzipping files: `printf "\x78\x9c" | cat - f5823cbc-b8f5-4c80-a4b1-7bf28a3c7944 | zlib-flate -uncompress > test2`
+
 == TODO
 * Setup Cluster
 	* Vertx
