@@ -32,26 +32,25 @@ plugins {
 }
 
 ext {
-  // We need to use the SNAPSHOT version, since testing of multipart form uploads is not supported with older versions.
-  vertxVersion = '3.6.3'
+  vertxVersion = '3.7.1'
   junitVersion = '4.12'
   flapdoodleVersion = '2.2.0'
   micrometerVersion = '1.0.6'
   logbackVersion = '1.2.3'
   commonsLangVersion = '3.8.1'
+  
+  jacocoVersion = '0.8.3'
+  gradleWrapperVersion = '5.4.1'
 }
 
 repositories {
-	maven {
-		url "https://oss.sonatype.org/content/repositories/snapshots/"
-	}
   	mavenLocal()
   	jcenter()
   
 }
 
 group = 'de.cyface'
-version = '3.0.1'
+version = '3.0.2'
 
 sourceCompatibility = '1.8'
 mainClassName = 'de.cyface.collector.Application'
@@ -107,11 +106,11 @@ run {
 }
 
 task wrapper(type: Wrapper) {
-  gradleVersion = '4.6'
+  gradleVersion = "$gradleWrapperVersion"
 }
 
 jacoco {
-    toolVersion = "0.8.1"
+    toolVersion = "$jacocoVersion"
     reportsDir = file("$buildDir/reports/jacoco")
 }
 
