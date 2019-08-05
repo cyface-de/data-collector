@@ -20,6 +20,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
+import java.util.Collections;
 
 import org.apache.commons.lang3.Validate;
 
@@ -170,7 +171,7 @@ public final class CollectorApiVerticle extends AbstractVerticle {
         Validate.notNull(next);
 
         // Set up authentication check
-        PubSecKeyOptions keyOptions = new PubSecKeyOptions().setAlgorithm(JWT_HASH_ALGORITHM).setPublicKey(publicKey)
+        final PubSecKeyOptions keyOptions = new PubSecKeyOptions().setAlgorithm(JWT_HASH_ALGORITHM).setPublicKey(publicKey)
                 .setSecretKey(privateKey);
         final JWTAuthOptions config = new JWTAuthOptions().addPubSecKey(keyOptions);
         final JWTAuth jwtAuthProvider = JWTAuth.create(vertx, config);
@@ -203,12 +204,16 @@ public final class CollectorApiVerticle extends AbstractVerticle {
 
         // Set up v2 API
         // Set up authentication route
+        final String host = Parameter.COLLECTOR_HOST.stringValue(vertx);
+        final String endpoint = Parameter.COLLECTOR_ENDPOINT.stringValue(vertx);
+        final String issuer = String.format("%s%s", host, endpoint);
+        final String audience = issuer;
         v2ApiRouter.route("/login").handler(BodyHandler.create())
-                .handler(new AuthenticationHandler(mongoAuthProvider, jwtAuthProvider))
+                .handler(new AuthenticationHandler(mongoAuthProvider, jwtAuthProvider, host, endpoint))
                 .failureHandler(new AuthenticationFailureHandler());
         // Set up data collector route
-        v2ApiRouter.post("/measurements").handler(BodyHandler.create().setDeleteUploadedFilesOnEnd(false))
-                .handler(JWTAuthHandler.create(jwtAuthProvider)).handler(new MeasurementHandler());
+        v2ApiRouter.post("/measurements").handler(BodyHandler.create().setDeleteUploadedFilesOnEnd(true))
+                .handler(JWTAuthHandler.create(jwtAuthProvider).setIssuer(issuer).setAudience(Collections.singletonList(audience))).handler(new MeasurementHandler());
                 //.failureHandler(new AuthenticationFailureHandler());
 
         v2ApiRouter.route().handler(StaticHandler.create("webroot/api"));
