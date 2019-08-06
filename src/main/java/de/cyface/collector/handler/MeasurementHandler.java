@@ -70,6 +70,12 @@ public final class MeasurementHandler implements Handler<RoutingContext> {
      */
     private static final Logger LOGGER = LoggerFactory.getLogger(MeasurementHandler.class);
 
+    /**
+     * Maximum size of a meta data field, with plenty space for future development. This prevents attackers from putting
+     * arbitrary long data into these fields.
+     */
+    private static final int MAX_GENERIC_METADATA_FIELD_LENGTH = 30;
+
     @Override
     public void handle(final RoutingContext ctx) {
         LOGGER.info("Received new measurement request.");
@@ -114,20 +120,16 @@ public final class MeasurementHandler implements Handler<RoutingContext> {
             final Set<File> uploads = new HashSet<>();
             ctx.fileUploads().forEach(upload -> uploads.add(new File(upload.uploadedFileName())));
 
-            if (deviceId == null || deviceType == null || measurementId == null || osVersion == null
-                    || applicationVersion == null || uploads.size() == 0 || vehicleType == null || username == null) {
-                LOGGER.error("Data was deviceId: " + deviceId + ", deviceType: " + deviceType + ", measurementId: "
-                        + measurementId + ", osVersion: " + osVersion + ", applicationVersion: " + applicationVersion
-                        + ", locationCount: " + locationCount + ", startLocation: " + startLocation + ", endLocation: "
-                        + endLocation + ", vehicle: " + vehicleType + ", username: " + username);
-                ctx.fail(422);
-            } else {
+            if (parametersAreValid(deviceId, deviceType, measurementId, osVersion, applicationVersion, length,
+                    locationCount, startLocation, endLocation, vehicleType, username, uploads)) {
                 informAboutNew(new Measurement(deviceId, measurementId, osVersion, deviceType, applicationVersion,
                         length, locationCount, startLocation, endLocation, vehicleType, username, uploads), ctx);
 
                 response.setStatusCode(201);
                 LOGGER.debug("Request was successful!");
                 response.end();
+            } else {
+                ctx.fail(422);
             }
         } catch (final NumberFormatException e) {
             LOGGER.error("Data was not parsable!");
@@ -147,6 +149,120 @@ public final class MeasurementHandler implements Handler<RoutingContext> {
     private void informAboutNew(final Measurement measurement, final RoutingContext context) {
         final EventBus eventBus = context.vertx().eventBus();
         eventBus.publish(NEW_MEASUREMENT, measurement);
+    }
+
+    private boolean parametersAreValid(final String deviceId, final String deviceType, final String measurementId,
+            final String osVersion, final String applicationVersion, final double length, final long locationCount,
+            final GeoLocation startLocation, final GeoLocation endLocation, final String vehicleType,
+            final String username, final Set<File> uploads) {
+        if (deviceId == null) {
+            LOGGER.error("Field deviceId was null!");
+            return false;
+        }
+
+        if (deviceId.getBytes().length != 36) {
+            LOGGER.error("Field deviceId was not exactly 128 Bit, which is required for UUIDs!");
+            return false;
+        }
+
+        if (deviceType == null) {
+            LOGGER.error("Field deviceType was null!");
+            return false;
+        }
+
+        if (deviceType.isEmpty() || deviceType.length() > MAX_GENERIC_METADATA_FIELD_LENGTH) {
+            LOGGER.error("Field deviceType had an invalid length of {}!", deviceType.length());
+            return false;
+        }
+
+        if (measurementId == null) {
+            LOGGER.error("Field measurementId was null!");
+            return false;
+        }
+
+        if (measurementId.isEmpty() || measurementId.length() > 20) {
+            LOGGER.error("Field measurementId had an invalid length of {}!", measurementId.length());
+            return false;
+        }
+
+        if (osVersion == null) {
+            LOGGER.error("Field osVersion was null!");
+            return false;
+        }
+
+        if (osVersion.isEmpty() || osVersion.length() > MAX_GENERIC_METADATA_FIELD_LENGTH) {
+            LOGGER.error("Field osVersion had an invalid length of {}!", osVersion.length());
+            return false;
+        }
+
+        if (applicationVersion == null) {
+            LOGGER.error("Field applicationVersion was null!");
+            return false;
+        }
+
+        if (applicationVersion.isEmpty() || applicationVersion.length() > MAX_GENERIC_METADATA_FIELD_LENGTH) {
+            LOGGER.error("Field applicationVersion had an invalid length of {}!", applicationVersion.length());
+            return false;
+        }
+
+        if (length < 0.0) {
+            LOGGER.error("Field length had an invalid value {} which is smaller then 0.0!", length);
+            return false;
+        }
+
+        if (locationCount < 0L) {
+            LOGGER.error("Field locationCount had an invalid value {} which is smaller then 0!", locationCount);
+            return false;
+        }
+
+        if (locationCount == 0L) {
+            if (startLocation != null) {
+                LOGGER.error("Field locationCount is 0 but a start location is defined. This is invalid!");
+                return false;
+            }
+            if (endLocation != null) {
+                LOGGER.error("Field locationCount is 0 but an end location is defined. This is invalid!");
+                return false;
+            }
+        } else {
+            if (startLocation == null) {
+                LOGGER.error("Field startLocation was not set for a track with one or more locations!");
+                return false;
+            }
+
+            if (endLocation == null) {
+                LOGGER.error("Field endLocation was not set for a track with one or more locations!");
+                return false;
+            }
+        }
+
+        if (vehicleType == null) {
+            LOGGER.error("Field vehicleType was null!");
+            return false;
+        }
+
+        if (vehicleType.isEmpty() || vehicleType.length() > MAX_GENERIC_METADATA_FIELD_LENGTH) {
+            LOGGER.error("Field vehicleType had an invalid length of {}!", vehicleType.length());
+            return false;
+        }
+
+        if (username == null) {
+            LOGGER.error("Field username was null!");
+            return false;
+        }
+
+        if (username.isEmpty() || username.length() > MAX_GENERIC_METADATA_FIELD_LENGTH) {
+            LOGGER.error("Field username had an invalid length of {}!", username.length());
+            return false;
+        }
+
+        if (uploads.size() != 1) {
+            LOGGER.error("MultiPart contained {} files to upload. It should be exactly one!", uploads.size());
+            return false;
+        }
+
+        return true;
+
     }
 
 }
