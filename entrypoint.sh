@@ -31,7 +31,15 @@ if [ -z $CYFACE_API_PORT ]; then
 	CYFACE_API_PORT="8080"
 fi
 
-echo "Running Cyface Collector API at port $CYFACE_API_PORT"
+if [ -z $CYFACE_API_HOST ]; then
+	CYFACE_API_HOST="localhost"
+fi
+
+if [ -z $CYFACE_API_ENDPOINT ]; then
+	CYFACE_API_ENDPOINT="/api/v2/"
+fi
+
+echo "Running Cyface Collector API at $CYFACE_API_HOST:$CYFACE_API_PORT$CYFACE_API_ENDPOINT"
 
 if [ -z $CYFACE_MANAGEMENT_PORT ]; then
 	CYFACE_MANAGEMENT_PORT="13371"
@@ -69,4 +77,4 @@ if [ $COUNTER -ge 10 ]; then
 fi
 
 echo "Starting API"
-java -Dvertx.cacheDirBase=/tmp/vertx-cache -jar collector-fat.jar -conf "{\"jwt.private\":\"$JWT_PRIVATE_KEY_FILE_PATH\",\"jwt.public\":\"$JWT_PUBLIC_KEY_FILE_PATH\",\"metrics.enabled\":true,\"mongo.userdb\":{\"db_name\":\"cyface-user\",\"connection_string\":\"mongodb://mongo-user:27017\",\"data_source_name\":\"cyface-user\"},\"mongo.datadb\":{\"db_name\":\"cyface-data\",\"connection_string\":\"mongodb://mongo-data:27017\",\"data_source_name\":\"cyface-data\"},\"admin.user\":\"$ADMIN_USER\",\"admin.password\":\"$ADMIN_PASSWORD\",\"http.port\":$CYFACE_API_PORT,\"http.port.management\":$CYFACE_MANAGEMENT_PORT}"
+java -Dvertx.cacheDirBase=/tmp/vertx-cache -jar collector-fat.jar -conf "{\"jwt.private\":\"$JWT_PRIVATE_KEY_FILE_PATH\",\"jwt.public\":\"$JWT_PUBLIC_KEY_FILE_PATH\",\"metrics.enabled\":false,\"mongo.userdb\":{\"db_name\":\"cyface-user\",\"connection_string\":\"mongodb://mongo-user:27017\",\"data_source_name\":\"cyface-user\"},\"mongo.datadb\":{\"db_name\":\"cyface-data\",\"connection_string\":\"mongodb://mongo-data:27017\",\"data_source_name\":\"cyface-data\"},\"admin.user\":\"$ADMIN_USER\",\"admin.password\":\"$ADMIN_PASSWORD\",\"http.port\":$CYFACE_API_PORT,\"http.host\":\"$CYFACE_API_HOST\",\"http.endpoint\":\"$CYFACE_API_ENDPOINT\",\"http.port.management\":$CYFACE_MANAGEMENT_PORT}"
