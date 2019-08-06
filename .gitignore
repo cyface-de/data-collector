@@ -37,3 +37,7 @@ secrets
 
 # Ignore configuration file, since this is environment specific
 conf.json
+
+# Ignore temporary git and vim files
+**/*.orig
+**/*.swp

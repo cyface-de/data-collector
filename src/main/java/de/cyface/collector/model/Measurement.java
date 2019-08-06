@@ -31,7 +31,7 @@ import io.vertx.core.json.JsonObject;
  * A POJO representing a single measurement, which has arrived at the API and needs to be stored to persistent storage.
  * 
  * @author Klemens Muthmann
- * @version 3.0.0
+ * @version 4.0.0
  * @since 2.0.0
  */
 public final class Measurement {
@@ -71,6 +71,11 @@ public final class Measurement {
      * The <code>GeoLocation</code> at the end of the track represented by the transmitted measurement.
      */
     private final GeoLocation endLocation;
+    /**
+     * 
+     */
+    private final String vehicle;
+    private final String username;
 
     /**
      * A list of files uploaded together with the measurement. These files contain the actual data.
@@ -91,13 +96,13 @@ public final class Measurement {
      *            measurement.
      * @param endLocation The <code>GeoLocation</code> at the end of the track represented by the transmitted
      *            measurement.
+     * @param vehicle 
      * @param fileUploads A list of files uploaded together with the measurement. These files contain the actual data.
      */
     public Measurement(final String deviceIdentifier, final String measurementIdentifier,
             final String operatingSystemVersion, final String deviceType, final String applicationVersion,
             final double length, final long locationCount, final GeoLocation startLocation,
-            final GeoLocation endLocation,
-            final Collection<File> fileUploads) {
+            final GeoLocation endLocation, final String vehicle, final String username, final Collection<File> fileUploads) {
         this.deviceIdentifier = deviceIdentifier;
         this.measurementIdentifier = measurementIdentifier;
         this.operatingSystemVersion = operatingSystemVersion;
@@ -107,6 +112,8 @@ public final class Measurement {
         this.locationCount = locationCount;
         this.startLocation = startLocation;
         this.endLocation = endLocation;
+        this.vehicle = vehicle;
+        this.username = username;
         this.fileUploads = fileUploads;
     }
 
@@ -179,6 +186,17 @@ public final class Measurement {
     public GeoLocation getEndLocation() {
         return endLocation;
     }
+    
+    /**
+     * @return
+     */
+    public String getVehicle() {
+        return vehicle;
+    }
+    
+    public String getUsername() {
+        return username;
+    }
 
     /**
      * @return A JSON representation of this measurement.
@@ -201,6 +219,8 @@ public final class Measurement {
             ret.put(FormAttributes.END_LOCATION_LON.getValue(), endLocation.getLon());
             ret.put(FormAttributes.END_LOCATION_TS.getValue(), endLocation.getTimestamp());
         }
+        ret.put(FormAttributes.VEHICLE_TYPE.getValue(), vehicle);
+        ret.put(FormAttributes.USERNAME.getValue(), username);
 
         return ret;
     }
@@ -220,12 +240,16 @@ public final class Measurement {
                 final String applicationVersion = s.getApplicationVersion();
                 final double length = s.getLength();
                 final long locationCount = s.getLocationCount();
+                final String vehicle = s.getVehicle();
+                final String username = s.getUsername();
 
                 buffer.appendInt(deviceIdentifier.length());
                 buffer.appendInt(measurementIdentifier.length());
                 buffer.appendInt(deviceType.length());
                 buffer.appendInt(operatingSystemVersion.length());
                 buffer.appendInt(applicationVersion.length());
+                buffer.appendInt(vehicle.length());
+                buffer.appendInt(username.length());
                 buffer.appendInt(s.getFileUploads().size());
                 buffer.appendString(deviceIdentifier);
                 buffer.appendString(measurementIdentifier);
@@ -234,6 +258,8 @@ public final class Measurement {
                 buffer.appendString(applicationVersion);
                 buffer.appendDouble(length);
                 buffer.appendLong(locationCount);
+                buffer.appendString(vehicle);
+                buffer.appendString(username);
                 if (locationCount > 0) {
                     final double startLocationLat = s.getStartLocation().getLat();
                     final double startLocationLon = s.getStartLocation().getLon();
@@ -261,10 +287,12 @@ public final class Measurement {
                 final int deviceTypeLength = buffer.getInt(2 * Integer.BYTES);
                 final int operatingSystemVersionLength = buffer.getInt(3 * Integer.BYTES);
                 final int applicationVersionLength = buffer.getInt(4 * Integer.BYTES);
-                final int numberOfFileUploads = buffer.getInt(5 * Integer.BYTES);
+                final int vehicleTypeLength = buffer.getInt(5*Integer.BYTES);
+                final int usernameLength = buffer.getInt(6*Integer.BYTES);
+                final int numberOfFileUploads = buffer.getInt(7 * Integer.BYTES);
 
-                final int deviceIdentifierEnd = 6 * Integer.BYTES + deviceIdentifierLength;
-                final String deviceIdentifier = buffer.getString(6 * Integer.BYTES, deviceIdentifierEnd);
+                final int deviceIdentifierEnd = 8 * Integer.BYTES + deviceIdentifierLength;
+                final String deviceIdentifier = buffer.getString(8 * Integer.BYTES, deviceIdentifierEnd);
                 final int measurementIdentifierEnd = deviceIdentifierEnd + measurementIdentifierLength;
                 final String measurementIdentifier = buffer.getString(deviceIdentifierEnd, measurementIdentifierEnd);
                 final int deviceTypeEnd = measurementIdentifierEnd + deviceTypeLength;
@@ -277,15 +305,19 @@ public final class Measurement {
                 final double length = buffer.getDouble(applicationVersionEnd);
                 final int locationCountEnd = lengthEnd + Long.BYTES;
                 final long locationCount = buffer.getLong(lengthEnd);
+                final int vehicleEnd = locationCountEnd + vehicleTypeLength;
+                final String vehicle = buffer.getString(locationCountEnd, vehicleEnd);
+                final int usernameEnd = vehicleEnd + usernameLength;
+                final String username = buffer.getString(vehicleEnd, usernameEnd);
 
                 GeoLocation startLocation = null;
                 GeoLocation endLocation = null;
-                int startOfFileUploads = locationCountEnd;
+                int startOfFileUploads = usernameEnd;
                 if (locationCount > 0) {
-                    final int startLocationLatEnd = locationCountEnd + Double.BYTES;
+                    final int startLocationLatEnd = usernameEnd + Double.BYTES;
                     final int startLocationLonEnd = startLocationLatEnd + Double.BYTES;
                     final int startLocationTimestampEnd = startLocationLonEnd + Double.BYTES;
-                    final double startLocationLat = buffer.getDouble(locationCountEnd);
+                    final double startLocationLat = buffer.getDouble(usernameEnd);
                     final double startLocationLon = buffer.getDouble(startLocationLatEnd);
                     final long startLocationTimestamp = buffer.getLong(startLocationLonEnd);
 
@@ -300,6 +332,7 @@ public final class Measurement {
                     endLocation = new GeoLocation(endLocationLat, endLocationLon, endLocationTimestamp);
                     startOfFileUploads = endLocationTimestampEnd;
                 }
+                
 
                 Collection<File> fileUploads = new HashSet<>();
                 int iterationStartByte = startOfFileUploads;
@@ -313,7 +346,7 @@ public final class Measurement {
                 }
 
                 return new Measurement(deviceIdentifier, measurementIdentifier, operatingSystemVersion, deviceType,
-                        applicationVersion, length, locationCount, startLocation, endLocation, fileUploads);
+                        applicationVersion, length, locationCount, startLocation, endLocation, vehicle, username, fileUploads);
             }
 
             @Override

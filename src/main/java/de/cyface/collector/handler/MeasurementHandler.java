@@ -32,6 +32,7 @@ import static de.cyface.collector.handler.FormAttributes.OS_VERSION;
 import static de.cyface.collector.handler.FormAttributes.START_LOCATION_LAT;
 import static de.cyface.collector.handler.FormAttributes.START_LOCATION_LON;
 import static de.cyface.collector.handler.FormAttributes.START_LOCATION_TS;
+import static de.cyface.collector.handler.FormAttributes.VEHICLE_TYPE;
 
 import java.io.File;
 import java.util.HashSet;
@@ -46,6 +47,7 @@ import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.http.HttpServerResponse;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
+import io.vertx.ext.auth.User;
 import io.vertx.ext.web.RoutingContext;
 
 /**
@@ -74,6 +76,7 @@ public final class MeasurementHandler implements Handler<RoutingContext> {
         final HttpServerRequest request = ctx.request();
         final HttpServerResponse response = ctx.response();
         LOGGER.debug("FormAttributes: " + request.formAttributes());
+        final User user = ctx.user();
 
         try {
             final String deviceId = request.getFormAttribute(DEVICE_ID.getValue());
@@ -83,6 +86,8 @@ public final class MeasurementHandler implements Handler<RoutingContext> {
             final String applicationVersion = request.getFormAttribute(APPLICATION_VERSION.getValue());
             final double length = Double.parseDouble(request.getFormAttribute(LENGTH.getValue()));
             final long locationCount = Long.parseLong(request.getFormAttribute(LOCATION_COUNT.getValue()));
+            final String vehicleType = request.getFormAttribute(VEHICLE_TYPE.getValue());
+            final String username = user.principal().getString("username");
             GeoLocation startLocation = null;
             GeoLocation endLocation = null;
             if (locationCount > 0) {
@@ -110,15 +115,15 @@ public final class MeasurementHandler implements Handler<RoutingContext> {
             ctx.fileUploads().forEach(upload -> uploads.add(new File(upload.uploadedFileName())));
 
             if (deviceId == null || deviceType == null || measurementId == null || osVersion == null
-                    || applicationVersion == null || uploads.size() == 0) {
+                    || applicationVersion == null || uploads.size() == 0 || vehicleType == null || username == null) {
                 LOGGER.error("Data was deviceId: " + deviceId + ", deviceType: " + deviceType + ", measurementId: "
                         + measurementId + ", osVersion: " + osVersion + ", applicationVersion: " + applicationVersion
                         + ", locationCount: " + locationCount + ", startLocation: " + startLocation + ", endLocation: "
-                        + endLocation);
+                        + endLocation + ", vehicle: " + vehicleType + ", username: " + username);
                 ctx.fail(422);
             } else {
                 informAboutNew(new Measurement(deviceId, measurementId, osVersion, deviceType, applicationVersion,
-                        length, locationCount, startLocation, endLocation, uploads), ctx);
+                        length, locationCount, startLocation, endLocation, vehicleType, username, uploads), ctx);
 
                 response.setStatusCode(201);
                 LOGGER.debug("Request was successful!");

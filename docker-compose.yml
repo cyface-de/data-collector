@@ -44,7 +44,7 @@ services:
     api:
       container_name: collector_api
       build: .
-      image: cyfacede/collector:3.0.2
+      image: cyfacede/collector:3.3.0
       ports: # It is ok that this entry manipulates the host's ip-tables since this compose file should only be used in dev environments.
         - "8080:8080"
         - "13371:13371"
@@ -61,3 +61,9 @@ volumes:
 networks:
     default:
         name: cyface-collector
+        ipam:
+          driver: default
+          config:
+            # Configure the IP Address range to not conflict with Deutsche Bahn WiFi
+            - subnet: 172.72.0.1/24
+            - subnet: 2001:3984:3989::/64

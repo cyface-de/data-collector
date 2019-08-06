@@ -90,7 +90,12 @@ public enum FormAttributes {
      * measurement. This value is optional and may not be available for measurements without locations. For measurements
      * with one location this equals the {@value #START_LOCATION_TS}.
      */
-    END_LOCATION_TS("endLocTS");
+    END_LOCATION_TS("endLocTS"),
+    /**
+     * The type of the vehicle that has captured the measurement.
+     */
+    VEHICLE_TYPE("vehicle"),
+    USERNAME("username");
 
     /**
      * The value identifying the attribute in the multipart form request.
