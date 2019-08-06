@@ -1,5 +1,5 @@
 /*
- * Copyright 2018 Cyface GmbH
+ * Copyright 2018, 2019 Cyface GmbH
  * 
  * This file is part of the Cyface Data Collector.
  *
@@ -72,9 +72,12 @@ public final class Measurement {
      */
     private final GeoLocation endLocation;
     /**
-     * 
+     * The type of the vehicle that has captured the measurement.
      */
     private final String vehicle;
+    /**
+     * The name of the user uploading the measurement.
+     */
     private final String username;
 
     /**
@@ -96,13 +99,15 @@ public final class Measurement {
      *            measurement.
      * @param endLocation The <code>GeoLocation</code> at the end of the track represented by the transmitted
      *            measurement.
-     * @param vehicle 
+     * @param vehicle The type of the vehicle that has captured the measurement.
+     * @param username The name of the user uploading the measurement.
      * @param fileUploads A list of files uploaded together with the measurement. These files contain the actual data.
      */
     public Measurement(final String deviceIdentifier, final String measurementIdentifier,
             final String operatingSystemVersion, final String deviceType, final String applicationVersion,
             final double length, final long locationCount, final GeoLocation startLocation,
-            final GeoLocation endLocation, final String vehicle, final String username, final Collection<File> fileUploads) {
+            final GeoLocation endLocation, final String vehicle, final String username,
+            final Collection<File> fileUploads) {
         this.deviceIdentifier = deviceIdentifier;
         this.measurementIdentifier = measurementIdentifier;
         this.operatingSystemVersion = operatingSystemVersion;
@@ -186,14 +191,17 @@ public final class Measurement {
     public GeoLocation getEndLocation() {
         return endLocation;
     }
-    
+
     /**
-     * @return
+     * @return The type of the vehicle that has captured the measurement.
      */
     public String getVehicle() {
         return vehicle;
     }
-    
+
+    /**
+     * @return The name of the user uploading the measurement.
+     */
     public String getUsername() {
         return username;
     }
@@ -287,8 +295,8 @@ public final class Measurement {
                 final int deviceTypeLength = buffer.getInt(2 * Integer.BYTES);
                 final int operatingSystemVersionLength = buffer.getInt(3 * Integer.BYTES);
                 final int applicationVersionLength = buffer.getInt(4 * Integer.BYTES);
-                final int vehicleTypeLength = buffer.getInt(5*Integer.BYTES);
-                final int usernameLength = buffer.getInt(6*Integer.BYTES);
+                final int vehicleTypeLength = buffer.getInt(5 * Integer.BYTES);
+                final int usernameLength = buffer.getInt(6 * Integer.BYTES);
                 final int numberOfFileUploads = buffer.getInt(7 * Integer.BYTES);
 
                 final int deviceIdentifierEnd = 8 * Integer.BYTES + deviceIdentifierLength;
@@ -332,7 +340,6 @@ public final class Measurement {
                     endLocation = new GeoLocation(endLocationLat, endLocationLon, endLocationTimestamp);
                     startOfFileUploads = endLocationTimestampEnd;
                 }
-                
 
                 Collection<File> fileUploads = new HashSet<>();
                 int iterationStartByte = startOfFileUploads;
@@ -346,7 +353,8 @@ public final class Measurement {
                 }
 
                 return new Measurement(deviceIdentifier, measurementIdentifier, operatingSystemVersion, deviceType,
-                        applicationVersion, length, locationCount, startLocation, endLocation, vehicle, username, fileUploads);
+                        applicationVersion, length, locationCount, startLocation, endLocation, vehicle, username,
+                        fileUploads);
             }
 
             @Override

@@ -1,5 +1,5 @@
 /*
- * Copyright 2018 Cyface GmbH
+ * Copyright 2018,2019 Cyface GmbH
  * 
  * This file is part of the Cyface Data Collector.
  *
@@ -48,7 +48,7 @@ import io.vertx.ext.unit.junit.VertxUnitRunner;
  * Tests individual verticles by sending appropriate messages using the Vert.x event bus.
  * 
  * @author Klemens Muthmann
- * @version 1.1.0
+ * @version 1.1.1
  * @since 2.0.0
  */
 @RunWith(VertxUnitRunner.class)

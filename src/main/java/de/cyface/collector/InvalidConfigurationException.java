@@ -34,7 +34,7 @@ public final class InvalidConfigurationException extends RuntimeException {
 
     @Override
     public String getMessage() {
-        return String.format("Unable to start application with configuration:\n%s",
+        return String.format("Unable to start application with configuration:%n%s",
                 encounteredConfiguration.encodePrettily());
     }
 }

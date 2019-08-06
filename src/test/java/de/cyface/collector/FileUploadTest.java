@@ -1,5 +1,5 @@
 /*
- * Copyright 2018 Cyface GmbH
+ * Copyright 2018, 2019 Cyface GmbH
  * 
  * This file is part of the Cyface Data Collector.
  *
@@ -56,7 +56,7 @@ import io.vertx.ext.web.multipart.MultipartForm;
  * 
  * @author Klemens Muthmann
  * @author Armin Schnabel
- * @version 3.0.1
+ * @version 3.0.2
  * @since 2.0.0
  */
 @RunWith(VertxUnitRunner.class)

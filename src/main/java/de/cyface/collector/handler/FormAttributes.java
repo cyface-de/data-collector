@@ -1,5 +1,5 @@
 /*
- * Copyright 2018 Cyface GmbH
+ * Copyright 2018, 2019 Cyface GmbH
  *
  * This file is part of the Cyface Data Collector.
  *
@@ -23,7 +23,7 @@ package de.cyface.collector.handler;
  * 
  * @author Klemens Muthmann
  * @author Armin Schnabel
- * @version 3.0.0
+ * @version 3.1.0
  * @since 2.0.0
  */
 public enum FormAttributes {
@@ -95,6 +95,9 @@ public enum FormAttributes {
      * The type of the vehicle that has captured the measurement.
      */
     VEHICLE_TYPE("vehicle"),
+    /**
+     * The name of the user uploading the measurement.
+     */
     USERNAME("username");
 
     /**
