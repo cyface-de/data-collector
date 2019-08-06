@@ -20,6 +20,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
+import java.util.Collections;
 
 import org.apache.commons.lang3.Validate;
 
@@ -45,6 +46,7 @@ import io.vertx.ext.auth.jwt.JWTAuth;
 import io.vertx.ext.auth.jwt.JWTAuthOptions;
 import io.vertx.ext.auth.mongo.MongoAuth;
 import io.vertx.ext.mongo.MongoClient;
+import io.vertx.ext.web.MIMEHeader;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.handler.BodyHandler;
 import io.vertx.ext.web.handler.JWTAuthHandler;
@@ -71,6 +73,14 @@ public final class CollectorApiVerticle extends AbstractVerticle {
      * The hashing algorithm used for public and private keys to generate and check JWT tokens.
      */
     public static final String JWT_HASH_ALGORITHM = "RS256";
+    /**
+     * The number of bytes in one gigabyte. This can be used to limit the amount of data accepted by the server.
+     */
+    private static final long BYTES_IN_ONE_GIGABYTE = 1073741824L;
+    /**
+     * The number of bytes in one kilobyte. This is used to limit the amount of bytes accepted by an authentication request.
+     */
+    private static final long BYTES_IN_ONE_KILOBYTE = 1024L;
 
     @Override
     public void start(final Future<Void> startFuture) throws Exception {
@@ -170,7 +180,8 @@ public final class CollectorApiVerticle extends AbstractVerticle {
         Validate.notNull(next);
 
         // Set up authentication check
-        PubSecKeyOptions keyOptions = new PubSecKeyOptions().setAlgorithm(JWT_HASH_ALGORITHM).setPublicKey(publicKey)
+        final PubSecKeyOptions keyOptions = new PubSecKeyOptions().setAlgorithm(JWT_HASH_ALGORITHM)
+                .setPublicKey(publicKey)
                 .setSecretKey(privateKey);
         final JWTAuthOptions config = new JWTAuthOptions().addPubSecKey(keyOptions);
         final JWTAuth jwtAuthProvider = JWTAuth.create(vertx, config);
@@ -197,19 +208,28 @@ public final class CollectorApiVerticle extends AbstractVerticle {
         // });
         final Router mainRouter = Router.router(vertx);
         final Router v2ApiRouter = Router.router(vertx);
+        final String host = Parameter.COLLECTOR_HOST.stringValue(vertx);
+        Validate.notEmpty(host, "Hostname not found. Please provide it using the %s parameter!", Parameter.COLLECTOR_HOST.key());
+        final String endpoint = Parameter.COLLECTOR_ENDPOINT.stringValue(vertx);
+        Validate.notEmpty(endpoint, "Endpoint not found. Please provide it using the %s parameter!", Parameter.COLLECTOR_ENDPOINT.key());
 
         // Set up default routes
-        mainRouter.mountSubRouter("/api/v2", v2ApiRouter);
+        mainRouter.mountSubRouter(endpoint, v2ApiRouter);
 
         // Set up v2 API
         // Set up authentication route
-        v2ApiRouter.route("/login").handler(BodyHandler.create())
-                .handler(new AuthenticationHandler(mongoAuthProvider, jwtAuthProvider))
+        final String issuer = String.format("%s%s", host, endpoint);
+        final String audience = issuer;
+        v2ApiRouter.route("/login").consumes("application/json").handler(BodyHandler.create().setBodyLimit(2*BYTES_IN_ONE_KILOBYTE))
+                .handler(new AuthenticationHandler(mongoAuthProvider, jwtAuthProvider, host, endpoint))
                 .failureHandler(new AuthenticationFailureHandler());
         // Set up data collector route
-        v2ApiRouter.post("/measurements").handler(BodyHandler.create().setDeleteUploadedFilesOnEnd(false))
-                .handler(JWTAuthHandler.create(jwtAuthProvider)).handler(new MeasurementHandler());
-                //.failureHandler(new AuthenticationFailureHandler());
+        v2ApiRouter.post("/measurements").consumes("multipart/form-data")
+                .handler(BodyHandler.create().setBodyLimit(BYTES_IN_ONE_GIGABYTE).setDeleteUploadedFilesOnEnd(false))
+                .handler(JWTAuthHandler.create(jwtAuthProvider).setIssuer(issuer)
+                        .setAudience(Collections.singletonList(audience)))
+                .handler(new MeasurementHandler());
+        // .failureHandler(new AuthenticationFailureHandler());
 
         v2ApiRouter.route().handler(StaticHandler.create("webroot/api"));
 
@@ -239,7 +259,8 @@ public final class CollectorApiVerticle extends AbstractVerticle {
     }
 
     /**
-     * Finishes the <code>CollectorApiVerticle</code> startup process and informs all interested parties about whether it has
+     * Finishes the <code>CollectorApiVerticle</code> startup process and informs all interested parties about whether
+     * it has
      * been successful or not.
      *
      * @param serverStartup The result of the server startup as provided by <code>Vertx</code>.

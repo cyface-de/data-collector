@@ -53,7 +53,9 @@ final class DataCollectorClient {
                 .put(Parameter.MONGO_USER_DB.key(), mongoDbConfig).put(Parameter.COLLECTOR_HTTP_PORT.key(), port)
                 .put(Parameter.JWT_PRIVATE_KEY_FILE_PATH.key(),
                         this.getClass().getResource("/private_key.pem").getFile())
-                .put(Parameter.JWT_PUBLIC_KEY_FILE_PATH.key(), this.getClass().getResource("/public.pem").getFile());
+                .put(Parameter.JWT_PUBLIC_KEY_FILE_PATH.key(), this.getClass().getResource("/public.pem").getFile())
+                .put(Parameter.COLLECTOR_HOST.key(), "localhost")
+                .put(Parameter.COLLECTOR_ENDPOINT.key(), "/api/v2/");
         final DeploymentOptions options = new DeploymentOptions().setConfig(config);
 
         vertx.deployVerticle(CollectorApiVerticle.class.getName(), options, ctx.asyncAssertSuccess());

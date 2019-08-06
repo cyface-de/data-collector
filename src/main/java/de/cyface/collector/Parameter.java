@@ -40,6 +40,14 @@ public enum Parameter {
      */
     JWT_PUBLIC_KEY_FILE_PATH("jwt.public"),
     /**
+     * A parameter setting the hostname the collector service is available at.
+     */
+    COLLECTOR_HOST("http.host"),
+    /**
+     * A parameter for the endpoint path the collector service is available at.
+     */
+    COLLECTOR_ENDPOINT("http.endpoint"),
+    /**
      * The server port the API shall be available at.
      */
     COLLECTOR_HTTP_PORT("http.port"),

@@ -153,6 +153,7 @@ public final class FileUploadTest {
         form.attribute(FormAttributes.END_LOCATION_LAT.getValue(), "12.0");
         form.attribute(FormAttributes.END_LOCATION_LON.getValue(), "12.0");
         form.attribute(FormAttributes.END_LOCATION_TS.getValue(), "12000");
+        form.attribute(FormAttributes.VEHICLE_TYPE.getValue(), "BICYCLE");
     }
 
     /**
@@ -242,6 +243,7 @@ public final class FileUploadTest {
         form.attribute(FormAttributes.END_LOCATION_LAT.getValue(), "12.0");
         form.attribute(FormAttributes.END_LOCATION_LON.getValue(), "12.0");
         form.attribute(FormAttributes.END_LOCATION_TS.getValue(), "12000");
+        form.attribute(FormAttributes.VEHICLE_TYPE.getValue(), "BICYCLE");
 
         // Execute
         upload(context, "/test.bin", ar -> {
