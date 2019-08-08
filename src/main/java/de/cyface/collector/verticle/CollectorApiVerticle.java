@@ -1,5 +1,5 @@
 /*
- * Copyright 2018 Cyface GmbH
+ * Copyright 2018, 2019 Cyface GmbH
  * This file is part of the Cyface Data Collector.
  * The Cyface Data Collector is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -46,7 +46,6 @@ import io.vertx.ext.auth.jwt.JWTAuth;
 import io.vertx.ext.auth.jwt.JWTAuthOptions;
 import io.vertx.ext.auth.mongo.MongoAuth;
 import io.vertx.ext.mongo.MongoClient;
-import io.vertx.ext.web.MIMEHeader;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.handler.BodyHandler;
 import io.vertx.ext.web.handler.JWTAuthHandler;
@@ -58,7 +57,7 @@ import io.vertx.ext.web.handler.StaticHandler;
  *
  * @author Klemens Muthmann
  * @author Armin Schnabel
- * @version 1.2.3
+ * @version 1.2.4
  * @since 2.0.0
  */
 public final class CollectorApiVerticle extends AbstractVerticle {
@@ -78,7 +77,8 @@ public final class CollectorApiVerticle extends AbstractVerticle {
      */
     private static final long BYTES_IN_ONE_GIGABYTE = 1073741824L;
     /**
-     * The number of bytes in one kilobyte. This is used to limit the amount of bytes accepted by an authentication request.
+     * The number of bytes in one kilobyte. This is used to limit the amount of bytes accepted by an authentication
+     * request.
      */
     private static final long BYTES_IN_ONE_KILOBYTE = 1024L;
 
@@ -209,9 +209,11 @@ public final class CollectorApiVerticle extends AbstractVerticle {
         final Router mainRouter = Router.router(vertx);
         final Router v2ApiRouter = Router.router(vertx);
         final String host = Parameter.COLLECTOR_HOST.stringValue(vertx);
-        Validate.notEmpty(host, "Hostname not found. Please provide it using the %s parameter!", Parameter.COLLECTOR_HOST.key());
+        Validate.notEmpty(host, "Hostname not found. Please provide it using the %s parameter!",
+                Parameter.COLLECTOR_HOST.key());
         final String endpoint = Parameter.COLLECTOR_ENDPOINT.stringValue(vertx);
-        Validate.notEmpty(endpoint, "Endpoint not found. Please provide it using the %s parameter!", Parameter.COLLECTOR_ENDPOINT.key());
+        Validate.notEmpty(endpoint, "Endpoint not found. Please provide it using the %s parameter!",
+                Parameter.COLLECTOR_ENDPOINT.key());
 
         // Set up default routes
         mainRouter.mountSubRouter(endpoint, v2ApiRouter);
@@ -220,7 +222,8 @@ public final class CollectorApiVerticle extends AbstractVerticle {
         // Set up authentication route
         final String issuer = String.format("%s%s", host, endpoint);
         final String audience = issuer;
-        v2ApiRouter.route("/login").consumes("application/json").handler(BodyHandler.create().setBodyLimit(2*BYTES_IN_ONE_KILOBYTE))
+        v2ApiRouter.route("/login").consumes("application/json")
+                .handler(BodyHandler.create().setBodyLimit(2 * BYTES_IN_ONE_KILOBYTE))
                 .handler(new AuthenticationHandler(mongoAuthProvider, jwtAuthProvider, host, endpoint))
                 .failureHandler(new AuthenticationFailureHandler());
         // Set up data collector route

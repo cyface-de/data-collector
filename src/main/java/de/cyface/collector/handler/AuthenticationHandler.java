@@ -1,5 +1,5 @@
 /*
- * Copyright 2018 Cyface GmbH
+ * Copyright 2018, 2019 Cyface GmbH
  * 
  * This file is part of the Cyface Data Collector.
  *
@@ -39,7 +39,7 @@ import io.vertx.ext.web.RoutingContext;
  * issues a new token. This token can then be used to transmit the actual request.
  * 
  * @author Klemens Muthmann
- * @version 1.0.3
+ * @version 2.0.0
  * @since 2.0.0
  */
 public final class AuthenticationHandler implements Handler<RoutingContext> {

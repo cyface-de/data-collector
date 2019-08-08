@@ -1,5 +1,5 @@
 /*
- * Copyright 2018 Cyface GmbH
+ * Copyright 2018, 2019 Cyface GmbH
  * 
  * This file is part of the Cyface Data Collector.
  *
@@ -27,7 +27,7 @@ import io.vertx.core.logging.LoggerFactory;
  * An enumeration of parameters, that may be provided upon application startup, to configure the application.
  * 
  * @author Klemens Muthmann
- * @version 3.1.0
+ * @version 3.2.0
  * @since 2.0.0
  */
 public enum Parameter {

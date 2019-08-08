@@ -1,5 +1,5 @@
 /*
- * Copyright 2018 Cyface GmbH
+ * Copyright 2018, 2019 Cyface GmbH
  * 
  * This file is part of the Cyface Data Collector.
  *
@@ -42,7 +42,7 @@ import io.vertx.ext.web.client.WebClient;
  * This tests the REST-API provided by the collector and used to upload the data to the server.
  * 
  * @author Klemens Muthmann
- * @version 2.3.0
+ * @version 2.3.1
  * @since 1.0.0
  */
 @RunWith(VertxUnitRunner.class)

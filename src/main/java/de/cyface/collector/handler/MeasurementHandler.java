@@ -35,6 +35,7 @@ import static de.cyface.collector.handler.FormAttributes.START_LOCATION_TS;
 import static de.cyface.collector.handler.FormAttributes.VEHICLE_TYPE;
 
 import java.io.File;
+import java.nio.charset.Charset;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -58,7 +59,7 @@ import io.vertx.ext.web.RoutingContext;
  * 
  * @author Klemens Muthmann
  * @author Armin Schnabel
- * @version 3.0.0
+ * @version 3.1.0
  * @since 2.0.0
  */
 public final class MeasurementHandler implements Handler<RoutingContext> {
@@ -151,6 +152,30 @@ public final class MeasurementHandler implements Handler<RoutingContext> {
         eventBus.publish(NEW_MEASUREMENT, measurement);
     }
 
+    /**
+     * Checks the validity of the values of all multi part fields, provided together with a measurement.
+     * 
+     * @param deviceId The world wide unique identifier of the device uploading the data.
+     * @param deviceType The type of device uploading the data, such as Pixel 3 or iPhone 6 Plus.
+     * @param measurementId The device wide unique identifier of the uploaded measurement.
+     * @param osVersion The operating system version, such as Android 9.0.0 or iOS 11.2.
+     * @param applicationVersion The version of the app that transmitted the measurement.
+     * @param length The length of the measurement in meters.
+     * @param locationCount The count of geo locations in the transmitted measurement.
+     * @param startLocation The geo location at the beginning of the track represented by the transmitted measurement.
+     *            This
+     *            value is optional and may not be available for measurements without locations. For measurements with
+     *            one location
+     *            this equals the {@value #endLocation}.
+     * @param endLocation The geo location at the end of the track represented by the transmitted measurement. This
+     *            value
+     *            is optional and may not be available for measurements without locations. For measurements
+     *            with one location this equals the {@value startLocation}.
+     * @param vehicleType The type of the vehicle that has captured the measurement.
+     * @param username The name of the user uploading the measurement.
+     * @param uploads The files transmitted with the upload request.
+     * @return <code>true</code> if all field are valid; <code>false</code> otherwise.
+     */
     private boolean parametersAreValid(final String deviceId, final String deviceType, final String measurementId,
             final String osVersion, final String applicationVersion, final double length, final long locationCount,
             final GeoLocation startLocation, final GeoLocation endLocation, final String vehicleType,
@@ -160,7 +185,7 @@ public final class MeasurementHandler implements Handler<RoutingContext> {
             return false;
         }
 
-        if (deviceId.getBytes().length != 36) {
+        if (deviceId.getBytes(Charset.forName("UTF-8")).length != 36) {
             LOGGER.error("Field deviceId was not exactly 128 Bit, which is required for UUIDs!");
             return false;
         }

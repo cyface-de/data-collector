@@ -1,5 +1,5 @@
 /*
- * Copyright 2018 Cyface GmbH
+ * Copyright 2018,2019 Cyface GmbH
  * 
  * This file is part of the Cyface Data Collector.
  *
@@ -18,7 +18,7 @@
  */
 /*
  * @author Klemens Muthmann
- * @version 1.0.3
+ * @version 1.0.4
  * @since 2.0.0
  */
 plugins {
@@ -51,7 +51,7 @@ repositories {
 }
 
 group = 'de.cyface'
-version = '3.0.2'
+version = '4.0.0'
 
 sourceCompatibility = '1.8'
 mainClassName = 'de.cyface.collector.Application'

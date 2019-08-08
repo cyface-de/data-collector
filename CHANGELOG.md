@@ -7,7 +7,9 @@ We follow the [Semantic Versioning](http://semver.org) scheme and the guidelines
 Since we did not run this changelog from the beginning early versions are not listed here.
 Those version have never been published officially and thus changes to them are of no interest.
 
-## [Unreleased]
+## [Unreleased] 
+
+## [4.0.0] - 2019-08-06
 ### Info
 * Initial release
 * Compatible with [Cyface Android SDK](https://github.com/cyface-de/android-backend) 4.2.1
