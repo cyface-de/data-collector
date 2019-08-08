@@ -1,5 +1,5 @@
 /*
- * Copyright 2018 Cyface GmbH
+ * Copyright 2018,2019 Cyface GmbH
  * 
  * This file is part of the Cyface Data Collector.
  *
@@ -48,7 +48,7 @@ import io.vertx.ext.unit.junit.VertxUnitRunner;
  * Tests individual verticles by sending appropriate messages using the Vert.x event bus.
  * 
  * @author Klemens Muthmann
- * @version 1.1.0
+ * @version 1.1.1
  * @since 2.0.0
  */
 @RunWith(VertxUnitRunner.class)
@@ -170,7 +170,7 @@ public final class EventBusTest {
 
         eventBus.publish(EventBusAddresses.NEW_MEASUREMENT,
                 new Measurement("some_device", "2", "9.0.0", "Pixel 2", "4.0.0-alpha1", 200.0, 10,
-                        new GeoLocation(10.0, 10.0, 10_000), new GeoLocation(12.0, 12.0, 12_000),
+                        new GeoLocation(10.0, 10.0, 10_000), new GeoLocation(12.0, 12.0, 12_000), "BICYCLE", "testUser",
                         Collections.emptyList()));
 
         async.await(5_000L);
@@ -234,7 +234,7 @@ public final class EventBusTest {
         });
 
         eventBus.publish(EventBusAddresses.NEW_MEASUREMENT, new Measurement("some_device", "2", "9.0.0", "Pixel 2",
-                "4.0.0-alpha1", .0, 0L, null, null, Collections.emptyList()));
+                "4.0.0-alpha1", .0, 0L, null, null, "BICYCLE", "testUser", Collections.emptyList()));
 
         async.await(5_000L);
     }

@@ -36,7 +36,7 @@ import io.vertx.micrometer.VertxPrometheusOptions;
  * You may also provide additional parameters in JSON format as described in the <code>README.md</code> file.
  * 
  * @author Klemens Muthmann
- * @version 1.0.2
+ * @version 1.0.3
  * @since 2.0.0
  */
 public class Application extends Launcher {
@@ -66,6 +66,9 @@ public class Application extends Launcher {
     @Override
     public final void afterConfigParsed(final JsonObject config) {
         super.afterConfigParsed(config);
+
+        checkValidConfiguration(config);
+
         if (config.containsKey(Parameter.METRICS_ENABLED.key())) {
             metricsEnabled = config.getBoolean(Parameter.METRICS_ENABLED.key());
         }
@@ -82,6 +85,18 @@ public class Application extends Launcher {
                     .setEnabled(true));
         } else {
             LOGGER.info("Starting without capturing metrics");
+        }
+    }
+
+    /**
+     * Checks if the provided configuration is valid for a Cyface data collector.
+     * 
+     * @param config The configuration to check.
+     */
+    private void checkValidConfiguration(final JsonObject config) {
+        if (config.getString(Parameter.COLLECTOR_HOST.key()) == null
+                || config.getString(Parameter.COLLECTOR_ENDPOINT.key()) == null) {
+            throw new InvalidConfigurationException(config);
         }
     }
 }

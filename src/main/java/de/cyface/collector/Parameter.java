@@ -1,5 +1,5 @@
 /*
- * Copyright 2018 Cyface GmbH
+ * Copyright 2018, 2019 Cyface GmbH
  * 
  * This file is part of the Cyface Data Collector.
  *
@@ -27,7 +27,7 @@ import io.vertx.core.logging.LoggerFactory;
  * An enumeration of parameters, that may be provided upon application startup, to configure the application.
  * 
  * @author Klemens Muthmann
- * @version 3.1.0
+ * @version 3.2.0
  * @since 2.0.0
  */
 public enum Parameter {
@@ -39,6 +39,14 @@ public enum Parameter {
      * The location of the PEM file containing the public key to check JWT tokens for validity.
      */
     JWT_PUBLIC_KEY_FILE_PATH("jwt.public"),
+    /**
+     * A parameter setting the hostname the collector service is available at.
+     */
+    COLLECTOR_HOST("http.host"),
+    /**
+     * A parameter for the endpoint path the collector service is available at.
+     */
+    COLLECTOR_ENDPOINT("http.endpoint"),
     /**
      * The server port the API shall be available at.
      */

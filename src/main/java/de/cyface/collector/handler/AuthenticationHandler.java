@@ -1,5 +1,5 @@
 /*
- * Copyright 2018 Cyface GmbH
+ * Copyright 2018, 2019 Cyface GmbH
  * 
  * This file is part of the Cyface Data Collector.
  *
@@ -17,6 +17,8 @@
  * along with the Cyface Data Collector. If not, see <http://www.gnu.org/licenses/>.
  */
 package de.cyface.collector.handler;
+
+import java.util.Collections;
 
 import org.apache.commons.lang3.Validate;
 
@@ -37,7 +39,7 @@ import io.vertx.ext.web.RoutingContext;
  * issues a new token. This token can then be used to transmit the actual request.
  * 
  * @author Klemens Muthmann
- * @version 1.0.3
+ * @version 2.0.0
  * @since 2.0.0
  */
 public final class AuthenticationHandler implements Handler<RoutingContext> {
@@ -55,19 +57,38 @@ public final class AuthenticationHandler implements Handler<RoutingContext> {
      * Authenticator that checks for valid authentications against Java Web Tokens.
      */
     private final JWTAuth jwtAuthProvider;
+    /**
+     * The institution which issued the generated JWT token. Usually something like the name of this
+     * server.
+     */
+    private final String issuer;
+    /**
+     * The entity allowed to process requests authenticated with the generated JWT token. This might be
+     * a certain server installation or a certain part of an application.
+     */
+    private final String audience;
 
     /**
      * Creates a new completely initialized <code>AuthenticationHandler</code>.
      * 
      * @param authProvider Authenticator that uses the Mongo user database to store and retrieve credentials.
      * @param jwtAuthProvider Authenticator that checks for valid authentications against Java Web Tokens.
+     * @param issuer The institution which issued the generated JWT token. Usually something like the name of this
+     *            server.
+     * @param audience The entity allowed to process requests authenticated with the generated JWT token. This might be
+     *            a certain server installation or a certain part of an application.
      */
-    public AuthenticationHandler(final MongoAuth authProvider, JWTAuth jwtAuthProvider) {
+    public AuthenticationHandler(final MongoAuth authProvider, final JWTAuth jwtAuthProvider, final String issuer,
+            final String audience) {
         Validate.notNull(authProvider);
         Validate.notNull(jwtAuthProvider);
+        Validate.notEmpty(issuer);
+        Validate.notEmpty(audience);
 
         this.authProvider = authProvider;
         this.jwtAuthProvider = jwtAuthProvider;
+        this.issuer = issuer;
+        this.audience = audience;
     }
 
     @Override
@@ -79,17 +100,22 @@ public final class AuthenticationHandler implements Handler<RoutingContext> {
                 if (r.succeeded()) {
                     LOGGER.debug("Authentication successful!");
                     LOGGER.trace(body);
+
                     final JWTOptions jwtOptions = new JWTOptions().setExpiresInSeconds(60);
+                    jwtOptions.setIssuer(issuer);
+                    jwtOptions.setAudience(Collections.singletonList(audience));
+
                     final String generatedToken = jwtAuthProvider.generateToken(body,
                             jwtOptions.setAlgorithm(CollectorApiVerticle.JWT_HASH_ALGORITHM));
                     LOGGER.trace("New JWT Token: " + generatedToken);
                     ctx.response().putHeader("Authorization", generatedToken).setStatusCode(200).end();
                 } else {
+                    LOGGER.error("Unsuccessful authentication request: {}", body);
                     ctx.fail(401);
                 }
             });
         } catch (DecodeException e) {
-            LOGGER.error("Unable to decode body!", e);
+            LOGGER.error("Unable to decode authentication request!");
             ctx.fail(401);
         }
     }

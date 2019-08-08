@@ -2,7 +2,7 @@ openapi: 3.0.2
 info:
   title: Cyface Data Collector
   description: This is a Cyface data collection endpoint, that receives traffic data from Cyface measurement devices, and stores them for further processing.
-  version: 3.0.1
+  version: 4.0.0
   
 servers:
   - url: /api/v2
@@ -55,6 +55,8 @@ paths:
                 minimum: 0
         '401':
           description: The provided credentials were not correct
+        '429':
+          description: Too many requests in short succession
             
   /measurements:
     post:
@@ -127,6 +129,9 @@ paths:
                   type: integer
                   format: int64
                   example: 1551436996091
+                vehicle:
+                  type: string
+                  example: BICYCLE
               required:
                 - fileToUpload
                 - deviceId
@@ -142,6 +147,7 @@ paths:
                 - endLocLat
                 - endLocLon
                 - endLocTS
+                - vehicle
               
       responses:
         '201':
@@ -156,5 +162,7 @@ paths:
           description: The measurement from the device already exists on the server.
         '422':
           description: The multipart request is erroneous. There for example is not exactly one file or a syntax error.
+        '429':
+          description: Too many requests in too short succession.
         '500':
           description: Reported on any internal server error, such as the storage layer was not accessible.

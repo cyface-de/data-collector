@@ -1,4 +1,4 @@
-# Copyright 2018 Cyface GmbH
+# Copyright 2018, 2019 Cyface GmbH
 # 
 # This file is part of the Cyface Data Collector.
 # 
@@ -15,14 +15,14 @@
 # You should have received a copy of the GNU General Public License
 # along with the Cyface Data Collector. If not, see <http://www.gnu.org/licenses/>.
 #
-# version 1.0.1
+# version 2.0.0
 
 version: "3.5"
 services:
     # Mongo Database Container
     mongo-data:
       container_name: collector_mongo-data
-      image: mongo:4.0.9
+      image: mongo:4.0.11
       ports:
         - "27019:27017"
       volumes:
@@ -32,19 +32,24 @@ services:
         
     mongo-user:
       container_name: collector_mongo-user
-      image: mongo:4.0.9
+      image: mongo:4.0.11
       ports:
         - "27018:27017"
       volumes:
         - type: volume
           source: mongo-user-db 
           target: /data/db
+        - type: bind
+          source: ./mongo-user-init-scripts
+          target: /docker-entrypoint-initdb.d/
+      environment:
+        MONGO_INITDB_DATABASE: cyface-user
 
     # The Cyface Collector API Container
     api:
       container_name: collector_api
       build: .
-      image: cyfacede/collector:3.0.2
+      image: cyfacede/collector:4.0.0
       ports: # It is ok that this entry manipulates the host's ip-tables since this compose file should only be used in dev environments.
         - "8080:8080"
         - "13371:13371"
@@ -61,3 +66,9 @@ volumes:
 networks:
     default:
         name: cyface-collector
+        ipam:
+          driver: default
+          config:
+            # Configure the IP Address range to not conflict with Deutsche Bahn WiFi
+            - subnet: 172.72.0.1/24
+            - subnet: 2001:3984:3989::/64
