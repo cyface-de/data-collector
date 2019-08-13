@@ -58,6 +58,9 @@ services:
       depends_on:
         - mongo-data
         - mongo-user
+      environment:
+        - ADMIN_USER=admin
+        - ADMIN_PASSWORD=secret
         
 volumes:
     mongo-data-db:
