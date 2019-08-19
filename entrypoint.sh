@@ -48,11 +48,13 @@ fi
 echo "Running Cyface Management API at port $CYFACE_MANAGEMENT_PORT"
 
 if [ -z $ADMIN_USER ]; then
-    ADMIN_USER="admin"
+    echo "Unable to find admin user. Please set the environment variable ADMIN_USER to an appropriate value! API will not start!"
+    exit 1
 fi
 
 if [ -z $ADMIN_PASSWORD ]; then
-    ADMIN_PASSWORD="secret"
+    echo "Unable to find admin password. Please set the environment variable ADMIN_PASSWORD to an appropriate value! API will not start!"
+    exit 1
 fi
 
 echo "Waiting for Database to start!"
