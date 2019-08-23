@@ -24,6 +24,7 @@ WORKDIR /app
 
 COPY build/libs/collector-fat.jar /app
 COPY entrypoint.sh /app
+COPY logback.xml /app
 RUN chmod +x /app/entrypoint.sh
 
 # Make port 8080 available to the world outside the container

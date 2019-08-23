@@ -55,6 +55,7 @@ services:
         - "13371:13371"
       volumes:
         - ./secrets:/app/secrets
+        - ./logs:/logs
       depends_on:
         - mongo-data
         - mongo-user

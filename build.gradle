@@ -106,7 +106,7 @@ run {
   args = ['run', mainVerticleName, "--redeploy=$watchForChange", "--launcher-class=$mainClassName", "--on-redeploy=$doOnChange"]
 }
 
-task wrapper(type: Wrapper) {
+wrapper {
   gradleVersion = "$gradleWrapperVersion"
 }
 
@@ -134,4 +134,8 @@ checkstyle {
 	// use one common config file for all subprojects
 	configFile = project(':').file('config/checkstyle/checkstyle.xml')
 	configProperties = [ "suppressionFile" : project(':').file('config/checkstyle/suppressions.xml')]
+}
+
+pmd {
+	ignoreFailures = true
 }

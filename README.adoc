@@ -116,7 +116,7 @@ To package your application:
 
 To run your application:
 ```
-./gradlew clean run
+./gradlew run --args="run de.cyface.collector.verticle.MainVerticle -conf conf.json"
 ```
 
 ==== Running from IDE
