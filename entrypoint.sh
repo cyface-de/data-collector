@@ -57,6 +57,10 @@ if [ -z $ADMIN_PASSWORD ]; then
     exit 1
 fi
 
+if [ -z $METRICS_ENABLED ]; then
+	METRICS_ENABLED="false"
+fi
+
 echo "Waiting for Database to start!"
 
 MONGO_STATUS="not running"
@@ -79,4 +83,4 @@ if [ $COUNTER -ge 10 ]; then
 fi
 
 echo "Starting API"
-java -Dvertx.cacheDirBase=/tmp/vertx-cache -jar collector-fat.jar -conf "{\"jwt.private\":\"$JWT_PRIVATE_KEY_FILE_PATH\",\"jwt.public\":\"$JWT_PUBLIC_KEY_FILE_PATH\",\"metrics.enabled\":false,\"mongo.userdb\":{\"db_name\":\"cyface-user\",\"connection_string\":\"mongodb://mongo-user:27017\",\"data_source_name\":\"cyface-user\"},\"mongo.datadb\":{\"db_name\":\"cyface-data\",\"connection_string\":\"mongodb://mongo-data:27017\",\"data_source_name\":\"cyface-data\"},\"admin.user\":\"$ADMIN_USER\",\"admin.password\":\"$ADMIN_PASSWORD\",\"http.port\":$CYFACE_API_PORT,\"http.host\":\"$CYFACE_API_HOST\",\"http.endpoint\":\"$CYFACE_API_ENDPOINT\",\"http.port.management\":$CYFACE_MANAGEMENT_PORT}"
+java -Dvertx.cacheDirBase=/tmp/vertx-cache -jar collector-fat.jar -conf "{\"jwt.private\":\"$JWT_PRIVATE_KEY_FILE_PATH\",\"jwt.public\":\"$JWT_PUBLIC_KEY_FILE_PATH\",\"metrics.enabled\":$METRICS_ENABLED,\"mongo.userdb\":{\"db_name\":\"cyface-user\",\"connection_string\":\"mongodb://mongo-user:27017\",\"data_source_name\":\"cyface-user\"},\"mongo.datadb\":{\"db_name\":\"cyface-data\",\"connection_string\":\"mongodb://mongo-data:27017\",\"data_source_name\":\"cyface-data\"},\"admin.user\":\"$ADMIN_USER\",\"admin.password\":\"$ADMIN_PASSWORD\",\"http.port\":$CYFACE_API_PORT,\"http.host\":\"$CYFACE_API_HOST\",\"http.endpoint\":\"$CYFACE_API_ENDPOINT\",\"http.port.management\":$CYFACE_MANAGEMENT_PORT}"
