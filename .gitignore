@@ -41,3 +41,7 @@ conf.json
 # Ignore temporary git and vim files
 **/*.orig
 **/*.swp
+
+# Ignore log files
+**/*.log
+
