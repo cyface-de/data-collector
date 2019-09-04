@@ -61,7 +61,6 @@ public class Application extends Launcher {
      *            about supported arguments.
      */
     public static void main(final String[] args) {
-        System.setProperty("logback.configurationFile", "/home/muthmann/Projekte/Cyface/data-collector/src/main/resources/logback.xml");
         System.setProperty(LoggerFactory.LOGGER_DELEGATE_FACTORY_CLASS_NAME, SLF4JLogDelegateFactory.class.getName());
         InternalLoggerFactory.setDefaultFactory(Slf4JLoggerFactory.INSTANCE);
         LoggerFactory.getLogger(Application.class);
