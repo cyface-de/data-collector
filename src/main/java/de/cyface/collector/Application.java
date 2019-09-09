@@ -19,12 +19,15 @@
 package de.cyface.collector;
 
 import de.cyface.collector.verticle.MainVerticle;
+import io.netty.util.internal.logging.InternalLoggerFactory;
+import io.netty.util.internal.logging.Slf4JLoggerFactory;
 import io.vertx.core.Launcher;
 import io.vertx.core.VertxOptions;
 import io.vertx.core.http.HttpServerOptions;
 import io.vertx.core.json.JsonObject;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
+import io.vertx.core.logging.SLF4JLogDelegateFactory;
 import io.vertx.micrometer.MicrometerMetricsOptions;
 import io.vertx.micrometer.VertxPrometheusOptions;
 
@@ -49,7 +52,7 @@ public class Application extends Launcher {
     /**
      * The flag specifying whether metrics measurement is enabled or not.
      */
-    private boolean metricsEnabled = false;
+    private transient boolean metricsEnabled = false;
 
     /**
      * Starts the application.
@@ -58,7 +61,9 @@ public class Application extends Launcher {
      *            about supported arguments.
      */
     public static void main(final String[] args) {
-        System.setProperty("vertx.logger-delegate-factory-class-name", "io.vertx.core.logging.SLF4JLogDelegateFactory");
+        System.setProperty(LoggerFactory.LOGGER_DELEGATE_FACTORY_CLASS_NAME, SLF4JLogDelegateFactory.class.getName());
+        InternalLoggerFactory.setDefaultFactory(Slf4JLoggerFactory.INSTANCE);
+        LoggerFactory.getLogger(Application.class);
 
         new Application().dispatch(args);
     }
