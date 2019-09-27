@@ -59,7 +59,7 @@ import io.vertx.ext.web.RoutingContext;
  * 
  * @author Klemens Muthmann
  * @author Armin Schnabel
- * @version 3.1.0
+ * @version 3.1.1
  * @since 2.0.0
  */
 public final class MeasurementHandler implements Handler<RoutingContext> {
@@ -81,9 +81,13 @@ public final class MeasurementHandler implements Handler<RoutingContext> {
      */
     private static final String DEFAULT_CHARSET = "UTF-8";
     /**
-     * The number of measurement files uploaded with a single request.
+     * The minimum number of files uploaded with a single request (measurement binary).
      */
-    private static final int ACCEPTED_NUMBER_OF_FILES = 1;
+    private static final int MINIMUM_NUMBER_OF_FILES = 1;
+    /**
+     * The maximum number of files uploaded with a single request (measurement and events binary).
+     */
+    private static final int MAXIMUM_NUMBER_OF_FILES = 2;
     /**
      * The length of a universal unique identifier.
      */
@@ -193,14 +197,11 @@ public final class MeasurementHandler implements Handler<RoutingContext> {
      * @param length The length of the measurement in meters.
      * @param locationCount The count of geo locations in the transmitted measurement.
      * @param startLocation The geo location at the beginning of the track represented by the transmitted measurement.
-     *            This
-     *            value is optional and may not be available for measurements without locations. For measurements with
-     *            one location
-     *            this equals the {@value #endLocation}.
+     *            This value is optional and may not be available for measurements without locations. For measurements
+     *            with one location this equals the {@param #endLocation}.
      * @param endLocation The geo location at the end of the track represented by the transmitted measurement. This
-     *            value
-     *            is optional and may not be available for measurements without locations. For measurements
-     *            with one location this equals the {@value startLocation}.
+     *            value is optional and may not be available for measurements without locations. For measurements
+     *            with one location this equals the {@param startLocation}.
      * @param vehicleType The type of the vehicle that has captured the measurement.
      * @param username The name of the user uploading the measurement.
      * @param uploads The files transmitted with the upload request.
@@ -311,8 +312,8 @@ public final class MeasurementHandler implements Handler<RoutingContext> {
             return false;
         }
 
-        if (uploads.size() != ACCEPTED_NUMBER_OF_FILES) {
-            LOGGER.error("MultiPart contained {} files to upload. It should be exactly one!", uploads.size());
+        if (uploads.size() < MINIMUM_NUMBER_OF_FILES || uploads.size() > MAXIMUM_NUMBER_OF_FILES) {
+            LOGGER.error(String.format("MultiPart contained the wrong number of files to upload: %d",  uploads.size()));
             return false;
         }
 
