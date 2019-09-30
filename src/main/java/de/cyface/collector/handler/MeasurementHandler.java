@@ -59,7 +59,7 @@ import io.vertx.ext.web.RoutingContext;
  * 
  * @author Klemens Muthmann
  * @author Armin Schnabel
- * @version 3.1.1
+ * @version 3.1.2
  * @since 2.0.0
  */
 public final class MeasurementHandler implements Handler<RoutingContext> {
@@ -81,13 +81,9 @@ public final class MeasurementHandler implements Handler<RoutingContext> {
      */
     private static final String DEFAULT_CHARSET = "UTF-8";
     /**
-     * The minimum number of files uploaded with a single request (measurement binary).
+     * The number of files uploaded with a single request.
      */
-    private static final int MINIMUM_NUMBER_OF_FILES = 1;
-    /**
-     * The maximum number of files uploaded with a single request (measurement and events binary).
-     */
-    private static final int MAXIMUM_NUMBER_OF_FILES = 2;
+    private static final int ACCEPTED_NUMBER_OF_FILES = 2;
     /**
      * The length of a universal unique identifier.
      */
@@ -312,13 +308,13 @@ public final class MeasurementHandler implements Handler<RoutingContext> {
             return false;
         }
 
-        if (uploads.size() < MINIMUM_NUMBER_OF_FILES || uploads.size() > MAXIMUM_NUMBER_OF_FILES) {
-            LOGGER.error(String.format("MultiPart contained the wrong number of files to upload: %d",  uploads.size()));
+        if (uploads.size() != ACCEPTED_NUMBER_OF_FILES) {
+            LOGGER.error(String.format("MultiPart contained %d files but should contain exactly %d", uploads.size(),
+                    ACCEPTED_NUMBER_OF_FILES));
             return false;
         }
 
         return true;
 
     }
-
 }
