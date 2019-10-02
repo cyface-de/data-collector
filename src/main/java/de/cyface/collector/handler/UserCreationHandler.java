@@ -33,7 +33,8 @@ import io.vertx.ext.web.RoutingContext;
  * A handler that creates users inside the user Mongo database.
  * 
  * @author Klemens Muthmann
- * @version 1.0.0
+ * @author Armin Schnabel
+ * @version 1.1.0
  * @since 2.0.0
  */
 public final class UserCreationHandler implements Handler<RoutingContext> {
@@ -62,19 +63,25 @@ public final class UserCreationHandler implements Handler<RoutingContext> {
     @Override
     public void handle(final RoutingContext event) {
         final JsonObject body = event.getBodyAsJson();
-        final String username = body.getString("username");
+        final String providedUsername = body.getString("username");
         final String password = body.getString("password");
+        final int numberOfUsers = body.getInteger("numberOfUsers");
+        Validate.isTrue(numberOfUsers > 0 && numberOfUsers <= 10_000);
 
-        mongoAuth.insertUser(username, password, new ArrayList<>(), new ArrayList<>(), ir -> {
-            if (ir.succeeded()) {
-                LOGGER.info("Added new user with id: " + username);
-                event.response().setStatusCode(201).end();
-            } else {
-                LOGGER.error("Unable to create user with id: " + username, ir.cause());
-                event.fail(400);
+        for (int i = 0; i < numberOfUsers; i++) {
+            final StringBuilder username = new StringBuilder(providedUsername);
+            if (numberOfUsers > 1) {
+                username.append(i);
             }
-        });
-
+            mongoAuth.insertUser(username.toString(), password, new ArrayList<>(), new ArrayList<>(), ir -> {
+                if (ir.succeeded()) {
+                    LOGGER.info("Added new user with id: " + username);
+                    event.response().setStatusCode(201).end();
+                } else {
+                    LOGGER.error("Unable to create user with id: " + username, ir.cause());
+                    event.fail(400);
+                }
+            });
+        }
     }
-
 }
