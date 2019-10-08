@@ -20,6 +20,7 @@ package de.cyface.collector.handler;
 
 import java.util.ArrayList;
 
+import com.mongodb.lang.NonNull;
 import org.apache.commons.lang3.Validate;
 
 import io.vertx.core.Handler;
@@ -28,6 +29,8 @@ import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
 import io.vertx.ext.auth.mongo.MongoAuth;
 import io.vertx.ext.web.RoutingContext;
+
+import javax.validation.constraints.NotNull;
 
 /**
  * A handler that creates users inside the user Mongo database.
@@ -68,20 +71,36 @@ public final class UserCreationHandler implements Handler<RoutingContext> {
         final int numberOfUsers = body.getInteger("numberOfUsers");
         Validate.isTrue(numberOfUsers > 0 && numberOfUsers <= 10_000);
 
-        for (int i = 0; i < numberOfUsers; i++) {
-            final StringBuilder username = new StringBuilder(providedUsername);
-            if (numberOfUsers > 1) {
-                username.append(i);
+        // Create users
+        final boolean[] success = {true};
+        if (numberOfUsers == 1) {
+            success[0] = insertUser(providedUsername, password);
+        } else {
+            for (int i = 1; i <= numberOfUsers; i++) {
+                final String username = providedUsername + i;
+                final boolean isSuccessful = insertUser(username, password);
+                success[0] = success[0] && isSuccessful;
             }
-            mongoAuth.insertUser(username.toString(), password, new ArrayList<>(), new ArrayList<>(), ir -> {
-                if (ir.succeeded()) {
-                    LOGGER.info("Added new user with id: " + username);
-                    event.response().setStatusCode(201).end();
-                } else {
-                    LOGGER.error("Unable to create user with id: " + username, ir.cause());
-                    event.fail(400);
-                }
-            });
         }
+
+        // Response
+        if (success[0]) {
+            event.response().setStatusCode(201).end();
+        } else {
+            event.fail(400);
+        }
+    }
+
+    private boolean insertUser(final String username, final String password) {
+        final boolean[] success = {true};
+        mongoAuth.insertUser(username, password, new ArrayList<>(), new ArrayList<>(), ir -> {
+            if (ir.succeeded()) {
+                LOGGER.info("Added new user with id: " + username);
+            } else {
+                LOGGER.error("Unable to create user with id: " + username, ir.cause());
+                success[0] = false;
+            }
+        });
+        return success[0];
     }
 }
