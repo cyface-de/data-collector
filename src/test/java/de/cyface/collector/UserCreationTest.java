@@ -44,7 +44,7 @@ import io.vertx.ext.web.client.WebClient;
  * 
  * @author Klemens Muthmann
  * @author Armin Schnabel
- * @version 1.0.1
+ * @version 1.1.0
  * @since 2.0.0
  */
 @RunWith(VertxUnitRunner.class)
@@ -129,7 +129,16 @@ public final class UserCreationTest {
      * Closes the <code>vertx</code> instance.
      */
     @After
-    public void tearDown() {
+    public void tearDown(final TestContext context) {
+        // Delete entries so that the next tests are independent
+        final MongoClient mongoClient = Utils.createSharedMongoClient(vertx, mongoDbConfiguration);
+        final Async mongoQueryAsync = context.async();
+        mongoClient.removeDocuments("user", new JsonObject(), result -> {
+            context.assertTrue(result.succeeded());
+            mongoQueryAsync.complete();
+        });
+        mongoQueryAsync.await(3_000L);
+
         vertx.close();
     }
 
@@ -140,11 +149,11 @@ public final class UserCreationTest {
      */
     @Test
     public void testCreateUser_HappyPath(final TestContext context) {
-        final Async async = context.async();
 
+        // Act
+        final Async async = context.async();
         client.post(port, "localhost", "/user").sendJsonObject(
-                new JsonObject().put("username", "test-user").put("password", "test-password").put("numberOfUsers",
-                        1),
+                new JsonObject().put("username", "test-user").put("password", "test-password"),
                 result -> {
                     if (result.succeeded()) {
                         async.complete();
@@ -152,9 +161,9 @@ public final class UserCreationTest {
                         async.resolve(Future.failedFuture(result.cause()));
                     }
                 });
-
         async.await(3_000L);
 
+        // Assert
         final MongoClient mongoClient = Utils.createSharedMongoClient(vertx, mongoDbConfiguration);
 
         final Async mongoQueryCountAsync = context.async();
@@ -182,10 +191,10 @@ public final class UserCreationTest {
     @Test
     public void testCreateMultipleUsers_HappyPath(final TestContext context) {
 
+        // Act
         final Async async = context.async();
-        client.post(port, "localhost", "/user").sendJsonObject(
-                new JsonObject().put("username", "test-user").put("password", "test-password").put("numberOfUsers",
-                        2),
+        client.post(port, "localhost", "/users").sendJsonObject(
+                new JsonObject().put("username", "test-user").put("numberOfUsers", 2),
                 result -> {
                     if (result.succeeded()) {
                         async.complete();
@@ -195,22 +204,31 @@ public final class UserCreationTest {
                 });
         async.await(3_000L);
 
+        // Assert
         final MongoClient mongoClient = Utils.createSharedMongoClient(vertx, mongoDbConfiguration);
 
         final Async mongoQueryCountAsync = context.async();
-        mongoClient.count("user", new JsonObject().put("username", "test-user1"), result -> {
+        mongoClient.count("user", new JsonObject(), result -> {
             context.assertTrue(result.succeeded());
-            context.assertEquals(result.result(), 1L);
+            context.assertEquals(result.result(), 2L);
             mongoQueryCountAsync.complete();
         });
         mongoQueryCountAsync.await(3_000L);
 
         final Async mongoQueryCountAsync2 = context.async();
-        mongoClient.count("user", new JsonObject().put("username", "test-user2"), result -> {
+        mongoClient.count("user", new JsonObject().put("username", "test-user1"), result -> {
             context.assertTrue(result.succeeded());
             context.assertEquals(result.result(), 1L);
             mongoQueryCountAsync2.complete();
         });
         mongoQueryCountAsync2.await(3_000L);
+
+        final Async mongoQueryCountAsync3 = context.async();
+        mongoClient.count("user", new JsonObject().put("username", "test-user2"), result -> {
+            context.assertTrue(result.succeeded());
+            context.assertEquals(result.result(), 1L);
+            mongoQueryCountAsync3.complete();
+        });
+        mongoQueryCountAsync3.await(3_000L);
     }
 }
