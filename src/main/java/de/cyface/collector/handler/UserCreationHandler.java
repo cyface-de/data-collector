@@ -19,6 +19,8 @@
 package de.cyface.collector.handler;
 
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Random;
 import java.util.UUID;
 
@@ -71,7 +73,11 @@ public final class UserCreationHandler implements Handler<RoutingContext> {
         final String providedUsername = body.getString("username");
         final String providedPassword = body.getString("password");
         final Integer numberOfUsers = body.getInteger("numberOfUsers");
-        Validate.isTrue(numberOfUsers == null || (numberOfUsers > 0 && numberOfUsers <= 10_000));
+        final String usernamePrefix = body.getString("usernamePrefix");
+        final boolean isMultiUserCreation = numberOfUsers != null;
+        Validate.isTrue(numberOfUsers == null || numberOfUsers > 0 && numberOfUsers <= 10_000);
+        Validate.isTrue(isMultiUserCreation || (providedUsername != null && providedPassword != null));
+        Validate.isTrue(!isMultiUserCreation || (usernamePrefix != null));
 
         // Create users
         final boolean[] success = {true};
@@ -79,7 +85,7 @@ public final class UserCreationHandler implements Handler<RoutingContext> {
             success[0] = insertUser(providedUsername, providedPassword);
         } else {
             for (int i = 1; i <= numberOfUsers; i++) {
-                final String username = providedUsername + i;
+                final String username = usernamePrefix + i;
                 final String password = UUID.randomUUID().toString().substring(0, 6);
                 final boolean isSuccessful = insertUser(username, password);
                 if (!isSuccessful) {

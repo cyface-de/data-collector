@@ -184,7 +184,8 @@ public final class UserCreationTest {
     }
 
     /**
-     * Tests that the normal process of creating multiple test users with one command via the management interface works as expected.
+     * Tests that the normal process of creating multiple test users with one command via the management interface works
+     * as expected.
      *
      * @param context The Vert.x test context used to control the test process.
      */
@@ -194,7 +195,7 @@ public final class UserCreationTest {
         // Act
         final Async async = context.async();
         client.post(port, "localhost", "/users").sendJsonObject(
-                new JsonObject().put("username", "test-user").put("numberOfUsers", 2),
+                new JsonObject().put("usernamePrefix", "test-user").put("numberOfUsers", 2),
                 result -> {
                     if (result.succeeded()) {
                         async.complete();
