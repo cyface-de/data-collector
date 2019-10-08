@@ -37,12 +37,13 @@ import io.vertx.ext.web.handler.StaticHandler;
  * This is separated from the Upload API as we do not want to expose this unintentionally to the public.
  * 
  * @author Klemens Muthmann
- * @version 1.0.1
+ * @author Armin Schnabel
+ * @version 1.0.2
  * @since 2.0.0
  */
 public final class ManagementApiVerticle extends AbstractVerticle {
     @Override
-    public void start(final Future<Void> startFuture) throws Exception {
+    public void start(final Future<Void> startFuture) {
         Validate.notNull(startFuture);
 
         final JsonObject mongoUserDatabaseConfiguration = Parameter.MONGO_USER_DB.jsonValue(getVertx(),
@@ -74,6 +75,7 @@ public final class ManagementApiVerticle extends AbstractVerticle {
         Router router = Router.router(getVertx());
 
         router.post("/user").handler(BodyHandler.create()).blockingHandler(new UserCreationHandler(mongoAuth));
+        router.post("/users").handler(BodyHandler.create()).blockingHandler(new UserCreationHandler(mongoAuth));
         router.get("/*").handler(StaticHandler.create("webroot/management"));
 
         return router;
