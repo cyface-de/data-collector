@@ -173,4 +173,44 @@ public final class UserCreationTest {
         });
         mongoQueryAsync.await(3_000L);
     }
+
+    /**
+     * Tests that the normal process of creating multiple test users with one command via the management interface works as expected.
+     *
+     * @param context The Vert.x test context used to control the test process.
+     */
+    @Test
+    public void testCreateMultipleUsers_HappyPath(final TestContext context) {
+
+        final Async async = context.async();
+        client.post(port, "localhost", "/user").sendJsonObject(
+                new JsonObject().put("username", "test-user").put("password", "test-password").put("numberOfUsers",
+                        2),
+                result -> {
+                    if (result.succeeded()) {
+                        async.complete();
+                    } else {
+                        async.resolve(Future.failedFuture(result.cause()));
+                    }
+                });
+        async.await(3_000L);
+
+        final MongoClient mongoClient = Utils.createSharedMongoClient(vertx, mongoDbConfiguration);
+
+        final Async mongoQueryCountAsync = context.async();
+        mongoClient.count("user", new JsonObject().put("username", "test-user1"), result -> {
+            context.assertTrue(result.succeeded());
+            context.assertEquals(result.result(), 1L);
+            mongoQueryCountAsync.complete();
+        });
+        mongoQueryCountAsync.await(3_000L);
+
+        final Async mongoQueryCountAsync2 = context.async();
+        mongoClient.count("user", new JsonObject().put("username", "test-user2"), result -> {
+            context.assertTrue(result.succeeded());
+            context.assertEquals(result.result(), 1L);
+            mongoQueryCountAsync2.complete();
+        });
+        mongoQueryCountAsync2.await(3_000L);
+    }
 }
