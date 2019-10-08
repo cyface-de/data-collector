@@ -19,6 +19,8 @@
 package de.cyface.collector.handler;
 
 import java.util.ArrayList;
+import java.util.Random;
+import java.util.UUID;
 
 import com.mongodb.lang.NonNull;
 import org.apache.commons.lang3.Validate;
@@ -67,19 +69,22 @@ public final class UserCreationHandler implements Handler<RoutingContext> {
     public void handle(final RoutingContext event) {
         final JsonObject body = event.getBodyAsJson();
         final String providedUsername = body.getString("username");
-        final String password = body.getString("password");
-        final int numberOfUsers = body.getInteger("numberOfUsers");
-        Validate.isTrue(numberOfUsers > 0 && numberOfUsers <= 10_000);
+        final String providedPassword = body.getString("password");
+        final Integer numberOfUsers = body.getInteger("numberOfUsers");
+        Validate.isTrue(numberOfUsers == null || (numberOfUsers > 0 && numberOfUsers <= 10_000));
 
         // Create users
         final boolean[] success = {true};
-        if (numberOfUsers == 1) {
-            success[0] = insertUser(providedUsername, password);
+        if (numberOfUsers == null) {
+            success[0] = insertUser(providedUsername, providedPassword);
         } else {
             for (int i = 1; i <= numberOfUsers; i++) {
                 final String username = providedUsername + i;
+                final String password = UUID.randomUUID().toString().substring(0, 6);
                 final boolean isSuccessful = insertUser(username, password);
-                success[0] = success[0] && isSuccessful;
+                if (!isSuccessful) {
+                    success[0] = false;
+                }
             }
         }
 
