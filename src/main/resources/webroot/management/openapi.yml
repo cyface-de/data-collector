@@ -8,7 +8,7 @@ paths:
   /user:
     post:
       summary: Create a new user for this Cyface data collector
-      operationId: user
+      operationId: addUser
       requestBody:
         description: The new users username and password.
         required: true
@@ -23,19 +23,44 @@ paths:
                 password:
                   description: Password for the new user.
                   type: string
-                numberOfUsers:
-                  description: Number of users to create by adding a number to the username (1-10000).
-                  type: integer
               required:
                 - username
                 - password
-                - numberOfUsers
               example:
                 username: admin
                 password: secret
-                numberOfUsers: 1
       responses:
         '201':
           description: User was created successfully.
+        '400':
+          description: The reques was malformed.
+
+  /users:
+    post:
+      summary: Create multiple new users for this Cyface data collector
+      operationId: addUsers
+      requestBody:
+        description: The new users username prefix and the number of users.
+        required: true
+        content:
+          'application/json':
+            schema:
+              type: object
+              properties:
+                username:
+                  description: Prefix used to generate the usernames (prefix1, prefix2, ...).
+                  type: string
+                numberOfUsers:
+                  description: Number of users to create (1-10000).
+                  type: integer
+              required:
+                - username
+                - numberOfUsers
+              example:
+                username: admin
+                numberOfUsers: 1
+      responses:
+        '201':
+          description: Users were created successfully.
         '400':
           description: The reques was malformed.
