@@ -32,11 +32,13 @@ import de.cyface.collector.verticle.ManagementApiVerticle;
 import io.vertx.core.DeploymentOptions;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
+import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.mongo.MongoClient;
 import io.vertx.ext.unit.Async;
 import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
+import io.vertx.ext.web.client.HttpResponse;
 import io.vertx.ext.web.client.WebClient;
 
 /**
@@ -193,16 +195,23 @@ public final class UserCreationTest {
     public void testCreateMultipleUsers_HappyPath(final TestContext context) {
 
         // Act
+        final JsonObject payload = new JsonObject().put("usernamePrefix", "test-user").put("numberOfUsers", 2);
         final Async async = context.async();
-        client.post(port, "localhost", "/users").sendJsonObject(
-                new JsonObject().put("usernamePrefix", "test-user").put("numberOfUsers", 2),
-                result -> {
-                    if (result.succeeded()) {
-                        async.complete();
-                    } else {
-                        async.resolve(Future.failedFuture(result.cause()));
-                    }
-                });
+        client
+                .post(port, "localhost", "/users")
+                .sendJsonObject(
+                        payload,
+                        result -> {
+                            if (result.succeeded()) {
+                                HttpResponse<Buffer> response = result.result();
+                                final String credentialHeader = response.getHeader("credentials");
+                                context.assertTrue(credentialHeader.contains("{\"test-user1\":\""));
+                                context.assertTrue(credentialHeader.contains("\"test-user2\":\""));
+                                async.complete();
+                            } else {
+                                async.resolve(Future.failedFuture(result.cause()));
+                            }
+                        });
         async.await(3_000L);
 
         // Assert

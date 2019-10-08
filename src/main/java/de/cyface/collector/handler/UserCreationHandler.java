@@ -21,20 +21,17 @@ package de.cyface.collector.handler;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Random;
 import java.util.UUID;
 
-import com.mongodb.lang.NonNull;
 import org.apache.commons.lang3.Validate;
 
 import io.vertx.core.Handler;
+import io.vertx.core.http.HttpServerResponse;
 import io.vertx.core.json.JsonObject;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
 import io.vertx.ext.auth.mongo.MongoAuth;
 import io.vertx.ext.web.RoutingContext;
-
-import javax.validation.constraints.NotNull;
 
 /**
  * A handler that creates users inside the user Mongo database.
@@ -81,12 +78,14 @@ public final class UserCreationHandler implements Handler<RoutingContext> {
 
         // Create users
         final boolean[] success = {true};
+        final Map<String, Object> credentials = new HashMap<>();
         if (numberOfUsers == null) {
             success[0] = insertUser(providedUsername, providedPassword);
         } else {
             for (int i = 1; i <= numberOfUsers; i++) {
                 final String username = usernamePrefix + i;
                 final String password = UUID.randomUUID().toString().substring(0, 6);
+                credentials.put(username, password);
                 final boolean isSuccessful = insertUser(username, password);
                 if (!isSuccessful) {
                     success[0] = false;
@@ -96,7 +95,13 @@ public final class UserCreationHandler implements Handler<RoutingContext> {
 
         // Response
         if (success[0]) {
-            event.response().setStatusCode(201).end();
+            final HttpServerResponse response = event.response();
+            response.setStatusCode(201);
+            if (numberOfUsers != null) {
+                // Writing this to the body leads to a 500 error, thus, we write it to the header for now
+                response.putHeader("credentials", new JsonObject(credentials).toString());
+            }
+            response.end();
         } else {
             event.fail(400);
         }

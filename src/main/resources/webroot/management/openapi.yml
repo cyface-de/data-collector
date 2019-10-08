@@ -47,20 +47,33 @@ paths:
             schema:
               type: object
               properties:
-                username:
-                  description: Prefix used to generate the usernames (prefix1, prefix2, ...).
+                usernamePrefix:
+                  description: Prefix used to generate the usernames.
                   type: string
                 numberOfUsers:
                   description: Number of users to create (1-10000).
                   type: integer
               required:
-                - username
+                - usernamePrefix
                 - numberOfUsers
               example:
-                username: admin
-                numberOfUsers: 1
+                usernamePrefix: bulkUser
+                numberOfUsers: 2
       responses:
         '201':
-          description: Users were created successfully.
+          description: Users were created successfully. Returns the credentials of the created users as JSON string in the format {"username1":"password1"}.
+          headers:
+            credentials:
+              schema:
+                type: string
+                format: application/json
+                properties:
+                  username:
+                    type: string
+                    description: The generated username.
+                  password:
+                    type: string
+                    description: The generated password.
+              description: The credentials of the created users.
         '400':
           description: The reques was malformed.
