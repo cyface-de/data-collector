@@ -1,5 +1,5 @@
 /*
- * Copyright 2018 Cyface GmbH
+ * Copyright 2018, 2019 Cyface GmbH
  *
  * This file is part of the Cyface Data Collector.
  *
@@ -59,7 +59,7 @@ import io.vertx.ext.web.RoutingContext;
  * 
  * @author Klemens Muthmann
  * @author Armin Schnabel
- * @version 3.1.0
+ * @version 3.1.2
  * @since 2.0.0
  */
 public final class MeasurementHandler implements Handler<RoutingContext> {
@@ -76,6 +76,31 @@ public final class MeasurementHandler implements Handler<RoutingContext> {
      * arbitrary long data into these fields.
      */
     private static final int MAX_GENERIC_METADATA_FIELD_LENGTH = 30;
+    /**
+     * The default char set to use for encoding and decoding strings transmitted as meta data.
+     */
+    private static final String DEFAULT_CHARSET = "UTF-8";
+    /**
+     * The number of files uploaded with a single request.
+     */
+    private static final int ACCEPTED_NUMBER_OF_FILES = 2;
+    /**
+     * The length of a universal unique identifier.
+     */
+    private static final int UUID_LENGTH = 36;
+    /**
+     * The minimum length of a track stored with a measurement.
+     */
+    private static final double MINIMUM_TRACK_LENGTH = 0.0;
+    /**
+     * The minimum valid amount of locations stored inside a measurement.
+     */
+    private static final long MINIMUM_LOCATION_COUNT = 0L;
+    /**
+     * The maximum length of the measurement identifier in characters (this is the amount of characters of
+     * {@value Long#MAX_VALUE}.
+     */
+    private static final int MAX_MEASUREMENT_ID_LENGTH = 20;
 
     @Override
     public void handle(final RoutingContext ctx) {
@@ -98,24 +123,29 @@ public final class MeasurementHandler implements Handler<RoutingContext> {
             GeoLocation startLocation = null;
             GeoLocation endLocation = null;
             if (locationCount > 0) {
-                try {
-                    final double startLocationLat = Double
-                            .parseDouble(request.getFormAttribute(START_LOCATION_LAT.getValue()));
-                    final double startLocationLon = Double
-                            .parseDouble(request.getFormAttribute(START_LOCATION_LON.getValue()));
-                    final long startLocationTs = Long
-                            .parseLong(request.getFormAttribute(START_LOCATION_TS.getValue()));
-                    final double endLocationLat = Double
-                            .parseDouble(request.getFormAttribute(END_LOCATION_LAT.getValue()));
-                    final double endLocationLon = Double
-                            .parseDouble(request.getFormAttribute(END_LOCATION_LON.getValue()));
-                    final long endLocationTs = Long.parseLong(request.getFormAttribute(END_LOCATION_TS.getValue()));
-                    startLocation = new GeoLocation(startLocationLat, startLocationLon, startLocationTs);
-                    endLocation = new GeoLocation(endLocationLat, endLocationLon, endLocationTs);
-                } catch (final NullPointerException e) {
+                final String startLocationLatString = request.getFormAttribute(START_LOCATION_LAT.getValue());
+                final String startLocationLonString = request.getFormAttribute(START_LOCATION_LON.getValue());
+                final String startLocationTsString = request.getFormAttribute(START_LOCATION_TS.getValue());
+                final String endLocationLatString = request.getFormAttribute(END_LOCATION_LAT.getValue());
+                final String endLocationLonString = request.getFormAttribute(END_LOCATION_LON.getValue());
+                final String endLocationTsString = request.getFormAttribute(END_LOCATION_TS.getValue());
+
+                if (startLocationLatString == null || startLocationLonString == null || startLocationTsString == null
+                        || endLocationLatString == null || endLocationLonString == null
+                        || endLocationTsString == null) {
                     LOGGER.error("Data incomplete!");
                     ctx.fail(422);
                 }
+
+                final double startLocationLat = Double.parseDouble(startLocationLatString);
+                final double startLocationLon = Double.parseDouble(startLocationLonString);
+                final long startLocationTs = Long.parseLong(startLocationTsString);
+                final double endLocationLat = Double.parseDouble(endLocationLatString);
+                final double endLocationLon = Double.parseDouble(endLocationLonString);
+                final long endLocationTs = Long.parseLong(endLocationTsString);
+
+                startLocation = new GeoLocation(startLocationLat, startLocationLon, startLocationTs);
+                endLocation = new GeoLocation(endLocationLat, endLocationLon, endLocationTs);
             }
 
             final Set<File> uploads = new HashSet<>();
@@ -163,14 +193,11 @@ public final class MeasurementHandler implements Handler<RoutingContext> {
      * @param length The length of the measurement in meters.
      * @param locationCount The count of geo locations in the transmitted measurement.
      * @param startLocation The geo location at the beginning of the track represented by the transmitted measurement.
-     *            This
-     *            value is optional and may not be available for measurements without locations. For measurements with
-     *            one location
-     *            this equals the {@value #endLocation}.
+     *            This value is optional and may not be available for measurements without locations. For measurements
+     *            with one location this equals the {@param #endLocation}.
      * @param endLocation The geo location at the end of the track represented by the transmitted measurement. This
-     *            value
-     *            is optional and may not be available for measurements without locations. For measurements
-     *            with one location this equals the {@value startLocation}.
+     *            value is optional and may not be available for measurements without locations. For measurements
+     *            with one location this equals the {@param startLocation}.
      * @param vehicleType The type of the vehicle that has captured the measurement.
      * @param username The name of the user uploading the measurement.
      * @param uploads The files transmitted with the upload request.
@@ -185,7 +212,7 @@ public final class MeasurementHandler implements Handler<RoutingContext> {
             return false;
         }
 
-        if (deviceId.getBytes(Charset.forName("UTF-8")).length != 36) {
+        if (deviceId.getBytes(Charset.forName(DEFAULT_CHARSET)).length != UUID_LENGTH) {
             LOGGER.error("Field deviceId was not exactly 128 Bit, which is required for UUIDs!");
             return false;
         }
@@ -205,7 +232,7 @@ public final class MeasurementHandler implements Handler<RoutingContext> {
             return false;
         }
 
-        if (measurementId.isEmpty() || measurementId.length() > 20) {
+        if (measurementId.isEmpty() || measurementId.length() > MAX_MEASUREMENT_ID_LENGTH) {
             LOGGER.error("Field measurementId had an invalid length of {}!", measurementId.length());
             return false;
         }
@@ -230,17 +257,17 @@ public final class MeasurementHandler implements Handler<RoutingContext> {
             return false;
         }
 
-        if (length < 0.0) {
+        if (length < MINIMUM_TRACK_LENGTH) {
             LOGGER.error("Field length had an invalid value {} which is smaller then 0.0!", length);
             return false;
         }
 
-        if (locationCount < 0L) {
+        if (locationCount < MINIMUM_LOCATION_COUNT) {
             LOGGER.error("Field locationCount had an invalid value {} which is smaller then 0!", locationCount);
             return false;
         }
 
-        if (locationCount == 0L) {
+        if (locationCount == MINIMUM_LOCATION_COUNT) {
             if (startLocation != null) {
                 LOGGER.error("Field locationCount is 0 but a start location is defined. This is invalid!");
                 return false;
@@ -281,13 +308,13 @@ public final class MeasurementHandler implements Handler<RoutingContext> {
             return false;
         }
 
-        if (uploads.size() != 1) {
-            LOGGER.error("MultiPart contained {} files to upload. It should be exactly one!", uploads.size());
+        if (uploads.size() != ACCEPTED_NUMBER_OF_FILES) {
+            LOGGER.error(String.format("MultiPart contained %d files but should contain exactly %d", uploads.size(),
+                    ACCEPTED_NUMBER_OF_FILES));
             return false;
         }
 
         return true;
 
     }
-
 }

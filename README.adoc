@@ -16,6 +16,7 @@ If you require this software under a closed source license for you own projects,
 Simply run `build.sh` inside the root of this project. 
 This builds the jar file which is then packed into the Docker container which is build afterwards. 
 This script also makes sure all required subdirectories are created.
+When you updated the Swagger UI make sure to clear your browser cache or else it might not update.
 
 === Release a new Version
 
@@ -116,7 +117,7 @@ To package your application:
 
 To run your application:
 ```
-./gradlew clean run
+./gradlew run --args="run de.cyface.collector.verticle.MainVerticle -conf conf.json"
 ```
 
 ==== Running from IDE

@@ -9,6 +9,20 @@ Those version have never been published officially and thus changes to them are 
 
 ## [Unreleased] 
 
+## [5.0.0] - 2019-10-09
+### Info
+* Compatible with [Cyface Android SDK](https://github.com/cyface-de/android-backend) 5.0.0-beta1
+* Compatible with [iOS SDK](https://github.com/cyface-de/ios-backend) 5.0.0-beta1
+### Added
+* Parameter to de-/activate metrics
+* Accept events binary with upload (as added in the Cyface Android SDK V5)
+### Changed
+* Move default admin credentials to docker-compose.yml
+* Rerouted log output to files in logs folder
+* Only accept uploads with exactly two binary files (see Cyface Android SDK V5)
+### Removed
+* Integrated Grafana. It moved to a [separate project](https://github.com/cyface-de/grafana).
+
 ## [4.0.0] - 2019-08-06
 ### Info
 * Initial release

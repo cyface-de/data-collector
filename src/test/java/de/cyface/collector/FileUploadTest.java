@@ -56,7 +56,7 @@ import io.vertx.ext.web.multipart.MultipartForm;
  * 
  * @author Klemens Muthmann
  * @author Armin Schnabel
- * @version 3.0.2
+ * @version 3.0.3
  * @since 2.0.0
  */
 @RunWith(VertxUnitRunner.class)
@@ -317,7 +317,11 @@ public final class FileUploadTest {
         final URL testFileResource = this.getClass().getResource(testFileResourceName);
 
         form.binaryFileUpload("fileToUpload",
-                String.format(Locale.US, "%s_%s.cyf", deviceIdentifier, measurementIdentifier),
+                String.format(Locale.US, "%s_%s.ccyf", deviceIdentifier, measurementIdentifier),
+                testFileResource.getFile(), "application/octet-stream");
+
+        form.binaryFileUpload("eventsFile",
+                String.format(Locale.US, "%s_%s.ccyfe", deviceIdentifier, measurementIdentifier),
                 testFileResource.getFile(), "application/octet-stream");
 
         final EventBus eventBus = vertx.eventBus();

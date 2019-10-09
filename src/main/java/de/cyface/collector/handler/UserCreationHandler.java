@@ -46,7 +46,7 @@ public final class UserCreationHandler implements Handler<RoutingContext> {
     /**
      * An authenticator that uses credentials from the Mongo user database to authenticate users.
      */
-    private final MongoAuth mongoAuth;
+    private transient final MongoAuth mongoAuth;
 
     /**
      * Creates a new completely initialized <code>UserCreationHandler</code>.

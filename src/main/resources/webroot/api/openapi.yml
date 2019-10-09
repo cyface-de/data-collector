@@ -2,7 +2,7 @@ openapi: 3.0.2
 info:
   title: Cyface Data Collector
   description: This is a Cyface data collection endpoint, that receives traffic data from Cyface measurement devices, and stores them for further processing.
-  version: 4.0.0
+  version: 5.0.0
   
 servers:
   - url: /api/v2
@@ -72,12 +72,19 @@ paths:
               type: object
               properties:
                 fileToUpload:
-                  #description: The measured data in the Cyface binary format.
+                  #description: The compressed measured data in the Cyface binary format.
                   type: string
                   format: binary
                   example:
                     summary: An example upload in Cyface data format version 1
                     externalValue: 'data.ccyf'
+                eventsFile:
+                  #description: The compressed events of a measurement in the Cyface binary format.
+                  type: string
+                  format: binary
+                  example:
+                    summary: An example upload in Cyface events data format version 1
+                    externalValue: 'data.ccyfe'
                 deviceId:
                   #description: The world wide unique identifier of the device that uploaded the data.
                   type: string
@@ -134,6 +141,7 @@ paths:
                   example: BICYCLE
               required:
                 - fileToUpload
+                - eventsFile
                 - deviceId
                 - measurementId
                 - deviceType
