@@ -110,7 +110,17 @@ public final class UserCreationTest {
      * Closes the <code>vertx</code> instance.
      */
     @After
-    public void tearDown() {
+    public void tearDown(final TestContext context) {
+
+        // Delete entries so that the next tests are independent
+        final MongoClient mongoClient = Utils.createSharedMongoClient(vertx, mongoDbConfiguration);
+        final Async mongoQueryAsync = context.async();
+        mongoClient.removeDocuments("user", new JsonObject(), result -> {
+            context.assertTrue(result.succeeded());
+            mongoQueryAsync.complete();
+        });
+        mongoQueryAsync.await(3_000L);
+
         vertx.close();
     }
 
