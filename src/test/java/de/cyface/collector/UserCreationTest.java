@@ -1,3 +1,21 @@
+/*
+ * Copyright 2018 Cyface GmbH
+ *
+ * This file is part of the Cyface Data Collector.
+ *
+ * The Cyface Data Collector is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * The Cyface Data Collector is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with the Cyface Data Collector. If not, see <http://www.gnu.org/licenses/>.
+ */
 package de.cyface.collector;
 
 import java.io.IOException;
@@ -25,7 +43,8 @@ import io.vertx.ext.web.client.WebClient;
  * Tests whether user creation via the management API works as expected.
  * 
  * @author Klemens Muthmann
- * @version 1.0.1
+ * @author Armin Schnabel
+ * @version 1.0.2
  * @since 2.0.0
  */
 @RunWith(VertxUnitRunner.class)
@@ -37,7 +56,7 @@ public final class UserCreationTest {
     private static MongoTest mongoTest;
 
     /**
-     * The port the management API under test runs at. The test trys to find a free port by itself as part of its set
+     * The port the management API under test runs at. The test tries to find a free port by itself as part of its set
      * up.
      */
     private int port;
@@ -80,7 +99,7 @@ public final class UserCreationTest {
     }
 
     /**
-     * Initializes the <code>vertx</code> instance and deployes all required verticles. Also provides a
+     * Initializes the <code>vertx</code> instance and deploys all required verticles. Also provides a
      * <code>WebClient</code> to simulate client requests.
      * 
      * @param context The Vert.x test context used to control the test process.
