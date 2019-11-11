@@ -41,10 +41,10 @@ import io.vertx.ext.web.client.WebClient;
 
 /**
  * Tests whether user creation via the management API works as expected.
- * 
+ *
  * @author Klemens Muthmann
  * @author Armin Schnabel
- * @version 1.0.2
+ * @version 1.0.3
  * @since 2.0.0
  */
 @RunWith(VertxUnitRunner.class)
@@ -77,7 +77,7 @@ public final class UserCreationTest {
 
     /**
      * Boots the Mongo database before this test starts.
-     * 
+     *
      * @throws IOException If no socket was available for the Mongo database.
      */
     @BeforeClass
@@ -100,7 +100,7 @@ public final class UserCreationTest {
     /**
      * Initializes the <code>vertx</code> instance and deploys all required verticles. Also provides a
      * <code>WebClient</code> to simulate client requests.
-     * 
+     *
      * @param context The Vert.x test context used to control the test process.
      * @throws IOException If unable to open a socket for the test HTTP server.
      */
@@ -146,7 +146,7 @@ public final class UserCreationTest {
 
     /**
      * Tests that the normal process of creating a test user via the management interface works as expected.
-     * 
+     *
      * @param context The Vert.x test context used to control the test process.
      */
     @Test
@@ -154,7 +154,9 @@ public final class UserCreationTest {
         final Async async = context.async();
 
         client.post(port, "localhost", "/user").sendJsonObject(
-                new JsonObject().put("username", "test-user").put("password", "test-password"), result -> {
+                new JsonObject().put("username", "test-user").put("password", "test-password").put("role",
+                        "testGroup_user"),
+                result -> {
                     if (result.succeeded()) {
                         async.complete();
                     } else {
