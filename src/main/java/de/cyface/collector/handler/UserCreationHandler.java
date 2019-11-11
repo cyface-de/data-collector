@@ -1,13 +1,13 @@
 /*
  * Copyright 2018 Cyface GmbH
- * 
+ *
  * This file is part of the Cyface Data Collector.
  *
  * The Cyface Data Collector is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * The Cyface Data Collector is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
@@ -19,6 +19,7 @@
 package de.cyface.collector.handler;
 
 import java.util.ArrayList;
+import java.util.Collections;
 
 import org.apache.commons.lang3.Validate;
 
@@ -31,9 +32,10 @@ import io.vertx.ext.web.RoutingContext;
 
 /**
  * A handler that creates users inside the user Mongo database.
- * 
+ *
  * @author Klemens Muthmann
- * @version 1.0.0
+ * @author Armin Schnabel
+ * @version 1.1.0
  * @since 2.0.0
  */
 public final class UserCreationHandler implements Handler<RoutingContext> {
@@ -50,7 +52,7 @@ public final class UserCreationHandler implements Handler<RoutingContext> {
 
     /**
      * Creates a new completely initialized <code>UserCreationHandler</code>.
-     * 
+     *
      * @param mongoAuth An authenticator that uses credentials from the Mongo user database to authenticate users.
      */
     public UserCreationHandler(final MongoAuth mongoAuth) {
@@ -64,17 +66,17 @@ public final class UserCreationHandler implements Handler<RoutingContext> {
         final JsonObject body = event.getBodyAsJson();
         final String username = body.getString("username");
         final String password = body.getString("password");
+        final String role = body.getString("role");
 
-        mongoAuth.insertUser(username, password, new ArrayList<>(), new ArrayList<>(), ir -> {
-            if (ir.succeeded()) {
-                LOGGER.info("Added new user with id: " + username);
-                event.response().setStatusCode(201).end();
-            } else {
-                LOGGER.error("Unable to create user with id: " + username, ir.cause());
-                event.fail(400);
-            }
-        });
-
+        mongoAuth.insertUser(username, password, role.isEmpty() ? new ArrayList<>() : Collections.singletonList(role),
+                new ArrayList<>(), ir -> {
+                    if (ir.succeeded()) {
+                        LOGGER.info("Added new user with id: " + username);
+                        event.response().setStatusCode(201).end();
+                    } else {
+                        LOGGER.error("Unable to create user with id: " + username, ir.cause());
+                        event.fail(400);
+                    }
+                });
     }
-
 }
