@@ -24,7 +24,7 @@ paths:
                   description: Password for the new user.
                   type: string
                 role:
-                  description: Role for the new user. E.g. "mygroup_user" or "mygroup_manager".
+                  description: Role for the new user. Role "mygroup_manager" allows to access data of users with role "mygroup_user".
                   type: string
               required:
                 - username
