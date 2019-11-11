@@ -68,7 +68,8 @@ public final class UserCreationHandler implements Handler<RoutingContext> {
         final String password = body.getString("password");
         final String role = body.getString("role");
 
-        mongoAuth.insertUser(username, password, role.isEmpty() ? new ArrayList<>() : Collections.singletonList(role),
+        mongoAuth.insertUser(username, password,
+                role == null || role.isEmpty() ? new ArrayList<>() : Collections.singletonList(role),
                 new ArrayList<>(), ir -> {
                     if (ir.succeeded()) {
                         LOGGER.info("Added new user with id: " + username);
