@@ -86,11 +86,21 @@ public final class CollectorApiVerticle extends AbstractVerticle {
     public void start(final Future<Void> startFuture) throws Exception {
         Validate.notNull(startFuture);
 
+        // Setup Measurement event bus
         prepareEventBus();
 
+        // Deploy verticles with mongo_data config
         final JsonObject mongoDatabaseConfiguration = Parameter.MONGO_DATA_DB.jsonValue(vertx, new JsonObject());
         deployVerticles(mongoDatabaseConfiguration);
 
+        // Setup mongo user database client with authProvider
+        final JsonObject mongoUserDatabaseConfiguration = Parameter.MONGO_USER_DB.jsonValue(vertx, new JsonObject());
+        final MongoClient client = Utils.createSharedMongoClient(vertx, mongoUserDatabaseConfiguration);
+        final String salt = Parameter.SALT.stringValue(vertx, "cyface-salt");
+        final MongoAuth authProvider = Utils.buildMongoAuthProvider(client, salt);
+
+        // Start http server with auth config
+        final int httpPort = Parameter.COLLECTOR_HTTP_PORT.intValue(vertx, 8080);
         final String publicKey = extractKey(Parameter.JWT_PUBLIC_KEY_FILE_PATH);
         Validate.notNull(publicKey,
                 "Unable to load public key for JWT authentication. Did you provide a valid PEM file using the parameter "
@@ -99,13 +109,6 @@ public final class CollectorApiVerticle extends AbstractVerticle {
         Validate.notNull(privateKey,
                 "Unable to load private key for JWT authentication. Did you provide a valid PEM file using the parameter "
                         + Parameter.JWT_PRIVATE_KEY_FILE_PATH.key() + ".");
-        final JsonObject mongoUserDatabaseConfiguration = Parameter.MONGO_USER_DB.jsonValue(vertx, new JsonObject());
-        final MongoClient client = Utils.createSharedMongoClient(vertx, mongoUserDatabaseConfiguration);
-        final int httpPort = Parameter.COLLECTOR_HTTP_PORT.intValue(vertx, 8080);
-        final String salt = Parameter.SALT.stringValue(vertx, "cyface-salt");
-
-        final MongoAuth authProvider = Utils.buildMongoAuthProvider(client, salt);
-
         final Future<Void> serverStartFuture = Future.future();
         setupRoutes(publicKey, privateKey, authProvider, result -> {
             if (result.succeeded()) {
@@ -115,6 +118,8 @@ public final class CollectorApiVerticle extends AbstractVerticle {
                 serverStartFuture.fail(result.cause());
             }
         });
+
+        // Insert default admin user
         final String adminUsername = Parameter.ADMIN_USER_NAME.stringValue(vertx, "admin");
         final String adminPassword = Parameter.ADMIN_PASSWORD.stringValue(vertx, "secret");
         final Future<Void> defaultUserCreatedFuture = Future.future();
@@ -123,7 +128,6 @@ public final class CollectorApiVerticle extends AbstractVerticle {
                 defaultUserCreatedFuture.fail(result.cause());
                 return;
             }
-
             if (result.result() == null) {
                 authProvider.insertUser(adminUsername, adminPassword, new ArrayList<>(), new ArrayList<>(), ir -> {
                     LOGGER.info("Identifier of new user id: " + ir);
@@ -133,6 +137,8 @@ public final class CollectorApiVerticle extends AbstractVerticle {
                 defaultUserCreatedFuture.complete();
             }
         });
+
+        // Block until all futures completed
         final CompositeFuture startUpFinishedFuture = CompositeFuture.all(serverStartFuture, defaultUserCreatedFuture);
         startUpFinishedFuture.setHandler(r -> {
             if (r.succeeded()) {
@@ -153,7 +159,7 @@ public final class CollectorApiVerticle extends AbstractVerticle {
 
     /**
      * Deploys all additional <code>Verticle</code> objects required by the application.
-     * 
+     *
      * @param mongoDatabaseConfiguration The JSON configuration for the mongo database to store the uploaded data to.
      */
     private void deployVerticles(final JsonObject mongoDatabaseConfiguration) {
@@ -165,7 +171,7 @@ public final class CollectorApiVerticle extends AbstractVerticle {
 
     /**
      * Initializes all the routes available via the Cyface Data Collector.
-     * 
+     *
      * @param publicKey The public key used to check the validity of JWT tokens used for authentication.
      * @param privateKey The private key used to issue new valid JWT tokens.
      * @param mongoAuthProvider Authentication provider used to check for valid user accounts used to generate new JWT
@@ -281,7 +287,7 @@ public final class CollectorApiVerticle extends AbstractVerticle {
 
     /**
      * Extracts a key from a PEM keyfile.
-     * 
+     *
      * @param keyParameter The Vertx configuration parameter specifying the location of the file containing the key.
      * @return The extracted key.
      * @throws FileNotFoundException If the key file was not found.
