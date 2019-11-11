@@ -3,14 +3,14 @@ info:
   title: Cyface Data Collector Management Interface
   description: This is the internal endpoint to manage a Cyface Data Collector
   version: 5.0.0
-      
+
 paths:
   /user:
     post:
       summary: Create a new user for this Cyface data collector
       operationId: user
       requestBody:
-        description: The new users username and password.
+        description: The new users username, password and, optionally, role.
         required: true
         content:
           'application/json':
@@ -23,12 +23,16 @@ paths:
                 password:
                   description: Password for the new user.
                   type: string
+                role:
+                  description: Role for the new user. E.g. "mygroup_user" or "mygroup_manager".
+                  type: string
               required:
                 - username
                 - password
               example:
                 username: admin
                 password: secret
+                role: epicgroup_manager
       responses:
         '201':
           description: User was created successfully.
