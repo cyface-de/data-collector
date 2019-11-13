@@ -31,7 +31,8 @@ import io.vertx.core.json.JsonObject;
  * A POJO representing a single measurement, which has arrived at the API and needs to be stored to persistent storage.
  *
  * @author Klemens Muthmann
- * @version 4.0.0
+ * @author Armin Schnabel
+ * @version 5.0.0
  * @since 2.0.0
  */
 public final class Measurement {
@@ -383,6 +384,10 @@ public final class Measurement {
 
     /**
      * A class which holds the uploaded file and it's type, required to choose a deserialization strategy.
+     *
+     * @author Armin Schnabel
+     * @version 1.0.0
+     * @since 5.1.0
      */
     public static class FileUpload {
         private File file;
