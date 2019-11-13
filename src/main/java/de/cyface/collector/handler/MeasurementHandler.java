@@ -36,6 +36,7 @@ import static de.cyface.collector.handler.FormAttributes.VEHICLE_TYPE;
 
 import java.io.File;
 import java.nio.charset.Charset;
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -50,16 +51,17 @@ import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
 import io.vertx.ext.auth.User;
 import io.vertx.ext.web.RoutingContext;
+import org.apache.commons.io.FilenameUtils;
 
 /**
  * A handler for receiving HTTP POST requests on the "measurements" end point.
  * This end point is the core of this application and responsible for receiving
  * new measurements from any measurement device and forwarding those
  * measurements for persistent storage.
- * 
+ *
  * @author Klemens Muthmann
  * @author Armin Schnabel
- * @version 3.1.2
+ * @version 3.1.3
  * @since 2.0.0
  */
 public final class MeasurementHandler implements Handler<RoutingContext> {
@@ -101,6 +103,11 @@ public final class MeasurementHandler implements Handler<RoutingContext> {
      * {@value Long#MAX_VALUE}.
      */
     private static final int MAX_MEASUREMENT_ID_LENGTH = 20;
+    /**
+     * The supported file extensions for the uploaded files. The file extensions have semantically meaning as they are
+     * used to choose the deserialization method depending on the file type.
+     */
+    private static final String[] supportedFileExtensions = {"ccyf", "ccyfe"};
 
     @Override
     public void handle(final RoutingContext ctx) {
@@ -148,8 +155,10 @@ public final class MeasurementHandler implements Handler<RoutingContext> {
                 endLocation = new GeoLocation(endLocationLat, endLocationLon, endLocationTs);
             }
 
-            final Set<File> uploads = new HashSet<>();
-            ctx.fileUploads().forEach(upload -> uploads.add(new File(upload.uploadedFileName())));
+            final Set<Measurement.FileUpload> uploads = new HashSet<>();
+            ctx.fileUploads()
+                    .forEach(upload -> uploads.add(new Measurement.FileUpload(new File(upload.uploadedFileName()),
+                            FilenameUtils.getExtension(upload.fileName()))));
 
             if (parametersAreValid(deviceId, deviceType, measurementId, osVersion, applicationVersion, length,
                     locationCount, startLocation, endLocation, vehicleType, username, uploads)) {
@@ -171,7 +180,7 @@ public final class MeasurementHandler implements Handler<RoutingContext> {
 
     /**
      * Informs the system about a new measurement that has arrived.
-     * 
+     *
      * @param measurement The newly arrived measurement.
      * @param context The routing context necessary to get access to the Vert.x
      *            event bus.
@@ -184,7 +193,7 @@ public final class MeasurementHandler implements Handler<RoutingContext> {
 
     /**
      * Checks the validity of the values of all multi part fields, provided together with a measurement.
-     * 
+     *
      * @param deviceId The world wide unique identifier of the device uploading the data.
      * @param deviceType The type of device uploading the data, such as Pixel 3 or iPhone 6 Plus.
      * @param measurementId The device wide unique identifier of the uploaded measurement.
@@ -206,7 +215,7 @@ public final class MeasurementHandler implements Handler<RoutingContext> {
     private boolean parametersAreValid(final String deviceId, final String deviceType, final String measurementId,
             final String osVersion, final String applicationVersion, final double length, final long locationCount,
             final GeoLocation startLocation, final GeoLocation endLocation, final String vehicleType,
-            final String username, final Set<File> uploads) {
+            final String username, final Set<Measurement.FileUpload> uploads) {
         if (deviceId == null) {
             LOGGER.error("Field deviceId was null!");
             return false;
@@ -314,7 +323,15 @@ public final class MeasurementHandler implements Handler<RoutingContext> {
             return false;
         }
 
-        return true;
+        for (final Measurement.FileUpload fileUpload : uploads) {
+            if (!Arrays.asList(supportedFileExtensions).contains(fileUpload.getFileType())) {
+                LOGGER.error(
+                        String.format("MultiPart contained file with unsupported file type (file extension): %s",
+                                fileUpload.getFileType()));
+                return false;
+            }
+        }
 
+        return true;
     }
 }

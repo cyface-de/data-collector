@@ -1,13 +1,13 @@
 /*
  * Copyright 2018 Cyface GmbH
- * 
+ *
  * This file is part of the Cyface Data Collector.
  *
  * The Cyface Data Collector is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * The Cyface Data Collector is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
@@ -26,9 +26,12 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 
+import io.vertx.core.json.JsonObject;
+import org.apache.commons.io.FilenameUtils;
 import org.bson.Document;
 
 import com.mongodb.ConnectionString;
@@ -52,7 +55,7 @@ import io.vertx.core.logging.LoggerFactory;
 /**
  * This <code>Verticle</code> listens for new measurements arriving in the system and stores them to the MongoDB for
  * persistent storage.
- * 
+ *
  * @author Klemens Muthmann
  * @version 1.1.3
  * @since 2.0.0
@@ -96,7 +99,7 @@ public final class SerializationVerticle extends AbstractVerticle implements Han
                 .create(new ConnectionString(mongoConnectionString)).getDatabase(mongoDatabaseName);
         final GridFSBucket gridFsBucket = GridFSBuckets.create(db);
 
-        final Collection<File> filesToUpload = measurement.getFileUploads();
+        final Collection<Measurement.FileUpload> filesToUpload = measurement.getFileUploads();
         @SuppressWarnings("rawtypes")
         final List<Future> fileUploadFutures = new ArrayList<>(filesToUpload.size());
 
@@ -106,14 +109,17 @@ public final class SerializationVerticle extends AbstractVerticle implements Han
             Future<String> future = Future.future();
             try {
                 fileUploadFutures.add(future);
-                FileInputStream fileInputStream = new FileInputStream(upload.getAbsolutePath());
+                FileInputStream fileInputStream = new FileInputStream(upload.getFile().getAbsolutePath());
                 AsyncInputStream asyncStream = com.mongodb.async.client.gridfs.helpers.AsyncStreamHelper
                         .toAsyncInputStream(fileInputStream);
 
-                final GridFSUploadOptions options = new GridFSUploadOptions()
-                        .metadata(Document.parse(measurement.toJson().toString()));
+                JsonObject measurementJson = measurement.toJson();
+                measurementJson.put("fileType", upload.getFileType());
 
-                gridFsBucket.uploadFromStream(upload.getName(), asyncStream, options, (result, throwable) -> {
+                final GridFSUploadOptions options = new GridFSUploadOptions()
+                        .metadata(Document.parse(measurementJson.toString()));
+
+                gridFsBucket.uploadFromStream(upload.getFile().getName(), asyncStream, options, (result, throwable) -> {
                     LOGGER.debug("Saved file as object " + result);
                     future.complete();
                 });
@@ -135,7 +141,7 @@ public final class SerializationVerticle extends AbstractVerticle implements Han
 
     /**
      * Fails saving the measurement by sending an appropriate message over the event bus.
-     * 
+     *
      * @param res The <code>Throwable</code> causing the failure. This contains further information about the reason
      *            the serialization failed.
      * @param measurement The measurement for which synchronization failed.

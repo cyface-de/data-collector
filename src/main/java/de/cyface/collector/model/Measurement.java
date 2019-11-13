@@ -1,13 +1,13 @@
 /*
  * Copyright 2018, 2019 Cyface GmbH
- * 
+ *
  * This file is part of the Cyface Data Collector.
  *
  * The Cyface Data Collector is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * The Cyface Data Collector is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
@@ -29,7 +29,7 @@ import io.vertx.core.json.JsonObject;
 
 /**
  * A POJO representing a single measurement, which has arrived at the API and needs to be stored to persistent storage.
- * 
+ *
  * @author Klemens Muthmann
  * @version 4.0.0
  * @since 2.0.0
@@ -83,11 +83,11 @@ public final class Measurement {
     /**
      * A list of files uploaded together with the measurement. These files contain the actual data.
      */
-    private final Collection<File> fileUploads;
+    private final Collection<FileUpload> fileUploads;
 
     /**
      * Creates a new completely initialized object of this class.
-     * 
+     *
      * @param deviceIdentifier The world wide unique identifier of the device uploading the data.
      * @param measurementIdentifier The device wide unique identifier of the uploaded measurement.
      * @param operatingSystemVersion The operating system version, such as Android 9.0.0 or iOS 11.2.
@@ -101,13 +101,14 @@ public final class Measurement {
      *            measurement.
      * @param vehicle The type of the vehicle that has captured the measurement.
      * @param username The name of the user uploading the measurement.
-     * @param fileUploads A list of files uploaded together with the measurement. These files contain the actual data.
+     * @param fileUploads A list of {@link FileUpload}s uploaded together with the measurement. These files contain the
+     *            actual data.
      */
     public Measurement(final String deviceIdentifier, final String measurementIdentifier,
             final String operatingSystemVersion, final String deviceType, final String applicationVersion,
             final double length, final long locationCount, final GeoLocation startLocation,
             final GeoLocation endLocation, final String vehicle, final String username,
-            final Collection<File> fileUploads) {
+            final Collection<FileUpload> fileUploads) {
         this.deviceIdentifier = deviceIdentifier;
         this.measurementIdentifier = measurementIdentifier;
         this.operatingSystemVersion = operatingSystemVersion;
@@ -153,7 +154,7 @@ public final class Measurement {
     /**
      * @return A list of files uploaded together with the measurement. These files contain the actual data.
      */
-    public Collection<File> getFileUploads() {
+    public Collection<FileUpload> getFileUploads() {
         return fileUploads;
     }
 
@@ -283,8 +284,10 @@ public final class Measurement {
                     buffer.appendLong(endLocationTimestamp);
                 }
                 s.getFileUploads().forEach(fu -> {
-                    buffer.appendInt(fu.getAbsolutePath().length());
-                    buffer.appendString(fu.getAbsolutePath());
+                    buffer.appendInt(fu.file.getAbsolutePath().length());
+                    buffer.appendString(fu.file.getAbsolutePath());
+                    buffer.appendInt(fu.fileType.length());
+                    buffer.appendString(fu.fileType);
                 });
             }
 
@@ -341,15 +344,18 @@ public final class Measurement {
                     startOfFileUploads = endLocationTimestampEnd;
                 }
 
-                Collection<File> fileUploads = new HashSet<>();
+                Collection<FileUpload> fileUploads = new HashSet<>();
                 int iterationStartByte = startOfFileUploads;
                 for (int i = 0; i < numberOfFileUploads; i++) {
                     int entryLength = buffer.getInt(iterationStartByte);
                     String fileName = buffer.getString(4 + iterationStartByte, 4 + iterationStartByte + entryLength);
                     iterationStartByte += 4 + iterationStartByte + entryLength;
+                    int extensionLength = buffer.getInt(iterationStartByte);
+                    String fileType = buffer.getString(4 + iterationStartByte,
+                            4 + iterationStartByte + extensionLength);
 
                     File uploadFile = new File(fileName);
-                    fileUploads.add(uploadFile);
+                    fileUploads.add(new FileUpload(uploadFile, fileType));
                 }
 
                 return new Measurement(deviceIdentifier, measurementIdentifier, operatingSystemVersion, deviceType,
@@ -375,4 +381,24 @@ public final class Measurement {
 
     }
 
+    /**
+     * A class which holds the uploaded file and it's type, required to choose a deserialization strategy.
+     */
+    public static class FileUpload {
+        private File file;
+        private String fileType;
+
+        public FileUpload(final File file, final String fileType) {
+            this.file = file;
+            this.fileType = fileType;
+        }
+
+        public File getFile() {
+            return file;
+        }
+
+        public String getFileType() {
+            return fileType;
+        }
+    }
 }
