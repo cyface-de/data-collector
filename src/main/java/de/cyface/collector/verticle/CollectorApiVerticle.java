@@ -239,9 +239,9 @@ public final class CollectorApiVerticle extends AbstractVerticle {
                         .setAudience(Collections.singletonList(audience)))
                 .handler(new MeasurementHandler());
         // .failureHandler(new AuthenticationFailureHandler());
-
+        // Set up web api
         v2ApiRouter.route().handler(StaticHandler.create("webroot/api"));
-
+        // Set up failure handler for all other resources
         mainRouter.route("/*").last().handler(new FailureHandler());
 
         /*

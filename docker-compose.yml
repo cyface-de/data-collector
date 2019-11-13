@@ -1,12 +1,12 @@
 # Copyright 2018, 2019 Cyface GmbH
-# 
+#
 # This file is part of the Cyface Data Collector.
-# 
+#
 # The Cyface Data Collector is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
-#  
+#
 # The Cyface Data Collector is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
@@ -19,60 +19,72 @@
 
 version: "3.5"
 services:
-    # Mongo Database Container
-    mongo-data:
-      container_name: collector_mongo-data
-      image: mongo:4.0.11
-      ports:
-        - "27019:27017"
-      volumes:
-        - type: volume
-          source: mongo-data-db
-          target: /data/db
-        
-    mongo-user:
-      container_name: collector_mongo-user
-      image: mongo:4.0.11
-      ports:
-        - "27018:27017"
-      volumes:
-        - type: volume
-          source: mongo-user-db 
-          target: /data/db
-        - type: bind
-          source: ./mongo-user-init-scripts
-          target: /docker-entrypoint-initdb.d/
-      environment:
-        MONGO_INITDB_DATABASE: cyface-user
+  # Mongo Database Container
+  mongo-data:
+    container_name: collector_mongo-data
+    image: mongo:4.0.11
+    ports:
+      - "27019:27017"
+    volumes:
+      - type: volume
+        source: mongo-data-db
+        target: /data/db
+    networks:
+      - default
+      - database
 
-    # The Cyface Collector API Container
-    api:
-      container_name: collector_api
-      build: .
-      image: cyfacede/collector:5.0.0
-      ports: # It is ok that this entry manipulates the host's ip-tables since this compose file should only be used in dev environments.
-        - "8080:8080"
-        - "13371:13371"
-      volumes:
-        - ./secrets:/app/secrets
-        - ./logs:/logs
-      depends_on:
-        - mongo-data
-        - mongo-user
-      environment:
-        - ADMIN_USER=admin
-        - ADMIN_PASSWORD=secret
-        
+  mongo-user:
+    container_name: collector_mongo-user
+    image: mongo:4.0.11
+    ports:
+      - "27018:27017"
+    volumes:
+      - type: volume
+        source: mongo-user-db
+        target: /data/db
+      - type: bind
+        source: ./mongo-user-init-scripts
+        target: /docker-entrypoint-initdb.d/
+    environment:
+      MONGO_INITDB_DATABASE: cyface-user
+    networks:
+      - default
+      - database
+
+  # The Cyface Collector API Container
+  api:
+    container_name: collector_api
+    build: .
+    image: cyfacede/collector:5.0.0
+    ports: # It is ok that this entry manipulates the host's ip-tables since this compose file should only be used in dev environments.
+      - "8080:8080"
+      - "13371:13371"
+    volumes:
+      - ./secrets:/app/secrets
+      - ./logs:/logs
+    depends_on:
+      - mongo-data
+      - mongo-user
+    environment:
+      - ADMIN_USER=admin
+      - ADMIN_PASSWORD=secret
+    networks:
+      - default
+      - database
+
 volumes:
-    mongo-data-db:
-    mongo-user-db:
+  mongo-data-db:
+  mongo-user-db:
 
 networks:
-    default:
-        name: cyface-collector
-        ipam:
-          driver: default
-          config:
-            # Configure the IP Address range to not conflict with Deutsche Bahn WiFi
-            - subnet: 172.72.0.1/24
-            - subnet: 2001:3984:3989::/64
+  default:
+    name: cyface-collector
+    ipam:
+      driver: default
+      config:
+        # Configure the IP Address range to not conflict with Deutsche Bahn WiFi
+        - subnet: 172.72.0.1/24
+        - subnet: 2001:3984:3989::/64
+  # Shared docker network. Allows "exporter" docker container to access APIs without exposing them to the outside world
+  database:
+    name: cyface-collector_database
