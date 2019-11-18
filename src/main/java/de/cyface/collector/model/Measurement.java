@@ -472,18 +472,39 @@ public final class Measurement {
      * @since 5.1.0
      */
     public static class FileUpload {
+        /**
+         * A handle for the uploaded file on the local file system.
+         */
         private File file;
+        /**
+         * The type of the data stored in this file. This corresponds to the extension of the file. Compressed sensor
+         * data for example is identified via the <tt>ccyf</tt> extension, while event files use <tt>ccyfe</tt>.
+         */
         private String fileType;
 
+        /**
+         * @param file A handle for the uploaded file on the local file system.
+         * @param fileType The type of the data stored in this file. This corresponds to the extension of the file.
+         *            Compressed sensor data for example is identified via the <tt>ccyf</tt> extension, while event
+         *            files use <tt>ccyfe</tt>.
+         */
         public FileUpload(final File file, final String fileType) {
             this.file = file;
             this.fileType = fileType;
         }
 
+        /**
+         * @return A handle for the uploaded file on the local file system.
+         */
         public File getFile() {
             return file;
         }
 
+        /**
+         * @return The type of the data stored in this file. This corresponds to the extension of the file. Compressed
+         *         sensor data for example is identified via the <tt>ccyf</tt> extension, while event files use
+         *         <tt>ccyfe</tt>.
+         */
         public String getFileType() {
             return fileType;
         }
