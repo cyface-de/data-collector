@@ -131,7 +131,7 @@ public final class MeasurementHandler implements Handler<RoutingContext> {
             response.end();
 
         } catch (final  IllegalArgumentException | NullPointerException e) {
-            LOGGER.error("Data was not parsable!");
+            LOGGER.error("Data was not parsable!", e);
             ctx.fail(422);
         }
 

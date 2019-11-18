@@ -182,7 +182,7 @@ public final class Measurement {
         Validate.notNull(username, "Field username was null!");
         Validate.isTrue(!username.isEmpty() && username.length() <= MAX_GENERIC_METADATA_FIELD_LENGTH,
                 "Field username had an invalid length of {}!", username.length());
-        Validate.isTrue(fileUploads.size() != ACCEPTED_NUMBER_OF_FILES,
+        Validate.isTrue(fileUploads.size() == ACCEPTED_NUMBER_OF_FILES,
                 String.format("MultiPart contained %d files but should contain exactly %d", fileUploads.size(),
                         ACCEPTED_NUMBER_OF_FILES));
 

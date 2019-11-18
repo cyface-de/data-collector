@@ -18,9 +18,13 @@
  */
 package de.cyface.collector;
 
+import java.io.File;
 import java.io.IOException;
 import java.net.ServerSocket;
+import java.util.Arrays;
 import java.util.Collections;
+import java.util.List;
+import java.util.UUID;
 
 import org.junit.After;
 import org.junit.Before;
@@ -60,6 +64,7 @@ public final class EventBusTest {
      * <tt>-Dvertx.logger-delegate-factory-class-name=io.vertx.core.logging.SLF4JLogDelegateFactory</tt>.
      */
     private static final Logger LOGGER = LoggerFactory.getLogger(EventBusTest.class);
+    private final static String TEST_DEVICE_IDENTIFIER = UUID.randomUUID().toString();
     /**
      * Process providing a connection to the test Mongo database.
      */
@@ -112,9 +117,10 @@ public final class EventBusTest {
      * Tests if the {@link SerializationVerticle} handles new measurements arriving in the system correctly.
      * 
      * @param context The Vert.x context used for testing.
+     * @throws IOException If working with the data files fails.
      */
     @Test
-    public void test(final TestContext context) {
+    public void test(final TestContext context) throws IOException {
         final Async async = context.async();
 
         final EventBus eventBus = vertx.eventBus();
@@ -144,7 +150,7 @@ public final class EventBusTest {
                         final double endLocationLon = json.getDouble(FormAttributes.END_LOCATION_LON.getValue());
                         final long endLocationTimestamp = json.getLong(FormAttributes.END_LOCATION_TS.getValue());
 
-                        context.assertEquals("some_device", deviceIdentifier);
+                        context.assertEquals(TEST_DEVICE_IDENTIFIER, deviceIdentifier);
                         context.assertEquals("2", measurementIdentifier);
                         context.assertEquals("9.0.0", operatingSystemVersion);
                         context.assertEquals("Pixel 2", deviceType);
@@ -169,9 +175,9 @@ public final class EventBusTest {
         });
 
         eventBus.publish(EventBusAddresses.NEW_MEASUREMENT,
-                new Measurement("some_device", "2", "9.0.0", "Pixel 2", "4.0.0-alpha1", 200.0, 10,
+                new Measurement(TEST_DEVICE_IDENTIFIER, "2", "9.0.0", "Pixel 2", "4.0.0-alpha1", 200.0, 10,
                         new GeoLocation(10.0, 10.0, 10_000), new GeoLocation(12.0, 12.0, 12_000), "BICYCLE", "testUser",
-                        Collections.emptyList()));
+                        fixtureUploads()));
 
         async.await(5_000L);
     }
@@ -180,9 +186,10 @@ public final class EventBusTest {
      * Tests that handling measurements without geo locations works as expected.
      * 
      * @param context The Vert.x context used for testing.
+     * @throws IOException If working with the data files fails.
      */
     @Test
-    public void testPublishMeasurementWithNoGeoLocations_HappyPath(final TestContext context) {
+    public void testPublishMeasurementWithNoGeoLocations_HappyPath(final TestContext context) throws IOException {
         final Async async = context.async();
 
         final EventBus eventBus = vertx.eventBus();
@@ -212,7 +219,7 @@ public final class EventBusTest {
                         final Double endLocationLon = json.getDouble(FormAttributes.END_LOCATION_LON.getValue());
                         final Long endLocationTimestamp = json.getLong(FormAttributes.END_LOCATION_TS.getValue());
 
-                        context.assertEquals("some_device", deviceIdentifier);
+                        context.assertEquals(TEST_DEVICE_IDENTIFIER, deviceIdentifier);
                         context.assertEquals("2", measurementIdentifier);
                         context.assertEquals("9.0.0", operatingSystemVersion);
                         context.assertEquals("Pixel 2", deviceType);
@@ -233,10 +240,24 @@ public final class EventBusTest {
             }
         });
 
-        eventBus.publish(EventBusAddresses.NEW_MEASUREMENT, new Measurement("some_device", "2", "9.0.0", "Pixel 2",
-                "4.0.0-alpha1", .0, 0L, null, null, "BICYCLE", "testUser", Collections.emptyList()));
+        eventBus.publish(EventBusAddresses.NEW_MEASUREMENT,
+                new Measurement(TEST_DEVICE_IDENTIFIER, "2", "9.0.0", "Pixel 2",
+                        "4.0.0-alpha1", .0, 0L, null, null, "BICYCLE", "testUser", fixtureUploads()));
 
         async.await(5_000L);
+    }
+
+    /**
+     * Provides a fixture simulating the files necessary to create an appropriate measurement.
+     *
+     * @return A fixture containing empty files for data and events.
+     * @throws IOException If writing the empty temporary files fails for some reason.
+     */
+    private List<Measurement.FileUpload> fixtureUploads() throws IOException {
+        final File dataFile = File.createTempFile("data", "ccyf");
+        final File eventsFile = File.createTempFile("events", "ccyfe");
+        return Arrays.asList(new Measurement.FileUpload(dataFile, "ccyf"),
+                new Measurement.FileUpload(eventsFile, "ccyfe"));
     }
 
 }
