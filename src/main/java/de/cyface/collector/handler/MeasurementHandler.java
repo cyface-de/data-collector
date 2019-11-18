@@ -35,10 +35,10 @@ import static de.cyface.collector.handler.FormAttributes.START_LOCATION_TS;
 import static de.cyface.collector.handler.FormAttributes.VEHICLE_TYPE;
 
 import java.io.File;
-import java.nio.charset.Charset;
-import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
+
+import org.apache.commons.io.FilenameUtils;
 
 import de.cyface.collector.EventBusAddresses;
 import de.cyface.collector.model.GeoLocation;
@@ -51,7 +51,6 @@ import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
 import io.vertx.ext.auth.User;
 import io.vertx.ext.web.RoutingContext;
-import org.apache.commons.io.FilenameUtils;
 
 /**
  * A handler for receiving HTTP POST requests on the "measurements" end point.
@@ -72,42 +71,6 @@ public final class MeasurementHandler implements Handler<RoutingContext> {
      * <code>src/main/resources/logback.xml</code>.
      */
     private static final Logger LOGGER = LoggerFactory.getLogger(MeasurementHandler.class);
-
-    /**
-     * Maximum size of a meta data field, with plenty space for future development. This prevents attackers from putting
-     * arbitrary long data into these fields.
-     */
-    private static final int MAX_GENERIC_METADATA_FIELD_LENGTH = 30;
-    /**
-     * The default char set to use for encoding and decoding strings transmitted as meta data.
-     */
-    private static final String DEFAULT_CHARSET = "UTF-8";
-    /**
-     * The number of files uploaded with a single request.
-     */
-    private static final int ACCEPTED_NUMBER_OF_FILES = 2;
-    /**
-     * The length of a universal unique identifier.
-     */
-    private static final int UUID_LENGTH = 36;
-    /**
-     * The minimum length of a track stored with a measurement.
-     */
-    private static final double MINIMUM_TRACK_LENGTH = 0.0;
-    /**
-     * The minimum valid amount of locations stored inside a measurement.
-     */
-    private static final long MINIMUM_LOCATION_COUNT = 0L;
-    /**
-     * The maximum length of the measurement identifier in characters (this is the amount of characters of
-     * {@value Long#MAX_VALUE}.
-     */
-    private static final int MAX_MEASUREMENT_ID_LENGTH = 20;
-    /**
-     * The supported file extensions for the uploaded files. The file extensions have semantically meaning as they are
-     * used to choose the deserialization method depending on the file type.
-     */
-    private static final String[] supportedFileExtensions = {"ccyf", "ccyfe"};
 
     @Override
     public void handle(final RoutingContext ctx) {
@@ -160,18 +123,14 @@ public final class MeasurementHandler implements Handler<RoutingContext> {
                     .forEach(upload -> uploads.add(new Measurement.FileUpload(new File(upload.uploadedFileName()),
                             FilenameUtils.getExtension(upload.fileName()))));
 
-            if (parametersAreValid(deviceId, deviceType, measurementId, osVersion, applicationVersion, length,
-                    locationCount, startLocation, endLocation, vehicleType, username, uploads)) {
-                informAboutNew(new Measurement(deviceId, measurementId, osVersion, deviceType, applicationVersion,
-                        length, locationCount, startLocation, endLocation, vehicleType, username, uploads), ctx);
+            informAboutNew(new Measurement(deviceId, measurementId, osVersion, deviceType, applicationVersion,
+                    length, locationCount, startLocation, endLocation, vehicleType, username, uploads), ctx);
 
-                response.setStatusCode(201);
-                LOGGER.debug("Request was successful!");
-                response.end();
-            } else {
-                ctx.fail(422);
-            }
-        } catch (final NumberFormatException e) {
+            response.setStatusCode(201);
+            LOGGER.debug("Request was successful!");
+            response.end();
+
+        } catch (final  IllegalArgumentException | NullPointerException e) {
             LOGGER.error("Data was not parsable!");
             ctx.fail(422);
         }
@@ -189,149 +148,5 @@ public final class MeasurementHandler implements Handler<RoutingContext> {
     private void informAboutNew(final Measurement measurement, final RoutingContext context) {
         final EventBus eventBus = context.vertx().eventBus();
         eventBus.publish(NEW_MEASUREMENT, measurement);
-    }
-
-    /**
-     * Checks the validity of the values of all multi part fields, provided together with a measurement.
-     *
-     * @param deviceId The world wide unique identifier of the device uploading the data.
-     * @param deviceType The type of device uploading the data, such as Pixel 3 or iPhone 6 Plus.
-     * @param measurementId The device wide unique identifier of the uploaded measurement.
-     * @param osVersion The operating system version, such as Android 9.0.0 or iOS 11.2.
-     * @param applicationVersion The version of the app that transmitted the measurement.
-     * @param length The length of the measurement in meters.
-     * @param locationCount The count of geo locations in the transmitted measurement.
-     * @param startLocation The geo location at the beginning of the track represented by the transmitted measurement.
-     *            This value is optional and may not be available for measurements without locations. For measurements
-     *            with one location this equals the {@param #endLocation}.
-     * @param endLocation The geo location at the end of the track represented by the transmitted measurement. This
-     *            value is optional and may not be available for measurements without locations. For measurements
-     *            with one location this equals the {@param startLocation}.
-     * @param vehicleType The type of the vehicle that has captured the measurement.
-     * @param username The name of the user uploading the measurement.
-     * @param uploads The files transmitted with the upload request.
-     * @return <code>true</code> if all field are valid; <code>false</code> otherwise.
-     */
-    private boolean parametersAreValid(final String deviceId, final String deviceType, final String measurementId,
-            final String osVersion, final String applicationVersion, final double length, final long locationCount,
-            final GeoLocation startLocation, final GeoLocation endLocation, final String vehicleType,
-            final String username, final Set<Measurement.FileUpload> uploads) {
-        if (deviceId == null) {
-            LOGGER.error("Field deviceId was null!");
-            return false;
-        }
-
-        if (deviceId.getBytes(Charset.forName(DEFAULT_CHARSET)).length != UUID_LENGTH) {
-            LOGGER.error("Field deviceId was not exactly 128 Bit, which is required for UUIDs!");
-            return false;
-        }
-
-        if (deviceType == null) {
-            LOGGER.error("Field deviceType was null!");
-            return false;
-        }
-
-        if (deviceType.isEmpty() || deviceType.length() > MAX_GENERIC_METADATA_FIELD_LENGTH) {
-            LOGGER.error("Field deviceType had an invalid length of {}!", deviceType.length());
-            return false;
-        }
-
-        if (measurementId == null) {
-            LOGGER.error("Field measurementId was null!");
-            return false;
-        }
-
-        if (measurementId.isEmpty() || measurementId.length() > MAX_MEASUREMENT_ID_LENGTH) {
-            LOGGER.error("Field measurementId had an invalid length of {}!", measurementId.length());
-            return false;
-        }
-
-        if (osVersion == null) {
-            LOGGER.error("Field osVersion was null!");
-            return false;
-        }
-
-        if (osVersion.isEmpty() || osVersion.length() > MAX_GENERIC_METADATA_FIELD_LENGTH) {
-            LOGGER.error("Field osVersion had an invalid length of {}!", osVersion.length());
-            return false;
-        }
-
-        if (applicationVersion == null) {
-            LOGGER.error("Field applicationVersion was null!");
-            return false;
-        }
-
-        if (applicationVersion.isEmpty() || applicationVersion.length() > MAX_GENERIC_METADATA_FIELD_LENGTH) {
-            LOGGER.error("Field applicationVersion had an invalid length of {}!", applicationVersion.length());
-            return false;
-        }
-
-        if (length < MINIMUM_TRACK_LENGTH) {
-            LOGGER.error("Field length had an invalid value {} which is smaller then 0.0!", length);
-            return false;
-        }
-
-        if (locationCount < MINIMUM_LOCATION_COUNT) {
-            LOGGER.error("Field locationCount had an invalid value {} which is smaller then 0!", locationCount);
-            return false;
-        }
-
-        if (locationCount == MINIMUM_LOCATION_COUNT) {
-            if (startLocation != null) {
-                LOGGER.error("Field locationCount is 0 but a start location is defined. This is invalid!");
-                return false;
-            }
-            if (endLocation != null) {
-                LOGGER.error("Field locationCount is 0 but an end location is defined. This is invalid!");
-                return false;
-            }
-        } else {
-            if (startLocation == null) {
-                LOGGER.error("Field startLocation was not set for a track with one or more locations!");
-                return false;
-            }
-
-            if (endLocation == null) {
-                LOGGER.error("Field endLocation was not set for a track with one or more locations!");
-                return false;
-            }
-        }
-
-        if (vehicleType == null) {
-            LOGGER.error("Field vehicleType was null!");
-            return false;
-        }
-
-        if (vehicleType.isEmpty() || vehicleType.length() > MAX_GENERIC_METADATA_FIELD_LENGTH) {
-            LOGGER.error("Field vehicleType had an invalid length of {}!", vehicleType.length());
-            return false;
-        }
-
-        if (username == null) {
-            LOGGER.error("Field username was null!");
-            return false;
-        }
-
-        if (username.isEmpty() || username.length() > MAX_GENERIC_METADATA_FIELD_LENGTH) {
-            LOGGER.error("Field username had an invalid length of {}!", username.length());
-            return false;
-        }
-
-        if (uploads.size() != ACCEPTED_NUMBER_OF_FILES) {
-            LOGGER.error(String.format("MultiPart contained %d files but should contain exactly %d", uploads.size(),
-                    ACCEPTED_NUMBER_OF_FILES));
-            return false;
-        }
-
-        for (final Measurement.FileUpload fileUpload : uploads) {
-            if (!Arrays.asList(supportedFileExtensions).contains(fileUpload.getFileType())) {
-                LOGGER.error(
-                        String.format("MultiPart contained file with unsupported file type (file extension): %s",
-                                fileUpload.getFileType()));
-                return false;
-            }
-        }
-
-        return true;
     }
 }

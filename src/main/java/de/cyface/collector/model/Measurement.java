@@ -19,8 +19,12 @@
 package de.cyface.collector.model;
 
 import java.io.File;
+import java.nio.charset.Charset;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashSet;
+
+import org.apache.commons.lang3.Validate;
 
 import de.cyface.collector.handler.FormAttributes;
 import io.vertx.core.buffer.Buffer;
@@ -36,6 +40,41 @@ import io.vertx.core.json.JsonObject;
  * @since 2.0.0
  */
 public final class Measurement {
+    /**
+     * The length of a universal unique identifier.
+     */
+    private static final int UUID_LENGTH = 36;
+    /**
+     * The default char set to use for encoding and decoding strings transmitted as meta data.
+     */
+    private static final String DEFAULT_CHARSET = "UTF-8";
+    /**
+     * Maximum size of a meta data field, with plenty space for future development. This prevents attackers from putting
+     * arbitrary long data into these fields.
+     */
+    private static final int MAX_GENERIC_METADATA_FIELD_LENGTH = 30;
+    /**
+     * The maximum length of the measurement identifier in characters (this is the amount of characters of
+     * {@value Long#MAX_VALUE}.
+     */
+    private static final int MAX_MEASUREMENT_ID_LENGTH = 20;
+    /**
+     * The minimum length of a track stored with a measurement.
+     */
+    private static final double MINIMUM_TRACK_LENGTH = 0.0;
+    /**
+     * The number of files uploaded with a single request.
+     */
+    private static final int ACCEPTED_NUMBER_OF_FILES = 2;
+    /**
+     * The minimum valid amount of locations stored inside a measurement.
+     */
+    private static final long MINIMUM_LOCATION_COUNT = 0L;
+    /**
+     * The supported file extensions for the uploaded files. The file extensions have semantically meaning as they are
+     * used to choose the deserialization method depending on the file type.
+     */
+    private static final String[] SUPPORTED_FILE_EXTENSIONS = {"ccyf", "ccyfe"};
     /**
      * The world wide unique identifier of the device uploading the data.
      */
@@ -110,6 +149,49 @@ public final class Measurement {
             final double length, final long locationCount, final GeoLocation startLocation,
             final GeoLocation endLocation, final String vehicle, final String username,
             final Collection<FileUpload> fileUploads) {
+        Validate.notNull(deviceIdentifier, "Field deviceId was null!");
+        Validate.isTrue(deviceIdentifier.getBytes(Charset.forName(DEFAULT_CHARSET)).length == UUID_LENGTH,
+                "Field deviceId was not exactly 128 Bit, which is required for UUIDs!");
+        Validate.notNull(deviceType, "Field deviceType was null!");
+        Validate.isTrue(!deviceType.isEmpty() && deviceType.length() <= MAX_GENERIC_METADATA_FIELD_LENGTH,
+                "Field deviceType had an invalid length of {}!", deviceType.length());
+        Validate.notNull(measurementIdentifier, "Field measurementId was null!");
+        Validate.isTrue(
+                !measurementIdentifier.isEmpty() && measurementIdentifier.length() <= MAX_MEASUREMENT_ID_LENGTH,
+                "Field measurementId had an invalid length of {}!", measurementIdentifier.length());
+        Validate.notNull(operatingSystemVersion, "Field osVersion was null!");
+        Validate.isTrue(
+                !operatingSystemVersion.isEmpty()
+                        && operatingSystemVersion.length() <= MAX_GENERIC_METADATA_FIELD_LENGTH,
+                "Field osVersion had an invalid length of {}!", operatingSystemVersion.length());
+        Validate.notNull(applicationVersion, "Field applicationVersion was null!");
+        Validate.isTrue(
+                !applicationVersion.isEmpty() && applicationVersion.length() <= MAX_GENERIC_METADATA_FIELD_LENGTH,
+                "Field applicationVersion had an invalid length of {}!", applicationVersion.length());
+        Validate.isTrue(length >= MINIMUM_TRACK_LENGTH,
+                "Field length had an invalid value {} which is smaller then 0.0!", length);
+        Validate.isTrue(locationCount >= MINIMUM_LOCATION_COUNT,
+                "Field locationCount had an invalid value {} which is smaller then 0!", locationCount);
+        Validate.isTrue((locationCount == MINIMUM_LOCATION_COUNT && startLocation == null) || startLocation != null,
+                "Start location should only be defined if there is at least one location in the uploaded track!");
+        Validate.isTrue((locationCount == MINIMUM_LOCATION_COUNT && endLocation == null) || endLocation != null,
+                "End location should only be defined if there is at least one location in the uploaded track!");
+        Validate.notNull(vehicle, "Field vehicleType was null!");
+        Validate.isTrue(!vehicle.isEmpty() && vehicle.length() <= MAX_GENERIC_METADATA_FIELD_LENGTH,
+                "Field vehicleType had an invalid length of {}!", vehicle.length());
+        Validate.notNull(username, "Field username was null!");
+        Validate.isTrue(!username.isEmpty() && username.length() <= MAX_GENERIC_METADATA_FIELD_LENGTH,
+                "Field username had an invalid length of {}!", username.length());
+        Validate.isTrue(fileUploads.size() != ACCEPTED_NUMBER_OF_FILES,
+                String.format("MultiPart contained %d files but should contain exactly %d", fileUploads.size(),
+                        ACCEPTED_NUMBER_OF_FILES));
+
+        for (final Measurement.FileUpload fileUpload : fileUploads) {
+            Validate.isTrue(Arrays.asList(SUPPORTED_FILE_EXTENSIONS).contains(fileUpload.getFileType()),
+                    "MultiPart contained file with unsupported file type (file extension): {}",
+                    fileUpload.getFileType());
+        }
+
         this.deviceIdentifier = deviceIdentifier;
         this.measurementIdentifier = measurementIdentifier;
         this.operatingSystemVersion = operatingSystemVersion;
