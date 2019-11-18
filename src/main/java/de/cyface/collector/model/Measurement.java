@@ -475,12 +475,12 @@ public final class Measurement {
         /**
          * A handle for the uploaded file on the local file system.
          */
-        private File file;
+        private final File file;
         /**
          * The type of the data stored in this file. This corresponds to the extension of the file. Compressed sensor
          * data for example is identified via the <tt>ccyf</tt> extension, while event files use <tt>ccyfe</tt>.
          */
-        private String fileType;
+        private final String fileType;
 
         /**
          * @param file A handle for the uploaded file on the local file system.

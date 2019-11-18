@@ -64,7 +64,10 @@ public final class EventBusTest {
      * <tt>-Dvertx.logger-delegate-factory-class-name=io.vertx.core.logging.SLF4JLogDelegateFactory</tt>.
      */
     private static final Logger LOGGER = LoggerFactory.getLogger(EventBusTest.class);
-    private final static String TEST_DEVICE_IDENTIFIER = UUID.randomUUID().toString();
+    /**
+     * A random device identifier used as test data.
+     */
+    private static final String TEST_DEVICE_IDENTIFIER = UUID.randomUUID().toString();
     /**
      * Process providing a connection to the test Mongo database.
      */
