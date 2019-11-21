@@ -49,7 +49,6 @@ import io.vertx.ext.web.client.WebClient;
  */
 @RunWith(VertxUnitRunner.class)
 public final class UserCreationTest {
-
     /**
      * A {@link MongoTest} instance used to start and stop an in memory Mongo database.
      */
@@ -127,6 +126,8 @@ public final class UserCreationTest {
 
     /**
      * Closes the <code>vertx</code> instance.
+     * 
+     * @param context The Vert.x test context used to control the test process.
      */
     @After
     public void tearDown(final TestContext context) {
