@@ -51,6 +51,11 @@ public final class UserCreationHandler implements Handler<RoutingContext> {
     private final transient MongoAuth mongoAuth;
 
     /**
+     * This is the role which a newly created user gets when it's created without any defined roles.
+     */
+    private final static String DEFAULT_USER_ROLE = "guest";
+
+    /**
      * Creates a new completely initialized <code>UserCreationHandler</code>.
      *
      * @param mongoAuth An authenticator that uses credentials from the Mongo user database to authenticate users.
@@ -66,10 +71,10 @@ public final class UserCreationHandler implements Handler<RoutingContext> {
         final JsonObject body = event.getBodyAsJson();
         final String username = body.getString("username");
         final String password = body.getString("password");
-        final String role = body.getString("role");
+        final String providedRole = body.getString("role");
+        final String role = (providedRole == null || providedRole.isEmpty()) ? DEFAULT_USER_ROLE : providedRole;
 
-        mongoAuth.insertUser(username, password,
-                role == null || role.isEmpty() ? new ArrayList<>() : Collections.singletonList(role),
+        mongoAuth.insertUser(username, password, Collections.singletonList(role),
                 new ArrayList<>(), ir -> {
                     if (ir.succeeded()) {
                         LOGGER.info("Added new user with id: " + username);
