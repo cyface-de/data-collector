@@ -81,6 +81,10 @@ public final class CollectorApiVerticle extends AbstractVerticle {
      * request.
      */
     private static final long BYTES_IN_ONE_KILOBYTE = 1024L;
+    /**
+     * The role which identifies users with "admin" privileges.
+     */
+    private final static String ADMIN_ROLE = "admin";
 
     @Override
     public void start(final Future<Void> startFuture) throws Exception {
@@ -129,10 +133,11 @@ public final class CollectorApiVerticle extends AbstractVerticle {
                 return;
             }
             if (result.result() == null) {
-                authProvider.insertUser(adminUsername, adminPassword, new ArrayList<>(), new ArrayList<>(), ir -> {
-                    LOGGER.info("Identifier of new user id: " + ir);
-                    defaultUserCreatedFuture.complete();
-                });
+                authProvider.insertUser(adminUsername, adminPassword, Collections.singletonList(ADMIN_ROLE),
+                        new ArrayList<>(), ir -> {
+                            LOGGER.info("Identifier of new user id: " + ir);
+                            defaultUserCreatedFuture.complete();
+                        });
             } else {
                 defaultUserCreatedFuture.complete();
             }
