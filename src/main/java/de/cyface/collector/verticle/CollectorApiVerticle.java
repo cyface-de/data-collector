@@ -57,7 +57,7 @@ import io.vertx.ext.web.handler.StaticHandler;
  *
  * @author Klemens Muthmann
  * @author Armin Schnabel
- * @version 1.2.5
+ * @version 1.2.6
  * @since 2.0.0
  */
 public final class CollectorApiVerticle extends AbstractVerticle {
@@ -81,6 +81,10 @@ public final class CollectorApiVerticle extends AbstractVerticle {
      * request.
      */
     private static final long BYTES_IN_ONE_KILOBYTE = 1024L;
+    /**
+     * The role which identifies users with "admin" privileges.
+     */
+    private final static String ADMIN_ROLE = "admin";
 
     @Override
     public void start(final Future<Void> startFuture) throws Exception {
@@ -129,10 +133,11 @@ public final class CollectorApiVerticle extends AbstractVerticle {
                 return;
             }
             if (result.result() == null) {
-                authProvider.insertUser(adminUsername, adminPassword, new ArrayList<>(), new ArrayList<>(), ir -> {
-                    LOGGER.info("Identifier of new user id: " + ir);
-                    defaultUserCreatedFuture.complete();
-                });
+                authProvider.insertUser(adminUsername, adminPassword, Collections.singletonList(ADMIN_ROLE),
+                        new ArrayList<>(), ir -> {
+                            LOGGER.info("Identifier of new user id: " + ir);
+                            defaultUserCreatedFuture.complete();
+                        });
             } else {
                 defaultUserCreatedFuture.complete();
             }
@@ -239,9 +244,9 @@ public final class CollectorApiVerticle extends AbstractVerticle {
                         .setAudience(Collections.singletonList(audience)))
                 .handler(new MeasurementHandler());
         // .failureHandler(new AuthenticationFailureHandler());
-
+        // Set up web api
         v2ApiRouter.route().handler(StaticHandler.create("webroot/api"));
-
+        // Set up failure handler for all other resources
         mainRouter.route("/*").last().handler(new FailureHandler());
 
         /*
