@@ -109,19 +109,25 @@ The following parameters are supported:
 ==== Running from Command Line
 
 To launch your tests:
-```
+
+[source]
+----
 ./gradlew clean test
-```
+----
 
 To package your application:
-```
+
+[source]
+----
 ./gradlew clean assemble
-```
+----
 
 To run your application:
-```
+
+[source]
+----
 ./gradlew run --args="run de.cyface.collector.verticle.MainVerticle -conf conf.json"
-```
+----
 
 ==== Running from IDE
 To run directly from within your IDE you need to use the `de.cyface.collector.Application` class, which is a subclass of the https://vertx.io/docs/vertx-core/java/#_the_vert_x_launcher[Vert.x launcher]. Just specify it as the main class in your launch configuration with the program argument `run de.cyface.collector.verticle.MainVerticle`.

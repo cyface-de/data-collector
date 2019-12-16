@@ -9,6 +9,12 @@ Those version have never been published officially and thus changes to them are 
 
 ## [Unreleased] 
 
+## [5.1.0] - 2019-12-16
+### Added
+* Save file extension from uploaded files as 'fileType' to the meta data to distinguish upload files
+* Support for the role parameter in UserCreation
+* Add shared 'database' docker network for communication between backend services
+
 ## [5.0.0] - 2019-10-09
 ### Info
 * Compatible with [Cyface Android SDK](https://github.com/cyface-de/android-backend) 5.0.0-beta1
