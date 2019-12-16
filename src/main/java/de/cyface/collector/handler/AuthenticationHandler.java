@@ -52,21 +52,21 @@ public final class AuthenticationHandler implements Handler<RoutingContext> {
     /**
      * Authenticator that uses the Mongo user database to store and retrieve credentials.
      */
-    private transient final MongoAuth authProvider;
+    private final transient MongoAuth authProvider;
     /**
      * Authenticator that checks for valid authentications against Java Web Tokens.
      */
-    private transient final JWTAuth jwtAuthProvider;
+    private final transient JWTAuth jwtAuthProvider;
     /**
      * The institution which issued the generated JWT token. Usually something like the name of this
      * server.
      */
-    private transient final String issuer;
+    private final transient String issuer;
     /**
      * The entity allowed to process requests authenticated with the generated JWT token. This might be
      * a certain server installation or a certain part of an application.
      */
-    private transient final String audience;
+    private final transient String audience;
 
     /**
      * Creates a new completely initialized <code>AuthenticationHandler</code>.

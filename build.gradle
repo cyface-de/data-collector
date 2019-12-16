@@ -45,13 +45,13 @@ ext {
 }
 
 repositories {
-  	mavenLocal()
-  	jcenter()
+  mavenLocal()
+  jcenter()
   
 }
 
 group = 'de.cyface'
-version = '5.0.0'
+version = '5.1.0'
 
 sourceCompatibility = '1.8'
 mainClassName = 'de.cyface.collector.Application'

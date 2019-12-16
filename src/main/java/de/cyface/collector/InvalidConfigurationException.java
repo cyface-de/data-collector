@@ -38,6 +38,9 @@ public final class InvalidConfigurationException extends RuntimeException {
                 getEncounteredConfiguration().encodePrettily());
     }
     
+    /**
+     * @return The invalid configuration that has been encountered.
+     */
     private JsonObject getEncounteredConfiguration() {
         return encounteredConfiguration;
     }
