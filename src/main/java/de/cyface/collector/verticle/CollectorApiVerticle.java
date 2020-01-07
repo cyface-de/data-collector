@@ -15,14 +15,18 @@
 package de.cyface.collector.verticle;
 
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Collections;
 
 import org.apache.commons.lang3.Validate;
+
+import com.google.common.io.Files;
 
 import de.cyface.collector.Parameter;
 import de.cyface.collector.Utils;
@@ -31,12 +35,14 @@ import de.cyface.collector.handler.AuthenticationHandler;
 import de.cyface.collector.handler.FailureHandler;
 import de.cyface.collector.handler.MeasurementHandler;
 import de.cyface.collector.model.Measurement;
+import io.micrometer.core.instrument.config.InvalidConfigurationException;
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.DeploymentOptions;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
+import io.vertx.core.Vertx;
 import io.vertx.core.http.HttpServer;
 import io.vertx.core.json.JsonObject;
 import io.vertx.core.logging.Logger;
@@ -100,7 +106,7 @@ public final class CollectorApiVerticle extends AbstractVerticle {
         // Setup mongo user database client with authProvider
         final JsonObject mongoUserDatabaseConfiguration = Parameter.MONGO_USER_DB.jsonValue(vertx, new JsonObject());
         final MongoClient client = Utils.createSharedMongoClient(vertx, mongoUserDatabaseConfiguration);
-        final String salt = Parameter.SALT.stringValue(vertx, "cyface-salt");
+        final String salt = loadSalt(vertx);
         final MongoAuth authProvider = Utils.buildMongoAuthProvider(client, salt);
 
         // Start http server with auth config
@@ -153,6 +159,21 @@ public final class CollectorApiVerticle extends AbstractVerticle {
             }
         });
 
+    }
+
+    private String loadSalt(Vertx vertx) throws IOException {
+        final String salt = Parameter.SALT.stringValue(vertx);
+        final String saltPath = Parameter.SALT_PATH.stringValue(vertx);
+        if (salt == null && saltPath == null) {
+            return "cyface-salt";
+        } else if (salt != null && saltPath != null) {
+            throw new InvalidConfigurationException(
+                    "Please provide either a salt value or a path to a salt file. Encountered both and can not decide which to use. Aborting!");
+        } else if (salt != null) {
+            return salt;
+        } else {
+            return Files.readFirstLine(new File(saltPath), Charset.forName("UTF-8"));
+        }
     }
 
     /**
