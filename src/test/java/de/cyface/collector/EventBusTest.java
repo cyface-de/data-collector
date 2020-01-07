@@ -51,7 +51,7 @@ import io.vertx.ext.unit.junit.VertxUnitRunner;
  * Tests individual verticles by sending appropriate messages using the Vert.x event bus.
  *
  * @author Klemens Muthmann
- * @version 1.1.1
+ * @version 1.1.2
  * @since 2.0.0
  */
 @RunWith(VertxUnitRunner.class)
@@ -215,6 +215,14 @@ public final class EventBusTest {
                 new Measurement.FileUpload(eventsFile, "ccyfe"));
     }
 
+    /**
+     * Asserts the meta data on the uploaded measurement.
+     *
+     * @param identifier The measurement identifier as a <code>String</code> in the format "deviceId:measurementId"
+     * @param context The Vertx <code>TestContext</code>
+     * @param async A Vertx synchronizer, which is waiting for the assertions to finish
+     * @param expectedData The expected data to assert against
+     */
     private void checkMeasurementData(final String identifier, final TestContext context, final Async async,
             final ExpectedData expectedData) {
         final String[] generatedIdentifier = identifier.split(":");
@@ -274,19 +282,66 @@ public final class EventBusTest {
         });
     }
 
+    /**
+     * A parameter object to wrap all meta information that is checked for a single measurement. All attributes are
+     * typed with object types, since they can become <code>null</code>.
+     *
+     * @author Klemens Muthmann
+     * @version 1.0.0
+     * @since 1.0.0
+     */
     private class ExpectedData {
+        /**
+         * The world wide unique identifier of the uploading device.
+         */
         String deviceIdentifier;
+        /**
+         * The device wide unqiue identifier of the measurement.
+         */
         String measurementIdentifier;
+        /**
+         * The version of the uploading operating system (usually Android or iOS).
+         */
         String operatingSystemVersion;
+        /**
+         * The type of the uploading device. This should usually be some kind of Android or iOS phone.
+         */
         String deviceType;
+        /**
+         * The version of the Cyface application/SDK uploading the data.
+         */
         String applicationVersion;
+        /**
+         * The length of the uploaded track in meters.
+         */
         Double length;
+        /**
+         * The count of captured locations in the uploaded track.
+         */
         Long locationCount;
+        /**
+         * The geographical latitude of the first location in the uploaded track.
+         */
         Double startLocationLat;
+        /**
+         * The geographical longitude of the first location in the uploaded track.
+         */
         Double startLocationLon;
+        /**
+         * The unix timestamp in milliseconds of the first location in the uploaded track.
+         */
         Long startLocationTimestamp;
+        /**
+         * The geographical latitude of the last location in the uploaded track.
+         */
         Double endLocationLat;
+        /**
+         * The geographical longitude of the last location in the uploaded track.
+         */
         Double endLocationLon;
+        /**
+         * The unix timestamp in milliseconds of the last location in the uploaded track.
+         */
         Long endLocationTimestamp;
     }
 

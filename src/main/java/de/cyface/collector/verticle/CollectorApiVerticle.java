@@ -1,5 +1,5 @@
 /*
- * Copyright 2018, 2019 Cyface GmbH
+ * Copyright 2018, 2019, 2020 Cyface GmbH
  * This file is part of the Cyface Data Collector.
  * The Cyface Data Collector is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -63,7 +63,7 @@ import io.vertx.ext.web.handler.StaticHandler;
  *
  * @author Klemens Muthmann
  * @author Armin Schnabel
- * @version 1.2.6
+ * @version 1.2.7
  * @since 2.0.0
  */
 public final class CollectorApiVerticle extends AbstractVerticle {
@@ -161,6 +161,14 @@ public final class CollectorApiVerticle extends AbstractVerticle {
 
     }
 
+    /**
+     * Loads the external encryption salt from the Vertx configuration. If no value was provided the default value
+     * "cyface-salt" is used.
+     *
+     * @param vertx The current <code>Vertx</code> instance
+     * @return A value to be used as encryption salt
+     * @throws IOException If the salt is provided in a file and that file is not accessible
+     */
     private String loadSalt(Vertx vertx) throws IOException {
         final String salt = Parameter.SALT.stringValue(vertx);
         final String saltPath = Parameter.SALT_PATH.stringValue(vertx);
