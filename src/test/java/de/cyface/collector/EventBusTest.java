@@ -1,13 +1,13 @@
 /*
  * Copyright 2018,2019 Cyface GmbH
- * 
+ *
  * This file is part of the Cyface Data Collector.
  *
  * The Cyface Data Collector is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * The Cyface Data Collector is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
@@ -22,7 +22,6 @@ import java.io.File;
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 
@@ -50,7 +49,7 @@ import io.vertx.ext.unit.junit.VertxUnitRunner;
 
 /**
  * Tests individual verticles by sending appropriate messages using the Vert.x event bus.
- * 
+ *
  * @author Klemens Muthmann
  * @version 1.1.1
  * @since 2.0.0
@@ -63,6 +62,7 @@ public final class EventBusTest {
      * not forget to set the Java property:
      * <tt>-Dvertx.logger-delegate-factory-class-name=io.vertx.core.logging.SLF4JLogDelegateFactory</tt>.
      */
+    @SuppressWarnings("unused")
     private static final Logger LOGGER = LoggerFactory.getLogger(EventBusTest.class);
     /**
      * A random device identifier used as test data.
@@ -83,7 +83,7 @@ public final class EventBusTest {
 
     /**
      * Deploys the {@link SerializationVerticle} for testing purposes.
-     * 
+     *
      * @param context The Vert.x context used for testing.
      * @throws IOException Fails the test if anything unexpected happens.
      */
@@ -107,7 +107,7 @@ public final class EventBusTest {
 
     /**
      * Finishes the test <code>Vertx</code> instance and stops the Mongo database.
-     * 
+     *
      * @param context The Vert.x context used for testing.
      */
     @After
@@ -118,7 +118,7 @@ public final class EventBusTest {
 
     /**
      * Tests if the {@link SerializationVerticle} handles new measurements arriving in the system correctly.
-     * 
+     *
      * @param context The Vert.x context used for testing.
      * @throws IOException If working with the data files fails.
      */
@@ -132,48 +132,22 @@ public final class EventBusTest {
 
             @Override
             public void handle(Message<String> event) {
-                final String generatedIdentifier = event.body();
-                final MongoClient client = MongoClient.createShared(vertx, mongoConfiguration);
-                client.findOne("measurements", new JsonObject().put("_id", generatedIdentifier), null, object -> {
-                    context.assertTrue(object.succeeded());
+                final ExpectedData expectedData = new ExpectedData();
+                expectedData.deviceIdentifier = TEST_DEVICE_IDENTIFIER;
+                expectedData.measurementIdentifier = "2";
+                expectedData.operatingSystemVersion = "9.0.0";
+                expectedData.deviceType = "Pixel 2";
+                expectedData.applicationVersion = "4.0.0-alpha1";
+                expectedData.length = 200.0;
+                expectedData.locationCount = 10L;
+                expectedData.startLocationLat = 10.0;
+                expectedData.startLocationLon = 10.0;
+                expectedData.startLocationTimestamp = 10_000L;
+                expectedData.endLocationLat = 12.0;
+                expectedData.endLocationLon = 12.0;
+                expectedData.endLocationTimestamp = 12_000L;
 
-                    JsonObject json = object.result();
-                    try {
-                        final String deviceIdentifier = json.getString(FormAttributes.DEVICE_ID.getValue());
-                        final String measurementIdentifier = json.getString(FormAttributes.MEASUREMENT_ID.getValue());
-                        final String operatingSystemVersion = json.getString(FormAttributes.OS_VERSION.getValue());
-                        final String deviceType = json.getString(FormAttributes.DEVICE_TYPE.getValue());
-                        final String applicationVersion = json.getString(FormAttributes.APPLICATION_VERSION.getValue());
-                        final double length = json.getDouble(FormAttributes.LENGTH.getValue());
-                        final long locationCount = json.getLong(FormAttributes.LOCATION_COUNT.getValue());
-                        final double startLocationLat = json.getDouble(FormAttributes.START_LOCATION_LAT.getValue());
-                        final double startLocationLon = json.getDouble(FormAttributes.START_LOCATION_LON.getValue());
-                        final long startLocationTimestamp = json.getLong(FormAttributes.START_LOCATION_TS.getValue());
-                        final double endLocationLat = json.getDouble(FormAttributes.END_LOCATION_LAT.getValue());
-                        final double endLocationLon = json.getDouble(FormAttributes.END_LOCATION_LON.getValue());
-                        final long endLocationTimestamp = json.getLong(FormAttributes.END_LOCATION_TS.getValue());
-
-                        context.assertEquals(TEST_DEVICE_IDENTIFIER, deviceIdentifier);
-                        context.assertEquals("2", measurementIdentifier);
-                        context.assertEquals("9.0.0", operatingSystemVersion);
-                        context.assertEquals("Pixel 2", deviceType);
-                        context.assertEquals("4.0.0-alpha1", applicationVersion);
-                        context.assertEquals(200.0, length);
-                        context.assertEquals(10L, locationCount);
-                        context.assertEquals(10.0, startLocationLat);
-                        context.assertEquals(10.0, startLocationLon);
-                        context.assertEquals(10_000L, startLocationTimestamp);
-                        context.assertEquals(12.0, endLocationLat);
-                        context.assertEquals(12.0, endLocationLon);
-                        context.assertEquals(12_000L, endLocationTimestamp);
-
-                    } catch (ClassCastException e) {
-                        LOGGER.error("Unable to parse JSON: \n" + json.encodePrettily());
-                        context.fail(e);
-                    } finally {
-                        async.complete();
-                    }
-                });
+                checkMeasurementData(event.body(), context, async, expectedData);
             }
         });
 
@@ -187,7 +161,7 @@ public final class EventBusTest {
 
     /**
      * Tests that handling measurements without geo locations works as expected.
-     * 
+     *
      * @param context The Vert.x context used for testing.
      * @throws IOException If working with the data files fails.
      */
@@ -201,45 +175,23 @@ public final class EventBusTest {
 
             @Override
             public void handle(Message<String> event) {
-                final String generatedIdentifier = event.body();
-                final MongoClient client = MongoClient.createShared(vertx, mongoConfiguration);
-                client.findOne("measurements", new JsonObject().put("_id", generatedIdentifier), null, object -> {
-                    context.assertTrue(object.succeeded());
+                final ExpectedData expectedData = new ExpectedData();
 
-                    JsonObject json = object.result();
-                    try {
-                        final String deviceIdentifier = json.getString(FormAttributes.DEVICE_ID.getValue());
-                        final String measurementIdentifier = json.getString(FormAttributes.MEASUREMENT_ID.getValue());
-                        final String operatingSystemVersion = json.getString(FormAttributes.OS_VERSION.getValue());
-                        final String deviceType = json.getString(FormAttributes.DEVICE_TYPE.getValue());
-                        final String applicationVersion = json.getString(FormAttributes.APPLICATION_VERSION.getValue());
-                        final double length = json.getDouble(FormAttributes.LENGTH.getValue());
-                        final long locationCount = json.getLong(FormAttributes.LOCATION_COUNT.getValue());
-                        final Double startLocationLat = json.getDouble(FormAttributes.START_LOCATION_LAT.getValue());
-                        final Double startLocationLon = json.getDouble(FormAttributes.START_LOCATION_LON.getValue());
-                        final Long startLocationTimestamp = json.getLong(FormAttributes.START_LOCATION_TS.getValue());
-                        final Double endLocationLat = json.getDouble(FormAttributes.END_LOCATION_LAT.getValue());
-                        final Double endLocationLon = json.getDouble(FormAttributes.END_LOCATION_LON.getValue());
-                        final Long endLocationTimestamp = json.getLong(FormAttributes.END_LOCATION_TS.getValue());
+                expectedData.deviceIdentifier = TEST_DEVICE_IDENTIFIER;
+                expectedData.measurementIdentifier = "2";
+                expectedData.operatingSystemVersion = "9.0.0";
+                expectedData.deviceType = "Pixel 2";
+                expectedData.applicationVersion = "4.0.0-alpha1";
+                expectedData.length = .0;
+                expectedData.locationCount = 0L;
+                expectedData.startLocationLat = null;
+                expectedData.startLocationLon = null;
+                expectedData.startLocationTimestamp = null;
+                expectedData.endLocationLat = null;
+                expectedData.endLocationLon = null;
+                expectedData.endLocationTimestamp = null;
 
-                        context.assertEquals(TEST_DEVICE_IDENTIFIER, deviceIdentifier);
-                        context.assertEquals("2", measurementIdentifier);
-                        context.assertEquals("9.0.0", operatingSystemVersion);
-                        context.assertEquals("Pixel 2", deviceType);
-                        context.assertEquals("4.0.0-alpha1", applicationVersion);
-                        context.assertEquals(.0, length);
-                        context.assertEquals(0L, locationCount);
-                        context.assertNull(startLocationLat);
-                        context.assertNull(startLocationLon);
-                        context.assertNull(startLocationTimestamp);
-                        context.assertNull(endLocationLat);
-                        context.assertNull(endLocationLon);
-                        context.assertNull(endLocationTimestamp);
-                    } finally {
-                        async.complete();
-                    }
-                });
-
+                checkMeasurementData(event.body(), context, async, expectedData);
             }
         });
 
@@ -261,6 +213,81 @@ public final class EventBusTest {
         final File eventsFile = File.createTempFile("events", "ccyfe");
         return Arrays.asList(new Measurement.FileUpload(dataFile, "ccyf"),
                 new Measurement.FileUpload(eventsFile, "ccyfe"));
+    }
+
+    private void checkMeasurementData(final String identifier, final TestContext context, final Async async,
+            final ExpectedData expectedData) {
+        final String[] generatedIdentifier = identifier.split(":");
+        final MongoClient client = MongoClient.createShared(vertx, mongoConfiguration);
+        final JsonObject query = new JsonObject();
+
+        query.put("metadata.deviceId", generatedIdentifier[0]);
+        query.put("metadata.measurementId", generatedIdentifier[1]);
+
+        client.findOne("fs.files", query, null, object -> {
+            context.assertTrue(object.succeeded());
+
+            final JsonObject json = object.result();
+            context.assertNotNull(json);
+            final JsonObject metadata = json.getJsonObject("metadata");
+            context.assertNotNull(metadata);
+
+            try {
+                final String deviceIdentifier = metadata.getString(FormAttributes.DEVICE_ID.getValue());
+                final String measurementIdentifier = metadata
+                        .getString(FormAttributes.MEASUREMENT_ID.getValue());
+                final String operatingSystemVersion = metadata.getString(FormAttributes.OS_VERSION.getValue());
+                final String deviceType = metadata.getString(FormAttributes.DEVICE_TYPE.getValue());
+                final String applicationVersion = metadata
+                        .getString(FormAttributes.APPLICATION_VERSION.getValue());
+                final double length = metadata.getDouble(FormAttributes.LENGTH.getValue());
+                final long locationCount = metadata.getLong(FormAttributes.LOCATION_COUNT.getValue());
+                final Double startLocationLat = metadata
+                        .getDouble(FormAttributes.START_LOCATION_LAT.getValue());
+                final Double startLocationLon = metadata
+                        .getDouble(FormAttributes.START_LOCATION_LON.getValue());
+                final Long startLocationTimestamp = metadata
+                        .getLong(FormAttributes.START_LOCATION_TS.getValue());
+                final Double endLocationLat = metadata.getDouble(FormAttributes.END_LOCATION_LAT.getValue());
+                final Double endLocationLon = metadata.getDouble(FormAttributes.END_LOCATION_LON.getValue());
+                final Long endLocationTimestamp = metadata.getLong(FormAttributes.END_LOCATION_TS.getValue());
+
+                context.assertEquals(expectedData.deviceIdentifier, deviceIdentifier);
+                context.assertEquals(expectedData.measurementIdentifier, measurementIdentifier);
+                context.assertEquals(expectedData.operatingSystemVersion, operatingSystemVersion);
+                context.assertEquals(expectedData.deviceType, deviceType);
+                context.assertEquals(expectedData.applicationVersion, applicationVersion);
+                context.assertEquals(expectedData.length, length);
+                context.assertEquals(expectedData.locationCount, locationCount);
+                context.assertEquals(expectedData.startLocationLat, startLocationLat);
+                context.assertEquals(expectedData.startLocationLon, startLocationLon);
+                context.assertEquals(expectedData.startLocationTimestamp, startLocationTimestamp);
+                context.assertEquals(expectedData.endLocationLat, endLocationLat);
+                context.assertEquals(expectedData.endLocationLon, endLocationLon);
+                context.assertEquals(expectedData.endLocationTimestamp, endLocationTimestamp);
+
+            } catch (Exception e) {
+                context.fail(e);
+            } finally {
+                async.complete();
+            }
+        });
+    }
+
+    private class ExpectedData {
+        String deviceIdentifier;
+        String measurementIdentifier;
+        String operatingSystemVersion;
+        String deviceType;
+        String applicationVersion;
+        Double length;
+        Long locationCount;
+        Double startLocationLat;
+        Double startLocationLon;
+        Long startLocationTimestamp;
+        Double endLocationLat;
+        Double endLocationLon;
+        Long endLocationTimestamp;
     }
 
 }
