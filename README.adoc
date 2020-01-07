@@ -29,7 +29,7 @@ You may also add an optional human readable explanation.
 4. Create Pull Requests to master and dev branches.
 5. If those Pull Requests are accepted merge them back, but make sure, you are still based on the most recent versions of master and dev.
 6. Create a tag with the version on the merged master branch and push that tag to the repository.
-7. Mark the released version as 'new Release' on (Github)[https://github.com/cyface-de/data-collector/releases].
+7. Mark the released version as 'new Release' on https://github.com/cyface-de/data-collector/releases[Github].
 8. Update the 'latest' tag: `docker tag cyfacede/collector:[VERSION] cyfacede/collector:latest`
 9. Push the 'latest' tag to docker hub: `docker push cyfacede/collector:latest`
 
@@ -150,7 +150,7 @@ To load files from the Mongo GridFS file storage use the https://docs.mongodb.co
 	* MongoDb
 
 == Licensing
-Copyright 2018,2019 Cyface GmbH
+Copyright 2018,2019,2020 Cyface GmbH
  
 This file is part of the Cyface Data Collector.
 
