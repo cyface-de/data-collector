@@ -70,7 +70,6 @@ services:
       - ADMIN_PASSWORD=secret
     networks:
       - default
-      - database
 
 volumes:
   mongo-data-db:
