@@ -56,7 +56,6 @@ import io.vertx.ext.unit.junit.VertxUnitRunner;
  */
 @RunWith(VertxUnitRunner.class)
 public final class EventBusTest {
-
     /**
      * The logger used by objects of this class. Configure it using <tt>/src/test/resources/logback-test.xml</tt> and do
      * not forget to set the Java property:
@@ -132,22 +131,12 @@ public final class EventBusTest {
 
             @Override
             public void handle(Message<String> event) {
-                final ExpectedData expectedData = new ExpectedData();
-                expectedData.deviceIdentifier = TEST_DEVICE_IDENTIFIER;
-                expectedData.measurementIdentifier = "2";
-                expectedData.operatingSystemVersion = "9.0.0";
-                expectedData.deviceType = "Pixel 2";
-                expectedData.applicationVersion = "4.0.0-alpha1";
-                expectedData.length = 200.0;
-                expectedData.locationCount = 10L;
-                expectedData.startLocationLat = 10.0;
-                expectedData.startLocationLon = 10.0;
-                expectedData.startLocationTimestamp = 10_000L;
-                expectedData.endLocationLat = 12.0;
-                expectedData.endLocationLon = 12.0;
-                expectedData.endLocationTimestamp = 12_000L;
+                final ExpectedData expectedDeviceData = new ExpectedData(TEST_DEVICE_IDENTIFIER, "9.0.0", "Pixel 2",
+                        "4.0.0-alpha1");
+                final ExpectedMeasurementData expectedMeasurementData = new ExpectedMeasurementData("2", 200.0, 10L,
+                        10.0, 10.0, 10_000L, 12.0, 12.0, 12_000L);
 
-                checkMeasurementData(event.body(), context, async, expectedData);
+                checkMeasurementData(event.body(), context, async, expectedDeviceData, expectedMeasurementData);
             }
         });
 
@@ -175,23 +164,12 @@ public final class EventBusTest {
 
             @Override
             public void handle(Message<String> event) {
-                final ExpectedData expectedData = new ExpectedData();
+                final ExpectedData expectedDeviceData = new ExpectedData(TEST_DEVICE_IDENTIFIER, "9.0.0", "Pixel 2",
+                        "4.0.0-alpha1");
+                final ExpectedMeasurementData expectedMeasurementData = new ExpectedMeasurementData("2", .0, 0L, null,
+                        null, null, null, null, null);
 
-                expectedData.deviceIdentifier = TEST_DEVICE_IDENTIFIER;
-                expectedData.measurementIdentifier = "2";
-                expectedData.operatingSystemVersion = "9.0.0";
-                expectedData.deviceType = "Pixel 2";
-                expectedData.applicationVersion = "4.0.0-alpha1";
-                expectedData.length = .0;
-                expectedData.locationCount = 0L;
-                expectedData.startLocationLat = null;
-                expectedData.startLocationLon = null;
-                expectedData.startLocationTimestamp = null;
-                expectedData.endLocationLat = null;
-                expectedData.endLocationLon = null;
-                expectedData.endLocationTimestamp = null;
-
-                checkMeasurementData(event.body(), context, async, expectedData);
+                checkMeasurementData(event.body(), context, async, expectedDeviceData, expectedMeasurementData);
             }
         });
 
@@ -224,7 +202,7 @@ public final class EventBusTest {
      * @param expectedData The expected data to assert against
      */
     private void checkMeasurementData(final String identifier, final TestContext context, final Async async,
-            final ExpectedData expectedData) {
+            final ExpectedData expectedData, final ExpectedMeasurementData expectedMeasurementData) {
         final String[] generatedIdentifier = identifier.split(":");
         final MongoClient client = MongoClient.createShared(vertx, mongoConfiguration);
         final JsonObject query = new JsonObject();
@@ -260,19 +238,19 @@ public final class EventBusTest {
                 final Double endLocationLon = metadata.getDouble(FormAttributes.END_LOCATION_LON.getValue());
                 final Long endLocationTimestamp = metadata.getLong(FormAttributes.END_LOCATION_TS.getValue());
 
-                context.assertEquals(expectedData.deviceIdentifier, deviceIdentifier);
-                context.assertEquals(expectedData.measurementIdentifier, measurementIdentifier);
-                context.assertEquals(expectedData.operatingSystemVersion, operatingSystemVersion);
-                context.assertEquals(expectedData.deviceType, deviceType);
-                context.assertEquals(expectedData.applicationVersion, applicationVersion);
-                context.assertEquals(expectedData.length, length);
-                context.assertEquals(expectedData.locationCount, locationCount);
-                context.assertEquals(expectedData.startLocationLat, startLocationLat);
-                context.assertEquals(expectedData.startLocationLon, startLocationLon);
-                context.assertEquals(expectedData.startLocationTimestamp, startLocationTimestamp);
-                context.assertEquals(expectedData.endLocationLat, endLocationLat);
-                context.assertEquals(expectedData.endLocationLon, endLocationLon);
-                context.assertEquals(expectedData.endLocationTimestamp, endLocationTimestamp);
+                context.assertEquals(expectedData.deviceIdentifier(), deviceIdentifier);
+                context.assertEquals(expectedMeasurementData.measurementIdentifier(), measurementIdentifier);
+                context.assertEquals(expectedData.operatingSystemVersion(), operatingSystemVersion);
+                context.assertEquals(expectedData.deviceType(), deviceType);
+                context.assertEquals(expectedData.applicationVersion(), applicationVersion);
+                context.assertEquals(expectedMeasurementData.length(), length);
+                context.assertEquals(expectedMeasurementData.locationCount(), locationCount);
+                context.assertEquals(expectedMeasurementData.startLocationLat(), startLocationLat);
+                context.assertEquals(expectedMeasurementData.startLocationLon(), startLocationLon);
+                context.assertEquals(expectedMeasurementData.startLocationTimestamp(), startLocationTimestamp);
+                context.assertEquals(expectedMeasurementData.endLocationLat(), endLocationLat);
+                context.assertEquals(expectedMeasurementData.endLocationLon(), endLocationLon);
+                context.assertEquals(expectedMeasurementData.endLocationTimestamp(), endLocationTimestamp);
 
             } catch (Exception e) {
                 context.fail(e);
@@ -283,66 +261,214 @@ public final class EventBusTest {
     }
 
     /**
-     * A parameter object to wrap all meta information that is checked for a single measurement. All attributes are
+     * A parameter object to wrap all meta information that is checked for a single uploading device.
+     *
+     * @author Klemens Muthmann
+     * @version 1.0.0
+     * @since 1.0.0
+     */
+    private final class ExpectedData {
+        /**
+         * The world wide unique identifier of the uploading device.
+         */
+        private final String deviceIdentifier;
+        /**
+         * The version of the uploading operating system (usually Android or iOS).
+         */
+        private final String operatingSystemVersion;
+        /**
+         * The type of the uploading device. This should usually be some kind of Android or iOS phone.
+         */
+        private final String deviceType;
+        /**
+         * The version of the Cyface application/SDK uploading the data.
+         */
+        private final String applicationVersion;
+
+        /**
+         * Creates a new completely intialized object of this class.
+         *
+         * @param deviceIdentifier The world wide unique identifier of the uploading device
+         * @param operatingSystemVersion The version of the uploading operating system (usually Android or iOS)
+         * @param deviceType The type of the uploading device. This should usually be some kind of Android or iOS phone
+         * @param applicationVersion The version of the Cyface application/SDK uploading the data
+         */
+        public ExpectedData(final String deviceIdentifier, final String operatingSystemVersion, final String deviceType,
+                String applicationVersion) {
+            this.deviceIdentifier = deviceIdentifier;
+            this.operatingSystemVersion = operatingSystemVersion;
+            this.deviceType = deviceType;
+            this.applicationVersion = applicationVersion;
+        }
+
+        /**
+         * @return The world wide unique identifier of the uploading device
+         */
+        public String deviceIdentifier() {
+            return deviceIdentifier;
+        }
+
+        /**
+         * @return The version of the uploading operating system (usually Android or iOS)
+         */
+        public String operatingSystemVersion() {
+            return operatingSystemVersion;
+        }
+
+        /**
+         * @return The type of the uploading device. This should usually be some kind of Android or iOS phone
+         */
+        public String deviceType() {
+            return deviceType;
+        }
+
+        /**
+         * @return The version of the Cyface application/SDK uploading the data
+         */
+        public String applicationVersion() {
+            return applicationVersion;
+        }
+
+    }
+
+    /**
+     * A value object containing all expected meta data a test is run against for a single Cyface measurement. All
+     * attributes are
      * typed with object types, since they can become <code>null</code>.
      *
      * @author Klemens Muthmann
      * @version 1.0.0
      * @since 1.0.0
      */
-    private class ExpectedData {
-        /**
-         * The world wide unique identifier of the uploading device.
-         */
-        String deviceIdentifier;
+    private final class ExpectedMeasurementData {
         /**
          * The device wide unqiue identifier of the measurement.
          */
-        String measurementIdentifier;
-        /**
-         * The version of the uploading operating system (usually Android or iOS).
-         */
-        String operatingSystemVersion;
-        /**
-         * The type of the uploading device. This should usually be some kind of Android or iOS phone.
-         */
-        String deviceType;
-        /**
-         * The version of the Cyface application/SDK uploading the data.
-         */
-        String applicationVersion;
+        private final String measurementIdentifier;
         /**
          * The length of the uploaded track in meters.
          */
-        Double length;
+        private final Double length;
         /**
          * The count of captured locations in the uploaded track.
          */
-        Long locationCount;
+        private final Long locationCount;
         /**
          * The geographical latitude of the first location in the uploaded track.
          */
-        Double startLocationLat;
+        private final Double startLocationLat;
         /**
          * The geographical longitude of the first location in the uploaded track.
          */
-        Double startLocationLon;
+        private final Double startLocationLon;
         /**
          * The unix timestamp in milliseconds of the first location in the uploaded track.
          */
-        Long startLocationTimestamp;
+        private final Long startLocationTimestamp;
         /**
          * The geographical latitude of the last location in the uploaded track.
          */
-        Double endLocationLat;
+        private final Double endLocationLat;
         /**
          * The geographical longitude of the last location in the uploaded track.
          */
-        Double endLocationLon;
+        private final Double endLocationLon;
         /**
          * The unix timestamp in milliseconds of the last location in the uploaded track.
          */
-        Long endLocationTimestamp;
+        private final Long endLocationTimestamp;
+
+        /**
+         * Creates a new completely initialized object of this class.
+         *
+         * @param measurementIdentifier The device wide unqiue identifier of the measurement
+         * @param length The length of the uploaded track in meters
+         * @param locationCount The count of captured locations in the uploaded track
+         * @param startLocationLat The geographical latitude of the first location in the uploaded track
+         * @param startLocationLon The geographical longitude of the first location in the uploaded track
+         * @param startLocationTimestamp The unix timestamp in milliseconds of the first location in the uploaded track
+         * @param endLocationLat The geographical latitude of the last location in the uploaded track
+         * @param endLocationLon The geographical longitude of the last location in the uploaded track
+         * @param endLocationTimestamp The unix timestamp in milliseconds of the last location in the uploaded track
+         */
+        public ExpectedMeasurementData(final String measurementIdentifier, final Double length,
+                final Long locationCount, final Double startLocationLat, final Double startLocationLon,
+                final Long startLocationTimestamp, final Double endLocationLat, final Double endLocationLon,
+                final Long endLocationTimestamp) {
+            this.measurementIdentifier = measurementIdentifier;
+            this.length = length;
+            this.locationCount = locationCount;
+            this.startLocationLat = startLocationLat;
+            this.startLocationLon = startLocationLon;
+            this.startLocationTimestamp = startLocationTimestamp;
+            this.endLocationLat = endLocationLat;
+            this.endLocationLon = endLocationLon;
+            this.endLocationTimestamp = endLocationTimestamp;
+        }
+
+        /**
+         * @return The device wide unqiue identifier of the measurement
+         */
+        public String measurementIdentifier() {
+            return measurementIdentifier;
+        }
+
+        /**
+         * @return The length of the uploaded track in meters
+         */
+        public Double length() {
+            return length;
+        }
+
+        /**
+         * @return The count of captured locations in the uploaded track
+         */
+        public Long locationCount() {
+            return locationCount;
+        }
+
+        /**
+         * @return The geographical latitude of the first location in the uploaded track
+         */
+        public Double startLocationLat() {
+            return startLocationLat;
+        }
+
+        /**
+         * @return The geographical longitude of the first location in the uploaded track
+         */
+        public Double startLocationLon() {
+            return startLocationLon;
+        }
+
+        /**
+         * @return The unix timestamp in milliseconds of the first location in the uploaded track
+         */
+        public Long startLocationTimestamp() {
+            return startLocationTimestamp;
+        }
+
+        /**
+         * @return The geographical latitude of the last location in the uploaded track
+         */
+        public Double endLocationLat() {
+            return endLocationLat;
+        }
+
+        /**
+         * @return The geographical longitude of the last location in the uploaded track
+         */
+        public Double endLocationLon() {
+            return endLocationLon;
+        }
+
+        /**
+         * @return The unix timestamp in milliseconds of the last location in the uploaded track
+         */
+        public Long endLocationTimestamp() {
+            return endLocationTimestamp;
+        }
+
     }
 
 }

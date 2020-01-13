@@ -471,7 +471,7 @@ public final class Measurement {
      * @version 1.0.0
      * @since 5.1.0
      */
-    public static class FileUpload {
+    public static final class FileUpload {
         /**
          * A handle for the uploaded file on the local file system.
          */

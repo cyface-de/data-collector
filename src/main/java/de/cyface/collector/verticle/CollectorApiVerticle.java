@@ -90,7 +90,7 @@ public final class CollectorApiVerticle extends AbstractVerticle {
     /**
      * The role which identifies users with "admin" privileges.
      */
-    private final static String ADMIN_ROLE = "admin";
+    private static final String ADMIN_ROLE = "admin";
 
     @Override
     public void start(final Future<Void> startFuture) throws Exception {
@@ -176,7 +176,8 @@ public final class CollectorApiVerticle extends AbstractVerticle {
             return "cyface-salt";
         } else if (salt != null && saltPath != null) {
             throw new InvalidConfigurationException(
-                    "Please provide either a salt value or a path to a salt file. Encountered both and can not decide which to use. Aborting!");
+                    "Please provide either a salt value or a path to a salt file. "
+                            + "Encountered both and can not decide which to use. Aborting!");
         } else if (salt != null) {
             return salt;
         } else {
