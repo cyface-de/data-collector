@@ -48,6 +48,7 @@ import io.vertx.ext.web.client.WebClient;
  * @since 2.0.0
  */
 @RunWith(VertxUnitRunner.class)
+@SuppressWarnings("PMD.MethodNamingConventions")
 public final class UserCreationTest {
     /**
      * A {@link MongoTest} instance used to start and stop an in memory Mongo database.
@@ -83,10 +84,11 @@ public final class UserCreationTest {
     @BeforeClass
     public static void setUpMongoDatabase() throws IOException {
         mongoTest = new MongoTest();
-        final ServerSocket socket = new ServerSocket(0);
-        int mongoPort = socket.getLocalPort();
-        socket.close();
-        mongoTest.setUpMongoDatabase(mongoPort);
+        try (ServerSocket socket = new ServerSocket(0);) {
+            final int mongoPort = socket.getLocalPort();
+            socket.close();
+            mongoTest.setUpMongoDatabase(mongoPort);
+        }
     }
 
     /**
@@ -108,32 +110,33 @@ public final class UserCreationTest {
     public void setUp(final TestContext context) throws IOException {
         vertx = Vertx.vertx();
 
-        final ServerSocket socket = new ServerSocket(0);
-        port = socket.getLocalPort();
-        socket.close();
+        try (ServerSocket socket = new ServerSocket(0);) {
+            port = socket.getLocalPort();
 
-        mongoDbConfiguration = new JsonObject()
-                .put("connection_string", "mongodb://localhost:" + mongoTest.getMongoPort()).put("db_name", "cyface");
+            mongoDbConfiguration = new JsonObject()
+                    .put("connection_string", "mongodb://localhost:" + mongoTest.getMongoPort())
+                    .put("db_name", "cyface");
 
-        final JsonObject config = new JsonObject().put(Parameter.MANAGEMENT_HTTP_PORT.key(), port)
-                .put(Parameter.MONGO_USER_DB.key(), mongoDbConfiguration);
-        final DeploymentOptions options = new DeploymentOptions().setConfig(config);
+            final JsonObject config = new JsonObject().put(Parameter.MANAGEMENT_HTTP_PORT.key(), port)
+                    .put(Parameter.MONGO_USER_DB.key(), mongoDbConfiguration);
+            final DeploymentOptions options = new DeploymentOptions().setConfig(config);
 
-        vertx.deployVerticle(ManagementApiVerticle.class.getName(), options, context.asyncAssertSuccess());
+            vertx.deployVerticle(ManagementApiVerticle.class.getName(), options, context.asyncAssertSuccess());
 
-        client = WebClient.create(vertx);
+            client = WebClient.create(vertx);
+        }
     }
 
     /**
      * Closes the <code>vertx</code> instance.
-     * 
+     *
      * @param context The Vert.x test context used to control the test process.
      */
     @After
     public void tearDown(final TestContext context) {
 
         // Delete entries so that the next tests are independent
-        final MongoClient mongoClient = Utils.createSharedMongoClient(vertx, mongoDbConfiguration);
+        final MongoClient mongoClient = MongoDbUtils.createSharedMongoClient(vertx, mongoDbConfiguration);
         final Async mongoQueryAsync = context.async();
         mongoClient.removeDocuments("user", new JsonObject(), result -> {
             context.assertTrue(result.succeeded());
@@ -166,7 +169,7 @@ public final class UserCreationTest {
 
         async.await(3_000L);
 
-        final MongoClient mongoClient = Utils.createSharedMongoClient(vertx, mongoDbConfiguration);
+        final MongoClient mongoClient = MongoDbUtils.createSharedMongoClient(vertx, mongoDbConfiguration);
 
         final Async mongoQueryCountAsync = context.async();
         mongoClient.count("user", new JsonObject(), result -> {

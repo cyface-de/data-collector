@@ -55,6 +55,7 @@ import io.vertx.ext.unit.junit.VertxUnitRunner;
  * @since 2.0.0
  */
 @RunWith(VertxUnitRunner.class)
+@SuppressWarnings("PMD.MethodNamingConventions")
 public final class EventBusTest {
     /**
      * The logger used by objects of this class. Configure it using <tt>/src/test/resources/logback-test.xml</tt> and do
@@ -64,50 +65,63 @@ public final class EventBusTest {
     @SuppressWarnings("unused")
     private static final Logger LOGGER = LoggerFactory.getLogger(EventBusTest.class);
     /**
+     * Th version of the app used for the test measurements.
+     */
+    private static final String TEST_DEVICE_APP_VERSION = "4.0.0-alpha1";
+    /**
+     * The device name used for the test measurements.
+     */
+    private static final String TEST_DEVICE_NAME = "Pixel 2";
+    /**
+     * The default operating system version used by test measurements.
+     */
+    private static final String TEST_DEVICE_OS_VERSION = "9.0.0";
+    /**
      * A random device identifier used as test data.
      */
     private static final String TEST_DEVICE_IDENTIFIER = UUID.randomUUID().toString();
     /**
      * Process providing a connection to the test Mongo database.
      */
-    private MongoTest mongoTest;
+    private transient MongoTest mongoTest;
     /**
      * The <code>Vertx</code> used for testing the verticles.
      */
-    private Vertx vertx;
+    private transient Vertx vertx;
     /**
      * The configuration used for starting the Mongo database under test.
      */
-    private JsonObject mongoConfiguration;
+    private transient JsonObject mongoConfiguration;
 
     /**
      * Deploys the {@link SerializationVerticle} for testing purposes.
      *
-     * @param context The Vert.x context used for testing.
-     * @throws IOException Fails the test if anything unexpected happens.
+     * @param context The Vert.x context used for testing
+     * @throws IOException Fails the test if anything unexpected happens
      */
     @Before
     public void deployVerticle(final TestContext context) throws IOException {
         mongoTest = new MongoTest();
-        ServerSocket socket = new ServerSocket(0);
-        int mongoPort = socket.getLocalPort();
-        socket.close();
-        mongoTest.setUpMongoDatabase(mongoPort);
+        try (ServerSocket socket = new ServerSocket(0);) {
+            final int mongoPort = socket.getLocalPort();
+            socket.close();
+            mongoTest.setUpMongoDatabase(mongoPort);
 
-        vertx = Vertx.vertx();
+            vertx = Vertx.vertx();
 
-        mongoConfiguration = new JsonObject().put("db_name", "cyface").put("connection_string",
-                "mongodb://localhost:" + mongoPort);
+            mongoConfiguration = new JsonObject().put("db_name", "cyface").put("connection_string",
+                    "mongodb://localhost:" + mongoPort);
 
-        DeploymentOptions options = new DeploymentOptions().setConfig(mongoConfiguration);
+            final DeploymentOptions options = new DeploymentOptions().setConfig(mongoConfiguration);
 
-        vertx.deployVerticle(SerializationVerticle.class, options, context.asyncAssertSuccess());
+            vertx.deployVerticle(SerializationVerticle.class, options, context.asyncAssertSuccess());
+        }
     }
 
     /**
      * Finishes the test <code>Vertx</code> instance and stops the Mongo database.
      *
-     * @param context The Vert.x context used for testing.
+     * @param context The Vert.x context used for testing
      */
     @After
     public void shutdown(final TestContext context) {
@@ -118,8 +132,8 @@ public final class EventBusTest {
     /**
      * Tests if the {@link SerializationVerticle} handles new measurements arriving in the system correctly.
      *
-     * @param context The Vert.x context used for testing.
-     * @throws IOException If working with the data files fails.
+     * @param context The Vert.x context used for testing
+     * @throws IOException If working with the data files fails
      */
     @Test
     public void test(final TestContext context) throws IOException {
@@ -127,12 +141,13 @@ public final class EventBusTest {
 
         final EventBus eventBus = vertx.eventBus();
         eventBus.registerDefaultCodec(Measurement.class, Measurement.getCodec());
-        eventBus.consumer(EventBusAddresses.MEASUREMENT_SAVED, new Handler<Message<String>>() {
+        eventBus.consumer(EventBusAddressUtils.MEASUREMENT_SAVED, new Handler<Message<String>>() {
 
             @Override
-            public void handle(Message<String> event) {
-                final ExpectedData expectedDeviceData = new ExpectedData(TEST_DEVICE_IDENTIFIER, "9.0.0", "Pixel 2",
-                        "4.0.0-alpha1");
+            public void handle(final Message<String> event) {
+                final ExpectedData expectedDeviceData = new ExpectedData(TEST_DEVICE_IDENTIFIER, TEST_DEVICE_OS_VERSION,
+                        TEST_DEVICE_NAME,
+                        TEST_DEVICE_APP_VERSION);
                 final ExpectedMeasurementData expectedMeasurementData = new ExpectedMeasurementData("2", 200.0, 10L,
                         10.0, 10.0, 10_000L, 12.0, 12.0, 12_000L);
 
@@ -140,8 +155,9 @@ public final class EventBusTest {
             }
         });
 
-        eventBus.publish(EventBusAddresses.NEW_MEASUREMENT,
-                new Measurement(TEST_DEVICE_IDENTIFIER, "2", "9.0.0", "Pixel 2", "4.0.0-alpha1", 200.0, 10,
+        eventBus.publish(EventBusAddressUtils.NEW_MEASUREMENT,
+                new Measurement(TEST_DEVICE_IDENTIFIER, "2", TEST_DEVICE_OS_VERSION, TEST_DEVICE_NAME, TEST_DEVICE_APP_VERSION, 200.0,
+                        10,
                         new GeoLocation(10.0, 10.0, 10_000), new GeoLocation(12.0, 12.0, 12_000), "BICYCLE", "testUser",
                         fixtureUploads()));
 
@@ -151,8 +167,8 @@ public final class EventBusTest {
     /**
      * Tests that handling measurements without geo locations works as expected.
      *
-     * @param context The Vert.x context used for testing.
-     * @throws IOException If working with the data files fails.
+     * @param context The Vert.x context used for testing
+     * @throws IOException If working with the data files fails
      */
     @Test
     public void testPublishMeasurementWithNoGeoLocations_HappyPath(final TestContext context) throws IOException {
@@ -160,12 +176,13 @@ public final class EventBusTest {
 
         final EventBus eventBus = vertx.eventBus();
         eventBus.registerDefaultCodec(Measurement.class, Measurement.getCodec());
-        eventBus.consumer(EventBusAddresses.MEASUREMENT_SAVED, new Handler<Message<String>>() {
+        eventBus.consumer(EventBusAddressUtils.MEASUREMENT_SAVED, new Handler<Message<String>>() {
 
             @Override
-            public void handle(Message<String> event) {
-                final ExpectedData expectedDeviceData = new ExpectedData(TEST_DEVICE_IDENTIFIER, "9.0.0", "Pixel 2",
-                        "4.0.0-alpha1");
+            public void handle(final Message<String> event) {
+                final ExpectedData expectedDeviceData = new ExpectedData(TEST_DEVICE_IDENTIFIER, TEST_DEVICE_OS_VERSION,
+                        TEST_DEVICE_NAME,
+                        TEST_DEVICE_APP_VERSION);
                 final ExpectedMeasurementData expectedMeasurementData = new ExpectedMeasurementData("2", .0, 0L, null,
                         null, null, null, null, null);
 
@@ -173,9 +190,9 @@ public final class EventBusTest {
             }
         });
 
-        eventBus.publish(EventBusAddresses.NEW_MEASUREMENT,
-                new Measurement(TEST_DEVICE_IDENTIFIER, "2", "9.0.0", "Pixel 2",
-                        "4.0.0-alpha1", .0, 0L, null, null, "BICYCLE", "testUser", fixtureUploads()));
+        eventBus.publish(EventBusAddressUtils.NEW_MEASUREMENT,
+                new Measurement(TEST_DEVICE_IDENTIFIER, "2", TEST_DEVICE_OS_VERSION, TEST_DEVICE_NAME,
+                        TEST_DEVICE_APP_VERSION, .0, 0L, null, null, "BICYCLE", "testUser", fixtureUploads()));
 
         async.await(5_000L);
     }
@@ -183,8 +200,8 @@ public final class EventBusTest {
     /**
      * Provides a fixture simulating the files necessary to create an appropriate measurement.
      *
-     * @return A fixture containing empty files for data and events.
-     * @throws IOException If writing the empty temporary files fails for some reason.
+     * @return A fixture containing empty files for data and events
+     * @throws IOException If writing the empty temporary files fails for some reason
      */
     private List<Measurement.FileUpload> fixtureUploads() throws IOException {
         final File dataFile = File.createTempFile("data", "ccyf");
@@ -199,10 +216,11 @@ public final class EventBusTest {
      * @param identifier The measurement identifier as a <code>String</code> in the format "deviceId:measurementId"
      * @param context The Vertx <code>TestContext</code>
      * @param async A Vertx synchronizer, which is waiting for the assertions to finish
-     * @param expectedData The expected data to assert against
+     * @param expectedDeviceData The meta data of the device that uploaded the test measurement to check
+     * @param expectedMeasurementData The meta data of the test measurement to check
      */
     private void checkMeasurementData(final String identifier, final TestContext context, final Async async,
-            final ExpectedData expectedData, final ExpectedMeasurementData expectedMeasurementData) {
+            final ExpectedData expectedDeviceData, final ExpectedMeasurementData expectedMeasurementData) {
         final String[] generatedIdentifier = identifier.split(":");
         final MongoClient client = MongoClient.createShared(vertx, mongoConfiguration);
         final JsonObject query = new JsonObject();
@@ -238,11 +256,11 @@ public final class EventBusTest {
                 final Double endLocationLon = metadata.getDouble(FormAttributes.END_LOCATION_LON.getValue());
                 final Long endLocationTimestamp = metadata.getLong(FormAttributes.END_LOCATION_TS.getValue());
 
-                context.assertEquals(expectedData.deviceIdentifier(), deviceIdentifier);
+                context.assertEquals(expectedDeviceData.deviceIdentifier(), deviceIdentifier);
                 context.assertEquals(expectedMeasurementData.measurementIdentifier(), measurementIdentifier);
-                context.assertEquals(expectedData.operatingSystemVersion(), operatingSystemVersion);
-                context.assertEquals(expectedData.deviceType(), deviceType);
-                context.assertEquals(expectedData.applicationVersion(), applicationVersion);
+                context.assertEquals(expectedDeviceData.operatingSystemVersion(), operatingSystemVersion);
+                context.assertEquals(expectedDeviceData.deviceType(), deviceType);
+                context.assertEquals(expectedDeviceData.applicationVersion(), applicationVersion);
                 context.assertEquals(expectedMeasurementData.length(), length);
                 context.assertEquals(expectedMeasurementData.locationCount(), locationCount);
                 context.assertEquals(expectedMeasurementData.startLocationLat(), startLocationLat);
@@ -267,7 +285,7 @@ public final class EventBusTest {
      * @version 1.0.0
      * @since 1.0.0
      */
-    private final class ExpectedData {
+    private static final class ExpectedData {
         /**
          * The world wide unique identifier of the uploading device.
          */
@@ -293,8 +311,8 @@ public final class EventBusTest {
          * @param deviceType The type of the uploading device. This should usually be some kind of Android or iOS phone
          * @param applicationVersion The version of the Cyface application/SDK uploading the data
          */
-        public ExpectedData(final String deviceIdentifier, final String operatingSystemVersion, final String deviceType,
-                String applicationVersion) {
+        ExpectedData(final String deviceIdentifier, final String operatingSystemVersion, final String deviceType,
+                final String applicationVersion) {
             this.deviceIdentifier = deviceIdentifier;
             this.operatingSystemVersion = operatingSystemVersion;
             this.deviceType = deviceType;
@@ -340,7 +358,7 @@ public final class EventBusTest {
      * @version 1.0.0
      * @since 1.0.0
      */
-    private final class ExpectedMeasurementData {
+    private static final class ExpectedMeasurementData {
         /**
          * The device wide unqiue identifier of the measurement.
          */
@@ -391,7 +409,7 @@ public final class EventBusTest {
          * @param endLocationLon The geographical longitude of the last location in the uploaded track
          * @param endLocationTimestamp The unix timestamp in milliseconds of the last location in the uploaded track
          */
-        public ExpectedMeasurementData(final String measurementIdentifier, final Double length,
+        ExpectedMeasurementData(final String measurementIdentifier, final Double length,
                 final Long locationCount, final Double startLocationLat, final Double startLocationLon,
                 final Long startLocationTimestamp, final Double endLocationLat, final Double endLocationLon,
                 final Long endLocationTimestamp) {

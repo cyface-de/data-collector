@@ -1,0 +1,81 @@
+<?xml version="1.0"?>
+
+<ruleset name="Custom Rules"
+	xmlns="http://pmd.sourceforge.net/ruleset/2.0.0"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://pmd.sourceforge.net/ruleset/2.0.0 https://pmd.sourceforge.io/ruleset_2_0_0.xsd">
+
+	<description>
+        This is the basic rule file used for the Cyface collector. It basically includes all Java rules but, removes a few, which make no sense in our setting.
+    </description>
+
+
+	<rule ref="category/java/bestpractices.xml">
+		<exclude name="JUnitTestsShouldIncludeAssert" />
+	</rule>
+	
+	<rule ref="category/java/codestyle.xml">
+		<exclude name="AtLeastOneConstructor" />
+		<exclude name="OnlyOneReturn" />
+		<exclude name="CommentDefaultAccessModifier" />
+		<exclude name="DefaultPackage" />
+	</rule>
+	<rule ref="category/java/codestyle.xml/LongVariable">
+	    <properties>
+	        <property name="minimum" value="35" />
+	    </properties>
+	</rule>
+	<rule ref="category/java/codestyle.xml/ConfusingTernary">
+	    <properties>
+	        <property name="ignoreElseIf" value="true" />
+	    </properties>
+	</rule>
+
+	<rule ref="category/java/design.xml">
+		<exclude name="DataClass" />
+	</rule>
+	<rule ref="category/java/design.xml/LawOfDemeter">
+		<priority>5</priority>
+	</rule>
+	<rule ref="category/java/design.xml/ExcessiveImports">
+	    <properties>
+	        <property name="minimum" value="40.0" />
+	    </properties>
+	</rule>
+	<rule ref="category/java/design.xml/AvoidCatchingGenericException">
+		<priority>5</priority>
+	</rule>
+	<rule ref="category/java/design.xml/ExcessiveParameterList">
+	    <properties>
+	        <property name="minimum" value="15.0" />
+	    </properties>
+	</rule>
+
+	<rule ref="category/java/documentation.xml" />
+	<rule ref="category/java/documentation.xml/CommentSize">
+    	<properties>
+        	<property name="maxLines" value="20" />
+        	<property name="maxLineLength" value="120" />
+    	</properties>
+	</rule>
+
+	<rule ref="category/java/errorprone.xml">
+		<exclude name="AvoidFieldNameMatchingMethodName" />
+		<exclude name="BeanMembersShouldSerialize" />
+	</rule>
+	<rule ref="category/java/errorprone.xml/AvoidCatchingNPE">
+		<priority>5</priority>
+	</rule>
+
+	
+	<rule ref="category/java/multithreading.xml"></rule>
+	<rule ref="category/java/performance.xml">
+		<exclude name="RedundantFieldInitializer" />
+	</rule>
+	<rule ref="category/java/performance.xml/AvoidInstantiatingObjectsInLoops">
+		<priority>5</priority>
+	</rule>
+	
+	<rule ref="category/java/security.xml"></rule>
+
+</ruleset>

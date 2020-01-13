@@ -15,21 +15,17 @@
 package de.cyface.collector.verticle;
 
 import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.nio.charset.Charset;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Collections;
 
 import org.apache.commons.lang3.Validate;
 
-import com.google.common.io.Files;
-
+import de.cyface.collector.MongoDbUtils;
 import de.cyface.collector.Parameter;
-import de.cyface.collector.Utils;
 import de.cyface.collector.handler.AuthenticationFailureHandler;
 import de.cyface.collector.handler.AuthenticationHandler;
 import de.cyface.collector.handler.FailureHandler;
@@ -81,7 +77,7 @@ public final class CollectorApiVerticle extends AbstractVerticle {
     /**
      * The number of bytes in one gigabyte. This can be used to limit the amount of data accepted by the server.
      */
-    private static final long BYTES_IN_ONE_GIGABYTE = 1073741824L;
+    private static final long BYTES_IN_ONE_GIGABYTE = 1_073_741_824L;
     /**
      * The number of bytes in one kilobyte. This is used to limit the amount of bytes accepted by an authentication
      * request.
@@ -105,9 +101,9 @@ public final class CollectorApiVerticle extends AbstractVerticle {
 
         // Setup mongo user database client with authProvider
         final JsonObject mongoUserDatabaseConfiguration = Parameter.MONGO_USER_DB.jsonValue(vertx, new JsonObject());
-        final MongoClient client = Utils.createSharedMongoClient(vertx, mongoUserDatabaseConfiguration);
+        final MongoClient client = MongoDbUtils.createSharedMongoClient(vertx, mongoUserDatabaseConfiguration);
         final String salt = loadSalt(vertx);
-        final MongoAuth authProvider = Utils.buildMongoAuthProvider(client, salt);
+        final MongoAuth authProvider = MongoDbUtils.buildMongoAuthProvider(client, salt);
 
         // Start http server with auth config
         final int httpPort = Parameter.COLLECTOR_HTTP_PORT.intValue(vertx, 8080);
@@ -141,7 +137,7 @@ public final class CollectorApiVerticle extends AbstractVerticle {
             if (result.result() == null) {
                 authProvider.insertUser(adminUsername, adminPassword, Collections.singletonList(ADMIN_ROLE),
                         new ArrayList<>(), ir -> {
-                            LOGGER.info("Identifier of new user id: " + ir);
+                            LOGGER.info("Identifier of new user id: {}", ir);
                             defaultUserCreatedFuture.complete();
                         });
             } else {
@@ -169,7 +165,7 @@ public final class CollectorApiVerticle extends AbstractVerticle {
      * @return A value to be used as encryption salt
      * @throws IOException If the salt is provided in a file and that file is not accessible
      */
-    private String loadSalt(Vertx vertx) throws IOException {
+    private String loadSalt(final Vertx vertx) throws IOException {
         final String salt = Parameter.SALT.stringValue(vertx);
         final String saltPath = Parameter.SALT_PATH.stringValue(vertx);
         if (salt == null && saltPath == null) {
@@ -181,7 +177,7 @@ public final class CollectorApiVerticle extends AbstractVerticle {
         } else if (salt != null) {
             return salt;
         } else {
-            return Files.readFirstLine(new File(saltPath), Charset.forName("UTF-8"));
+            return Files.readAllLines(Paths.get(saltPath)).get(0);
         }
     }
 
@@ -325,10 +321,9 @@ public final class CollectorApiVerticle extends AbstractVerticle {
      *
      * @param keyParameter The Vertx configuration parameter specifying the location of the file containing the key.
      * @return The extracted key.
-     * @throws FileNotFoundException If the key file was not found.
      * @throws IOException If the key file was not accessible.
      */
-    private String extractKey(final Parameter keyParameter) throws FileNotFoundException, IOException {
+    private String extractKey(final Parameter keyParameter) throws IOException {
         final String keyFilePath = keyParameter.stringValue(vertx, null);
         if (keyFilePath == null) {
             return null;
@@ -336,7 +331,7 @@ public final class CollectorApiVerticle extends AbstractVerticle {
 
         final StringBuilder keyBuilder = new StringBuilder();
         try (BufferedReader keyFileInput = new BufferedReader(
-                new InputStreamReader(new FileInputStream(keyFilePath), "UTF-8"));) {
+                new InputStreamReader(Files.newInputStream(Paths.get(keyFilePath)), "UTF-8"));) {
 
             String line = keyFileInput.readLine();
             while (line != null) {

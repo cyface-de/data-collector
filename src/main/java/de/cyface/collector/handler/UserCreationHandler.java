@@ -53,7 +53,7 @@ public final class UserCreationHandler implements Handler<RoutingContext> {
     /**
      * This is the role which a newly created user gets when it's created without any defined roles.
      */
-    private final static String DEFAULT_USER_ROLE = "guest";
+    private static final String DEFAULT_USER_ROLE = "guest";
 
     /**
      * Creates a new completely initialized <code>UserCreationHandler</code>.
@@ -72,15 +72,15 @@ public final class UserCreationHandler implements Handler<RoutingContext> {
         final String username = body.getString("username");
         final String password = body.getString("password");
         final String providedRole = body.getString("role");
-        final String role = (providedRole == null || providedRole.isEmpty()) ? DEFAULT_USER_ROLE : providedRole;
+        final String role = providedRole == null || providedRole.isEmpty() ? DEFAULT_USER_ROLE : providedRole;
 
         mongoAuth.insertUser(username, password, Collections.singletonList(role),
                 new ArrayList<>(), ir -> {
                     if (ir.succeeded()) {
-                        LOGGER.info("Added new user with id: " + username);
+                        LOGGER.info("Added new user with id: {}", username);
                         event.response().setStatusCode(201).end();
                     } else {
-                        LOGGER.error("Unable to create user with id: " + username, ir.cause());
+                        LOGGER.error("Unable to create user with id: {}", ir.cause(), username);
                         event.fail(400);
                     }
                 });

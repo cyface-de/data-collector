@@ -172,9 +172,9 @@ public final class Measurement {
                 "Field length had an invalid value {} which is smaller then 0.0!", length);
         Validate.isTrue(locationCount >= MINIMUM_LOCATION_COUNT,
                 "Field locationCount had an invalid value {} which is smaller then 0!", locationCount);
-        Validate.isTrue((locationCount == MINIMUM_LOCATION_COUNT && startLocation == null) || startLocation != null,
+        Validate.isTrue(locationCount == MINIMUM_LOCATION_COUNT && startLocation == null || startLocation != null,
                 "Start location should only be defined if there is at least one location in the uploaded track!");
-        Validate.isTrue((locationCount == MINIMUM_LOCATION_COUNT && endLocation == null) || endLocation != null,
+        Validate.isTrue(locationCount == MINIMUM_LOCATION_COUNT && endLocation == null || endLocation != null,
                 "End location should only be defined if there is at least one location in the uploaded track!");
         Validate.notNull(vehicle, "Field vehicleType was null!");
         Validate.isTrue(!vehicle.isEmpty() && vehicle.length() <= MAX_GENERIC_METADATA_FIELD_LENGTH,
@@ -321,147 +321,156 @@ public final class Measurement {
      * @return A codec encoding and decoding this <code>Measurement</code> for usage on the event bus.
      */
     public static MessageCodec<Measurement, Measurement> getCodec() {
-        return new MessageCodec<Measurement, Measurement>() {
+        return new EventBusCodec();
 
-            @Override
-            public void encodeToWire(final Buffer buffer, final Measurement s) {
-                final String deviceIdentifier = s.getDeviceIdentifier();
-                final String measurementIdentifier = s.getMeasurementIdentifier();
-                final String deviceType = s.getDeviceType();
-                final String operatingSystemVersion = s.getOperatingSystemVersion();
-                final String applicationVersion = s.getApplicationVersion();
-                final double length = s.getLength();
-                final long locationCount = s.getLocationCount();
-                final String vehicle = s.getVehicle();
-                final String username = s.getUsername();
+    }
 
-                buffer.appendInt(deviceIdentifier.length());
-                buffer.appendInt(measurementIdentifier.length());
-                buffer.appendInt(deviceType.length());
-                buffer.appendInt(operatingSystemVersion.length());
-                buffer.appendInt(applicationVersion.length());
-                buffer.appendInt(vehicle.length());
-                buffer.appendInt(username.length());
-                buffer.appendInt(s.getFileUploads().size());
-                buffer.appendString(deviceIdentifier);
-                buffer.appendString(measurementIdentifier);
-                buffer.appendString(deviceType);
-                buffer.appendString(operatingSystemVersion);
-                buffer.appendString(applicationVersion);
-                buffer.appendDouble(length);
-                buffer.appendLong(locationCount);
-                buffer.appendString(vehicle);
-                buffer.appendString(username);
-                if (locationCount > 0) {
-                    final double startLocationLat = s.getStartLocation().getLat();
-                    final double startLocationLon = s.getStartLocation().getLon();
-                    final long startLocationTimestamp = s.getStartLocation().getTimestamp();
-                    final double endLocationLat = s.getEndLocation().getLat();
-                    final double endLocationLon = s.getEndLocation().getLon();
-                    final long endLocationTimestamp = s.getEndLocation().getTimestamp();
-                    buffer.appendDouble(startLocationLat);
-                    buffer.appendDouble(startLocationLon);
-                    buffer.appendLong(startLocationTimestamp);
-                    buffer.appendDouble(endLocationLat);
-                    buffer.appendDouble(endLocationLon);
-                    buffer.appendLong(endLocationTimestamp);
-                }
-                s.getFileUploads().forEach(fu -> {
-                    buffer.appendInt(fu.file.getAbsolutePath().length());
-                    buffer.appendString(fu.file.getAbsolutePath());
-                    buffer.appendInt(fu.fileType.length());
-                    buffer.appendString(fu.fileType);
-                });
+    /**
+     * A <code>MessageCodec</code> implementation to be used for transmitting a <code>Measurement</code> via a Vertx
+     * event bus.
+     *
+     * @author Klemens Muthmann
+     * @version 1.0.0
+     * @since 1.0.0
+     */
+    private static final class EventBusCodec implements MessageCodec<Measurement, Measurement> {
+        @Override
+        public void encodeToWire(final Buffer buffer, final Measurement serializable) {
+            final String deviceIdentifier = serializable.getDeviceIdentifier();
+            final String measurementIdentifier = serializable.getMeasurementIdentifier();
+            final String deviceType = serializable.getDeviceType();
+            final String operatingSystemVersion = serializable.getOperatingSystemVersion();
+            final String applicationVersion = serializable.getApplicationVersion();
+            final double length = serializable.getLength();
+            final long locationCount = serializable.getLocationCount();
+            final String vehicle = serializable.getVehicle();
+            final String username = serializable.getUsername();
+
+            buffer.appendInt(deviceIdentifier.length());
+            buffer.appendInt(measurementIdentifier.length());
+            buffer.appendInt(deviceType.length());
+            buffer.appendInt(operatingSystemVersion.length());
+            buffer.appendInt(applicationVersion.length());
+            buffer.appendInt(vehicle.length());
+            buffer.appendInt(username.length());
+            buffer.appendInt(serializable.getFileUploads().size());
+            buffer.appendString(deviceIdentifier);
+            buffer.appendString(measurementIdentifier);
+            buffer.appendString(deviceType);
+            buffer.appendString(operatingSystemVersion);
+            buffer.appendString(applicationVersion);
+            buffer.appendDouble(length);
+            buffer.appendLong(locationCount);
+            buffer.appendString(vehicle);
+            buffer.appendString(username);
+            if (locationCount > 0) {
+                final double startLocationLat = serializable.getStartLocation().getLat();
+                final double startLocationLon = serializable.getStartLocation().getLon();
+                final long startLocationTimestamp = serializable.getStartLocation().getTimestamp();
+                final double endLocationLat = serializable.getEndLocation().getLat();
+                final double endLocationLon = serializable.getEndLocation().getLon();
+                final long endLocationTimestamp = serializable.getEndLocation().getTimestamp();
+                buffer.appendDouble(startLocationLat);
+                buffer.appendDouble(startLocationLon);
+                buffer.appendLong(startLocationTimestamp);
+                buffer.appendDouble(endLocationLat);
+                buffer.appendDouble(endLocationLon);
+                buffer.appendLong(endLocationTimestamp);
+            }
+            serializable.getFileUploads().forEach(fu -> {
+                buffer.appendInt(fu.file.getAbsolutePath().length());
+                buffer.appendString(fu.file.getAbsolutePath());
+                buffer.appendInt(fu.fileType.length());
+                buffer.appendString(fu.fileType);
+            });
+        }
+
+        @Override
+        public Measurement decodeFromWire(final int pos, final Buffer buffer) {
+            final int deviceIdentifierLength = buffer.getInt(0 * Integer.BYTES);
+            final int measurementIdentifierLength = buffer.getInt(1 * Integer.BYTES);
+            final int deviceTypeLength = buffer.getInt(2 * Integer.BYTES);
+            final int operatingSystemVersionLength = buffer.getInt(3 * Integer.BYTES);
+            final int applicationVersionLength = buffer.getInt(4 * Integer.BYTES);
+            final int vehicleTypeLength = buffer.getInt(5 * Integer.BYTES);
+            final int usernameLength = buffer.getInt(6 * Integer.BYTES);
+            final int numberOfFileUploads = buffer.getInt(7 * Integer.BYTES);
+
+            final int deviceIdentifierEnd = 8 * Integer.BYTES + deviceIdentifierLength;
+            final String deviceIdentifier = buffer.getString(8 * Integer.BYTES, deviceIdentifierEnd);
+            final int measurementIdentifierEnd = deviceIdentifierEnd + measurementIdentifierLength;
+            final String measurementIdentifier = buffer.getString(deviceIdentifierEnd, measurementIdentifierEnd);
+            final int deviceTypeEnd = measurementIdentifierEnd + deviceTypeLength;
+            final String deviceType = buffer.getString(measurementIdentifierEnd, deviceTypeEnd);
+            final int operationSystemVersionEnd = deviceTypeEnd + operatingSystemVersionLength;
+            final String operatingSystemVersion = buffer.getString(deviceTypeEnd, operationSystemVersionEnd);
+            final int applicationVersionEnd = operationSystemVersionEnd + applicationVersionLength;
+            final String applicationVersion = buffer.getString(operationSystemVersionEnd, applicationVersionEnd);
+            final int lengthEnd = applicationVersionEnd + Double.BYTES;
+            final double length = buffer.getDouble(applicationVersionEnd);
+            final int locationCountEnd = lengthEnd + Long.BYTES;
+            final long locationCount = buffer.getLong(lengthEnd);
+            final int vehicleEnd = locationCountEnd + vehicleTypeLength;
+            final String vehicle = buffer.getString(locationCountEnd, vehicleEnd);
+            final int usernameEnd = vehicleEnd + usernameLength;
+            final String username = buffer.getString(vehicleEnd, usernameEnd);
+
+            GeoLocation startLocation = null;
+            GeoLocation endLocation = null;
+            int startOfFileUploads = usernameEnd;
+            if (locationCount > 0) {
+                final int startLocationLatEnd = usernameEnd + Double.BYTES;
+                final int startLocationLonEnd = startLocationLatEnd + Double.BYTES;
+                final int startLocationTimestampEnd = startLocationLonEnd + Double.BYTES;
+                final double startLocationLat = buffer.getDouble(usernameEnd);
+                final double startLocationLon = buffer.getDouble(startLocationLatEnd);
+                final long startLocationTimestamp = buffer.getLong(startLocationLonEnd);
+
+                final int endLocationLatEnd = startLocationTimestampEnd + Double.BYTES;
+                final int endLocationLonEnd = endLocationLatEnd + Double.BYTES;
+                final int endLocationTimestampEnd = endLocationLonEnd + Long.BYTES;
+                final double endLocationLat = buffer.getDouble(startLocationTimestampEnd);
+                final double endLocationLon = buffer.getDouble(endLocationLatEnd);
+                final long endLocationTimestamp = buffer.getLong(endLocationLonEnd);
+                startLocation = new GeoLocation(startLocationLat, startLocationLon,
+                        startLocationTimestamp);
+                endLocation = new GeoLocation(endLocationLat, endLocationLon, endLocationTimestamp);
+                startOfFileUploads = endLocationTimestampEnd;
             }
 
-            @Override
-            public Measurement decodeFromWire(final int pos, final Buffer buffer) {
-                final int deviceIdentifierLength = buffer.getInt(0 * Integer.BYTES);
-                final int measurementIdentifierLength = buffer.getInt(1 * Integer.BYTES);
-                final int deviceTypeLength = buffer.getInt(2 * Integer.BYTES);
-                final int operatingSystemVersionLength = buffer.getInt(3 * Integer.BYTES);
-                final int applicationVersionLength = buffer.getInt(4 * Integer.BYTES);
-                final int vehicleTypeLength = buffer.getInt(5 * Integer.BYTES);
-                final int usernameLength = buffer.getInt(6 * Integer.BYTES);
-                final int numberOfFileUploads = buffer.getInt(7 * Integer.BYTES);
+            final Collection<FileUpload> fileUploads = new HashSet<>();
+            int iterationStartByte = startOfFileUploads;
+            for (int i = 0; i < numberOfFileUploads; i++) {
+                final int entryLength = buffer.getInt(iterationStartByte);
+                final String fileName = buffer.getString(4 + iterationStartByte, 4 + iterationStartByte + entryLength);
+                iterationStartByte += 4 + iterationStartByte + entryLength;
+                final int extensionLength = buffer.getInt(iterationStartByte);
+                final String fileType = buffer.getString(4 + iterationStartByte,
+                        4 + iterationStartByte + extensionLength);
 
-                final int deviceIdentifierEnd = 8 * Integer.BYTES + deviceIdentifierLength;
-                final String deviceIdentifier = buffer.getString(8 * Integer.BYTES, deviceIdentifierEnd);
-                final int measurementIdentifierEnd = deviceIdentifierEnd + measurementIdentifierLength;
-                final String measurementIdentifier = buffer.getString(deviceIdentifierEnd, measurementIdentifierEnd);
-                final int deviceTypeEnd = measurementIdentifierEnd + deviceTypeLength;
-                final String deviceType = buffer.getString(measurementIdentifierEnd, deviceTypeEnd);
-                final int operationSystemVersionEnd = deviceTypeEnd + operatingSystemVersionLength;
-                final String operatingSystemVersion = buffer.getString(deviceTypeEnd, operationSystemVersionEnd);
-                final int applicationVersionEnd = operationSystemVersionEnd + applicationVersionLength;
-                final String applicationVersion = buffer.getString(operationSystemVersionEnd, applicationVersionEnd);
-                final int lengthEnd = applicationVersionEnd + Double.BYTES;
-                final double length = buffer.getDouble(applicationVersionEnd);
-                final int locationCountEnd = lengthEnd + Long.BYTES;
-                final long locationCount = buffer.getLong(lengthEnd);
-                final int vehicleEnd = locationCountEnd + vehicleTypeLength;
-                final String vehicle = buffer.getString(locationCountEnd, vehicleEnd);
-                final int usernameEnd = vehicleEnd + usernameLength;
-                final String username = buffer.getString(vehicleEnd, usernameEnd);
-
-                GeoLocation startLocation = null;
-                GeoLocation endLocation = null;
-                int startOfFileUploads = usernameEnd;
-                if (locationCount > 0) {
-                    final int startLocationLatEnd = usernameEnd + Double.BYTES;
-                    final int startLocationLonEnd = startLocationLatEnd + Double.BYTES;
-                    final int startLocationTimestampEnd = startLocationLonEnd + Double.BYTES;
-                    final double startLocationLat = buffer.getDouble(usernameEnd);
-                    final double startLocationLon = buffer.getDouble(startLocationLatEnd);
-                    final long startLocationTimestamp = buffer.getLong(startLocationLonEnd);
-
-                    final int endLocationLatEnd = startLocationTimestampEnd + Double.BYTES;
-                    final int endLocationLonEnd = endLocationLatEnd + Double.BYTES;
-                    final int endLocationTimestampEnd = endLocationLonEnd + Long.BYTES;
-                    final double endLocationLat = buffer.getDouble(startLocationTimestampEnd);
-                    final double endLocationLon = buffer.getDouble(endLocationLatEnd);
-                    final long endLocationTimestamp = buffer.getLong(endLocationLonEnd);
-                    startLocation = new GeoLocation(startLocationLat, startLocationLon,
-                            startLocationTimestamp);
-                    endLocation = new GeoLocation(endLocationLat, endLocationLon, endLocationTimestamp);
-                    startOfFileUploads = endLocationTimestampEnd;
-                }
-
-                Collection<FileUpload> fileUploads = new HashSet<>();
-                int iterationStartByte = startOfFileUploads;
-                for (int i = 0; i < numberOfFileUploads; i++) {
-                    int entryLength = buffer.getInt(iterationStartByte);
-                    String fileName = buffer.getString(4 + iterationStartByte, 4 + iterationStartByte + entryLength);
-                    iterationStartByte += 4 + iterationStartByte + entryLength;
-                    int extensionLength = buffer.getInt(iterationStartByte);
-                    String fileType = buffer.getString(4 + iterationStartByte,
-                            4 + iterationStartByte + extensionLength);
-
-                    File uploadFile = new File(fileName);
-                    fileUploads.add(new FileUpload(uploadFile, fileType));
-                }
-
-                return new Measurement(deviceIdentifier, measurementIdentifier, operatingSystemVersion, deviceType,
-                        applicationVersion, length, locationCount, startLocation, endLocation, vehicle, username,
-                        fileUploads);
+                final File uploadFile = new File(fileName);
+                fileUploads.add(new FileUpload(uploadFile, fileType));
             }
 
-            @Override
-            public Measurement transform(final Measurement s) {
-                return s;
-            }
+            return new Measurement(deviceIdentifier, measurementIdentifier, operatingSystemVersion, deviceType,
+                    applicationVersion, length, locationCount, startLocation, endLocation, vehicle, username,
+                    fileUploads);
+        }
 
-            @Override
-            public String name() {
-                return "Measurement";
-            }
+        @Override
+        public Measurement transform(final Measurement serializable) {
+            return serializable;
+        }
 
-            @Override
-            public byte systemCodecID() {
-                return -1;
-            }
-        };
+        @Override
+        public String name() {
+            return "Measurement";
+        }
 
+        @Override
+        public byte systemCodecID() {
+            return -1;
+        }
     }
 
     /**

@@ -18,21 +18,7 @@
  */
 package de.cyface.collector.handler;
 
-import static de.cyface.collector.EventBusAddresses.NEW_MEASUREMENT;
-import static de.cyface.collector.handler.FormAttributes.APPLICATION_VERSION;
-import static de.cyface.collector.handler.FormAttributes.DEVICE_ID;
-import static de.cyface.collector.handler.FormAttributes.DEVICE_TYPE;
-import static de.cyface.collector.handler.FormAttributes.END_LOCATION_LAT;
-import static de.cyface.collector.handler.FormAttributes.END_LOCATION_LON;
-import static de.cyface.collector.handler.FormAttributes.END_LOCATION_TS;
-import static de.cyface.collector.handler.FormAttributes.LENGTH;
-import static de.cyface.collector.handler.FormAttributes.LOCATION_COUNT;
-import static de.cyface.collector.handler.FormAttributes.MEASUREMENT_ID;
-import static de.cyface.collector.handler.FormAttributes.OS_VERSION;
-import static de.cyface.collector.handler.FormAttributes.START_LOCATION_LAT;
-import static de.cyface.collector.handler.FormAttributes.START_LOCATION_LON;
-import static de.cyface.collector.handler.FormAttributes.START_LOCATION_TS;
-import static de.cyface.collector.handler.FormAttributes.VEHICLE_TYPE;
+import static de.cyface.collector.EventBusAddressUtils.NEW_MEASUREMENT;
 
 import java.io.File;
 import java.util.HashSet;
@@ -40,7 +26,7 @@ import java.util.Set;
 
 import org.apache.commons.io.FilenameUtils;
 
-import de.cyface.collector.EventBusAddresses;
+import de.cyface.collector.EventBusAddressUtils;
 import de.cyface.collector.model.GeoLocation;
 import de.cyface.collector.model.Measurement;
 import io.vertx.core.Handler;
@@ -63,6 +49,7 @@ import io.vertx.ext.web.RoutingContext;
  * @version 3.1.3
  * @since 2.0.0
  */
+@SuppressWarnings("PMD.AvoidCatchingNPE")
 public final class MeasurementHandler implements Handler<RoutingContext> {
 
     /**
@@ -77,28 +64,34 @@ public final class MeasurementHandler implements Handler<RoutingContext> {
         LOGGER.info("Received new measurement request.");
         final HttpServerRequest request = ctx.request();
         final HttpServerResponse response = ctx.response();
-        LOGGER.debug("FormAttributes: " + request.formAttributes());
+        LOGGER.debug("FormAttributes: {}", request.formAttributes());
         final User user = ctx.user();
 
         try {
-            final String deviceId = request.getFormAttribute(DEVICE_ID.getValue());
-            final String deviceType = request.getFormAttribute(DEVICE_TYPE.getValue());
-            final String measurementId = request.getFormAttribute(MEASUREMENT_ID.getValue());
-            final String osVersion = request.getFormAttribute(OS_VERSION.getValue());
-            final String applicationVersion = request.getFormAttribute(APPLICATION_VERSION.getValue());
-            final double length = Double.parseDouble(request.getFormAttribute(LENGTH.getValue()));
-            final long locationCount = Long.parseLong(request.getFormAttribute(LOCATION_COUNT.getValue()));
-            final String vehicleType = request.getFormAttribute(VEHICLE_TYPE.getValue());
+            final String deviceId = request.getFormAttribute(FormAttributes.DEVICE_ID.getValue());
+            final String deviceType = request.getFormAttribute(FormAttributes.DEVICE_TYPE.getValue());
+            final String measurementId = request.getFormAttribute(FormAttributes.MEASUREMENT_ID.getValue());
+            final String osVersion = request.getFormAttribute(FormAttributes.OS_VERSION.getValue());
+            final String applicationVersion = request.getFormAttribute(FormAttributes.APPLICATION_VERSION.getValue());
+            final double length = Double.parseDouble(request.getFormAttribute(FormAttributes.LENGTH.getValue()));
+            final long locationCount = Long
+                    .parseLong(request.getFormAttribute(FormAttributes.LOCATION_COUNT.getValue()));
+            final String vehicleType = request.getFormAttribute(FormAttributes.VEHICLE_TYPE.getValue());
             final String username = user.principal().getString("username");
             GeoLocation startLocation = null;
             GeoLocation endLocation = null;
             if (locationCount > 0) {
-                final String startLocationLatString = request.getFormAttribute(START_LOCATION_LAT.getValue());
-                final String startLocationLonString = request.getFormAttribute(START_LOCATION_LON.getValue());
-                final String startLocationTsString = request.getFormAttribute(START_LOCATION_TS.getValue());
-                final String endLocationLatString = request.getFormAttribute(END_LOCATION_LAT.getValue());
-                final String endLocationLonString = request.getFormAttribute(END_LOCATION_LON.getValue());
-                final String endLocationTsString = request.getFormAttribute(END_LOCATION_TS.getValue());
+                final String startLocationLatString = request
+                        .getFormAttribute(FormAttributes.START_LOCATION_LAT.getValue());
+                final String startLocationLonString = request
+                        .getFormAttribute(FormAttributes.START_LOCATION_LON.getValue());
+                final String startLocationTsString = request
+                        .getFormAttribute(FormAttributes.START_LOCATION_TS.getValue());
+                final String endLocationLatString = request
+                        .getFormAttribute(FormAttributes.END_LOCATION_LAT.getValue());
+                final String endLocationLonString = request
+                        .getFormAttribute(FormAttributes.END_LOCATION_LON.getValue());
+                final String endLocationTsString = request.getFormAttribute(FormAttributes.END_LOCATION_TS.getValue());
 
                 if (startLocationLatString == null || startLocationLonString == null || startLocationTsString == null
                         || endLocationLatString == null || endLocationLonString == null
@@ -143,7 +136,7 @@ public final class MeasurementHandler implements Handler<RoutingContext> {
      * @param measurement The newly arrived measurement.
      * @param context The routing context necessary to get access to the Vert.x
      *            event bus.
-     * @see EventBusAddresses#NEW_MEASUREMENT
+     * @see EventBusAddressUtils#NEW_MEASUREMENT
      */
     private void informAboutNew(final Measurement measurement, final RoutingContext context) {
         final EventBus eventBus = context.vertx().eventBus();

@@ -27,7 +27,7 @@ plugins {
   id 'com.github.johnrengelman.shadow' version '4.0.4'
   id 'checkstyle'
   id 'pmd'
-  id 'findbugs'
+  id 'com.github.spotbugs' version '3.0.0'
   id 'jacoco'
 }
 
@@ -41,7 +41,7 @@ ext {
   commonsLangVersion = '3.8.1'
   
   jacocoVersion = '0.8.3'
-  gradleWrapperVersion = '5.4.1'
+  gradleWrapperVersion = '6.0.1'
 }
 
 repositories {
@@ -123,19 +123,32 @@ jacocoTestReport {
     }
 }
 
-tasks.withType(FindBugs) {
-    reports {
-        xml.enabled false
-        html.enabled true
-    }
+spotbugs {
+  toolVersion = '4.0.0-beta4'
+  ignoreFailures = true
+}
+
+// To generate an HTML report instead of XML <-- This does not work at the moment for unknown reasons. Maybe with the next release of spotbugs. Until then only XML output is possible.
+tasks.withType(com.github.spotbugs.SpotBugsTask) {
+  reports {
+    xml.enabled = false
+    html.enabled = true
+  }
+  pluginClasspath = project.configurations.spotbugsPlugins
 }
 
 checkstyle {
+	toolVersion "7.6.1"
 	// use one common config file for all subprojects
 	configFile = project(':').file('config/checkstyle/checkstyle.xml')
 	configProperties = [ "suppressionFile" : project(':').file('config/checkstyle/suppressions.xml')]
 }
 
 pmd {
-	ignoreFailures = true
+	ignoreFailures = false
+	toolVersion = "6.20.0"
+	incrementalAnalysis = true
+	ruleSetFiles = files('config/pmd.xml')
+	rulePriority = 4
+	ruleSets = []
 }

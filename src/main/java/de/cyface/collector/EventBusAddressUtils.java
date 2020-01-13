@@ -26,7 +26,7 @@ package de.cyface.collector;
  * @version 1.1.0
  * @since 2.0.0
  */
-public final class EventBusAddresses {
+public final class EventBusAddressUtils {
 
 	/**
 	 * Address used to inform the event bus about a new measurement, which has
@@ -47,7 +47,7 @@ public final class EventBusAddresses {
 	/**
 	 * Private constructor to prevent instantiation of utility classes.
 	 */
-	private EventBusAddresses() {
+	private EventBusAddressUtils() {
 		// Nothing to do here.
 	}
 }
