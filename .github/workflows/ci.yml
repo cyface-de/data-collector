@@ -15,4 +15,20 @@ jobs:
         java-version: 1.8
     - name: Build with Gradle
       run: ./gradlew clean shadowJar check jacocoTestReport
+    - name: Notify Slack of Failure
+      if: failure()
+      uses: rtCamp/action-slack-notify@master
+      env:
+        SLACK_COLOR: '#ff0000'
+        SLACK_TITLE: Build Failed
+        SLACK_USERNAME: Github
+        SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+    - name: Notify Slack of Success
+      if: success()
+      uses: rtCamp/action-slack-notify@master
+      env:
+        SLACK_TITLE: Build Successful
+        SLACK_USERNAME: Github
+        SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+      
 
