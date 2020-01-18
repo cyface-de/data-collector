@@ -11,8 +11,6 @@ on:
 jobs:
   build:
 
-    runs-on: ubuntu-latest
-
     steps:
     - uses: actions/checkout@v1
     - name: Set up JDK 1.8
@@ -28,3 +26,18 @@ jobs:
         username: ${{ secrets.DOCKER_USERNAME }}
         password: ${{ secrets.DOCKER_PASSWORD }}
         tag_names: true
+    - name: Notify Slack of Failure
+      if: failure()
+      uses: rtCamp/action-slack-notify@master
+      env:
+        SLACK_COLOR: '#ff0000'
+        SLACK_TITLE: Build Failed
+        SLACK_USERNAME: Github
+        SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+    - name: Notify Slack of Success
+      if: success()
+      uses: rtCamp/action-slack-notify@master
+      env:
+        SLACK_TITLE: Build Successful
+        SLACK_USERNAME: Github
+        SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
