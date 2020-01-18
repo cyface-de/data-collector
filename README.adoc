@@ -3,8 +3,7 @@
 image:https://img.shields.io/badge/vert.x-3.8.0-purple.svg[link="https://vertx.io"] 
 image:https://img.shields.io/badge/mongo-4.0.11-purple.svg[link="https://mongodb.com/"]
 
-image:https://img.shields.io/shippable/5bcd815dec335d0700da8fdb/dev.svg[link="https://app.shippable.com/github/cyface-de/data-collector/dashboard"]
-image:https://api.shippable.com/projects/5bcd815dec335d0700da8fdb/coverageBadge?branch=dev[link="https://app.shippable.com/github/cyface-de/data-collector/dashboard"]
+[![Build Status](https://github.com/cyface-de/data-collector/workflows/Cyface%20Data%20Collector/badge.svg)](https://github.com/cyface-de/data-collector/actions)
 
 This application represents the https://cyface.de[Cyface] data collector software.
 It is used to collect traffic data from Cyface measurement devices, such as our sensor box or our smartphone application.
