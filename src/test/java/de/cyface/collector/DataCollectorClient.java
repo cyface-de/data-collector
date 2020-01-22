@@ -32,7 +32,7 @@ import io.vertx.ext.web.client.WebClient;
  * A client providing capabilities for tests to communicate with a Cyface Data Collector server.
  *
  * @author Klemens Muthmann
- * @version 1.1.2
+ * @version 1.1.3
  * @since 2.0.0
  */
 final class DataCollectorClient {

@@ -42,7 +42,7 @@ import io.vertx.ext.web.client.WebClient;
  * This tests the REST-API provided by the collector and used to upload the data to the server.
  *
  * @author Klemens Muthmann
- * @version 2.3.1
+ * @version 2.3.2
  * @since 1.0.0
  */
 @RunWith(VertxUnitRunner.class)

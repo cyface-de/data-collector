@@ -39,7 +39,7 @@ import io.vertx.ext.web.RoutingContext;
  * issues a new token. This token can then be used to transmit the actual request.
  *
  * @author Klemens Muthmann
- * @version 2.0.0
+ * @version 2.0.1
  * @since 2.0.0
  */
 public final class AuthenticationHandler implements Handler<RoutingContext> {

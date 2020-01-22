@@ -28,7 +28,7 @@ import io.vertx.ext.web.RoutingContext;
  * authentication attempts.
  *
  * @author Klemens Muthmann
- * @version 1.0.1
+ * @version 1.0.2
  * @since 2.0.0
  */
 public final class AuthenticationFailureHandler implements Handler<RoutingContext> {

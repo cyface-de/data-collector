@@ -44,7 +44,7 @@ import io.vertx.ext.web.client.WebClient;
  *
  * @author Klemens Muthmann
  * @author Armin Schnabel
- * @version 1.0.3
+ * @version 1.0.4
  * @since 2.0.0
  */
 @RunWith(VertxUnitRunner.class)

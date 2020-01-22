@@ -51,7 +51,7 @@ import io.vertx.ext.unit.junit.VertxUnitRunner;
  * Tests individual verticles by sending appropriate messages using the Vert.x event bus.
  *
  * @author Klemens Muthmann
- * @version 1.1.2
+ * @version 1.1.3
  * @since 2.0.0
  */
 @RunWith(VertxUnitRunner.class)
