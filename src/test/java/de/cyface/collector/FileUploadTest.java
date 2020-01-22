@@ -1,13 +1,13 @@
 /*
  * Copyright 2018, 2019 Cyface GmbH
- * 
+ *
  * This file is part of the Cyface Data Collector.
  *
  * The Cyface Data Collector is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * The Cyface Data Collector is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
@@ -53,18 +53,39 @@ import io.vertx.ext.web.multipart.MultipartForm;
 
 /**
  * Tests that uploading measurements to the Cyface API works as expected.
- * 
+ *
  * @author Klemens Muthmann
  * @author Armin Schnabel
  * @version 3.0.3
  * @since 2.0.0
  */
 @RunWith(VertxUnitRunner.class)
+@SuppressWarnings("PMD.MethodNamingConventions")
 public final class FileUploadTest {
     /**
      * Logger used to log messages from this class. Configure it using <tt>src/test/resource/logback-test.xml</tt>.
      */
     private static final Logger LOGGER = LoggerFactory.getLogger(FileUploadTest.class);
+    /**
+     * The geographical latitude of the end of the test measurement.
+     */
+    private static final String TEST_MEASUREMENT_END_LOCATION_LAT = "12.0";
+    /**
+     * The geographical longitude of the end of the test measurement.
+     */
+    private static final String TEST_MEASUREMENT_END_LOCATION_LON = "12.0";
+    /**
+     * The geographical latitude of the test measurement.
+     */
+    private static final String TEST_MEASUREMENT_START_LOCATION_LAT = "10.0";
+    /**
+     * The geographical longitude of the test measurement.
+     */
+    private static final String TEST_MEASUREMENT_START_LOCATION_LON = "10.0";
+    /**
+     * The amount of locations captured for the test measurement.
+     */
+    private static final String TEST_MEASUREMENT_LOCATION_COUNT = "10";
     /**
      * The endpoint to upload measurements to.
      */
@@ -102,7 +123,7 @@ public final class FileUploadTest {
 
     /**
      * Deploys the {@link CollectorApiVerticle} in a test context.
-     * 
+     *
      * @param ctx The test context used to control the test <code>Vertx</code>.
      * @throws IOException Fails the test if anything unexpected goes wrong.
      */
@@ -114,21 +135,22 @@ public final class FileUploadTest {
 
     /**
      * Boots the Mongo database before this test starts.
-     * 
+     *
      * @throws IOException If no socket was available for the Mongo database.
      */
     @BeforeClass
     public static void setUpMongoDatabase() throws IOException {
         mongoTest = new MongoTest();
-        final ServerSocket socket = new ServerSocket(0);
-        int mongoPort = socket.getLocalPort();
-        socket.close();
-        mongoTest.setUpMongoDatabase(mongoPort);
+        try (ServerSocket socket = new ServerSocket(0);) {
+            final int mongoPort = socket.getLocalPort();
+            socket.close();
+            mongoTest.setUpMongoDatabase(mongoPort);
+        }
     }
 
     /**
      * Initializes the environment for each test case with a mock Mongo Database and a Vert.x set up for testing.
-     * 
+     *
      * @param context The context of the test Vert.x.
      * @throws IOException Fails the test on unexpected exceptions.
      */
@@ -146,19 +168,19 @@ public final class FileUploadTest {
         form.attribute(FormAttributes.OS_VERSION.getValue(), "4.4.4");
         form.attribute(FormAttributes.APPLICATION_VERSION.getValue(), "4.0.0-alpha1");
         form.attribute(FormAttributes.LENGTH.getValue(), "200.0");
-        form.attribute(FormAttributes.LOCATION_COUNT.getValue(), "10");
-        form.attribute(FormAttributes.START_LOCATION_LAT.getValue(), "10.0");
-        form.attribute(FormAttributes.START_LOCATION_LON.getValue(), "10.0");
+        form.attribute(FormAttributes.LOCATION_COUNT.getValue(), TEST_MEASUREMENT_LOCATION_COUNT);
+        form.attribute(FormAttributes.START_LOCATION_LAT.getValue(), TEST_MEASUREMENT_START_LOCATION_LAT);
+        form.attribute(FormAttributes.START_LOCATION_LON.getValue(), TEST_MEASUREMENT_START_LOCATION_LON);
         form.attribute(FormAttributes.START_LOCATION_TS.getValue(), "10000");
-        form.attribute(FormAttributes.END_LOCATION_LAT.getValue(), "12.0");
-        form.attribute(FormAttributes.END_LOCATION_LON.getValue(), "12.0");
+        form.attribute(FormAttributes.END_LOCATION_LAT.getValue(), TEST_MEASUREMENT_END_LOCATION_LAT);
+        form.attribute(FormAttributes.END_LOCATION_LON.getValue(), TEST_MEASUREMENT_END_LOCATION_LON);
         form.attribute(FormAttributes.END_LOCATION_TS.getValue(), "12000");
         form.attribute(FormAttributes.VEHICLE_TYPE.getValue(), "BICYCLE");
     }
 
     /**
      * Stops the test <code>Vertx</code> instance.
-     * 
+     *
      * @param context The test context for running <code>Vertx</code> under test.
      */
     @After
@@ -176,7 +198,7 @@ public final class FileUploadTest {
 
     /**
      * Tests uploading a file to the Vertx API.
-     * 
+     *
      * @param context The test context for running <code>Vertx</code> under test.
      * @throws Exception Fails the test if anything unexpected happens.
      */
@@ -187,7 +209,7 @@ public final class FileUploadTest {
 
     /**
      * Tests that uploading a larger file works as expected.
-     * 
+     *
      * @param context The test context for running <code>Vertx</code> under test.
      */
     @Test
@@ -197,7 +219,7 @@ public final class FileUploadTest {
 
     /**
      * Tests that trying to upload something using wrong credentials returns HTTP status code 401 as expected.
-     * 
+     *
      * @param context The test context for running <code>Vertx</code> under test.
      */
     @Test
@@ -221,7 +243,7 @@ public final class FileUploadTest {
 
     /**
      * Tests that an upload with unparsable meta data returns a 422 error.
-     * 
+     *
      * @param context The test context for running <code>Vertx</code> under test.
      */
     @Test
@@ -236,12 +258,12 @@ public final class FileUploadTest {
         form.attribute(FormAttributes.OS_VERSION.getValue(), "4.4.4");
         form.attribute(FormAttributes.APPLICATION_VERSION.getValue(), "4.0.0-alpha1");
         form.attribute(FormAttributes.LENGTH.getValue(), "Sir! You are being hacked!");
-        form.attribute(FormAttributes.LOCATION_COUNT.getValue(), "10");
-        form.attribute(FormAttributes.START_LOCATION_LAT.getValue(), "10.0");
-        form.attribute(FormAttributes.START_LOCATION_LON.getValue(), "10.0");
+        form.attribute(FormAttributes.LOCATION_COUNT.getValue(), TEST_MEASUREMENT_LOCATION_COUNT);
+        form.attribute(FormAttributes.START_LOCATION_LAT.getValue(), TEST_MEASUREMENT_START_LOCATION_LAT);
+        form.attribute(FormAttributes.START_LOCATION_LON.getValue(), TEST_MEASUREMENT_START_LOCATION_LON);
         form.attribute(FormAttributes.START_LOCATION_TS.getValue(), "10000");
-        form.attribute(FormAttributes.END_LOCATION_LAT.getValue(), "12.0");
-        form.attribute(FormAttributes.END_LOCATION_LON.getValue(), "12.0");
+        form.attribute(FormAttributes.END_LOCATION_LAT.getValue(), TEST_MEASUREMENT_END_LOCATION_LAT);
+        form.attribute(FormAttributes.END_LOCATION_LON.getValue(), TEST_MEASUREMENT_END_LOCATION_LON);
         form.attribute(FormAttributes.END_LOCATION_TS.getValue(), "12000");
         form.attribute(FormAttributes.VEHICLE_TYPE.getValue(), "BICYCLE");
 
@@ -262,7 +284,7 @@ public final class FileUploadTest {
     /**
      * Uploads a file identified by a test resource location and checks that it was
      * uploaded successfully.
-     * 
+     *
      * @param context The Vert.x test context to use to upload the
      *            file.
      * @param testFileResourceName A resource name of a file to upload for testing.
@@ -302,7 +324,7 @@ public final class FileUploadTest {
     /**
      * Uploads the provided file using an authenticated request. You may listen to the completion of this upload using
      * any of the provided handlers.
-     * 
+     *
      * @param context The test context to use.
      * @param testFileResourceName The Java resource name of a file to upload.
      * @param handler The handler called if the client received a response.
@@ -325,8 +347,8 @@ public final class FileUploadTest {
                 testFileResource.getFile(), "application/octet-stream");
 
         final EventBus eventBus = vertx.eventBus();
-        eventBus.consumer(EventBusAddresses.MEASUREMENT_SAVED, measurementSavedHandler);
-        eventBus.consumer(EventBusAddresses.SAVING_MEASUREMENT_FAILED, measurementSavingFailedHandler);
+        eventBus.consumer(EventBusAddressUtils.MEASUREMENT_SAVED, measurementSavedHandler);
+        eventBus.consumer(EventBusAddressUtils.SAVING_MEASUREMENT_FAILED, measurementSavingFailedHandler);
 
         LOGGER.debug("Sending authentication request!");
         TestUtils.authenticate(client, authResponse -> {

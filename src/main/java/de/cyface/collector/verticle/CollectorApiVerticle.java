@@ -1,5 +1,5 @@
 /*
- * Copyright 2018, 2019 Cyface GmbH
+ * Copyright 2018, 2019, 2020 Cyface GmbH
  * This file is part of the Cyface Data Collector.
  * The Cyface Data Collector is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,28 +15,30 @@
 package de.cyface.collector.verticle;
 
 import java.io.BufferedReader;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Collections;
 
 import org.apache.commons.lang3.Validate;
 
+import de.cyface.collector.MongoDbUtils;
 import de.cyface.collector.Parameter;
-import de.cyface.collector.Utils;
 import de.cyface.collector.handler.AuthenticationFailureHandler;
 import de.cyface.collector.handler.AuthenticationHandler;
 import de.cyface.collector.handler.FailureHandler;
 import de.cyface.collector.handler.MeasurementHandler;
 import de.cyface.collector.model.Measurement;
+import io.micrometer.core.instrument.config.InvalidConfigurationException;
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.DeploymentOptions;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
+import io.vertx.core.Vertx;
 import io.vertx.core.http.HttpServer;
 import io.vertx.core.json.JsonObject;
 import io.vertx.core.logging.Logger;
@@ -57,7 +59,7 @@ import io.vertx.ext.web.handler.StaticHandler;
  *
  * @author Klemens Muthmann
  * @author Armin Schnabel
- * @version 1.2.6
+ * @version 1.2.7
  * @since 2.0.0
  */
 public final class CollectorApiVerticle extends AbstractVerticle {
@@ -75,7 +77,7 @@ public final class CollectorApiVerticle extends AbstractVerticle {
     /**
      * The number of bytes in one gigabyte. This can be used to limit the amount of data accepted by the server.
      */
-    private static final long BYTES_IN_ONE_GIGABYTE = 1073741824L;
+    private static final long BYTES_IN_ONE_GIGABYTE = 1_073_741_824L;
     /**
      * The number of bytes in one kilobyte. This is used to limit the amount of bytes accepted by an authentication
      * request.
@@ -84,7 +86,7 @@ public final class CollectorApiVerticle extends AbstractVerticle {
     /**
      * The role which identifies users with "admin" privileges.
      */
-    private final static String ADMIN_ROLE = "admin";
+    private static final String ADMIN_ROLE = "admin";
 
     @Override
     public void start(final Future<Void> startFuture) throws Exception {
@@ -99,9 +101,9 @@ public final class CollectorApiVerticle extends AbstractVerticle {
 
         // Setup mongo user database client with authProvider
         final JsonObject mongoUserDatabaseConfiguration = Parameter.MONGO_USER_DB.jsonValue(vertx, new JsonObject());
-        final MongoClient client = Utils.createSharedMongoClient(vertx, mongoUserDatabaseConfiguration);
-        final String salt = Parameter.SALT.stringValue(vertx, "cyface-salt");
-        final MongoAuth authProvider = Utils.buildMongoAuthProvider(client, salt);
+        final MongoClient client = MongoDbUtils.createSharedMongoClient(vertx, mongoUserDatabaseConfiguration);
+        final String salt = loadSalt(vertx);
+        final MongoAuth authProvider = MongoDbUtils.buildMongoAuthProvider(client, salt);
 
         // Start http server with auth config
         final int httpPort = Parameter.COLLECTOR_HTTP_PORT.intValue(vertx, 8080);
@@ -135,7 +137,7 @@ public final class CollectorApiVerticle extends AbstractVerticle {
             if (result.result() == null) {
                 authProvider.insertUser(adminUsername, adminPassword, Collections.singletonList(ADMIN_ROLE),
                         new ArrayList<>(), ir -> {
-                            LOGGER.info("Identifier of new user id: " + ir);
+                            LOGGER.info("Identifier of new user id: {}", ir);
                             defaultUserCreatedFuture.complete();
                         });
             } else {
@@ -153,6 +155,30 @@ public final class CollectorApiVerticle extends AbstractVerticle {
             }
         });
 
+    }
+
+    /**
+     * Loads the external encryption salt from the Vertx configuration. If no value was provided the default value
+     * "cyface-salt" is used.
+     *
+     * @param vertx The current <code>Vertx</code> instance
+     * @return A value to be used as encryption salt
+     * @throws IOException If the salt is provided in a file and that file is not accessible
+     */
+    private String loadSalt(final Vertx vertx) throws IOException {
+        final String salt = Parameter.SALT.stringValue(vertx);
+        final String saltPath = Parameter.SALT_PATH.stringValue(vertx);
+        if (salt == null && saltPath == null) {
+            return "cyface-salt";
+        } else if (salt != null && saltPath != null) {
+            throw new InvalidConfigurationException(
+                    "Please provide either a salt value or a path to a salt file. "
+                            + "Encountered both and can not decide which to use. Aborting!");
+        } else if (salt != null) {
+            return salt;
+        } else {
+            return Files.readAllLines(Paths.get(saltPath)).get(0);
+        }
     }
 
     /**
@@ -295,10 +321,9 @@ public final class CollectorApiVerticle extends AbstractVerticle {
      *
      * @param keyParameter The Vertx configuration parameter specifying the location of the file containing the key.
      * @return The extracted key.
-     * @throws FileNotFoundException If the key file was not found.
      * @throws IOException If the key file was not accessible.
      */
-    private String extractKey(final Parameter keyParameter) throws FileNotFoundException, IOException {
+    private String extractKey(final Parameter keyParameter) throws IOException {
         final String keyFilePath = keyParameter.stringValue(vertx, null);
         if (keyFilePath == null) {
             return null;
@@ -306,7 +331,7 @@ public final class CollectorApiVerticle extends AbstractVerticle {
 
         final StringBuilder keyBuilder = new StringBuilder();
         try (BufferedReader keyFileInput = new BufferedReader(
-                new InputStreamReader(new FileInputStream(keyFilePath), "UTF-8"));) {
+                new InputStreamReader(Files.newInputStream(Paths.get(keyFilePath)), "UTF-8"));) {
 
             String line = keyFileInput.readLine();
             while (line != null) {

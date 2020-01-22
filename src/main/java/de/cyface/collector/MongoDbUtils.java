@@ -1,13 +1,13 @@
 /*
  * Copyright 2018 Cyface GmbH
- * 
+ *
  * This file is part of the Cyface Data Collector.
  *
  * The Cyface Data Collector is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * The Cyface Data Collector is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
@@ -28,12 +28,12 @@ import io.vertx.ext.mongo.MongoClient;
 
 /**
  * This class provides basic static utility methods, used throughout the system.
- * 
+ *
  * @author Klemens Muthmann
  * @version 2.0.0
  * @since 2.0.0
  */
-public final class Utils {
+public final class MongoDbUtils {
 
     /**
      * The default data source name to use for user and data database if none is provided via configuration.
@@ -43,7 +43,7 @@ public final class Utils {
     /**
      * Private constructor to prevent instantiation of static utility class.
      */
-    private Utils() {
+    private MongoDbUtils() {
         // Nothing to do here.
     }
 
@@ -55,7 +55,7 @@ public final class Utils {
     public static MongoAuth buildMongoAuthProvider(final MongoClient client, final String salt) {
         final JsonObject authProperties = new JsonObject();
         final MongoAuth authProvider = MongoAuth.create(client, authProperties);
-        HashStrategy hashStrategy = authProvider.getHashStrategy();
+        final HashStrategy hashStrategy = authProvider.getHashStrategy();
         hashStrategy.setSaltStyle(HashSaltStyle.EXTERNAL);
         hashStrategy.setExternalSalt(salt);
         authProvider.setHashAlgorithm(HashAlgorithm.PBKDF2);
@@ -65,7 +65,7 @@ public final class Utils {
 
     /**
      * Creates a shared Mongo database client for the provided configuration.
-     * 
+     *
      * @param vertx The <code>Vertx</code> instance to create the client from.
      * @param config Configuration of the newly created client. For further information refer to
      *            {@link Parameter#MONGO_DATA_DB} and {@link Parameter#MONGO_USER_DB}.

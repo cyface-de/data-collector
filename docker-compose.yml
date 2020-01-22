@@ -1,4 +1,4 @@
-# Copyright 2018, 2019 Cyface GmbH
+# Copyright 2018, 2019, 2020 Cyface GmbH
 #
 # This file is part of the Cyface Data Collector.
 #
@@ -15,7 +15,7 @@
 # You should have received a copy of the GNU General Public License
 # along with the Cyface Data Collector. If not, see <http://www.gnu.org/licenses/>.
 #
-# version 2.1.0
+# version 2.1.1
 
 version: "3.5"
 services:
@@ -55,7 +55,7 @@ services:
   api:
     container_name: collector_api
     build: .
-    image: cyfacede/collector:5.1.0
+    image: cyfacede/collector:5.1.1
     ports: # It is ok that this entry manipulates the host's ip-tables since this compose file should only be used in dev environments.
       - "8080:8080"
       - "13371:13371"
@@ -68,6 +68,7 @@ services:
     environment:
       - ADMIN_USER=admin
       - ADMIN_PASSWORD=secret
+      - SALT_FILE=/app/secrets/salt
     networks:
       - default
 
