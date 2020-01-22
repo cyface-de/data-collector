@@ -46,7 +46,7 @@ import io.vertx.ext.web.RoutingContext;
  *
  * @author Klemens Muthmann
  * @author Armin Schnabel
- * @version 3.1.3
+ * @version 3.1.4
  * @since 2.0.0
  */
 @SuppressWarnings("PMD.AvoidCatchingNPE")

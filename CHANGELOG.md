@@ -9,6 +9,17 @@ Those version have never been published officially and thus changes to them are 
 
 ## [Unreleased] 
 
+## [5.1.1] - 2020-01-22
+### Added
+* Value for encryption salt is now configurable
+### Fixed
+* Management API documentation now shows the correct version
+* Code style was changed to match requirements from PMD, Spotbugs and Checkstyle
+* EventBus JUnit test now reports errors correctly
+### Changed
+* CI from Shippable to Github
+
+
 ## [5.1.0] - 2019-12-16
 ### Added
 * Save file extension from uploaded files as 'fileType' to the meta data to distinguish upload files

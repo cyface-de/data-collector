@@ -36,7 +36,7 @@ import io.vertx.core.json.JsonObject;
  *
  * @author Klemens Muthmann
  * @author Armin Schnabel
- * @version 5.0.0
+ * @version 5.0.1
  * @since 2.0.0
  */
 public final class Measurement {

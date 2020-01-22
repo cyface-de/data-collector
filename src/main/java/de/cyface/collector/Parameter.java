@@ -27,7 +27,7 @@ import io.vertx.core.logging.LoggerFactory;
  * An enumeration of parameters, that may be provided upon application startup, to configure the application.
  *
  * @author Klemens Muthmann
- * @version 3.2.0
+ * @version 3.2.1
  * @since 2.0.0
  */
 public enum Parameter {
