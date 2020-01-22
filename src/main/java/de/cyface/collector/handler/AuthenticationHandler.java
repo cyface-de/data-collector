@@ -1,13 +1,13 @@
 /*
  * Copyright 2018, 2019 Cyface GmbH
- * 
+ *
  * This file is part of the Cyface Data Collector.
  *
  * The Cyface Data Collector is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * The Cyface Data Collector is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
@@ -37,9 +37,9 @@ import io.vertx.ext.web.RoutingContext;
  * Handles authentication request on the Cyface Collector API. This is implemented with JSON Web Token (JWT). To get a
  * valid token, the user is required to authenticate using username and password against the /login endpoint, which
  * issues a new token. This token can then be used to transmit the actual request.
- * 
+ *
  * @author Klemens Muthmann
- * @version 2.0.0
+ * @version 2.0.1
  * @since 2.0.0
  */
 public final class AuthenticationHandler implements Handler<RoutingContext> {
@@ -70,7 +70,7 @@ public final class AuthenticationHandler implements Handler<RoutingContext> {
 
     /**
      * Creates a new completely initialized <code>AuthenticationHandler</code>.
-     * 
+     *
      * @param authProvider Authenticator that uses the Mongo user database to store and retrieve credentials.
      * @param jwtAuthProvider Authenticator that checks for valid authentications against Java Web Tokens.
      * @param issuer The institution which issued the generated JWT token. Usually something like the name of this
@@ -95,7 +95,7 @@ public final class AuthenticationHandler implements Handler<RoutingContext> {
     public void handle(final RoutingContext ctx) {
         try {
             final JsonObject body = ctx.getBodyAsJson();
-            LOGGER.debug("Receiving authentication request: " + body);
+            LOGGER.debug("Receiving authentication request: {}", body);
             authProvider.authenticate(body, r -> {
                 if (r.succeeded()) {
                     LOGGER.debug("Authentication successful!");
@@ -107,7 +107,7 @@ public final class AuthenticationHandler implements Handler<RoutingContext> {
 
                     final String generatedToken = jwtAuthProvider.generateToken(body,
                             jwtOptions.setAlgorithm(CollectorApiVerticle.JWT_HASH_ALGORITHM));
-                    LOGGER.trace("New JWT Token: " + generatedToken);
+                    LOGGER.trace("New JWT Token: {}", generatedToken);
                     ctx.response().putHeader("Authorization", generatedToken).setStatusCode(200).end();
                 } else {
                     LOGGER.error("Unsuccessful authentication request: {}", body);

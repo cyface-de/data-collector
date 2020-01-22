@@ -3,8 +3,7 @@
 image:https://img.shields.io/badge/vert.x-3.8.0-purple.svg[link="https://vertx.io"] 
 image:https://img.shields.io/badge/mongo-4.0.11-purple.svg[link="https://mongodb.com/"]
 
-image:https://img.shields.io/shippable/5bcd815dec335d0700da8fdb/dev.svg[link="https://app.shippable.com/github/cyface-de/data-collector/dashboard"]
-image:https://api.shippable.com/projects/5bcd815dec335d0700da8fdb/coverageBadge?branch=dev[link="https://app.shippable.com/github/cyface-de/data-collector/dashboard"]
+[![Build Status](https://github.com/cyface-de/data-collector/workflows/Cyface%20Data%20Collector/badge.svg)](https://github.com/cyface-de/data-collector/actions)
 
 This application represents the https://cyface.de[Cyface] data collector software.
 It is used to collect traffic data from Cyface measurement devices, such as our sensor box or our smartphone application.
@@ -25,12 +24,12 @@ To release a new version:
 1. Create a new branch following the format `release/x.y.z/PRJ-<Number>_some-optional-explanation`. 
 Where `x.y.z` is the number of the new version following semantic versioning, `PRJ` is the project this release has been created for, `<Number>` is the issue in the task tracker created for this release.
 You may also add an optional human readable explanation.
-2. Increase version numbers in `build.gradle`, `docker-compose.yml`, `src/main/resources/webroot/openapi.yml` and `src/main/resources/management/openapi.yml` and CHANGELOG.md.
+2. Increase version numbers in `build.gradle`, `docker-compose.yml`, `src/main/resources/webroot/api/openapi.yml` and `src/main/resources/webroot/management/openapi.yml` and CHANGELOG.md.
 3. Commit and push everything to Github.
 4. Create Pull Requests to master and dev branches.
 5. If those Pull Requests are accepted merge them back, but make sure, you are still based on the most recent versions of master and dev.
 6. Create a tag with the version on the merged master branch and push that tag to the repository.
-7. Mark the released version as 'new Release' on (Github)[https://github.com/cyface-de/data-collector/releases].
+7. Mark the released version as 'new Release' on https://github.com/cyface-de/data-collector/releases[Github].
 8. Update the 'latest' tag: `docker tag cyfacede/collector:[VERSION] cyfacede/collector:latest`
 9. Push the 'latest' tag to docker hub: `docker push cyfacede/collector:latest`
 
@@ -151,7 +150,7 @@ To load files from the Mongo GridFS file storage use the https://docs.mongodb.co
 	* MongoDb
 
 == Licensing
-Copyright 2018,2019 Cyface GmbH
+Copyright 2018,2019,2020 Cyface GmbH
  
 This file is part of the Cyface Data Collector.
 

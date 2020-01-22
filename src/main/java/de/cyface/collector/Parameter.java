@@ -1,13 +1,13 @@
 /*
  * Copyright 2018, 2019 Cyface GmbH
- * 
+ *
  * This file is part of the Cyface Data Collector.
  *
  * The Cyface Data Collector is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * The Cyface Data Collector is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
@@ -25,9 +25,9 @@ import io.vertx.core.logging.LoggerFactory;
 
 /**
  * An enumeration of parameters, that may be provided upon application startup, to configure the application.
- * 
+ *
  * @author Klemens Muthmann
- * @version 3.2.0
+ * @version 3.2.1
  * @since 2.0.0
  */
 public enum Parameter {
@@ -103,7 +103,7 @@ public enum Parameter {
 
     /**
      * Creates a new completely initialized parameter.
-     * 
+     *
      * @param key The parameter key used to load its value from the JSON configuration.
      */
     Parameter(final String key) {
@@ -120,35 +120,35 @@ public enum Parameter {
     /**
      * Provides the string value of this parameter from the Vert.x configuration or the <code>defaultValue</code> if
      * there was none.
-     * 
+     *
      * @param vertx The <code>Vertx</code> instance containing the configuration.
      * @param defaultValue A default value if the parameter was missing.
      * @return Either the value of the parameter as a <code>String</code> or the <code>defaultValue</code>.
      */
     public String stringValue(final Vertx vertx, final String defaultValue) {
-        String value = vertx.getOrCreateContext().config().getString(key);
+        final String value = vertx.getOrCreateContext().config().getString(key);
         final String ret = value == null ? defaultValue : value;
-        LOGGER.info("Using configuration value: " + ret + " for key: " + key + ".");
+        LOGGER.info("Using configuration value: {} for key: {}.", ret, key);
         return ret;
     }
 
     /**
      * Provides the string value of this parameter from the Vert.x configuration or the <code>null</code> if there was
      * none.
-     * 
+     *
      * @param vertx The <code>Vertx</code> instance containing the configuration.
      * @return Either the value of the parameter as a <code>String</code> or <code>null</code>.
      */
     public String stringValue(final Vertx vertx) {
-        String ret = vertx.getOrCreateContext().config().getString(key);
-        LOGGER.info("Using configuration value: " + ret + " for key: " + key + ".");
+        final String ret = vertx.getOrCreateContext().config().getString(key);
+        LOGGER.info("Using configuration value: {} for key: {}.", ret, key);
         return ret;
     }
 
     /**
      * Provides the integer value of this parameter from the Vert.x configuration or the <code>defaultValue</code> if
      * there was none.
-     * 
+     *
      * @param vertx The <code>Vertx</code> instance containing the configuration.
      * @param defaultValue A default value if the parameter was missing.
      * @return Either the value of the parameter as an <code>int</code> or the <code>defaultValue</code>.
@@ -157,35 +157,35 @@ public enum Parameter {
     public int intValue(final Vertx vertx, final int defaultValue) {
         final Integer value = vertx.getOrCreateContext().config().getInteger(key);
         final int ret = value == null ? defaultValue : value;
-        LOGGER.info("Using configuration value: " + ret + " for key: " + key + ".");
+        LOGGER.info("Using configuration value: {} for key: {}.", ret, key);
         return ret;
     }
 
     /**
      * Provides the JSON value of this parameter from the Vert.x configuration or the <code>defaultValue</code> if there
      * was none.
-     * 
+     *
      * @param vertx The <code>Vertx</code> instance containing the configuration.
      * @param defaultValue A default value if the parameter was missing.
      * @return Either the value of the parameter as a JSON object or the <code>defaultValue</code>.
      */
-    public JsonObject jsonValue(final Vertx vertx, JsonObject defaultValue) {
-        JsonObject value = vertx.getOrCreateContext().config().getJsonObject(key);
+    public JsonObject jsonValue(final Vertx vertx, final JsonObject defaultValue) {
+        final JsonObject value = vertx.getOrCreateContext().config().getJsonObject(key);
         final JsonObject ret = value == null ? defaultValue : value;
-        LOGGER.info("Read json value " + ret + " for key " + key);
+        LOGGER.info("Read json value {} for key: {}.", ret, key);
         return ret;
     }
 
     /**
      * Provides the JSON value of this parameter from the Vert.x configuration or the <code>null</code> if there was
      * none.
-     * 
+     *
      * @param vertx The <code>Vertx</code> instance containing the configuration.
      * @return Either the value of the parameter as a JSON object or the <code>defaultValue</code>.
      */
     public JsonObject jsonValue(final Vertx vertx) {
-        JsonObject value = vertx.getOrCreateContext().config().getJsonObject(key);
-        LOGGER.info("Read json value " + value + " for key " + key);
+        final JsonObject value = vertx.getOrCreateContext().config().getJsonObject(key);
+        LOGGER.info("Read json value {} for key: {}.", value, key);
         return value;
     }
 }

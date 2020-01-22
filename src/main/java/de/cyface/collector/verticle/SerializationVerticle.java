@@ -18,20 +18,18 @@
  */
 package de.cyface.collector.verticle;
 
-import static de.cyface.collector.EventBusAddresses.MEASUREMENT_SAVED;
-import static de.cyface.collector.EventBusAddresses.NEW_MEASUREMENT;
-import static de.cyface.collector.EventBusAddresses.SAVING_MEASUREMENT_FAILED;
+import static de.cyface.collector.EventBusAddressUtils.MEASUREMENT_SAVED;
+import static de.cyface.collector.EventBusAddressUtils.NEW_MEASUREMENT;
+import static de.cyface.collector.EventBusAddressUtils.SAVING_MEASUREMENT_FAILED;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 
-import io.vertx.core.json.JsonObject;
-import org.apache.commons.io.FilenameUtils;
 import org.bson.Document;
 
 import com.mongodb.ConnectionString;
@@ -41,7 +39,7 @@ import com.mongodb.async.client.gridfs.GridFSBucket;
 import com.mongodb.async.client.gridfs.GridFSBuckets;
 import com.mongodb.client.gridfs.model.GridFSUploadOptions;
 
-import de.cyface.collector.EventBusAddresses;
+import de.cyface.collector.EventBusAddressUtils;
 import de.cyface.collector.model.Measurement;
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.CompositeFuture;
@@ -49,6 +47,7 @@ import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.eventbus.EventBus;
 import io.vertx.core.eventbus.Message;
+import io.vertx.core.json.JsonObject;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
 
@@ -58,7 +57,7 @@ import io.vertx.core.logging.LoggerFactory;
  *
  * @author Klemens Muthmann
  * @author Armin Schnabel
- * @version 1.1.4
+ * @version 1.1.5
  * @since 2.0.0
  */
 public final class SerializationVerticle extends AbstractVerticle implements Handler<Message<Measurement>> {
@@ -88,7 +87,7 @@ public final class SerializationVerticle extends AbstractVerticle implements Han
     }
 
     @Override
-    public void handle(Message<Measurement> event) {
+    public void handle(final Message<Measurement> event) {
         final Measurement measurement = event.body();
         LOGGER.debug("Inserted measurement with id {}:{}!", measurement.getDeviceIdentifier(),
                 measurement.getMeasurementIdentifier());
@@ -96,35 +95,35 @@ public final class SerializationVerticle extends AbstractVerticle implements Han
         // Store to Mongo GridFs
         final String mongoConnectionString = config().getString("connection_string", DEFAULT_MONGO_URL);
         final String mongoDatabaseName = config().getString("db_name", "test");
-        final MongoDatabase db = com.mongodb.async.client.MongoClients
+        final MongoDatabase database = com.mongodb.async.client.MongoClients
                 .create(new ConnectionString(mongoConnectionString)).getDatabase(mongoDatabaseName);
-        final GridFSBucket gridFsBucket = GridFSBuckets.create(db);
+        final GridFSBucket gridFsBucket = GridFSBuckets.create(database);
 
         final Collection<Measurement.FileUpload> filesToUpload = measurement.getFileUploads();
         @SuppressWarnings("rawtypes")
         final List<Future> fileUploadFutures = new ArrayList<>(filesToUpload.size());
 
-        LOGGER.debug("About to save: " + measurement.getFileUploads().size() + " Files.");
+        LOGGER.debug("About to save: {} Files.", measurement.getFileUploads().size());
         filesToUpload.forEach(upload -> {
 
-            Future<String> future = Future.future();
+            final Future<String> future = Future.future();
             try {
                 fileUploadFutures.add(future);
-                FileInputStream fileInputStream = new FileInputStream(upload.getFile().getAbsolutePath());
-                AsyncInputStream asyncStream = com.mongodb.async.client.gridfs.helpers.AsyncStreamHelper
+                final InputStream fileInputStream = Files.newInputStream(Paths.get(upload.getFile().getAbsolutePath()));
+                final AsyncInputStream asyncStream = com.mongodb.async.client.gridfs.helpers.AsyncStreamHelper
                         .toAsyncInputStream(fileInputStream);
 
-                JsonObject measurementJson = measurement.toJson();
+                final JsonObject measurementJson = measurement.toJson();
                 measurementJson.put("fileType", upload.getFileType());
 
                 final GridFSUploadOptions options = new GridFSUploadOptions()
                         .metadata(Document.parse(measurementJson.toString()));
 
                 gridFsBucket.uploadFromStream(upload.getFile().getName(), asyncStream, options, (result, throwable) -> {
-                    LOGGER.debug("Saved file as object " + result);
+                    LOGGER.debug("Saved file as object {}", result);
                     future.complete();
                 });
-            } catch (FileNotFoundException e) {
+            } catch (IOException e) {
                 LOGGER.error("Error during serialization.", e);
                 future.fail(e);
             }
@@ -146,7 +145,7 @@ public final class SerializationVerticle extends AbstractVerticle implements Han
      * @param res The <code>Throwable</code> causing the failure. This contains further information about the reason
      *            the serialization failed.
      * @param measurement The measurement for which synchronization failed.
-     * @see EventBusAddresses#SAVING_MEASUREMENT_FAILED
+     * @see EventBusAddressUtils#SAVING_MEASUREMENT_FAILED
      */
     private void fail(final Throwable res, final Measurement measurement) {
         LOGGER.error("Unable to save measurement with id {}", res, measurement.getMeasurementIdentifier());

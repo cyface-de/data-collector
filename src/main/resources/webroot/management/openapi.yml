@@ -2,7 +2,7 @@ openapi: 3.0.2
 info:
   title: Cyface Data Collector Management Interface
   description: This is the internal endpoint to manage a Cyface Data Collector
-  version: 5.0.0
+  version: 5.1.1
 
 paths:
   /user:
