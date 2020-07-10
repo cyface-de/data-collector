@@ -95,11 +95,11 @@ public final class AuthenticationHandler implements Handler<RoutingContext> {
     public void handle(final RoutingContext ctx) {
         try {
             final JsonObject body = ctx.getBodyAsJson();
-            LOGGER.debug("Receiving authentication request: {}", body);
+            LOGGER.info(LOGGER.isDebugEnabled());
+            LOGGER.debug("Receiving authentication request for user {}", body.getString("username"));
             authProvider.authenticate(body, r -> {
                 if (r.succeeded()) {
-                    LOGGER.debug("Authentication successful!");
-                    LOGGER.trace(body);
+                    LOGGER.debug("Authentication successful for user {}", body.getString("username"));
 
                     final JWTOptions jwtOptions = new JWTOptions().setExpiresInSeconds(60);
                     jwtOptions.setIssuer(issuer);
@@ -110,7 +110,7 @@ public final class AuthenticationHandler implements Handler<RoutingContext> {
                     LOGGER.trace("New JWT Token: {}", generatedToken);
                     ctx.response().putHeader("Authorization", generatedToken).setStatusCode(200).end();
                 } else {
-                    LOGGER.error("Unsuccessful authentication request: {}", body);
+                    LOGGER.error("Unsuccessful authentication request for user {}", body.getString("username"));
                     ctx.fail(401);
                 }
             });

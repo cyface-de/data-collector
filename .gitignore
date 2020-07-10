@@ -42,6 +42,9 @@ conf.json
 **/*.orig
 **/*.swp
 
+# Ignore logging configurations
+**/logback.xml
+
 # Ignore log files
 **/*.log
 
