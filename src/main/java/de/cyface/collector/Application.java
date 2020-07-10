@@ -1,13 +1,13 @@
 /*
  * Copyright 2018 Cyface GmbH
- * 
+ *
  * This file is part of the Cyface Data Collector.
  *
  * The Cyface Data Collector is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * The Cyface Data Collector is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
@@ -19,17 +19,15 @@
 package de.cyface.collector;
 
 import de.cyface.collector.verticle.MainVerticle;
-import io.netty.util.internal.logging.InternalLoggerFactory;
-import io.netty.util.internal.logging.Slf4JLoggerFactory;
 import io.vertx.core.Launcher;
 import io.vertx.core.VertxOptions;
 import io.vertx.core.http.HttpServerOptions;
 import io.vertx.core.json.JsonObject;
-import io.vertx.core.logging.Logger;
-import io.vertx.core.logging.LoggerFactory;
 import io.vertx.core.logging.SLF4JLogDelegateFactory;
 import io.vertx.micrometer.MicrometerMetricsOptions;
 import io.vertx.micrometer.VertxPrometheusOptions;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * An object of this class forms the entry point to the Cyface data collector application. It contains the
@@ -37,7 +35,7 @@ import io.vertx.micrometer.VertxPrometheusOptions;
  * as a parameter to this class using <code>run de.cyface.collector.verticle.MainVerticle</code>.
  * <p>
  * You may also provide additional parameters in JSON format as described in the <code>README.md</code> file.
- * 
+ *
  * @author Klemens Muthmann
  * @version 1.0.3
  * @since 2.0.0
@@ -56,14 +54,12 @@ public class Application extends Launcher {
 
     /**
      * Starts the application.
-     * 
+     *
      * @param args See README.adoc and documentation of the Vert.x <code>Launcher</code> class, for further details
-     *            about supported arguments.
+     *             about supported arguments.
      */
     public static void main(final String[] args) {
-        System.setProperty(LoggerFactory.LOGGER_DELEGATE_FACTORY_CLASS_NAME, SLF4JLogDelegateFactory.class.getName());
-        InternalLoggerFactory.setDefaultFactory(Slf4JLoggerFactory.INSTANCE);
-        LoggerFactory.getLogger(Application.class);
+        System.setProperty(io.vertx.core.logging.LoggerFactory.LOGGER_DELEGATE_FACTORY_CLASS_NAME, SLF4JLogDelegateFactory.class.getName());
 
         new Application().dispatch(args);
     }
@@ -95,7 +91,7 @@ public class Application extends Launcher {
 
     /**
      * Checks if the provided configuration is valid for a Cyface data collector.
-     * 
+     *
      * @param config The configuration to check.
      */
     private void checkValidConfiguration(final JsonObject config) {
