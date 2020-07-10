@@ -9,6 +9,10 @@ Those version have never been published officially and thus changes to them are 
 
 ## [Unreleased] 
 
+## [5.1.3] - 2020-07-10
+### Fixed
+* Enable Proper Logback-Logging
+
 ## [5.1.2] - 2020-01-23
 ### Info
 * Update Github Actions workflow for Docker publication
