@@ -29,7 +29,7 @@ echo "Loading public key for JWT from: $JWT_PUBLIC_KEY_FILE_PATH"
 
 if [ -n "$SALT" ]; then
 	SALT_PARAMETER=",\"salt\":\"$SALT\""
-elif [ -n "$SALT_FILE" ]; then
+elif [ -f "$SALT_FILE" ]; then
 	SALT_PARAMETER=",\"salt.path\":\"$SALT_FILE\""
 else
 	SALT_PARAMETER=",\"salt\":\"cyface-salt\""
