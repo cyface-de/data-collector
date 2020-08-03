@@ -27,9 +27,9 @@ fi
 echo "Loading private key for JWT from: $JWT_PRIVATE_KEY_FILE_PATH"
 echo "Loading public key for JWT from: $JWT_PUBLIC_KEY_FILE_PATH"
 
-if [ -z $SALT ]; then
+if [ -n "$SALT" ]; then
 	SALT_PARAMETER=",\"salt\":\"$SALT\""
-elif [ -f $SALT_FILE ]; then
+elif [ -f "$SALT_FILE" ]; then
 	SALT_PARAMETER=",\"salt.path\":\"$SALT_FILE\""
 else
 	SALT_PARAMETER=",\"salt\":\"cyface-salt\""
