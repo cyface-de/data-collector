@@ -20,31 +20,31 @@ When you updated the Swagger UI make sure to clear your browser cache or else it
 
 Versions of this project inside the master branch are always `0.0.0`. To release a new version:
 
-1. **Create a new release branch** following the format `release/x.y`.
-* `x.y` is the number of the first two sections of the new version following [Semantic Versioning](http://semver.org).
-* **Hotfixes should be applied on top of the already existing release-branch**.
-* Apply the hotfix on the `master` branch, create a Pull-Request and pass reviewing.
-* Cherry-pick the fix on top of the already existing `release/x.y` branch.
-* No new features are allowed on a release-branch, only fixes and minor changes.
+1. *Create a new release branch* following the format `release/x.y`.
+a. `x.y` is the number of the first two sections of the new version following link:http://semver.org[Semantic Versioning].
+b. *Hotfixes should be applied on top of the already existing release-branch*
+A. Apply the hotfix on the `master` branch, create a Pull-Request and pass reviewing.
+B. Cherry-pick the fix on top of the already existing `release/x.y` branch.
+C. No new features are allowed on a release-branch, only fixes and minor changes.
 
-2. **Increase version numbers** in root `build.gradle`,
-* and optional in any associated `docker-compose.yml` or OpenAPI documentation (usually located in `src/main/resources/webroot/openapi.yml`).
-* If you need to version sub-projects differently, create a version attribute in the corresponding `build.gradle`.
+2. *Increase version numbers* in root `build.gradle`,
+a. and optional in any associated `docker-compose.yml` or OpenAPI documentation (usually located in `src/main/resources/webroot/openapi.yml`).
+b. If you need to version sub-projects differently, create a version attribute in the corresponding `build.gradle`.
 
-3. **Commit version bump and push branch** to Github.
-* Wait until the continuous integration system passes.
-* Do **not** merge the release-branch back to master.
+3. *Commit version bump and push branch* to Github.
+a. Wait until the continuous integration system passes.
+b. Do *not* merge the release-branch back to master.
 
-4. **Tag the new release on the release branch**.
-* Ensure you are on the correct branch and commit.
-* Follow the guidelines from ["Keep a Changelog"](https://keepachangelog.com) in your tag description.
+4. *Tag the new release on the release branch*.
+a. Ensure you are on the correct branch and commit.
+b. Follow the guidelines from link:https://keepachangelog.com["Keep a Changelog"] in your tag description.
 
-5. **Push the release tag to Github**.
-* The docker image and Github packages are automatically published when a new version is tagged and pushed by our
-[Github Actions](https://github.com/cyface-de/data-collector/actions) to the
-[Github Registry](https://github.com/cyface-de/data-collector/packages).
+5. *Push the release tag to Github*.
+a. The docker image and Github packages are automatically published when a new version is tagged and pushed by our
+link:https://github.com/cyface-de/data-collector/actions[Github Actions] to the
+link:https://github.com/cyface-de/data-collector/packages[Github Registry].
 
-6. **Mark the released version as 'new Release' on [Github](https://github.com/cyface-de/data-collector/releases)**.
+6. *Mark the released version as 'new Release' on link:https://github.com/cyface-de/data-collector/releases[Github]*.
 
 == Execution
 This section describes how to execute the Cyface Data Collector.
