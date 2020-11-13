@@ -188,7 +188,7 @@ public final class Measurement {
 
         for (final Measurement.FileUpload fileUpload : fileUploads) {
             Validate.isTrue(Arrays.asList(SUPPORTED_FILE_EXTENSIONS).contains(fileUpload.getFileType()),
-                    "MultiPart contained file with unsupported file type (file extension): {}",
+                    "MultiPart contained file with unsupported file type (file extension): %s",
                     fileUpload.getFileType());
         }
 
