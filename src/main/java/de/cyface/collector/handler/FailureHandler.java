@@ -42,9 +42,9 @@ public final class FailureHandler implements Handler<RoutingContext> {
     @Override
     public void handle(final RoutingContext ctx) {
         LOGGER.error(String.format("Invalid resource %s requested!", ctx.request().absoluteURI()));
-        if(LOGGER.isDebugEnabled()) {
+        if (LOGGER.isDebugEnabled()) {
             LOGGER.debug("Headers:");
-            for(Map.Entry<String, String> header:ctx.request().headers()) {
+            for (final Map.Entry<String, String> header : ctx.request().headers()) {
                 LOGGER.debug(String.format("%s: %s", header.getKey(), header.getValue()));
             }
         }
