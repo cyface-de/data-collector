@@ -82,41 +82,41 @@ public final class SerializationVerticle extends AbstractVerticle implements Han
      * Register this <code>Verticle</code> to receive messages about new measurements arriving at the system.
      */
     private void registerForNewMeasurements() {
-        final EventBus eventBus = vertx.eventBus();
+        final var eventBus = vertx.eventBus();
         eventBus.consumer(NEW_MEASUREMENT, this);
     }
 
     @Override
     public void handle(final Message<Measurement> event) {
-        final Measurement measurement = event.body();
+        final var measurement = event.body();
         LOGGER.debug("Inserted measurement with id {}:{}!", measurement.getDeviceIdentifier(),
                 measurement.getMeasurementIdentifier());
 
         // Store to Mongo GridFs
-        final String mongoConnectionString = config().getString("connection_string", DEFAULT_MONGO_URL);
-        final String mongoDatabaseName = config().getString("db_name", "test");
-        final MongoDatabase database = com.mongodb.async.client.MongoClients
+        final var mongoConnectionString = config().getString("connection_string", DEFAULT_MONGO_URL);
+        final var mongoDatabaseName = config().getString("db_name", "test");
+        final var database = com.mongodb.async.client.MongoClients
                 .create(new ConnectionString(mongoConnectionString)).getDatabase(mongoDatabaseName);
-        final GridFSBucket gridFsBucket = GridFSBuckets.create(database);
+        final var gridFsBucket = GridFSBuckets.create(database);
 
-        final Collection<Measurement.FileUpload> filesToUpload = measurement.getFileUploads();
+        final var filesToUpload = measurement.getFileUploads();
         @SuppressWarnings("rawtypes")
-        final List<Future> fileUploadFutures = new ArrayList<>(filesToUpload.size());
+        final var fileUploadFutures = new ArrayList<Future>(filesToUpload.size());
 
         LOGGER.debug("About to save: {} Files.", measurement.getFileUploads().size());
         filesToUpload.forEach(upload -> {
 
-            final Future<String> future = Future.future();
+            final var future = Future.future();
             try {
                 fileUploadFutures.add(future);
-                final InputStream fileInputStream = Files.newInputStream(Paths.get(upload.getFile().getAbsolutePath()));
-                final AsyncInputStream asyncStream = com.mongodb.async.client.gridfs.helpers.AsyncStreamHelper
+                final var fileInputStream = Files.newInputStream(Paths.get(upload.getFile().getAbsolutePath()));
+                final var asyncStream = com.mongodb.async.client.gridfs.helpers.AsyncStreamHelper
                         .toAsyncInputStream(fileInputStream);
 
-                final JsonObject measurementJson = measurement.toJson();
+                final var measurementJson = measurement.toJson();
                 measurementJson.put("fileType", upload.getFileType());
 
-                final GridFSUploadOptions options = new GridFSUploadOptions()
+                final var options = new GridFSUploadOptions()
                         .metadata(Document.parse(measurementJson.toString()));
 
                 gridFsBucket.uploadFromStream(upload.getFile().getName(), asyncStream, options, (result, throwable) -> {

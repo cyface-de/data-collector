@@ -45,19 +45,19 @@ public final class ManagementApiVerticle extends AbstractVerticle {
     public void start(final Future<Void> startFuture) throws Exception {
         Validate.notNull(startFuture);
 
-        final JsonObject mongoUserDatabaseConfiguration = Parameter.MONGO_USER_DB.jsonValue(getVertx(),
+        final var mongoUserDatabaseConfiguration = Parameter.MONGO_USER_DB.jsonValue(getVertx(),
                 new JsonObject());
         // if (mongoUserDatabaseConfiguration == null) {
         // startFuture.fail("There was no configuration to access a user database. Please provide one by setting "
         // + Parameter.MONGO_USER_DB.key()
         // + " to the correct value. Please refer to the README for further instructions.");
         // } else {
-        final int port = Parameter.MANAGEMENT_HTTP_PORT.intValue(getVertx(), 13_371);
-        final String salt = Parameter.SALT.stringValue(vertx, "cyface-salt");
+        final var port = Parameter.MANAGEMENT_HTTP_PORT.intValue(getVertx(), 13_371);
+        final var salt = Parameter.SALT.stringValue(vertx, "cyface-salt");
 
-        final MongoClient client = MongoDbUtils.createSharedMongoClient(getVertx(), mongoUserDatabaseConfiguration);
-        final MongoAuth mongoAuth = MongoDbUtils.buildMongoAuthProvider(client, salt);
-        final Router router = setupRouter(mongoAuth);
+        final var client = MongoDbUtils.createSharedMongoClient(getVertx(), mongoUserDatabaseConfiguration);
+        final var mongoAuth = MongoDbUtils.buildMongoAuthProvider(client, salt);
+        final var router = setupRouter(mongoAuth);
         startHttpServer(startFuture, router, port);
         // }
     }
@@ -71,7 +71,7 @@ public final class ManagementApiVerticle extends AbstractVerticle {
     private Router setupRouter(final MongoAuth mongoAuth) {
         Validate.notNull(mongoAuth);
 
-        final Router router = Router.router(getVertx());
+        final var router = Router.router(getVertx());
 
         router.post("/user").handler(BodyHandler.create()).blockingHandler(new UserCreationHandler(mongoAuth));
         router.get("/*").handler(StaticHandler.create("webroot/management"));

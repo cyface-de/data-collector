@@ -68,11 +68,11 @@ public final class UserCreationHandler implements Handler<RoutingContext> {
 
     @Override
     public void handle(final RoutingContext event) {
-        final JsonObject body = event.getBodyAsJson();
-        final String username = body.getString("username");
-        final String password = body.getString("password");
-        final String providedRole = body.getString("role");
-        final String role = providedRole == null || providedRole.isEmpty() ? DEFAULT_USER_ROLE : providedRole;
+        final var body = event.getBodyAsJson();
+        final var username = body.getString("username");
+        final var password = body.getString("password");
+        final var providedRole = body.getString("role");
+        final var role = providedRole == null || providedRole.isEmpty() ? DEFAULT_USER_ROLE : providedRole;
 
         mongoAuth.insertUser(username, password, Collections.singletonList(role),
                 new ArrayList<>(), ir -> {

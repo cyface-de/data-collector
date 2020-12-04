@@ -43,8 +43,8 @@ public final class AuthenticationFailureHandler implements Handler<RoutingContex
         LOGGER.error("Received failure {}", context.failed());
         LOGGER.error(context.failure());
 
-        final boolean closed = context.response().closed();
-        final boolean ended = context.response().ended();
+        final var closed = context.response().closed();
+        final var ended = context.response().ended();
         if (!closed && !ended) {
             LOGGER.error("Failing authentication request with 401 since response was closed: {}, ended: {}", closed,
                     ended);

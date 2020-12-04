@@ -336,15 +336,15 @@ public final class Measurement {
     private static final class EventBusCodec implements MessageCodec<Measurement, Measurement> {
         @Override
         public void encodeToWire(final Buffer buffer, final Measurement serializable) {
-            final String deviceIdentifier = serializable.getDeviceIdentifier();
-            final String measurementIdentifier = serializable.getMeasurementIdentifier();
-            final String deviceType = serializable.getDeviceType();
-            final String operatingSystemVersion = serializable.getOperatingSystemVersion();
-            final String applicationVersion = serializable.getApplicationVersion();
-            final double length = serializable.getLength();
-            final long locationCount = serializable.getLocationCount();
-            final String vehicle = serializable.getVehicle();
-            final String username = serializable.getUsername();
+            final var deviceIdentifier = serializable.getDeviceIdentifier();
+            final var measurementIdentifier = serializable.getMeasurementIdentifier();
+            final var deviceType = serializable.getDeviceType();
+            final var operatingSystemVersion = serializable.getOperatingSystemVersion();
+            final var applicationVersion = serializable.getApplicationVersion();
+            final var length = serializable.getLength();
+            final var locationCount = serializable.getLocationCount();
+            final var vehicle = serializable.getVehicle();
+            final var username = serializable.getUsername();
 
             buffer.appendInt(deviceIdentifier.length());
             buffer.appendInt(measurementIdentifier.length());
@@ -364,12 +364,12 @@ public final class Measurement {
             buffer.appendString(vehicle);
             buffer.appendString(username);
             if (locationCount > 0) {
-                final double startLocationLat = serializable.getStartLocation().getLat();
-                final double startLocationLon = serializable.getStartLocation().getLon();
-                final long startLocationTimestamp = serializable.getStartLocation().getTimestamp();
-                final double endLocationLat = serializable.getEndLocation().getLat();
-                final double endLocationLon = serializable.getEndLocation().getLon();
-                final long endLocationTimestamp = serializable.getEndLocation().getTimestamp();
+                final var startLocationLat = serializable.getStartLocation().getLat();
+                final var startLocationLon = serializable.getStartLocation().getLon();
+                final var startLocationTimestamp = serializable.getStartLocation().getTimestamp();
+                final var endLocationLat = serializable.getEndLocation().getLat();
+                final var endLocationLon = serializable.getEndLocation().getLon();
+                final var endLocationTimestamp = serializable.getEndLocation().getTimestamp();
                 buffer.appendDouble(startLocationLat);
                 buffer.appendDouble(startLocationLon);
                 buffer.appendLong(startLocationTimestamp);
@@ -387,68 +387,68 @@ public final class Measurement {
 
         @Override
         public Measurement decodeFromWire(final int pos, final Buffer buffer) {
-            final int deviceIdentifierLength = buffer.getInt(0 * Integer.BYTES);
-            final int measurementIdentifierLength = buffer.getInt(1 * Integer.BYTES);
-            final int deviceTypeLength = buffer.getInt(2 * Integer.BYTES);
-            final int operatingSystemVersionLength = buffer.getInt(3 * Integer.BYTES);
-            final int applicationVersionLength = buffer.getInt(4 * Integer.BYTES);
-            final int vehicleTypeLength = buffer.getInt(5 * Integer.BYTES);
-            final int usernameLength = buffer.getInt(6 * Integer.BYTES);
-            final int numberOfFileUploads = buffer.getInt(7 * Integer.BYTES);
+            final var deviceIdentifierLength = buffer.getInt(0 * Integer.BYTES);
+            final var measurementIdentifierLength = buffer.getInt(1 * Integer.BYTES);
+            final var deviceTypeLength = buffer.getInt(2 * Integer.BYTES);
+            final var operatingSystemVersionLength = buffer.getInt(3 * Integer.BYTES);
+            final var applicationVersionLength = buffer.getInt(4 * Integer.BYTES);
+            final var vehicleTypeLength = buffer.getInt(5 * Integer.BYTES);
+            final var usernameLength = buffer.getInt(6 * Integer.BYTES);
+            final var numberOfFileUploads = buffer.getInt(7 * Integer.BYTES);
 
-            final int deviceIdentifierEnd = 8 * Integer.BYTES + deviceIdentifierLength;
-            final String deviceIdentifier = buffer.getString(8 * Integer.BYTES, deviceIdentifierEnd);
-            final int measurementIdentifierEnd = deviceIdentifierEnd + measurementIdentifierLength;
-            final String measurementIdentifier = buffer.getString(deviceIdentifierEnd, measurementIdentifierEnd);
-            final int deviceTypeEnd = measurementIdentifierEnd + deviceTypeLength;
-            final String deviceType = buffer.getString(measurementIdentifierEnd, deviceTypeEnd);
-            final int operationSystemVersionEnd = deviceTypeEnd + operatingSystemVersionLength;
-            final String operatingSystemVersion = buffer.getString(deviceTypeEnd, operationSystemVersionEnd);
-            final int applicationVersionEnd = operationSystemVersionEnd + applicationVersionLength;
-            final String applicationVersion = buffer.getString(operationSystemVersionEnd, applicationVersionEnd);
-            final int lengthEnd = applicationVersionEnd + Double.BYTES;
-            final double length = buffer.getDouble(applicationVersionEnd);
-            final int locationCountEnd = lengthEnd + Long.BYTES;
-            final long locationCount = buffer.getLong(lengthEnd);
-            final int vehicleEnd = locationCountEnd + vehicleTypeLength;
-            final String vehicle = buffer.getString(locationCountEnd, vehicleEnd);
-            final int usernameEnd = vehicleEnd + usernameLength;
-            final String username = buffer.getString(vehicleEnd, usernameEnd);
+            final var deviceIdentifierEnd = 8 * Integer.BYTES + deviceIdentifierLength;
+            final var deviceIdentifier = buffer.getString(8 * Integer.BYTES, deviceIdentifierEnd);
+            final var measurementIdentifierEnd = deviceIdentifierEnd + measurementIdentifierLength;
+            final var measurementIdentifier = buffer.getString(deviceIdentifierEnd, measurementIdentifierEnd);
+            final var deviceTypeEnd = measurementIdentifierEnd + deviceTypeLength;
+            final var deviceType = buffer.getString(measurementIdentifierEnd, deviceTypeEnd);
+            final var operationSystemVersionEnd = deviceTypeEnd + operatingSystemVersionLength;
+            final var operatingSystemVersion = buffer.getString(deviceTypeEnd, operationSystemVersionEnd);
+            final var applicationVersionEnd = operationSystemVersionEnd + applicationVersionLength;
+            final var applicationVersion = buffer.getString(operationSystemVersionEnd, applicationVersionEnd);
+            final var lengthEnd = applicationVersionEnd + Double.BYTES;
+            final var length = buffer.getDouble(applicationVersionEnd);
+            final var locationCountEnd = lengthEnd + Long.BYTES;
+            final var locationCount = buffer.getLong(lengthEnd);
+            final var vehicleEnd = locationCountEnd + vehicleTypeLength;
+            final var vehicle = buffer.getString(locationCountEnd, vehicleEnd);
+            final var usernameEnd = vehicleEnd + usernameLength;
+            final var username = buffer.getString(vehicleEnd, usernameEnd);
 
             GeoLocation startLocation = null;
             GeoLocation endLocation = null;
-            int startOfFileUploads = usernameEnd;
+            var startOfFileUploads = usernameEnd;
             if (locationCount > 0) {
-                final int startLocationLatEnd = usernameEnd + Double.BYTES;
-                final int startLocationLonEnd = startLocationLatEnd + Double.BYTES;
-                final int startLocationTimestampEnd = startLocationLonEnd + Double.BYTES;
-                final double startLocationLat = buffer.getDouble(usernameEnd);
-                final double startLocationLon = buffer.getDouble(startLocationLatEnd);
-                final long startLocationTimestamp = buffer.getLong(startLocationLonEnd);
+                final var startLocationLatEnd = usernameEnd + Double.BYTES;
+                final var startLocationLonEnd = startLocationLatEnd + Double.BYTES;
+                final var startLocationTimestampEnd = startLocationLonEnd + Double.BYTES;
+                final var startLocationLat = buffer.getDouble(usernameEnd);
+                final var startLocationLon = buffer.getDouble(startLocationLatEnd);
+                final var startLocationTimestamp = buffer.getLong(startLocationLonEnd);
 
-                final int endLocationLatEnd = startLocationTimestampEnd + Double.BYTES;
-                final int endLocationLonEnd = endLocationLatEnd + Double.BYTES;
-                final int endLocationTimestampEnd = endLocationLonEnd + Long.BYTES;
-                final double endLocationLat = buffer.getDouble(startLocationTimestampEnd);
-                final double endLocationLon = buffer.getDouble(endLocationLatEnd);
-                final long endLocationTimestamp = buffer.getLong(endLocationLonEnd);
+                final var endLocationLatEnd = startLocationTimestampEnd + Double.BYTES;
+                final var endLocationLonEnd = endLocationLatEnd + Double.BYTES;
+                final var endLocationTimestampEnd = endLocationLonEnd + Long.BYTES;
+                final var endLocationLat = buffer.getDouble(startLocationTimestampEnd);
+                final var endLocationLon = buffer.getDouble(endLocationLatEnd);
+                final var endLocationTimestamp = buffer.getLong(endLocationLonEnd);
                 startLocation = new GeoLocation(startLocationLat, startLocationLon,
                         startLocationTimestamp);
                 endLocation = new GeoLocation(endLocationLat, endLocationLon, endLocationTimestamp);
                 startOfFileUploads = endLocationTimestampEnd;
             }
 
-            final Collection<FileUpload> fileUploads = new HashSet<>();
-            int iterationStartByte = startOfFileUploads;
+            final var fileUploads = new HashSet<FileUpload>();
+            var iterationStartByte = startOfFileUploads;
             for (int i = 0; i < numberOfFileUploads; i++) {
-                final int entryLength = buffer.getInt(iterationStartByte);
-                final String fileName = buffer.getString(4 + iterationStartByte, 4 + iterationStartByte + entryLength);
+                final var entryLength = buffer.getInt(iterationStartByte);
+                final var fileName = buffer.getString(4 + iterationStartByte, 4 + iterationStartByte + entryLength);
                 iterationStartByte += 4 + iterationStartByte + entryLength;
-                final int extensionLength = buffer.getInt(iterationStartByte);
-                final String fileType = buffer.getString(4 + iterationStartByte,
+                final var extensionLength = buffer.getInt(iterationStartByte);
+                final var fileType = buffer.getString(4 + iterationStartByte,
                         4 + iterationStartByte + extensionLength);
 
-                final File uploadFile = new File(fileName);
+                final var uploadFile = new File(fileName);
                 fileUploads.add(new FileUpload(uploadFile, fileType));
             }
 

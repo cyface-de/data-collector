@@ -126,8 +126,8 @@ public enum Parameter {
      * @return Either the value of the parameter as a <code>String</code> or the <code>defaultValue</code>.
      */
     public String stringValue(final Vertx vertx, final String defaultValue) {
-        final String value = vertx.getOrCreateContext().config().getString(key);
-        final String ret = value == null ? defaultValue : value;
+        final var value = vertx.getOrCreateContext().config().getString(key);
+        final var ret = value == null ? defaultValue : value;
         LOGGER.info("Using configuration value: {} for key: {}.", ret, key);
         return ret;
     }
@@ -140,7 +140,7 @@ public enum Parameter {
      * @return Either the value of the parameter as a <code>String</code> or <code>null</code>.
      */
     public String stringValue(final Vertx vertx) {
-        final String ret = vertx.getOrCreateContext().config().getString(key);
+        final var ret = vertx.getOrCreateContext().config().getString(key);
         LOGGER.info("Using configuration value: {} for key: {}.", ret, key);
         return ret;
     }
@@ -155,8 +155,8 @@ public enum Parameter {
      * @throws ClassCastException If the value was not an integer.
      */
     public int intValue(final Vertx vertx, final int defaultValue) {
-        final Integer value = vertx.getOrCreateContext().config().getInteger(key);
-        final int ret = value == null ? defaultValue : value;
+        final var value = vertx.getOrCreateContext().config().getInteger(key);
+        final var ret = value == null ? defaultValue : value;
         LOGGER.info("Using configuration value: {} for key: {}.", ret, key);
         return ret;
     }
@@ -170,8 +170,8 @@ public enum Parameter {
      * @return Either the value of the parameter as a JSON object or the <code>defaultValue</code>.
      */
     public JsonObject jsonValue(final Vertx vertx, final JsonObject defaultValue) {
-        final JsonObject value = vertx.getOrCreateContext().config().getJsonObject(key);
-        final JsonObject ret = value == null ? defaultValue : value;
+        final var value = vertx.getOrCreateContext().config().getJsonObject(key);
+        final var ret = value == null ? defaultValue : value;
         LOGGER.info("Read json value {} for key: {}.", ret, key);
         return ret;
     }
@@ -184,7 +184,7 @@ public enum Parameter {
      * @return Either the value of the parameter as a JSON object or the <code>defaultValue</code>.
      */
     public JsonObject jsonValue(final Vertx vertx) {
-        final JsonObject value = vertx.getOrCreateContext().config().getJsonObject(key);
+        final var value = vertx.getOrCreateContext().config().getJsonObject(key);
         LOGGER.info("Read json value {} for key: {}.", value, key);
         return value;
     }
