@@ -70,15 +70,15 @@ public final class AuthenticationHandler implements Handler<RoutingContext> {
     /**
      * Creates a new completely initialized <code>AuthenticationHandler</code>.
      *
-     * @param authProvider    Authenticator that uses the Mongo user database to store and retrieve credentials.
+     * @param authProvider Authenticator that uses the Mongo user database to store and retrieve credentials.
      * @param jwtAuthProvider Authenticator that checks for valid authentications against Java Web Tokens.
-     * @param issuer          The institution which issued the generated JWT token. Usually something like the name of this
-     *                        server.
-     * @param audience        The entity allowed to process requests authenticated with the generated JWT token. This might be
-     *                        a certain server installation or a certain part of an application.
+     * @param issuer The institution which issued the generated JWT token. Usually something like the name of this
+     *            server.
+     * @param audience The entity allowed to process requests authenticated with the generated JWT token. This might be
+     *            a certain server installation or a certain part of an application.
      */
     public AuthenticationHandler(final MongoAuth authProvider, final JWTAuth jwtAuthProvider, final String issuer,
-                                 final String audience) {
+            final String audience) {
         Validate.notNull(authProvider);
         Validate.notNull(jwtAuthProvider);
         Validate.notEmpty(issuer);

@@ -203,14 +203,14 @@ public final class CollectorApiVerticle extends AbstractVerticle {
     /**
      * Initializes all the routes available via the Cyface Data Collector.
      *
-     * @param publicKey         The public key used to check the validity of JWT tokens used for authentication.
-     * @param privateKey        The private key used to issue new valid JWT tokens.
+     * @param publicKey The public key used to check the validity of JWT tokens used for authentication.
+     * @param privateKey The private key used to issue new valid JWT tokens.
      * @param mongoAuthProvider Authentication provider used to check for valid user accounts used to generate new JWT
-     *                          token.
-     * @param next              The handler to call when the router has been created.
+     *            token.
+     * @param next The handler to call when the router has been created.
      */
     private void setupRoutes(final String publicKey, final String privateKey, final MongoAuth mongoAuthProvider,
-                             final Handler<AsyncResult<Router>> next) {
+            final Handler<AsyncResult<Router>> next) {
         Validate.notEmpty(publicKey);
         Validate.notEmpty(privateKey);
         Validate.notNull(mongoAuthProvider);
@@ -284,9 +284,9 @@ public final class CollectorApiVerticle extends AbstractVerticle {
     /**
      * Starts the HTTP server provided by this application. This server runs the Cyface Collector REST-API.
      *
-     * @param router      The router for all the endpoints the HTTP server should serve.
+     * @param router The router for all the endpoints the HTTP server should serve.
      * @param startFuture Informs the caller about the successful or failed start of the server.
-     * @param httpPort    The HTTP port to run the server at.
+     * @param httpPort The HTTP port to run the server at.
      */
     private void startHttpServer(final Router router, final Future<Void> startFuture, final int httpPort) {
         Validate.notNull(router);
@@ -303,7 +303,7 @@ public final class CollectorApiVerticle extends AbstractVerticle {
      * been successful or not.
      *
      * @param serverStartup The result of the server startup as provided by <code>Vertx</code>.
-     * @param future        A future to call to inform all waiting parties about success or failure of the startup process.
+     * @param future A future to call to inform all waiting parties about success or failure of the startup process.
      */
     private void completeStartup(final AsyncResult<HttpServer> serverStartup, final Future<Void> future) {
         if (serverStartup.succeeded()) {

@@ -229,7 +229,7 @@ public final class EventBusTest {
      * @param expectedMeasurementData The meta data of the test measurement to check
      */
     private void checkMeasurementData(final String identifier, final TestContext context, final Async async,
-                                      final ExpectedData expectedDeviceData, final ExpectedMeasurementData expectedMeasurementData) {
+            final ExpectedData expectedDeviceData, final ExpectedMeasurementData expectedMeasurementData) {
         final String[] generatedIdentifier = identifier.split(":");
         final MongoClient client = MongoClient.createShared(vertx, mongoConfiguration);
         final JsonObject query = new JsonObject();
@@ -321,7 +321,7 @@ public final class EventBusTest {
          * @param applicationVersion The version of the Cyface application/SDK uploading the data
          */
         ExpectedData(final String deviceIdentifier, final String operatingSystemVersion, final String deviceType,
-                     final String applicationVersion) {
+                final String applicationVersion) {
             this.deviceIdentifier = deviceIdentifier;
             this.operatingSystemVersion = operatingSystemVersion;
             this.deviceType = deviceType;
@@ -408,20 +408,20 @@ public final class EventBusTest {
         /**
          * Creates a new completely initialized object of this class.
          *
-         * @param measurementIdentifier  The device wide unqiue identifier of the measurement
-         * @param length                 The length of the uploaded track in meters
-         * @param locationCount          The count of captured locations in the uploaded track
-         * @param startLocationLat       The geographical latitude of the first location in the uploaded track
-         * @param startLocationLon       The geographical longitude of the first location in the uploaded track
+         * @param measurementIdentifier The device wide unqiue identifier of the measurement
+         * @param length The length of the uploaded track in meters
+         * @param locationCount The count of captured locations in the uploaded track
+         * @param startLocationLat The geographical latitude of the first location in the uploaded track
+         * @param startLocationLon The geographical longitude of the first location in the uploaded track
          * @param startLocationTimestamp The unix timestamp in milliseconds of the first location in the uploaded track
-         * @param endLocationLat         The geographical latitude of the last location in the uploaded track
-         * @param endLocationLon         The geographical longitude of the last location in the uploaded track
-         * @param endLocationTimestamp   The unix timestamp in milliseconds of the last location in the uploaded track
+         * @param endLocationLat The geographical latitude of the last location in the uploaded track
+         * @param endLocationLon The geographical longitude of the last location in the uploaded track
+         * @param endLocationTimestamp The unix timestamp in milliseconds of the last location in the uploaded track
          */
         ExpectedMeasurementData(final String measurementIdentifier, final Double length,
-                                final Long locationCount, final Double startLocationLat, final Double startLocationLon,
-                                final Long startLocationTimestamp, final Double endLocationLat, final Double endLocationLon,
-                                final Long endLocationTimestamp) {
+                final Long locationCount, final Double startLocationLat, final Double startLocationLon,
+                final Long startLocationTimestamp, final Double endLocationLat, final Double endLocationLon,
+                final Long endLocationTimestamp) {
             this.measurementIdentifier = measurementIdentifier;
             this.length = length;
             this.locationCount = locationCount;
