@@ -23,19 +23,13 @@ import static de.cyface.collector.EventBusAddressUtils.NEW_MEASUREMENT;
 import static de.cyface.collector.EventBusAddressUtils.SAVING_MEASUREMENT_FAILED;
 
 import java.io.IOException;
-import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
 
 import org.bson.Document;
 
 import com.mongodb.ConnectionString;
-import com.mongodb.async.client.MongoDatabase;
-import com.mongodb.async.client.gridfs.AsyncInputStream;
-import com.mongodb.async.client.gridfs.GridFSBucket;
 import com.mongodb.async.client.gridfs.GridFSBuckets;
 import com.mongodb.client.gridfs.model.GridFSUploadOptions;
 
@@ -45,9 +39,7 @@ import io.vertx.core.AbstractVerticle;
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
-import io.vertx.core.eventbus.EventBus;
 import io.vertx.core.eventbus.Message;
-import io.vertx.core.json.JsonObject;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
 

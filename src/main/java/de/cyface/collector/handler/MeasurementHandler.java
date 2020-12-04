@@ -22,7 +22,6 @@ import static de.cyface.collector.EventBusAddressUtils.NEW_MEASUREMENT;
 
 import java.io.File;
 import java.util.HashSet;
-import java.util.Set;
 
 import org.apache.commons.io.FilenameUtils;
 
@@ -30,12 +29,8 @@ import de.cyface.collector.EventBusAddressUtils;
 import de.cyface.collector.model.GeoLocation;
 import de.cyface.collector.model.Measurement;
 import io.vertx.core.Handler;
-import io.vertx.core.eventbus.EventBus;
-import io.vertx.core.http.HttpServerRequest;
-import io.vertx.core.http.HttpServerResponse;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
-import io.vertx.ext.auth.User;
 import io.vertx.ext.web.RoutingContext;
 
 /**

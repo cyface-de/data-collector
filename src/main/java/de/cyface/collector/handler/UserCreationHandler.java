@@ -24,7 +24,6 @@ import java.util.Collections;
 import org.apache.commons.lang3.Validate;
 
 import io.vertx.core.Handler;
-import io.vertx.core.json.JsonObject;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
 import io.vertx.ext.auth.mongo.MongoAuth;

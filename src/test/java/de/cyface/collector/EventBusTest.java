@@ -18,6 +18,18 @@
  */
 package de.cyface.collector;
 
+import java.io.File;
+import java.io.IOException;
+import java.net.ServerSocket;
+import java.util.Arrays;
+import java.util.List;
+import java.util.UUID;
+
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+
 import de.cyface.collector.handler.FormAttributes;
 import de.cyface.collector.model.GeoLocation;
 import de.cyface.collector.model.Measurement;
@@ -34,17 +46,6 @@ import io.vertx.ext.mongo.MongoClient;
 import io.vertx.ext.unit.Async;
 import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-
-import java.io.File;
-import java.io.IOException;
-import java.net.ServerSocket;
-import java.util.Arrays;
-import java.util.List;
-import java.util.UUID;
 
 /**
  * Tests individual verticles by sending appropriate messages using the Vert.x event bus.

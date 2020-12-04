@@ -23,8 +23,6 @@ import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
 import io.vertx.ext.web.RoutingContext;
 
-import java.util.Map;
-
 /**
  * Default failure handler for all failures not directly handled by any of the other handlers.
  *

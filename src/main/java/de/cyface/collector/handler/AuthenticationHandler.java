@@ -18,19 +18,19 @@
  */
 package de.cyface.collector.handler;
 
+import java.util.Collections;
+
+import org.apache.commons.lang3.Validate;
+
 import de.cyface.collector.verticle.CollectorApiVerticle;
 import io.vertx.core.Handler;
 import io.vertx.core.json.DecodeException;
-import io.vertx.core.json.JsonObject;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
 import io.vertx.ext.auth.JWTOptions;
 import io.vertx.ext.auth.jwt.JWTAuth;
 import io.vertx.ext.auth.mongo.MongoAuth;
 import io.vertx.ext.web.RoutingContext;
-import org.apache.commons.lang3.Validate;
-
-import java.util.Collections;
 
 /**
  * Handles authentication request on the Cyface Collector API. This is implemented with JSON Web Token (JWT). To get a

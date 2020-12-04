@@ -14,6 +14,17 @@
  */
 package de.cyface.collector.verticle;
 
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.Collections;
+
+import org.apache.commons.lang3.Validate;
+
 import de.cyface.collector.MongoDbUtils;
 import de.cyface.collector.Parameter;
 import de.cyface.collector.handler.AuthenticationFailureHandler;
@@ -41,16 +52,6 @@ import io.vertx.ext.web.Router;
 import io.vertx.ext.web.handler.BodyHandler;
 import io.vertx.ext.web.handler.JWTAuthHandler;
 import io.vertx.ext.web.handler.StaticHandler;
-import org.apache.commons.lang3.Validate;
-
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.Collections;
 
 /**
  * This Verticle is the Cyface collectors main entry point. It orchestrates all other Verticles and configures the
