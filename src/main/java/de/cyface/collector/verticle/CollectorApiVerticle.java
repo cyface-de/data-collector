@@ -264,7 +264,7 @@ public final class CollectorApiVerticle extends AbstractVerticle {
                 .failureHandler(new AuthenticationFailureHandler());
         // Set up data collector route
         v2ApiRouter.post("/measurements").consumes("multipart/form-data")
-                .handler(BodyHandler.create().setBodyLimit(BYTES_IN_ONE_GIGABYTE).setDeleteUploadedFilesOnEnd(true))
+                .handler(BodyHandler.create().setBodyLimit(BYTES_IN_ONE_GIGABYTE).setDeleteUploadedFilesOnEnd(false))
                 .handler(JWTAuthHandler.create(jwtAuthProvider).setIssuer(issuer)
                         .setAudience(Collections.singletonList(issuer)))
                 .handler(new MeasurementHandler());
