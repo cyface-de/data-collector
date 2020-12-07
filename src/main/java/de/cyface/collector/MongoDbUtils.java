@@ -22,7 +22,6 @@ import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.auth.mongo.HashAlgorithm;
 import io.vertx.ext.auth.mongo.HashSaltStyle;
-import io.vertx.ext.auth.mongo.HashStrategy;
 import io.vertx.ext.auth.mongo.MongoAuth;
 import io.vertx.ext.mongo.MongoClient;
 
@@ -53,9 +52,9 @@ public final class MongoDbUtils {
      * @return Authentication provider used to check for valid user accounts used to generate new JWT token.
      */
     public static MongoAuth buildMongoAuthProvider(final MongoClient client, final String salt) {
-        final JsonObject authProperties = new JsonObject();
-        final MongoAuth authProvider = MongoAuth.create(client, authProperties);
-        final HashStrategy hashStrategy = authProvider.getHashStrategy();
+        final var authProperties = new JsonObject();
+        final var authProvider = MongoAuth.create(client, authProperties);
+        final var hashStrategy = authProvider.getHashStrategy();
         hashStrategy.setSaltStyle(HashSaltStyle.EXTERNAL);
         hashStrategy.setExternalSalt(salt);
         authProvider.setHashAlgorithm(HashAlgorithm.PBKDF2);
@@ -72,7 +71,7 @@ public final class MongoDbUtils {
      * @return A <code>MongoClient</code> ready for usage.
      */
     public static MongoClient createSharedMongoClient(final Vertx vertx, final JsonObject config) {
-        final String dataSourceName = config.getString("data_source_name", DEFAULT_MONGO_DATA_SOURCE_NAME);
+        final var dataSourceName = config.getString("data_source_name", DEFAULT_MONGO_DATA_SOURCE_NAME);
         return MongoClient.createShared(vertx, config, dataSourceName);
     }
 

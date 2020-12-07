@@ -33,7 +33,7 @@ plugins {
 
 ext {
   // We need to use the SNAPSHOT version, since testing of multipart form uploads is not supported with older versions.
-  vertxVersion = '3.8.1'
+  vertxVersion = '3.9.4'
   junitVersion = '4.12'
   flapdoodleVersion = '2.2.0'
   micrometerVersion = '1.0.6'
@@ -53,7 +53,7 @@ repositories {
 group = 'de.cyface'
 version = '5.1.2'
 
-sourceCompatibility = '1.8'
+sourceCompatibility = '1.11'
 mainClassName = 'de.cyface.collector.Application'
 
 def mainVerticleName = 'de.cyface.collector.verticle.MainVerticle'

@@ -25,7 +25,6 @@ import io.vertx.core.AbstractVerticle;
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.DeploymentOptions;
 import io.vertx.core.Future;
-import io.vertx.core.json.JsonObject;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
 
@@ -82,10 +81,10 @@ public final class MainVerticle extends AbstractVerticle {
         // Create a few futures to synchronize the start up process
         final Future<Void> collectorApiFuture = Future.future();
         final Future<Void> managementApiFuture = Future.future();
-        final CompositeFuture startUpProcessFuture = CompositeFuture.all(collectorApiFuture, managementApiFuture);
-        final JsonObject config = config();
+        final var startUpProcessFuture = CompositeFuture.all(collectorApiFuture, managementApiFuture);
+        final var config = config();
         config.put(Parameter.SALT.key(), salt);
-        final DeploymentOptions verticleConfig = new DeploymentOptions().setConfig(config);
+        final var verticleConfig = new DeploymentOptions().setConfig(config);
 
         // Start the collector API as first verticle.
         vertx.deployVerticle(CollectorApiVerticle.class, verticleConfig, result -> {

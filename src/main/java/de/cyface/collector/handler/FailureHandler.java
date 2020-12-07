@@ -23,8 +23,6 @@ import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
 import io.vertx.ext.web.RoutingContext;
 
-import java.util.Map;
-
 /**
  * Default failure handler for all failures not directly handled by any of the other handlers.
  *
@@ -44,7 +42,7 @@ public final class FailureHandler implements Handler<RoutingContext> {
         LOGGER.error(String.format("Invalid resource %s requested!", ctx.request().absoluteURI()));
         if (LOGGER.isDebugEnabled()) {
             LOGGER.debug("Headers:");
-            for (final Map.Entry<String, String> header : ctx.request().headers()) {
+            for (final var header : ctx.request().headers()) {
                 LOGGER.debug(String.format("%s: %s", header.getKey(), header.getValue()));
             }
         }

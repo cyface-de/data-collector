@@ -25,12 +25,11 @@ import org.apache.commons.lang3.Validate;
 import de.cyface.collector.verticle.CollectorApiVerticle;
 import io.vertx.core.Handler;
 import io.vertx.core.json.DecodeException;
-import io.vertx.core.json.JsonObject;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
+import io.vertx.ext.auth.JWTOptions;
 import io.vertx.ext.auth.jwt.JWTAuth;
 import io.vertx.ext.auth.mongo.MongoAuth;
-import io.vertx.ext.jwt.JWTOptions;
 import io.vertx.ext.web.RoutingContext;
 
 /**
@@ -94,18 +93,18 @@ public final class AuthenticationHandler implements Handler<RoutingContext> {
     @Override
     public void handle(final RoutingContext ctx) {
         try {
-            final JsonObject body = ctx.getBodyAsJson();
+            final var body = ctx.getBodyAsJson();
             LOGGER.info(LOGGER.isDebugEnabled());
             LOGGER.debug("Receiving authentication request for user {}", body.getString("username"));
             authProvider.authenticate(body, r -> {
                 if (r.succeeded()) {
                     LOGGER.debug("Authentication successful for user {}", body.getString("username"));
 
-                    final JWTOptions jwtOptions = new JWTOptions().setExpiresInSeconds(60);
+                    final var jwtOptions = new JWTOptions().setExpiresInSeconds(60);
                     jwtOptions.setIssuer(issuer);
                     jwtOptions.setAudience(Collections.singletonList(audience));
 
-                    final String generatedToken = jwtAuthProvider.generateToken(body,
+                    final var generatedToken = jwtAuthProvider.generateToken(body,
                             jwtOptions.setAlgorithm(CollectorApiVerticle.JWT_HASH_ALGORITHM));
                     LOGGER.trace("New JWT Token: {}", generatedToken);
                     ctx.response().putHeader("Authorization", generatedToken).setStatusCode(200).end();

@@ -22,7 +22,6 @@ import static de.cyface.collector.EventBusAddressUtils.NEW_MEASUREMENT;
 
 import java.io.File;
 import java.util.HashSet;
-import java.util.Set;
 
 import org.apache.commons.io.FilenameUtils;
 
@@ -30,12 +29,8 @@ import de.cyface.collector.EventBusAddressUtils;
 import de.cyface.collector.model.GeoLocation;
 import de.cyface.collector.model.Measurement;
 import io.vertx.core.Handler;
-import io.vertx.core.eventbus.EventBus;
-import io.vertx.core.http.HttpServerRequest;
-import io.vertx.core.http.HttpServerResponse;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
-import io.vertx.ext.auth.User;
 import io.vertx.ext.web.RoutingContext;
 
 /**
@@ -62,36 +57,36 @@ public final class MeasurementHandler implements Handler<RoutingContext> {
     @Override
     public void handle(final RoutingContext ctx) {
         LOGGER.info("Received new measurement request.");
-        final HttpServerRequest request = ctx.request();
-        final HttpServerResponse response = ctx.response();
+        final var request = ctx.request();
+        final var response = ctx.response();
         LOGGER.debug("FormAttributes: {}", request.formAttributes());
-        final User user = ctx.user();
+        final var user = ctx.user();
 
         try {
-            final String deviceId = request.getFormAttribute(FormAttributes.DEVICE_ID.getValue());
-            final String deviceType = request.getFormAttribute(FormAttributes.DEVICE_TYPE.getValue());
-            final String measurementId = request.getFormAttribute(FormAttributes.MEASUREMENT_ID.getValue());
-            final String osVersion = request.getFormAttribute(FormAttributes.OS_VERSION.getValue());
-            final String applicationVersion = request.getFormAttribute(FormAttributes.APPLICATION_VERSION.getValue());
-            final double length = Double.parseDouble(request.getFormAttribute(FormAttributes.LENGTH.getValue()));
-            final long locationCount = Long
+            final var deviceId = request.getFormAttribute(FormAttributes.DEVICE_ID.getValue());
+            final var deviceType = request.getFormAttribute(FormAttributes.DEVICE_TYPE.getValue());
+            final var measurementId = request.getFormAttribute(FormAttributes.MEASUREMENT_ID.getValue());
+            final var osVersion = request.getFormAttribute(FormAttributes.OS_VERSION.getValue());
+            final var applicationVersion = request.getFormAttribute(FormAttributes.APPLICATION_VERSION.getValue());
+            final var length = Double.parseDouble(request.getFormAttribute(FormAttributes.LENGTH.getValue()));
+            final var locationCount = Long
                     .parseLong(request.getFormAttribute(FormAttributes.LOCATION_COUNT.getValue()));
-            final String vehicleType = request.getFormAttribute(FormAttributes.VEHICLE_TYPE.getValue());
-            final String username = user.principal().getString("username");
+            final var vehicleType = request.getFormAttribute(FormAttributes.VEHICLE_TYPE.getValue());
+            final var username = user.principal().getString("username");
             GeoLocation startLocation = null;
             GeoLocation endLocation = null;
             if (locationCount > 0) {
-                final String startLocationLatString = request
+                final var startLocationLatString = request
                         .getFormAttribute(FormAttributes.START_LOCATION_LAT.getValue());
-                final String startLocationLonString = request
+                final var startLocationLonString = request
                         .getFormAttribute(FormAttributes.START_LOCATION_LON.getValue());
-                final String startLocationTsString = request
+                final var startLocationTsString = request
                         .getFormAttribute(FormAttributes.START_LOCATION_TS.getValue());
-                final String endLocationLatString = request
+                final var endLocationLatString = request
                         .getFormAttribute(FormAttributes.END_LOCATION_LAT.getValue());
-                final String endLocationLonString = request
+                final var endLocationLonString = request
                         .getFormAttribute(FormAttributes.END_LOCATION_LON.getValue());
-                final String endLocationTsString = request.getFormAttribute(FormAttributes.END_LOCATION_TS.getValue());
+                final var endLocationTsString = request.getFormAttribute(FormAttributes.END_LOCATION_TS.getValue());
 
                 if (startLocationLatString == null || startLocationLonString == null || startLocationTsString == null
                         || endLocationLatString == null || endLocationLonString == null
@@ -100,18 +95,18 @@ public final class MeasurementHandler implements Handler<RoutingContext> {
                     ctx.fail(422);
                 }
 
-                final double startLocationLat = Double.parseDouble(startLocationLatString);
-                final double startLocationLon = Double.parseDouble(startLocationLonString);
-                final long startLocationTs = Long.parseLong(startLocationTsString);
-                final double endLocationLat = Double.parseDouble(endLocationLatString);
-                final double endLocationLon = Double.parseDouble(endLocationLonString);
-                final long endLocationTs = Long.parseLong(endLocationTsString);
+                final var startLocationLat = Double.parseDouble(startLocationLatString);
+                final var startLocationLon = Double.parseDouble(startLocationLonString);
+                final var startLocationTs = Long.parseLong(startLocationTsString);
+                final var endLocationLat = Double.parseDouble(endLocationLatString);
+                final var endLocationLon = Double.parseDouble(endLocationLonString);
+                final var endLocationTs = Long.parseLong(endLocationTsString);
 
                 startLocation = new GeoLocation(startLocationLat, startLocationLon, startLocationTs);
                 endLocation = new GeoLocation(endLocationLat, endLocationLon, endLocationTs);
             }
 
-            final Set<Measurement.FileUpload> uploads = new HashSet<>();
+            final var uploads = new HashSet<Measurement.FileUpload>();
             ctx.fileUploads()
                     .forEach(upload -> uploads.add(new Measurement.FileUpload(new File(upload.uploadedFileName()),
                             FilenameUtils.getExtension(upload.fileName()))));
@@ -123,7 +118,7 @@ public final class MeasurementHandler implements Handler<RoutingContext> {
             LOGGER.debug("Request was successful!");
             response.end();
 
-        } catch (final  IllegalArgumentException | NullPointerException e) {
+        } catch (final IllegalArgumentException | NullPointerException e) {
             LOGGER.error("Data was not parsable!", e);
             ctx.fail(422);
         }
@@ -139,7 +134,7 @@ public final class MeasurementHandler implements Handler<RoutingContext> {
      * @see EventBusAddressUtils#NEW_MEASUREMENT
      */
     private void informAboutNew(final Measurement measurement, final RoutingContext context) {
-        final EventBus eventBus = context.vertx().eventBus();
+        final var eventBus = context.vertx().eventBus();
         eventBus.publish(NEW_MEASUREMENT, measurement);
     }
 }
