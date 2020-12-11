@@ -18,52 +18,58 @@
  */
 package de.cyface.collector;
 
-import java.io.File;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.greaterThan;
+import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.not;
+import static org.hamcrest.Matchers.nullValue;
+
 import java.io.IOException;
-import java.net.ServerSocket;
-import java.util.Arrays;
+import java.net.URISyntaxException;
+import java.nio.file.Path;
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.bson.types.ObjectId;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
+import de.cyface.collector.commons.MongoTest;
 import de.cyface.collector.handler.FormAttributes;
-import de.cyface.collector.model.GeoLocation;
-import de.cyface.collector.model.Measurement;
-import de.cyface.collector.verticle.SerializationVerticle;
-import io.vertx.core.DeploymentOptions;
-import io.vertx.core.Handler;
+import de.flapdoodle.embed.process.runtime.Network;
+import io.vertx.core.CompositeFuture;
+import io.vertx.core.Future;
 import io.vertx.core.Vertx;
-import io.vertx.core.eventbus.EventBus;
-import io.vertx.core.eventbus.Message;
+import io.vertx.core.file.OpenOptions;
 import io.vertx.core.json.JsonObject;
-import io.vertx.core.logging.Logger;
-import io.vertx.core.logging.LoggerFactory;
+import io.vertx.ext.mongo.GridFsUploadOptions;
 import io.vertx.ext.mongo.MongoClient;
-import io.vertx.ext.unit.Async;
-import io.vertx.ext.unit.TestContext;
-import io.vertx.ext.unit.junit.VertxUnitRunner;
+import io.vertx.junit5.VertxExtension;
+import io.vertx.junit5.VertxTestContext;
 
 /**
- * Tests individual verticles by sending appropriate messages using the Vert.x event bus.
+ * Tests that storing data to an underlying Mongo database works.
  *
  * @author Klemens Muthmann
  * @version 1.1.3
  * @since 2.0.0
  */
-@RunWith(VertxUnitRunner.class)
+@ExtendWith(VertxExtension.class)
 @SuppressWarnings("PMD.MethodNamingConventions")
-public final class EventBusTest {
+public final class DataStorageTest {
     /**
      * The logger used by objects of this class. Configure it using <tt>/src/test/resources/logback-test.xml</tt> and do
      * not forget to set the Java property:
      * <tt>-Dvertx.logger-delegate-factory-class-name=io.vertx.core.logging.SLF4JLogDelegateFactory</tt>.
      */
     @SuppressWarnings("unused")
-    private static final Logger LOGGER = LoggerFactory.getLogger(EventBusTest.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(DataStorageTest.class);
     /**
      * Th version of the app used for the test measurements.
      */
@@ -84,139 +90,95 @@ public final class EventBusTest {
      * Process providing a connection to the test Mongo database.
      */
     private transient MongoTest mongoTest;
-    /**
-     * The <code>Vertx</code> used for testing the verticles.
-     */
-    private transient Vertx vertx;
-    /**
-     * The configuration used for starting the Mongo database under test.
-     */
-    private transient JsonObject mongoConfiguration;
 
-    /**
-     * Deploys the {@link SerializationVerticle} for testing purposes.
-     *
-     * @param context The Vert.x context used for testing
-     * @throws IOException Fails the test if anything unexpected happens
-     */
-    @Before
-    public void deployVerticle(final TestContext context) throws IOException {
+    @BeforeEach
+    void setUp() throws IOException {
         mongoTest = new MongoTest();
-        try (ServerSocket socket = new ServerSocket(0);) {
-            final int mongoPort = socket.getLocalPort();
-            socket.close();
-            mongoTest.setUpMongoDatabase(mongoPort);
-
-            vertx = Vertx.vertx();
-
-            mongoConfiguration = new JsonObject().put("db_name", "cyface").put("connection_string",
-                    "mongodb://localhost:" + mongoPort);
-
-            final DeploymentOptions options = new DeploymentOptions().setConfig(mongoConfiguration);
-
-            vertx.deployVerticle(SerializationVerticle.class, options, context.asyncAssertSuccess());
-        }
+        mongoTest.setUpMongoDatabase(Network.getFreeServerPort());
     }
 
     /**
      * Finishes the test <code>Vertx</code> instance and stops the Mongo database.
-     *
-     * @param context The Vert.x context used for testing
      */
-    @After
-    public void shutdown(final TestContext context) {
-        vertx.close(context.asyncAssertSuccess());
+    @AfterEach
+    void shutdown() {
         mongoTest.stopMongoDb();
-    }
-
-    /**
-     * Tests if the {@link SerializationVerticle} handles new measurements arriving in the system correctly.
-     *
-     * @param context The Vert.x context used for testing
-     * @throws IOException If working with the data files fails
-     */
-    @Test
-    public void test(final TestContext context) throws IOException {
-        final Async async = context.async();
-
-        final EventBus eventBus = vertx.eventBus();
-        eventBus.registerDefaultCodec(Measurement.class, Measurement.getCodec());
-        eventBus.consumer(EventBusAddressUtils.MEASUREMENT_SAVED, new Handler<Message<String>>() {
-
-            @Override
-            public void handle(final Message<String> event) {
-                final ExpectedData expectedDeviceData = new ExpectedData(TEST_DEVICE_IDENTIFIER, TEST_DEVICE_OS_VERSION,
-                        TEST_DEVICE_NAME,
-                        TEST_DEVICE_APP_VERSION);
-                final ExpectedMeasurementData expectedMeasurementData = new ExpectedMeasurementData("2", 200.0, 10L,
-                        10.0, 10.0, 10_000L, 12.0, 12.0, 12_000L);
-
-                checkMeasurementData(event.body(), context, async, expectedDeviceData, expectedMeasurementData);
-            }
-        });
-
-        eventBus.publish(EventBusAddressUtils.NEW_MEASUREMENT,
-                new Measurement(
-                        TEST_DEVICE_IDENTIFIER,
-                        "2",
-                        TEST_DEVICE_OS_VERSION,
-                        TEST_DEVICE_NAME,
-                        TEST_DEVICE_APP_VERSION,
-                        200.0,
-                        10,
-                        new GeoLocation(10.0, 10.0, 10_000),
-                        new GeoLocation(12.0, 12.0, 12_000),
-                        "BICYCLE",
-                        "testUser",
-                        fixtureUploads()));
-
-        async.await(5_000L);
     }
 
     /**
      * Tests that handling measurements without geo locations works as expected.
      *
-     * @param context The Vert.x context used for testing
+     * @param ctx The Vert.x context used for testing
      * @throws IOException If working with the data files fails
      */
     @Test
-    public void testPublishMeasurementWithNoGeoLocations_HappyPath(final TestContext context) throws IOException {
-        final Async async = context.async();
+    public void testPublishMeasurementWithNoGeoLocations_HappyPath(final Vertx vertx, final VertxTestContext ctx)
+            throws IOException, URISyntaxException {
+        final var client = MongoClient.createShared(vertx, mongoTest.clientConfiguration());
+        client.createDefaultGridFsBucketService();
 
-        final EventBus eventBus = vertx.eventBus();
-        eventBus.registerDefaultCodec(Measurement.class, Measurement.getCodec());
-        eventBus.consumer(EventBusAddressUtils.MEASUREMENT_SAVED, new Handler<Message<String>>() {
+        final var gridFsBucketCreationFuture = client.createDefaultGridFsBucketService();
+        final var uploads = List.of(Path.of(this.getClass().getResource("/iphone-neu.ccyf").toURI()));
 
-            @Override
-            public void handle(final Message<String> event) {
-                final ExpectedData expectedDeviceData = new ExpectedData(TEST_DEVICE_IDENTIFIER, TEST_DEVICE_OS_VERSION,
-                        TEST_DEVICE_NAME,
-                        TEST_DEVICE_APP_VERSION);
-                final ExpectedMeasurementData expectedMeasurementData = new ExpectedMeasurementData("2", .0, 0L, null,
-                        null, null, null, null, null);
+        gridFsBucketCreationFuture.onSuccess(gridFsClient -> {
+            final var fileSystem = vertx.fileSystem();
+            final List<Future> fileUploadFutures = uploads.stream().map(fileUpload -> {
+                final var fileOpenFuture = fileSystem.open(fileUpload.toAbsolutePath().toString(),
+                        new OpenOptions());
+                final var uploadFuture = fileOpenFuture.compose(asyncFile -> {
 
-                checkMeasurementData(event.body(), context, async, expectedDeviceData, expectedMeasurementData);
-            }
-        });
+                    final var gridFsOptions = new GridFsUploadOptions();
+                    gridFsOptions.setMetadata(fixtureMetaData());
 
-        eventBus.publish(EventBusAddressUtils.NEW_MEASUREMENT,
-                new Measurement(TEST_DEVICE_IDENTIFIER, "2", TEST_DEVICE_OS_VERSION, TEST_DEVICE_NAME,
-                        TEST_DEVICE_APP_VERSION, .0, 0L, null, null, "BICYCLE", "testUser", fixtureUploads()));
+                    return gridFsClient.uploadByFileNameWithOptions(asyncFile,
+                            fileUpload.getFileName().toString(), gridFsOptions);
+                });
+                return (Future)uploadFuture;
+            }).collect(Collectors.toList());
 
-        async.await(5_000L);
+            fileUploadFutures.add(fileSystem.createTempFile("de.cyface.collector", "test"));
+            CompositeFuture.all(fileUploadFutures).compose(result -> {
+                final var uploadedFileId = (String)result.resultAt(0);
+                final var tempFileName = (String)result.list().get(result.list().size() - 1);
+                return CompositeFuture.all(gridFsClient.downloadFileByID(uploadedFileId, tempFileName),
+                        client.find("fs.files", new JsonObject().put("_id",
+                                new JsonObject().put("$oid", new ObjectId(uploadedFileId).toHexString()))));
+            }).onComplete(ctx.succeeding(loadedData -> {
+                final var downloadedBytes = (Long)loadedData.resultAt(0);
+                final var metaData = ((List<JsonObject>)loadedData.resultAt(1)).get(0).getJsonObject("metadata");
+                ctx.verify(() -> {
+                    assertThat(downloadedBytes, is(greaterThan(0L)));
+                    assertThat(metaData.getValue(FormAttributes.APPLICATION_VERSION.getValue()),
+                            is(equalTo(TEST_DEVICE_APP_VERSION)));
+                });
+                ctx.completeNow();
+            }));
+        }).onFailure(ctx::failNow);
     }
 
-    /**
-     * Provides a fixture simulating the files necessary to create an appropriate measurement.
-     *
-     * @return A fixture containing empty files for data and events
-     * @throws IOException If writing the empty temporary files fails for some reason
-     */
-    private List<Measurement.FileUpload> fixtureUploads() throws IOException {
-        final File dataFile = File.createTempFile("data", "ccyf");
-        final File eventsFile = File.createTempFile("events", "ccyfe");
-        return Arrays.asList(new Measurement.FileUpload(dataFile, "ccyf"),
-                new Measurement.FileUpload(eventsFile, "ccyfe"));
+    private JsonObject fixtureMetaData() {
+        final var ret = new JsonObject();
+        ret.put(FormAttributes.DEVICE_ID.getValue(), TEST_DEVICE_IDENTIFIER);
+        ret.put(FormAttributes.MEASUREMENT_ID.getValue(), 1);
+        ret.put(FormAttributes.OS_VERSION.getValue(), TEST_DEVICE_OS_VERSION);
+        ret.put(FormAttributes.DEVICE_TYPE.getValue(), null);
+        ret.put(FormAttributes.APPLICATION_VERSION.getValue(), TEST_DEVICE_APP_VERSION);
+        ret.put(FormAttributes.LENGTH.getValue(), 0);
+        ret.put(FormAttributes.LOCATION_COUNT.getValue(), 0);
+        /*
+         * if (locationCount > 0) {
+         * ret.put(FormAttributes.START_LOCATION_LAT.getValue(), startLocation.getLat());
+         * ret.put(FormAttributes.START_LOCATION_LON.getValue(), startLocation.getLon());
+         * ret.put(FormAttributes.START_LOCATION_TS.getValue(), startLocation.getTimestamp());
+         * ret.put(FormAttributes.END_LOCATION_LAT.getValue(), endLocation.getLat());
+         * ret.put(FormAttributes.END_LOCATION_LON.getValue(), endLocation.getLon());
+         * ret.put(FormAttributes.END_LOCATION_TS.getValue(), endLocation.getTimestamp());
+         * }
+         */
+        ret.put(FormAttributes.VEHICLE_TYPE.getValue(), "BICYCLE");
+        ret.put(FormAttributes.USERNAME.getValue(), "test");
+
+        return ret;
     }
 
     /**
@@ -224,67 +186,58 @@ public final class EventBusTest {
      *
      * @param identifier The measurement identifier as a <code>String</code> in the format "deviceId:measurementId"
      * @param context The Vertx <code>TestContext</code>
-     * @param async A Vertx synchronizer, which is waiting for the assertions to finish
      * @param expectedDeviceData The meta data of the device that uploaded the test measurement to check
      * @param expectedMeasurementData The meta data of the test measurement to check
      */
-    private void checkMeasurementData(final String identifier, final TestContext context, final Async async,
+    private void checkMeasurementData(final String identifier, final Vertx vertx, final VertxTestContext context,
             final ExpectedData expectedDeviceData, final ExpectedMeasurementData expectedMeasurementData) {
-        final String[] generatedIdentifier = identifier.split(":");
-        final MongoClient client = MongoClient.createShared(vertx, mongoConfiguration);
-        final JsonObject query = new JsonObject();
+        final var generatedIdentifier = identifier.split(":");
+        final var client = MongoClient.createShared(vertx, mongoTest.clientConfiguration());
+        final var query = new JsonObject();
 
         query.put("metadata.deviceId", generatedIdentifier[0]);
         query.put("metadata.measurementId", generatedIdentifier[1]);
 
-        client.findOne("fs.files", query, null, object -> {
-            context.assertTrue(object.succeeded());
+        client.findOne("fs.files", query, null, context.succeeding(json -> context.verify(() -> {
+            assertThat(json, is(not(nullValue())));
+            final var metadata = json.getJsonObject("metadata");
+            assertThat(metadata, is(not(nullValue())));
 
-            final JsonObject json = object.result();
-            context.assertNotNull(json);
-            final JsonObject metadata = json.getJsonObject("metadata");
-            context.assertNotNull(metadata);
+            final var deviceIdentifier = metadata.getString(FormAttributes.DEVICE_ID.getValue());
+            final var measurementIdentifier = metadata
+                    .getString(FormAttributes.MEASUREMENT_ID.getValue());
+            final var operatingSystemVersion = metadata.getString(FormAttributes.OS_VERSION.getValue());
+            final var deviceType = metadata.getString(FormAttributes.DEVICE_TYPE.getValue());
+            final var applicationVersion = metadata
+                    .getString(FormAttributes.APPLICATION_VERSION.getValue());
+            final var length = metadata.getDouble(FormAttributes.LENGTH.getValue());
+            final var locationCount = metadata.getLong(FormAttributes.LOCATION_COUNT.getValue());
+            final var startLocationLat = metadata
+                    .getDouble(FormAttributes.START_LOCATION_LAT.getValue());
+            final var startLocationLon = metadata
+                    .getDouble(FormAttributes.START_LOCATION_LON.getValue());
+            final var startLocationTimestamp = metadata
+                    .getLong(FormAttributes.START_LOCATION_TS.getValue());
+            final var endLocationLat = metadata.getDouble(FormAttributes.END_LOCATION_LAT.getValue());
+            final var endLocationLon = metadata.getDouble(FormAttributes.END_LOCATION_LON.getValue());
+            final var endLocationTimestamp = metadata.getLong(FormAttributes.END_LOCATION_TS.getValue());
 
-            try {
-                final String deviceIdentifier = metadata.getString(FormAttributes.DEVICE_ID.getValue());
-                final String measurementIdentifier = metadata
-                        .getString(FormAttributes.MEASUREMENT_ID.getValue());
-                final String operatingSystemVersion = metadata.getString(FormAttributes.OS_VERSION.getValue());
-                final String deviceType = metadata.getString(FormAttributes.DEVICE_TYPE.getValue());
-                final String applicationVersion = metadata
-                        .getString(FormAttributes.APPLICATION_VERSION.getValue());
-                final double length = metadata.getDouble(FormAttributes.LENGTH.getValue());
-                final long locationCount = metadata.getLong(FormAttributes.LOCATION_COUNT.getValue());
-                final Double startLocationLat = metadata
-                        .getDouble(FormAttributes.START_LOCATION_LAT.getValue());
-                final Double startLocationLon = metadata
-                        .getDouble(FormAttributes.START_LOCATION_LON.getValue());
-                final Long startLocationTimestamp = metadata
-                        .getLong(FormAttributes.START_LOCATION_TS.getValue());
-                final Double endLocationLat = metadata.getDouble(FormAttributes.END_LOCATION_LAT.getValue());
-                final Double endLocationLon = metadata.getDouble(FormAttributes.END_LOCATION_LON.getValue());
-                final Long endLocationTimestamp = metadata.getLong(FormAttributes.END_LOCATION_TS.getValue());
+            assertThat(expectedDeviceData.deviceIdentifier(), is(deviceIdentifier));
+            assertThat(expectedMeasurementData.measurementIdentifier(), is(measurementIdentifier));
+            assertThat(expectedDeviceData.operatingSystemVersion(), is(operatingSystemVersion));
+            assertThat(expectedDeviceData.deviceType(), is(deviceType));
+            assertThat(expectedDeviceData.applicationVersion(), is(applicationVersion));
+            assertThat(expectedMeasurementData.length(), is(length));
+            assertThat(expectedMeasurementData.locationCount(), is(locationCount));
+            assertThat(expectedMeasurementData.startLocationLat(), is(startLocationLat));
+            assertThat(expectedMeasurementData.startLocationLon(), is(startLocationLon));
+            assertThat(expectedMeasurementData.startLocationTimestamp(), is(startLocationTimestamp));
+            assertThat(expectedMeasurementData.endLocationLat(), is(endLocationLat));
+            assertThat(expectedMeasurementData.endLocationLon(), is(endLocationLon));
+            assertThat(expectedMeasurementData.endLocationTimestamp(), is(endLocationTimestamp));
 
-                context.assertEquals(expectedDeviceData.deviceIdentifier(), deviceIdentifier);
-                context.assertEquals(expectedMeasurementData.measurementIdentifier(), measurementIdentifier);
-                context.assertEquals(expectedDeviceData.operatingSystemVersion(), operatingSystemVersion);
-                context.assertEquals(expectedDeviceData.deviceType(), deviceType);
-                context.assertEquals(expectedDeviceData.applicationVersion(), applicationVersion);
-                context.assertEquals(expectedMeasurementData.length(), length);
-                context.assertEquals(expectedMeasurementData.locationCount(), locationCount);
-                context.assertEquals(expectedMeasurementData.startLocationLat(), startLocationLat);
-                context.assertEquals(expectedMeasurementData.startLocationLon(), startLocationLon);
-                context.assertEquals(expectedMeasurementData.startLocationTimestamp(), startLocationTimestamp);
-                context.assertEquals(expectedMeasurementData.endLocationLat(), endLocationLat);
-                context.assertEquals(expectedMeasurementData.endLocationLon(), endLocationLon);
-                context.assertEquals(expectedMeasurementData.endLocationTimestamp(), endLocationTimestamp);
-
-            } catch (Exception e) {
-                context.fail(e);
-            } finally {
-                async.complete();
-            }
-        });
+            context.completeNow();
+        })));
     }
 
     /**

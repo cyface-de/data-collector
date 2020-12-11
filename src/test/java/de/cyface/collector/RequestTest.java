@@ -18,25 +18,29 @@
  */
 package de.cyface.collector;
 
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.is;
+
 import java.io.IOException;
 import java.net.ServerSocket;
 
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import de.cyface.collector.commons.DataCollectorClient;
+import de.cyface.collector.commons.MongoTest;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import de.cyface.collector.verticle.CollectorApiVerticle;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
-import io.vertx.core.logging.Logger;
-import io.vertx.core.logging.LoggerFactory;
-import io.vertx.ext.unit.Async;
-import io.vertx.ext.unit.TestContext;
-import io.vertx.ext.unit.junit.VertxUnitRunner;
 import io.vertx.ext.web.client.WebClient;
+import io.vertx.junit5.VertxExtension;
+import io.vertx.junit5.VertxTestContext;
 
 /**
  * This tests the REST-API provided by the collector and used to upload the data to the server.
@@ -45,7 +49,7 @@ import io.vertx.ext.web.client.WebClient;
  * @version 2.3.2
  * @since 1.0.0
  */
-@RunWith(VertxUnitRunner.class)
+@ExtendWith(VertxExtension.class)
 @SuppressWarnings("PMD.MethodNamingConventions")
 public final class RequestTest {
 
@@ -59,10 +63,6 @@ public final class RequestTest {
      * The hostname used to send test requests to.
      */
     private static final String TEST_HOST = "localhost";
-    /**
-     * The test <code>Vertx</code> instance.
-     */
-    private Vertx vertx;
     /**
      * A Mongo database lifecycle handler. This provides the test with the capabilities to run and shutdown a Mongo
      * database for testing purposes.
@@ -82,10 +82,10 @@ public final class RequestTest {
      *
      * @throws IOException If no socket was available for the Mongo database.
      */
-    @BeforeClass
+    @BeforeAll
     public static void setupMongoDatabase() throws IOException {
         mongoTest = new MongoTest();
-        try (ServerSocket socket = new ServerSocket(0);) {
+        try (ServerSocket socket = new ServerSocket(0)) {
             final int mongoPort = socket.getLocalPort();
             socket.close();
             mongoTest.setUpMongoDatabase(mongoPort);
@@ -98,29 +98,16 @@ public final class RequestTest {
      * @param ctx The test context used to control the test <code>Vertx</code>.
      * @throws IOException Fails the test if anything unexpected goes wrong.
      */
-    @Before
-    public void deployVerticle(final TestContext ctx) throws IOException {
-
-        vertx = Vertx.vertx();
-
+    @BeforeEach
+    public void deployVerticle(final Vertx vertx, final VertxTestContext ctx) throws IOException {
         collectorClient = new DataCollectorClient();
         client = collectorClient.createWebClient(vertx, ctx, mongoTest.getMongoPort());
     }
 
     /**
-     * Stops the test <code>Vertx</code> instance.
-     *
-     * @param context The test context for running <code>Vertx</code> under test.
-     */
-    @After
-    public void stopVertx(final TestContext context) {
-        vertx.close(context.asyncAssertSuccess());
-    }
-
-    /**
      * Finishes the mongo database after this test has finished.
      */
-    @AfterClass
+    @AfterAll
     public static void stopMongoDatabase() {
         mongoTest.stopMongoDb();
     }
@@ -129,42 +116,30 @@ public final class RequestTest {
      * Tests the correct workings of accessing the API specification.
      *
      * @param context The test context for running <code>Vertx</code> under test.
-     * @throws Throwable Fails the test if anything unexpected happens.
      */
     @Test
-    public void testGetRoot_returnsApiSpecification(final TestContext context) throws Throwable {
-        final Async async = context.async();
-
-        client.get(collectorClient.getPort(), TEST_HOST, "/api/v2/").send(response -> {
-            if (response.succeeded()) {
-                context.assertEquals(response.result().statusCode(), 200);
-                final String body = response.result().bodyAsString();
-                context.assertTrue(body.contains("<title>Cyface Data Collector</title>"));
-            } else {
-                context.fail();
-            }
-            async.complete();
-        });
-
-        async.await(3_000L);
-
+    public void testGetRoot_returnsApiSpecification(final VertxTestContext context) {
+        client.get(collectorClient.getPort(), TEST_HOST, "/api/v2/")
+                .send(context.succeeding(response -> context.verify(() -> {
+                    assertThat(response.statusCode(), is(200));
+                    final var body = response.bodyAsString();
+                    assertThat(body, containsString("<title>Cyface Data Collector</title>"));
+                    context.completeNow();
+                })));
     }
 
     /**
      * Tests that the default error handler correctly returns 404 status as response for a non valid request.
      *
      * @param ctx The test context for running <code>Vertx</code> under test.
-     * @throws Throwable Fails the test if anything unexpected happens.
      */
     @Test
-    public void testGetUnknownResource_Returns404(final TestContext ctx) throws Throwable {
-        final Async async = ctx.async();
-
-        client.post(collectorClient.getPort(), TEST_HOST, "/api/v2/garbage").send(response -> {
-            ctx.assertEquals(response.result().statusCode(), 404);
-            async.complete();
-        });
-        async.await(3_000L);
+    public void testGetUnknownResource_Returns404(final VertxTestContext ctx) {
+        client.post(collectorClient.getPort(), TEST_HOST, "/api/v2/garbage")
+                .send(ctx.succeeding(response -> ctx.verify(() -> {
+                    assertThat(response.statusCode(), is(404));
+                    ctx.completeNow();
+                })));
     }
 
     /**
@@ -173,16 +148,13 @@ public final class RequestTest {
      * @param context The test context for running <code>Vertx</code> under test.
      */
     @Test
-    public void testLoginWithWrongCredentials_Returns401(final TestContext context) {
-        final Async async = context.async();
-
+    public void testLoginWithWrongCredentials_Returns401(final VertxTestContext context) {
         client.post(collectorClient.getPort(), TEST_HOST, "/api/v2/login")
-                .sendJson(new JsonObject().put("username", "unknown").put("password", "unknown"), result -> {
-                    context.assertEquals(result.result().statusCode(), 401);
-                    async.complete();
-                });
-
-        async.await(3_000L);
+                .sendJson(new JsonObject().put("username", "unknown").put("password", "unknown"),
+                        context.succeeding(result -> context.verify(() -> {
+                            assertThat(result.statusCode(), is(401));
+                            context.completeNow();
+                        })));
     }
 
     /**
@@ -191,16 +163,13 @@ public final class RequestTest {
      * @param context The test context for running <code>Vertx</code> under test.
      */
     @Test
-    public void testLogin_HappyPath(final TestContext context) {
-        final Async async = context.async();
-
+    public void testLogin_HappyPath(final VertxTestContext context) {
         client.post(collectorClient.getPort(), TEST_HOST, "/api/v2/login")
-                .sendJson(new JsonObject().put("username", "admin").put("password", "secret"), result -> {
-                    context.assertEquals(result.result().statusCode(), 200);
-                    context.assertTrue(result.result().headers().contains("Authorization"));
-                    async.complete();
-                });
-
-        async.await(3_000L);
+                .sendJson(new JsonObject().put("username", "admin").put("password", "secret"),
+                        context.succeeding(result -> context.verify(() -> {
+                            assertThat(result.statusCode(), is(200));
+                            assertThat(result.headers().contains("Authorization"), is(true));
+                            context.completeNow();
+                        })));
     }
 }

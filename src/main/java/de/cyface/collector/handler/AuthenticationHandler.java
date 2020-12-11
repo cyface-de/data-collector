@@ -21,15 +21,15 @@ package de.cyface.collector.handler;
 import java.util.Collections;
 
 import org.apache.commons.lang3.Validate;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import de.cyface.collector.verticle.CollectorApiVerticle;
 import io.vertx.core.Handler;
 import io.vertx.core.json.DecodeException;
-import io.vertx.core.logging.Logger;
-import io.vertx.core.logging.LoggerFactory;
 import io.vertx.ext.auth.JWTOptions;
 import io.vertx.ext.auth.jwt.JWTAuth;
-import io.vertx.ext.auth.mongo.MongoAuth;
+import io.vertx.ext.auth.mongo.MongoAuthentication;
 import io.vertx.ext.web.RoutingContext;
 
 /**
@@ -51,7 +51,7 @@ public final class AuthenticationHandler implements Handler<RoutingContext> {
     /**
      * Authenticator that uses the Mongo user database to store and retrieve credentials.
      */
-    private final transient MongoAuth authProvider;
+    private final transient MongoAuthentication authProvider;
     /**
      * Authenticator that checks for valid authentications against Java Web Tokens.
      */
@@ -77,7 +77,8 @@ public final class AuthenticationHandler implements Handler<RoutingContext> {
      * @param audience The entity allowed to process requests authenticated with the generated JWT token. This might be
      *            a certain server installation or a certain part of an application.
      */
-    public AuthenticationHandler(final MongoAuth authProvider, final JWTAuth jwtAuthProvider, final String issuer,
+    public AuthenticationHandler(final MongoAuthentication authProvider, final JWTAuth jwtAuthProvider,
+            final String issuer,
             final String audience) {
         Validate.notNull(authProvider);
         Validate.notNull(jwtAuthProvider);
@@ -94,7 +95,6 @@ public final class AuthenticationHandler implements Handler<RoutingContext> {
     public void handle(final RoutingContext ctx) {
         try {
             final var body = ctx.getBodyAsJson();
-            LOGGER.info(LOGGER.isDebugEnabled());
             LOGGER.debug("Receiving authentication request for user {}", body.getString("username"));
             authProvider.authenticate(body, r -> {
                 if (r.succeeded()) {
@@ -104,7 +104,8 @@ public final class AuthenticationHandler implements Handler<RoutingContext> {
                     jwtOptions.setIssuer(issuer);
                     jwtOptions.setAudience(Collections.singletonList(audience));
 
-                    final var generatedToken = jwtAuthProvider.generateToken(body,
+                    final var jwtBody = body.put("aud", audience).put("iss", issuer);
+                    final var generatedToken = jwtAuthProvider.generateToken(jwtBody,
                             jwtOptions.setAlgorithm(CollectorApiVerticle.JWT_HASH_ALGORITHM));
                     LOGGER.trace("New JWT Token: {}", generatedToken);
                     ctx.response().putHeader("Authorization", generatedToken).setStatusCode(200).end();
@@ -118,5 +119,4 @@ public final class AuthenticationHandler implements Handler<RoutingContext> {
             ctx.fail(401);
         }
     }
-
 }
