@@ -35,6 +35,7 @@ import java.util.stream.Collectors;
 import org.bson.types.ObjectId;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.slf4j.Logger;
@@ -118,6 +119,7 @@ public final class DataStorageTest {
      * @throws URISyntaxException If the test data location is invalid
      */
     @Test
+    @DisplayName("Test storing data on happy path")
     public void testPublishMeasurementWithNoGeoLocations_HappyPath(final Vertx vertx, final VertxTestContext ctx)
             throws IOException, URISyntaxException {
         final var client = MongoClient.createShared(vertx, mongoTest.clientConfiguration());

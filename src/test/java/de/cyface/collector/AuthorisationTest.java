@@ -10,6 +10,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Collections;
 
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
@@ -31,6 +32,7 @@ import io.vertx.junit5.VertxTestContext;
 @ExtendWith(VertxExtension.class)
 public class AuthorisationTest {
     @Test
+    @DisplayName("Test that authenticating a user works via the happy path")
     void test(final Vertx vertx, final VertxTestContext ctx) throws URISyntaxException, IOException {
         final var publicKey = Files.readString(Path.of(this.getClass().getResource("/public.pem").toURI()));
         final var privateKey = Files.readString(Path.of(this.getClass().getResource("/private_key.pem").toURI()));
