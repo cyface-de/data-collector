@@ -213,7 +213,7 @@ public final class FileUploadTest {
         final HttpRequest<Buffer> builder = client.post(collectorClient.getPort(), "localhost",
                 MEASUREMENTS_UPLOAD_ENDPOINT_PATH);
         builder.sendMultipartForm(form, context.succeeding(ar -> context.verify(() -> {
-            assertThat(ar.statusCode(), is(401));
+            assertThat("Wrong HTTP status code on invalid authentication!", ar.statusCode(), is(401));
             context.completeNow();
         })));
     }
@@ -244,7 +244,7 @@ public final class FileUploadTest {
 
         // Execute
         upload(context, "/test.bin", context.succeeding(ar -> context.verify(() -> {
-            assertThat(ar.statusCode(), is(422));
+            assertThat("Wrong HTTP status code on uploading invalid data!", ar.statusCode(), is(422));
             context.completeNow();
         })));
     }
@@ -262,7 +262,7 @@ public final class FileUploadTest {
         final var returnedRequestFuture = context.checkpoint();
 
         upload(context, testFileResourceName, context.succeeding(ar -> context.verify(() -> {
-            assertThat(ar.statusCode(), is(201));
+            assertThat("Wrong HTTP status code on uploading data!", ar.statusCode(), is(201));
             returnedRequestFuture.flag();
         })));
     }
@@ -292,8 +292,8 @@ public final class FileUploadTest {
         TestUtils.authenticate(client, context.succeeding(authResponse -> {
             final var authToken = authResponse.getHeader("Authorization");
             context.verify(() -> {
-                assertThat(authResponse.statusCode(), is(200));
-                assertThat(authToken, is(notNullValue()));
+                assertThat("Wrong HTTP status on authentication request!", authResponse.statusCode(), is(200));
+                assertThat("Auth token was missing from authentication request!", authToken, is(notNullValue()));
             });
 
             final var builder = client.post(collectorClient.getPort(), "localhost",

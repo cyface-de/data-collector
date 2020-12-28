@@ -83,18 +83,10 @@ public final class MeasurementHandler implements Handler<RoutingContext> {
         final var user = ctx.user();
 
         try {
-            final var deviceId = request.getFormAttribute(FormAttributes.DEVICE_ID.getValue());
-            final var deviceType = request.getFormAttribute(FormAttributes.DEVICE_TYPE.getValue());
-            final var measurementId = request.getFormAttribute(FormAttributes.MEASUREMENT_ID.getValue());
-            final var osVersion = request.getFormAttribute(FormAttributes.OS_VERSION.getValue());
-            final var applicationVersion = request.getFormAttribute(FormAttributes.APPLICATION_VERSION.getValue());
-            final var length = Double.parseDouble(request.getFormAttribute(FormAttributes.LENGTH.getValue()));
-            final var locationCount = Long
-                    .parseLong(request.getFormAttribute(FormAttributes.LOCATION_COUNT.getValue()));
-            final var vehicleType = request.getFormAttribute(FormAttributes.VEHICLE_TYPE.getValue());
-            final var username = user.principal().getString("username");
             GeoLocation startLocation = null;
             GeoLocation endLocation = null;
+            final var locationCount = Long
+                    .parseLong(request.getFormAttribute(FormAttributes.LOCATION_COUNT.getValue()));
             if (locationCount > 0) {
                 final var startLocationLatString = request
                         .getFormAttribute(FormAttributes.START_LOCATION_LAT.getValue());
@@ -127,6 +119,14 @@ public final class MeasurementHandler implements Handler<RoutingContext> {
                     endLocation = new GeoLocation(endLocationLat, endLocationLon, endLocationTs);
                 }
             }
+            final var deviceId = request.getFormAttribute(FormAttributes.DEVICE_ID.getValue());
+            final var deviceType = request.getFormAttribute(FormAttributes.DEVICE_TYPE.getValue());
+            final var measurementId = request.getFormAttribute(FormAttributes.MEASUREMENT_ID.getValue());
+            final var osVersion = request.getFormAttribute(FormAttributes.OS_VERSION.getValue());
+            final var applicationVersion = request.getFormAttribute(FormAttributes.APPLICATION_VERSION.getValue());
+            final var length = Double.parseDouble(request.getFormAttribute(FormAttributes.LENGTH.getValue()));
+            final var vehicleType = request.getFormAttribute(FormAttributes.VEHICLE_TYPE.getValue());
+            final var username = user.principal().getString("username");
 
             final var uploads = new HashSet<Measurement.FileUpload>();
             ctx.fileUploads()

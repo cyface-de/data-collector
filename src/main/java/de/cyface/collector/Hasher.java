@@ -1,5 +1,6 @@
 package de.cyface.collector;
 
+import java.util.Arrays;
 import java.util.Base64;
 import java.util.Objects;
 
@@ -35,7 +36,7 @@ public class Hasher {
         Objects.requireNonNull(salt);
 
         this.hashingStrategy = hashingStrategy;
-        this.salt = salt;
+        this.salt = Arrays.copyOf(salt, salt.length);
     }
 
     /**

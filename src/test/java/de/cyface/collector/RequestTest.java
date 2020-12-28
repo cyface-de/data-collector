@@ -104,7 +104,6 @@ public final class RequestTest {
         collectorClient = new DataCollectorClient();
         client = collectorClient.createWebClient(vertx, ctx, mongoTest.getMongoPort());
     }
-
     /**
      * Finishes the mongo database after this test has finished.
      */
@@ -122,9 +121,9 @@ public final class RequestTest {
     public void testGetRoot_returnsApiSpecification(final VertxTestContext context) {
         client.get(collectorClient.getPort(), TEST_HOST, "/api/v2/")
                 .send(context.succeeding(response -> context.verify(() -> {
-                    assertThat(response.statusCode(), is(200));
+                    assertThat("Invalid HTTP status code on request for API specification.", response.statusCode(), is(200));
                     final var body = response.bodyAsString();
-                    assertThat(body, containsString("<title>Cyface Data Collector</title>"));
+                    assertThat("Request for API specification seems to be missing a valid body.", body, containsString("<title>Cyface Data Collector</title>"));
                     context.completeNow();
                 })));
     }
@@ -138,7 +137,8 @@ public final class RequestTest {
     public void testGetUnknownResource_Returns404(final VertxTestContext ctx) {
         client.post(collectorClient.getPort(), TEST_HOST, "/api/v2/garbage")
                 .send(ctx.succeeding(response -> ctx.verify(() -> {
-                    assertThat(response.statusCode(), is(404));
+                    assertThat("Invalid HTTP status code on requesting invalid resource!", response.statusCode(),
+                            is(404));
                     ctx.completeNow();
                 })));
     }
@@ -153,7 +153,8 @@ public final class RequestTest {
         client.post(collectorClient.getPort(), TEST_HOST, "/api/v2/login")
                 .sendJson(new JsonObject().put("username", "unknown").put("password", "unknown"),
                         context.succeeding(result -> context.verify(() -> {
-                            assertThat(result.statusCode(), is(401));
+                            assertThat("Invalid HTTP status code on invalid login request!", result.statusCode(),
+                                    is(401));
                             context.completeNow();
                         })));
     }
@@ -168,8 +169,9 @@ public final class RequestTest {
         client.post(collectorClient.getPort(), TEST_HOST, "/api/v2/login")
                 .sendJson(new JsonObject().put("username", "admin").put("password", "secret"),
                         context.succeeding(result -> context.verify(() -> {
-                            assertThat(result.statusCode(), is(200));
-                            assertThat(result.headers().contains("Authorization"), is(true));
+                            assertThat("Invalid HTTP status code on login request!", result.statusCode(), is(200));
+                            assertThat("Login request contained no JWT token!",
+                                    result.headers().contains("Authorization"), is(true));
                             context.completeNow();
                         })));
     }

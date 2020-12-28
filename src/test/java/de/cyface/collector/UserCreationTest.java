@@ -24,7 +24,6 @@ import static org.hamcrest.Matchers.is;
 import java.io.IOException;
 import java.net.ServerSocket;
 
-import de.cyface.collector.commons.MongoTest;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
@@ -32,6 +31,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
+import de.cyface.collector.commons.MongoTest;
 import de.cyface.collector.verticle.ManagementApiVerticle;
 import io.vertx.core.DeploymentOptions;
 import io.vertx.core.Vertx;
@@ -145,8 +145,8 @@ public final class UserCreationTest {
     public void testCreateUser_HappyPath(final Vertx vertx, final VertxTestContext context) {
         // Arrange
         final var postUserCompleteCheckpoint = context.checkpoint();
-        final var successfullyCheckedIfUserIsInDataBase = context.checkpoint();
-        final var successfullyCheckedThatCorrectUserIsInDatabase = context.checkpoint();
+        final var checkedIfUserIsInDataBase = context.checkpoint();
+        final var checkedThatCorrectUserIsInDatabase = context.checkpoint();
         final var mongoClient = MongoDbUtils.createSharedMongoClient(vertx, mongoDbConfiguration);
 
         // Act
@@ -157,19 +157,20 @@ public final class UserCreationTest {
 
         final var countResultsFuture = requestPostedFuture.compose(response -> {
             context.verify(() -> {
-                assertThat(response.statusCode(), is(201));
+                assertThat("Invalid HTTP status code on user insertion request!", response.statusCode(), is(201));
             });
             return mongoClient.count("user", new JsonObject());
         });
         countResultsFuture.onComplete(context.succeeding(result -> context.verify(() -> {
-            assertThat(result, is(1L));
-            successfullyCheckedIfUserIsInDataBase.flag();
+            assertThat("Database does not contain exactly one entry after inserting a user!", result, is(1L));
+            checkedIfUserIsInDataBase.flag();
         })));
 
-        final var checkUsernameFuture = countResultsFuture.compose(res -> mongoClient.findOne("user", new JsonObject(), null));
+        final var checkUsernameFuture = countResultsFuture
+                .compose(res -> mongoClient.findOne("user", new JsonObject(), null));
         checkUsernameFuture.onComplete(context.succeeding(result -> context.verify(() -> {
-            assertThat(result.getString("username"), is("test-user"));
-            successfullyCheckedThatCorrectUserIsInDatabase.flag();
+            assertThat("Unable to load correct user from database!", result.getString("username"), is("test-user"));
+            checkedThatCorrectUserIsInDatabase.flag();
         })));
     }
 }

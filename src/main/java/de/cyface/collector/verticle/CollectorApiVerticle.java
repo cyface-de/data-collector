@@ -99,9 +99,6 @@ public final class CollectorApiVerticle extends AbstractVerticle {
         // Setup Measurement event bus
         prepareEventBus();
 
-        // Deploy verticles with mongo_data config
-        final var mongoDatabaseConfiguration = Parameter.MONGO_DATA_DB.jsonValue(vertx, new JsonObject());
-
         // Setup mongo user database client with authProvider
         final var mongoUserDatabaseConfiguration = Parameter.MONGO_USER_DB.jsonValue(vertx, new JsonObject());
         final var client = MongoDbUtils.createSharedMongoClient(vertx, mongoUserDatabaseConfiguration);

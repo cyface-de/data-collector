@@ -28,6 +28,7 @@ import io.vertx.junit5.VertxTestContext;
  * Test whether user authorisation works as expected.
  *
  * @author Klemens Muthmann
+ * @version 1.0.0
  */
 @ExtendWith(VertxExtension.class)
 public class AuthorisationTest {
@@ -49,11 +50,12 @@ public class AuthorisationTest {
         final var token = authorizer.generateToken(body);
         final var authenticationFuture = authorizer.authenticate(new TokenCredentials(token));
         authenticationFuture.onComplete(ctx.succeeding(user -> {
+            final var expectedPrincipal = new JsonObject().put("access_token", token).put("username", "test")
+                    .put("password", "test-password")
+                    .put("aud", issuer).put("iss", issuer);
             ctx.verify(() -> {
-                assertThat(user.principal().getString("username"), is(equalTo("test")));
-                assertThat(user.principal().getString("password"), is(equalTo("test-password")));
-                assertThat(user.principal().getString("aud"), is(equalTo(issuer)));
-                assertThat(user.principal().getString("iss"), is(equalTo(issuer)));
+                assertThat("User prinicpal did not match expected user!", user.principal(),
+                        is(equalTo(expectedPrincipal)));
             });
             ctx.completeNow();
         }));

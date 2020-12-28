@@ -153,8 +153,10 @@ public final class DataStorageTest {
                 final var downloadedBytes = (Long)loadedData.resultAt(0);
                 final var metaData = ((List<JsonObject>)loadedData.resultAt(1)).get(0).getJsonObject("metadata");
                 ctx.verify(() -> {
-                    assertThat(downloadedBytes, is(greaterThan(0L)));
-                    assertThat(metaData.getValue(FormAttributes.APPLICATION_VERSION.getValue()),
+                    assertThat("Expect to receive a file with more than zero bytes!", downloadedBytes,
+                            is(greaterThan(0L)));
+                    assertThat("Test for an example meta datum, but expected value was not found!",
+                            metaData.getValue(FormAttributes.APPLICATION_VERSION.getValue()),
                             is(equalTo(TEST_DEVICE_APP_VERSION)));
                 });
                 ctx.completeNow();
