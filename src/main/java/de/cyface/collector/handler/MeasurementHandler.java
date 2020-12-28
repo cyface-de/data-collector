@@ -58,13 +58,19 @@ public final class MeasurementHandler implements Handler<RoutingContext> {
      * <code>src/main/resources/logback.xml</code>.
      */
     private static final Logger LOGGER = LoggerFactory.getLogger(MeasurementHandler.class);
+
     /**
-     * The default url to use to connect to a Mongo database if none has been provided via Verticle configuration.
+     * Vertx <code>MongoClient</code> used to access the database to write the received data to.
      */
     private static final String DEFAULT_MONGO_URL = "mongodb://localhost:27017";
 
     private final MongoClient mongoClient;
 
+    /**
+     * Creates a new, completely initialized instance of this class.
+     *
+     * @param mongoClient Vertx <code>MongoClient</code> used to access the database to write the received data to
+     */
     public MeasurementHandler(final MongoClient mongoClient) {
         Objects.requireNonNull(mongoClient);
 
@@ -138,6 +144,13 @@ public final class MeasurementHandler implements Handler<RoutingContext> {
 
     }
 
+    /**
+     * Stores a {@link Measurement} to a Mongo database. This method never fails. If a failure occurs it is logged and
+     * status code 422 is used for the response.
+     *
+     * @param measurement The measured data to write to the Mongo database
+     * @param ctx The Vertx <code>RoutingContext</code> used to write the response
+     */
     public void storeToMongoDB(final Measurement measurement, final RoutingContext ctx) {
         LOGGER.debug("Inserted measurement with id {}:{}!", measurement.getDeviceIdentifier(),
                 measurement.getMeasurementIdentifier());

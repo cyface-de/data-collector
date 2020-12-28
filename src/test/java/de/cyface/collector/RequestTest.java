@@ -80,7 +80,7 @@ public final class RequestTest {
     /**
      * Boots the Mongo database before this test starts.
      *
-     * @throws IOException If no socket was available for the Mongo database.
+     * @throws IOException If no socket was available for the Mongo database
      */
     @BeforeAll
     public static void setupMongoDatabase() throws IOException {
@@ -95,8 +95,9 @@ public final class RequestTest {
     /**
      * Deploys the {@link CollectorApiVerticle} in a test context.
      *
-     * @param ctx The test context used to control the test <code>Vertx</code>.
-     * @throws IOException Fails the test if anything unexpected goes wrong.
+     * @param vertx A <code>Vertx</code> instance used for deploying the verticle
+     * @param ctx The test context used to control the test <code>Vertx</code>
+     * @throws IOException Fails the test if anything unexpected goes wrong
      */
     @BeforeEach
     public void deployVerticle(final Vertx vertx, final VertxTestContext ctx) throws IOException {
@@ -115,7 +116,7 @@ public final class RequestTest {
     /**
      * Tests the correct workings of accessing the API specification.
      *
-     * @param context The test context for running <code>Vertx</code> under test.
+     * @param context The test context for running <code>Vertx</code> under test
      */
     @Test
     public void testGetRoot_returnsApiSpecification(final VertxTestContext context) {
@@ -131,7 +132,7 @@ public final class RequestTest {
     /**
      * Tests that the default error handler correctly returns 404 status as response for a non valid request.
      *
-     * @param ctx The test context for running <code>Vertx</code> under test.
+     * @param ctx The test context for running <code>Vertx</code> under test
      */
     @Test
     public void testGetUnknownResource_Returns404(final VertxTestContext ctx) {
@@ -145,7 +146,7 @@ public final class RequestTest {
     /**
      * Tests that the UI returns 401 if a login is attempted with invalid credentials.
      *
-     * @param context The test context for running <code>Vertx</code> under test.
+     * @param context The test context for running <code>Vertx</code> under test
      */
     @Test
     public void testLoginWithWrongCredentials_Returns401(final VertxTestContext context) {
@@ -160,7 +161,7 @@ public final class RequestTest {
     /**
      * Tests that JWT token generation works as expected.
      *
-     * @param context The test context for running <code>Vertx</code> under test.
+     * @param context The test context for running <code>Vertx</code> under test
      */
     @Test
     public void testLogin_HappyPath(final VertxTestContext context) {

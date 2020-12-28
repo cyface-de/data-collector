@@ -120,8 +120,9 @@ public final class FileUploadTest {
     /**
      * Deploys the {@link CollectorApiVerticle} in a test context.
      *
-     * @param ctx The test context used to control the test <code>Vertx</code>.
-     * @throws IOException Fails the test if anything unexpected goes wrong.
+     * @param vertx The <code>Vertx</code> instance to deploy the verticle to
+     * @param ctx The test context used to control the test <code>Vertx</code>
+     * @throws IOException Fails the test if anything unexpected goes wrong
      */
     private void deployVerticle(final Vertx vertx, final VertxTestContext ctx) throws IOException {
         collectorClient = new DataCollectorClient();
@@ -131,7 +132,7 @@ public final class FileUploadTest {
     /**
      * Boots the Mongo database before this test starts.
      *
-     * @throws IOException If no socket was available for the Mongo database.
+     * @throws IOException If no socket was available for the Mongo database
      */
     @BeforeAll
     public static void setUpMongoDatabase() throws IOException {
@@ -146,8 +147,9 @@ public final class FileUploadTest {
     /**
      * Initializes the environment for each test case with a mock Mongo Database and a Vert.x set up for testing.
      *
-     * @param context The context of the test Vert.x.
-     * @throws IOException Fails the test on unexpected exceptions.
+     * @param vertx A <code>Vertx</code> instance injected to be used by this test
+     * @param context The context of the test Vert.x
+     * @throws IOException Fails the test on unexpected exceptions
      */
     @BeforeEach
     public void setUp(final Vertx vertx, final VertxTestContext context) throws IOException {

@@ -56,13 +56,11 @@ public final class UserCreationTest {
      * A {@link MongoTest} instance used to start and stop an in memory Mongo database.
      */
     private static MongoTest mongoTest;
-
     /**
      * The port the management API under test runs at. The test tries to find a free port by itself as part of its set
      * up.
      */
     private int port;
-
     /**
      * The <code>WebClient</code> to simulate client requests.
      */
@@ -96,11 +94,12 @@ public final class UserCreationTest {
     }
 
     /**
-     * Initializes the <code>vertx</code> instance and deploys all required verticles. Also provides a
+     * Deploys all required verticles. Also provides a
      * <code>WebClient</code> to simulate client requests.
      *
-     * @param context The Vert.x test context used to control the test process.
-     * @throws IOException If unable to open a socket for the test HTTP server.
+     * @param vertx A <code>Vertx</code> instance injected for this test to use
+     * @param context The Vert.x test context used to control the test process
+     * @throws IOException If unable to open a socket for the test HTTP server
      */
     @BeforeEach
     public void setUp(final Vertx vertx, final VertxTestContext context) throws IOException {
@@ -125,7 +124,8 @@ public final class UserCreationTest {
     /**
      * Closes the <code>vertx</code> instance.
      *
-     * @param context The Vert.x test context used to control the test process.
+     * @param vertx A <code>Vertx</code> instance injected for this test to use
+     * @param context The Vert.x test context used to control the test process
      */
     @AfterEach
     public void tearDown(final Vertx vertx, final VertxTestContext context) {
@@ -138,7 +138,8 @@ public final class UserCreationTest {
     /**
      * Tests that the normal process of creating a test user via the management interface works as expected.
      *
-     * @param context The Vert.x test context used to control the test process.
+     * @param vertx A <code>Vertx</code> instance injected for this test to use
+     * @param context The Vert.x test context used to control the test process
      */
     @Test
     public void testCreateUser_HappyPath(final Vertx vertx, final VertxTestContext context) {

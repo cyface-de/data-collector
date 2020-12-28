@@ -47,7 +47,6 @@ public final class MongoTest {
      * run.
      */
     private MongodExecutable mongodExecutable;
-
     /**
      * The port to run the test Mongo database under.
      */
@@ -59,6 +58,10 @@ public final class MongoTest {
     public int getMongoPort() {
         return mongoPort;
     }
+
+    /**
+     * @return The configuration required to configure a client to the test Mongo server
+     */
     public JsonObject clientConfiguration() {
         return new JsonObject().put("host", "localhost").put("port", mongoPort);
     }

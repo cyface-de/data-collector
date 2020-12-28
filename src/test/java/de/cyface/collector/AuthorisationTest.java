@@ -19,6 +19,11 @@ import io.vertx.ext.auth.jwt.JWTAuthOptions;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
 
+/**
+ * Test whether user authorisation works as expected.
+ *
+ * @author Klemens Muthmann
+ */
 @ExtendWith(VertxExtension.class)
 public class AuthorisationTest {
     @Test

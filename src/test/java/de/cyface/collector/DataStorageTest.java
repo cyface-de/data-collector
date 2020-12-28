@@ -91,6 +91,11 @@ public final class DataStorageTest {
      */
     private transient MongoTest mongoTest;
 
+    /**
+     * Starts a test in memory Mongo database.
+     *
+     * @throws IOException If creating the server fails
+     */
     @BeforeEach
     void setUp() throws IOException {
         mongoTest = new MongoTest();
@@ -98,7 +103,7 @@ public final class DataStorageTest {
     }
 
     /**
-     * Finishes the test <code>Vertx</code> instance and stops the Mongo database.
+     * Stops the Mongo database.
      */
     @AfterEach
     void shutdown() {
@@ -108,8 +113,9 @@ public final class DataStorageTest {
     /**
      * Tests that handling measurements without geo locations works as expected.
      *
+     * @param vertx A <code>Vertx</code> instance used during the test
      * @param ctx The Vert.x context used for testing
-     * @throws IOException If working with the data files fails
+     * @throws URISyntaxException If the test data location is invalid
      */
     @Test
     public void testPublishMeasurementWithNoGeoLocations_HappyPath(final Vertx vertx, final VertxTestContext ctx)
@@ -156,6 +162,9 @@ public final class DataStorageTest {
         }).onFailure(ctx::failNow);
     }
 
+    /**
+     * @return Some meta data used for testing
+     */
     private JsonObject fixtureMetaData() {
         final var ret = new JsonObject();
         ret.put(FormAttributes.DEVICE_ID.getValue(), TEST_DEVICE_IDENTIFIER);

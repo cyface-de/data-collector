@@ -53,7 +53,6 @@ public final class MongoDbUtils {
 
     /**
      * @param client A Mongo client to access the user Mongo database.
-     * @param salt The salt used to make hacking passwords more complex.
      * @return Authentication provider used to check for valid user accounts used to generate new JWT token.
      */
     public static MongoAuthentication buildMongoAuthProvider(final MongoClient client) {

@@ -62,7 +62,9 @@ public final class ManagementApiVerticle extends AbstractVerticle {
     /**
      * Initializes the router used to provide the routes supported by the management API.
      *
-     * @param mongoAuth Authentication provider used to check for valid user accounts used to generate new JWT token.
+     * @param mongoClient Client to a Mongo database used to check for valid user accounts used to generate new JWT
+     *            token
+     * @param hasher The hashing algorithm to obfuscate new passwords
      * @return The router initialized with the correct routes.
      */
     private Router setupRouter(final MongoClient mongoClient, final Hasher hasher) {

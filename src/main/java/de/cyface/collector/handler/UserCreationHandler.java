@@ -47,18 +47,25 @@ public final class UserCreationHandler implements Handler<RoutingContext> {
      * This is the role which a newly created user gets when it's created without any defined roles.
      */
     private static final String DEFAULT_USER_ROLE = "guest";
-
     /**
      * A <code>MongoClient</code> used to store user credentials.
      */
     private final MongoClient mongoClient;
+    /**
+     * The name of the Mongo collection used to store user data.
+     */
     private final String userCollectionName;
-    private final Hasher passwordHasingStrategy;
+    /**
+     * Strategy used to obfuscate passwords of newly created accounts.
+     */
+    private final Hasher passwordHashingStrategy;
 
     /**
      * Creates a new completely initialized <code>UserCreationHandler</code>.
      *
      * @param mongoClient A <code>MongoClient</code> used to store user credentials
+     * @param userCollectionName The name of the Mongo collection used to store user data
+     * @param passwordHashingStrategy Strategy used to obfuscate passwords of newly created accounts
      */
     public UserCreationHandler(final MongoClient mongoClient, final String userCollectionName,
             final Hasher passwordHashingStrategy) {
@@ -66,7 +73,7 @@ public final class UserCreationHandler implements Handler<RoutingContext> {
 
         this.mongoClient = mongoClient;
         this.userCollectionName = userCollectionName;
-        this.passwordHasingStrategy = passwordHashingStrategy;
+        this.passwordHashingStrategy = passwordHashingStrategy;
     }
 
     @Override
@@ -86,9 +93,18 @@ public final class UserCreationHandler implements Handler<RoutingContext> {
         });
     }
 
+    /**
+     * Add a user with the provided information to the database
+     *
+     * @param username The name of the new user to add
+     * @param password The clear text password of the new user
+     * @param role The initial role of the new user
+     * @param onSuccess Some code carried out on a successful insert opertion
+     * @param onFailure Some code carried out on a failed insert operation
+     */
     public void createUser(final String username, final String password, final String role,
             final Handler<String> onSuccess, final Handler<Throwable> onFailure) {
-        final var hashedPassword = passwordHasingStrategy.hash(password);
+        final var hashedPassword = passwordHashingStrategy.hash(password);
         final var newUserInsertCommand = new JsonObject().put("username", username)
                 .put("roles", new JsonArray().add(role)).put("password", hashedPassword);
         final var userInsertedFuture = mongoClient.insert(userCollectionName, newUserInsertCommand);
