@@ -62,8 +62,6 @@ public final class MeasurementHandler implements Handler<RoutingContext> {
     /**
      * Vertx <code>MongoClient</code> used to access the database to write the received data to.
      */
-    private static final String DEFAULT_MONGO_URL = "mongodb://localhost:27017";
-
     private final MongoClient mongoClient;
 
     /**
@@ -81,7 +79,6 @@ public final class MeasurementHandler implements Handler<RoutingContext> {
     public void handle(final RoutingContext ctx) {
         LOGGER.info("Received new measurement request.");
         final var request = ctx.request();
-        final var response = ctx.response();
         LOGGER.debug("FormAttributes: {}", request.formAttributes());
         final var user = ctx.user();
 
