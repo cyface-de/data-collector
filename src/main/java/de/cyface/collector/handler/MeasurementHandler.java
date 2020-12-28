@@ -116,17 +116,19 @@ public final class MeasurementHandler implements Handler<RoutingContext> {
                         || endLocationTsString == null) {
                     LOGGER.error("Data incomplete!");
                     ctx.fail(422);
+                    return;
+                } else {
+
+                    final var startLocationLat = Double.parseDouble(startLocationLatString);
+                    final var startLocationLon = Double.parseDouble(startLocationLonString);
+                    final var startLocationTs = Long.parseLong(startLocationTsString);
+                    final var endLocationLat = Double.parseDouble(endLocationLatString);
+                    final var endLocationLon = Double.parseDouble(endLocationLonString);
+                    final var endLocationTs = Long.parseLong(endLocationTsString);
+
+                    startLocation = new GeoLocation(startLocationLat, startLocationLon, startLocationTs);
+                    endLocation = new GeoLocation(endLocationLat, endLocationLon, endLocationTs);
                 }
-
-                final var startLocationLat = Double.parseDouble(startLocationLatString);
-                final var startLocationLon = Double.parseDouble(startLocationLonString);
-                final var startLocationTs = Long.parseLong(startLocationTsString);
-                final var endLocationLat = Double.parseDouble(endLocationLatString);
-                final var endLocationLon = Double.parseDouble(endLocationLonString);
-                final var endLocationTs = Long.parseLong(endLocationTsString);
-
-                startLocation = new GeoLocation(startLocationLat, startLocationLon, startLocationTs);
-                endLocation = new GeoLocation(endLocationLat, endLocationLon, endLocationTs);
             }
 
             final var uploads = new HashSet<Measurement.FileUpload>();
