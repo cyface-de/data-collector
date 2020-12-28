@@ -283,10 +283,24 @@ public final class CollectorApiVerticle extends AbstractVerticle {
         next.handle(Future.succeededFuture(mainRouter));
     }
 
+    /**
+     * Provides the value for the JWT audience information.
+     *
+     * @param host The host this service runs under
+     * @param endpoint The endpoint path this service runs under
+     * @return The JWT audience as a <code>String</code>
+     */
     private String jwtAudience(final String host, final String endpoint) {
         return String.format("%s%s", host, endpoint);
     }
 
+    /**
+     * Provides the value for the JWT issuer information.
+     *
+     * @param host The host this service runs under
+     * @param endpoint The endpoint path this service runs under
+     * @return The JWT issuer as a <code>String</code>
+     */
     private String jwtIssuer(final String host, final String endpoint) {
         return String.format("%s%s", host, endpoint);
     }
