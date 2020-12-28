@@ -25,8 +25,6 @@ import static org.hamcrest.Matchers.is;
 import java.io.IOException;
 import java.net.ServerSocket;
 
-import de.cyface.collector.commons.DataCollectorClient;
-import de.cyface.collector.commons.MongoTest;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -35,6 +33,8 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import de.cyface.collector.commons.DataCollectorClient;
+import de.cyface.collector.commons.MongoTest;
 import de.cyface.collector.verticle.CollectorApiVerticle;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;

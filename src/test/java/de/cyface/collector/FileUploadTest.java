@@ -28,8 +28,6 @@ import java.net.URL;
 import java.util.Locale;
 import java.util.UUID;
 
-import de.cyface.collector.commons.DataCollectorClient;
-import de.cyface.collector.commons.MongoTest;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -38,6 +36,8 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import de.cyface.collector.commons.DataCollectorClient;
+import de.cyface.collector.commons.MongoTest;
 import de.cyface.collector.handler.FormAttributes;
 import de.cyface.collector.verticle.CollectorApiVerticle;
 import io.vertx.core.AsyncResult;

@@ -20,12 +20,6 @@ package de.cyface.collector;
 
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
-import io.vertx.ext.auth.HashingStrategy;
-import io.vertx.ext.auth.impl.hash.PBKDF2;
-import io.vertx.ext.auth.mongo.HashAlgorithm;
-import io.vertx.ext.auth.mongo.HashSaltStyle;
-import io.vertx.ext.auth.mongo.HashStrategy;
-import io.vertx.ext.auth.mongo.MongoAuth;
 import io.vertx.ext.auth.mongo.MongoAuthentication;
 import io.vertx.ext.auth.mongo.MongoAuthenticationOptions;
 import io.vertx.ext.mongo.MongoClient;
