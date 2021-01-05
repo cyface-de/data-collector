@@ -16,17 +16,18 @@
  * You should have received a copy of the GNU General Public License
  * along with the Cyface Data Collector. If not, see <http://www.gnu.org/licenses/>.
  */
-package de.cyface.collector;
+package de.cyface.collector.commons;
 
 import java.io.IOException;
 import java.net.ServerSocket;
 
+import de.cyface.collector.Parameter;
 import de.cyface.collector.verticle.CollectorApiVerticle;
 import io.vertx.core.DeploymentOptions;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
-import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.web.client.WebClient;
+import io.vertx.junit5.VertxTestContext;
 
 /**
  * A client providing capabilities for tests to communicate with a Cyface Data Collector server.
@@ -35,7 +36,7 @@ import io.vertx.ext.web.client.WebClient;
  * @version 1.1.3
  * @since 2.0.0
  */
-final class DataCollectorClient {
+public final class DataCollectorClient {
 
     /**
      * The port the server is reachable at.
@@ -45,7 +46,7 @@ final class DataCollectorClient {
     /**
      * @return The port the server is reachable at.
      */
-    int getPort() {
+    public int getPort() {
         return port;
     }
 
@@ -59,8 +60,8 @@ final class DataCollectorClient {
      * @return A completely configured <code>WebClient</code> capable of accessing the started Cyface Data Collector.
      * @throws IOException If the server port could not be opened.
      */
-    WebClient createWebClient(final Vertx vertx, final TestContext ctx, final int mongoPort) throws IOException {
-        try (ServerSocket socket = new ServerSocket(0);) {
+    public WebClient createWebClient(final Vertx vertx, final VertxTestContext ctx, final int mongoPort) throws IOException {
+        try (ServerSocket socket = new ServerSocket(0)) {
             port = socket.getLocalPort();
 
             final JsonObject mongoDbConfig = new JsonObject()
@@ -76,7 +77,7 @@ final class DataCollectorClient {
                     .put(Parameter.COLLECTOR_ENDPOINT.key(), "/api/v2/");
             final DeploymentOptions options = new DeploymentOptions().setConfig(config);
 
-            vertx.deployVerticle(CollectorApiVerticle.class.getName(), options, ctx.asyncAssertSuccess());
+            vertx.deployVerticle(CollectorApiVerticle.class.getName(), options, ctx.succeedingThenComplete());
 
             return WebClient.create(vertx);
         }

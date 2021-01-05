@@ -18,15 +18,15 @@
  */
 package de.cyface.collector.handler;
 
-import java.util.ArrayList;
-import java.util.Collections;
-
 import org.apache.commons.lang3.Validate;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
+import de.cyface.collector.Hasher;
 import io.vertx.core.Handler;
-import io.vertx.core.logging.Logger;
-import io.vertx.core.logging.LoggerFactory;
-import io.vertx.ext.auth.mongo.MongoAuth;
+import io.vertx.core.json.JsonArray;
+import io.vertx.core.json.JsonObject;
+import io.vertx.ext.mongo.MongoClient;
 import io.vertx.ext.web.RoutingContext;
 
 /**
@@ -43,26 +43,37 @@ public final class UserCreationHandler implements Handler<RoutingContext> {
      * The logger used for objects of this class. Configure it by modifying <code>src/main/resources/logback.xml</code>.
      */
     private static final Logger LOGGER = LoggerFactory.getLogger(UserCreationHandler.class);
-
-    /**
-     * An authenticator that uses credentials from the Mongo user database to authenticate users.
-     */
-    private final transient MongoAuth mongoAuth;
-
     /**
      * This is the role which a newly created user gets when it's created without any defined roles.
      */
     private static final String DEFAULT_USER_ROLE = "guest";
+    /**
+     * A <code>MongoClient</code> used to store user credentials.
+     */
+    private final MongoClient mongoClient;
+    /**
+     * The name of the Mongo collection used to store user data.
+     */
+    private final String userCollectionName;
+    /**
+     * Strategy used to obfuscate passwords of newly created accounts.
+     */
+    private final Hasher passwordHashingStrategy;
 
     /**
      * Creates a new completely initialized <code>UserCreationHandler</code>.
      *
-     * @param mongoAuth An authenticator that uses credentials from the Mongo user database to authenticate users.
+     * @param mongoClient A <code>MongoClient</code> used to store user credentials
+     * @param userCollectionName The name of the Mongo collection used to store user data
+     * @param passwordHashingStrategy Strategy used to obfuscate passwords of newly created accounts
      */
-    public UserCreationHandler(final MongoAuth mongoAuth) {
-        Validate.notNull(mongoAuth);
+    public UserCreationHandler(final MongoClient mongoClient, final String userCollectionName,
+            final Hasher passwordHashingStrategy) {
+        Validate.notNull(mongoClient);
 
-        this.mongoAuth = mongoAuth;
+        this.mongoClient = mongoClient;
+        this.userCollectionName = userCollectionName;
+        this.passwordHashingStrategy = passwordHashingStrategy;
     }
 
     @Override
@@ -73,15 +84,31 @@ public final class UserCreationHandler implements Handler<RoutingContext> {
         final var providedRole = body.getString("role");
         final var role = providedRole == null || providedRole.isEmpty() ? DEFAULT_USER_ROLE : providedRole;
 
-        mongoAuth.insertUser(username, password, Collections.singletonList(role),
-                new ArrayList<>(), ir -> {
-                    if (ir.succeeded()) {
-                        LOGGER.info("Added new user with id: {}", username);
-                        event.response().setStatusCode(201).end();
-                    } else {
-                        LOGGER.error("Unable to create user with id: {}", ir.cause(), username);
-                        event.fail(400);
-                    }
-                });
+        createUser(username, password, role, success -> {
+            LOGGER.info("Added new user with id: {}", username);
+            event.response().setStatusCode(201).end();
+        }, failure -> {
+            LOGGER.error(String.format("Unable to create user with id: %s", username), failure);
+            event.fail(400);
+        });
+    }
+
+    /**
+     * Add a user with the provided information to the database
+     *
+     * @param username The name of the new user to add
+     * @param password The clear text password of the new user
+     * @param role The initial role of the new user
+     * @param onSuccess Some code carried out on a successful insert opertion
+     * @param onFailure Some code carried out on a failed insert operation
+     */
+    public void createUser(final String username, final String password, final String role,
+            final Handler<String> onSuccess, final Handler<Throwable> onFailure) {
+        final var hashedPassword = passwordHashingStrategy.hash(password);
+        final var newUserInsertCommand = new JsonObject().put("username", username)
+                .put("roles", new JsonArray().add(role)).put("password", hashedPassword);
+        final var userInsertedFuture = mongoClient.insert(userCollectionName, newUserInsertCommand);
+        userInsertedFuture.onSuccess(onSuccess);
+        userInsertedFuture.onFailure(onFailure);
     }
 }

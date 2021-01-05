@@ -16,18 +16,18 @@
  * You should have received a copy of the GNU General Public License
  * along with the Cyface Data Collector. If not, see <http://www.gnu.org/licenses/>.
  */
-package de.cyface.collector;
+package de.cyface.collector.commons;
 
 import java.io.IOException;
 
 import de.flapdoodle.embed.mongo.MongodExecutable;
 import de.flapdoodle.embed.mongo.MongodProcess;
 import de.flapdoodle.embed.mongo.MongodStarter;
-import de.flapdoodle.embed.mongo.config.IMongodConfig;
-import de.flapdoodle.embed.mongo.config.MongodConfigBuilder;
+import de.flapdoodle.embed.mongo.config.MongodConfig;
 import de.flapdoodle.embed.mongo.config.Net;
 import de.flapdoodle.embed.mongo.distribution.Version;
 import de.flapdoodle.embed.process.runtime.Network;
+import io.vertx.core.json.JsonObject;
 
 /**
  * A lifecycle handler for a Mongo database you can start and stop on the fly. The database is reinitialized after each
@@ -37,7 +37,7 @@ import de.flapdoodle.embed.process.runtime.Network;
  * @version 2.0.1
  * @since 2.0.0
  */
-final class MongoTest {
+public final class MongoTest {
     /**
      * The test Mongo database. This must be shut down after finishing this Mongo database run.
      */
@@ -47,7 +47,6 @@ final class MongoTest {
      * run.
      */
     private MongodExecutable mongodExecutable;
-
     /**
      * The port to run the test Mongo database under.
      */
@@ -61,6 +60,13 @@ final class MongoTest {
     }
 
     /**
+     * @return The configuration required to configure a client to the test Mongo server
+     */
+    public JsonObject clientConfiguration() {
+        return new JsonObject().put("host", "localhost").put("port", mongoPort);
+    }
+
+    /**
      * Sets up the Mongo database used for the test instance.
      * 
      * @param mongoPort The port to run the test Mongo database under.
@@ -68,8 +74,8 @@ final class MongoTest {
      */
     public void setUpMongoDatabase(final int mongoPort) throws IOException {
         this.mongoPort = mongoPort;
-        final MongodStarter starter = MongodStarter.getDefaultInstance();
-        final IMongodConfig mongodConfig = new MongodConfigBuilder().version(Version.Main.PRODUCTION)
+        final var starter = MongodStarter.getDefaultInstance();
+        final var mongodConfig = MongodConfig.builder().version(Version.Main.V3_6)
                 .net(new Net("localhost", mongoPort, Network.localhostIsIPv6())).build();
         mongodExecutable = starter.prepare(mongodConfig);
         mongo = mongodExecutable.start();

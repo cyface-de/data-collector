@@ -14,43 +14,48 @@
  */
 package de.cyface.collector.verticle;
 
-import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.ArrayList;
 import java.util.Collections;
 
 import org.apache.commons.lang3.Validate;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
+import de.cyface.collector.Hasher;
 import de.cyface.collector.MongoDbUtils;
 import de.cyface.collector.Parameter;
 import de.cyface.collector.handler.AuthenticationFailureHandler;
 import de.cyface.collector.handler.AuthenticationHandler;
 import de.cyface.collector.handler.FailureHandler;
 import de.cyface.collector.handler.MeasurementHandler;
+import de.cyface.collector.handler.UserCreationHandler;
 import de.cyface.collector.model.Measurement;
 import io.micrometer.core.instrument.config.InvalidConfigurationException;
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.CompositeFuture;
-import io.vertx.core.DeploymentOptions;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
+import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.core.http.HttpServer;
 import io.vertx.core.json.JsonObject;
-import io.vertx.core.logging.Logger;
-import io.vertx.core.logging.LoggerFactory;
+import io.vertx.ext.auth.HashingStrategy;
+import io.vertx.ext.auth.JWTOptions;
 import io.vertx.ext.auth.PubSecKeyOptions;
 import io.vertx.ext.auth.jwt.JWTAuth;
 import io.vertx.ext.auth.jwt.JWTAuthOptions;
-import io.vertx.ext.auth.mongo.MongoAuth;
+import io.vertx.ext.auth.mongo.MongoAuthentication;
+import io.vertx.ext.mongo.MongoClient;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.handler.BodyHandler;
+import io.vertx.ext.web.handler.ErrorHandler;
 import io.vertx.ext.web.handler.JWTAuthHandler;
+import io.vertx.ext.web.handler.LoggerHandler;
 import io.vertx.ext.web.handler.StaticHandler;
 
 /**
@@ -69,11 +74,10 @@ public final class CollectorApiVerticle extends AbstractVerticle {
      * <code>src/main/resources/logback.xml</code>.
      */
     private static final Logger LOGGER = LoggerFactory.getLogger(CollectorApiVerticle.class);
-
     /**
      * The hashing algorithm used for public and private keys to generate and check JWT tokens.
      */
-    public static final String JWT_HASH_ALGORITHM = "RS256";
+    public static final String JWT_HASH_ALGORITHM = "HS256";
     /**
      * The number of bytes in one gigabyte. This can be used to limit the amount of data accepted by the server.
      */
@@ -89,21 +93,17 @@ public final class CollectorApiVerticle extends AbstractVerticle {
     private static final String ADMIN_ROLE = "admin";
 
     @Override
-    public void start(final Future<Void> startFuture) throws Exception {
+    public void start(final Promise<Void> startFuture) throws Exception {
         Validate.notNull(startFuture);
 
         // Setup Measurement event bus
         prepareEventBus();
 
-        // Deploy verticles with mongo_data config
-        final var mongoDatabaseConfiguration = Parameter.MONGO_DATA_DB.jsonValue(vertx, new JsonObject());
-        deployVerticles(mongoDatabaseConfiguration);
-
         // Setup mongo user database client with authProvider
         final var mongoUserDatabaseConfiguration = Parameter.MONGO_USER_DB.jsonValue(vertx, new JsonObject());
         final var client = MongoDbUtils.createSharedMongoClient(vertx, mongoUserDatabaseConfiguration);
         final var salt = loadSalt(vertx);
-        final var authProvider = MongoDbUtils.buildMongoAuthProvider(client, salt);
+        final var authProvider = MongoDbUtils.buildMongoAuthProvider(client);
 
         // Start http server with auth config
         final var httpPort = Parameter.COLLECTOR_HTTP_PORT.intValue(vertx, 8080);
@@ -115,7 +115,7 @@ public final class CollectorApiVerticle extends AbstractVerticle {
         Validate.notNull(privateKey,
                 "Unable to load private key for JWT authentication. Did you provide a valid PEM file using the parameter "
                         + Parameter.JWT_PRIVATE_KEY_FILE_PATH.key() + ".");
-        final Future<Void> serverStartFuture = Future.future();
+        final Promise<Void> serverStartFuture = Promise.promise();
         setupRoutes(publicKey, privateKey, authProvider, result -> {
             if (result.succeeded()) {
                 final var router = result.result();
@@ -128,26 +128,31 @@ public final class CollectorApiVerticle extends AbstractVerticle {
         // Insert default admin user
         final var adminUsername = Parameter.ADMIN_USER_NAME.stringValue(vertx, "admin");
         final var adminPassword = Parameter.ADMIN_PASSWORD.stringValue(vertx, "secret");
-        final var defaultUserCreatedFuture = Future.future();
+        final var defaultUserCreatedFuture = Promise.promise();
         client.findOne("user", new JsonObject().put("username", adminUsername), null, result -> {
             if (result.failed()) {
                 defaultUserCreatedFuture.fail(result.cause());
                 return;
             }
             if (result.result() == null) {
-                authProvider.insertUser(adminUsername, adminPassword, Collections.singletonList(ADMIN_ROLE),
-                        new ArrayList<>(), ir -> {
-                            LOGGER.info("Identifier of new user id: {}", ir);
-                            defaultUserCreatedFuture.complete();
-                        });
+                final var hasher = new Hasher(HashingStrategy.load(), salt.getBytes(StandardCharsets.UTF_8));
+                final var userCreationHandler = new UserCreationHandler(client, "user", hasher);
+                userCreationHandler.createUser(adminUsername, adminPassword, ADMIN_ROLE, success -> {
+                    LOGGER.info("Identifier of new user id: {}", success);
+                    defaultUserCreatedFuture.complete();
+                }, failure -> {
+                    LOGGER.error("Unable to create default user!");
+                    defaultUserCreatedFuture.fail(failure);
+                });
             } else {
                 defaultUserCreatedFuture.complete();
             }
         });
 
         // Block until all futures completed
-        final var startUpFinishedFuture = CompositeFuture.all(serverStartFuture, defaultUserCreatedFuture);
-        startUpFinishedFuture.setHandler(r -> {
+        final var startUpFinishedFuture = CompositeFuture.all(serverStartFuture.future(),
+                defaultUserCreatedFuture.future());
+        startUpFinishedFuture.onComplete(r -> {
             if (r.succeeded()) {
                 startFuture.complete();
             } else {
@@ -189,18 +194,6 @@ public final class CollectorApiVerticle extends AbstractVerticle {
     }
 
     /**
-     * Deploys all additional <code>Verticle</code> objects required by the application.
-     *
-     * @param mongoDatabaseConfiguration The JSON configuration for the mongo database to store the uploaded data to.
-     */
-    private void deployVerticles(final JsonObject mongoDatabaseConfiguration) {
-        Validate.notNull(mongoDatabaseConfiguration);
-
-        final var options = new DeploymentOptions().setWorker(true).setConfig(mongoDatabaseConfiguration);
-        vertx.deployVerticle(SerializationVerticle.class, options);
-    }
-
-    /**
      * Initializes all the routes available via the Cyface Data Collector.
      *
      * @param publicKey The public key used to check the validity of JWT tokens used for authentication.
@@ -209,19 +202,13 @@ public final class CollectorApiVerticle extends AbstractVerticle {
      *            token.
      * @param next The handler to call when the router has been created.
      */
-    private void setupRoutes(final String publicKey, final String privateKey, final MongoAuth mongoAuthProvider,
+    private void setupRoutes(final String publicKey, final String privateKey,
+            final MongoAuthentication mongoAuthProvider,
             final Handler<AsyncResult<Router>> next) {
         Validate.notEmpty(publicKey);
         Validate.notEmpty(privateKey);
         Validate.notNull(mongoAuthProvider);
         Validate.notNull(next);
-
-        // Set up authentication check
-        final var keyOptions = new PubSecKeyOptions().setAlgorithm(JWT_HASH_ALGORITHM)
-                .setPublicKey(publicKey)
-                .setSecretKey(privateKey);
-        final var config = new JWTAuthOptions().addPubSecKey(keyOptions);
-        final var jwtAuthProvider = JWTAuth.create(vertx, config);
 
         // Routing
         // OpenAPI3RouterFactory.create(vertx, this.getClass().getResource("/webroot/openapi.yml").getFile(), r -> {
@@ -252,22 +239,34 @@ public final class CollectorApiVerticle extends AbstractVerticle {
         Validate.notEmpty(endpoint, "Endpoint not found. Please provide it using the %s parameter!",
                 Parameter.COLLECTOR_ENDPOINT.key());
 
+        // Set up authentication check
+        final var keyOptions = new PubSecKeyOptions().setAlgorithm(JWT_HASH_ALGORITHM).setBuffer(publicKey)
+                .setBuffer(privateKey);
+        final var issuer = jwtIssuer(host, endpoint);
+        final var config = new JWTAuthOptions().addPubSecKey(keyOptions)
+                .setJWTOptions(new JWTOptions().setIssuer(issuer)
+                        .setAudience(Collections.singletonList(jwtAudience(host, endpoint))));
+        final var jwtAuthProvider = JWTAuth.create(vertx, config);
+        // jwtAuthProvider.
+
         // Set up default routes
         mainRouter.mountSubRouter(endpoint, v2ApiRouter);
 
         // Set up v2 API
         // Set up authentication route
-        final var issuer = String.format("%s%s", host, endpoint);
         v2ApiRouter.route("/login").consumes("application/json")
                 .handler(BodyHandler.create().setBodyLimit(2 * BYTES_IN_ONE_KILOBYTE))
-                .handler(new AuthenticationHandler(mongoAuthProvider, jwtAuthProvider, host, endpoint))
+                .handler(LoggerHandler.create())
+                .handler(new AuthenticationHandler(mongoAuthProvider, jwtAuthProvider, issuer,
+                        jwtAudience(host, endpoint)))
                 .failureHandler(new AuthenticationFailureHandler());
         // Set up data collector route
         v2ApiRouter.post("/measurements").consumes("multipart/form-data")
                 .handler(BodyHandler.create().setBodyLimit(BYTES_IN_ONE_GIGABYTE).setDeleteUploadedFilesOnEnd(false))
-                .handler(JWTAuthHandler.create(jwtAuthProvider).setIssuer(issuer)
-                        .setAudience(Collections.singletonList(issuer)))
-                .handler(new MeasurementHandler());
+                .handler(LoggerHandler.create())
+                .handler(JWTAuthHandler.create(jwtAuthProvider))
+                .handler(new MeasurementHandler(MongoClient.create(vertx, config().getJsonObject("mongo.datadb"))))
+                .failureHandler(ErrorHandler.create(vertx));
         // .failureHandler(new AuthenticationFailureHandler());
         // Set up web api
         v2ApiRouter.route().handler(StaticHandler.create("webroot/api"));
@@ -282,13 +281,35 @@ public final class CollectorApiVerticle extends AbstractVerticle {
     }
 
     /**
+     * Provides the value for the JWT audience information.
+     *
+     * @param host The host this service runs under
+     * @param endpoint The endpoint path this service runs under
+     * @return The JWT audience as a <code>String</code>
+     */
+    private String jwtAudience(final String host, final String endpoint) {
+        return String.format("%s%s", host, endpoint);
+    }
+
+    /**
+     * Provides the value for the JWT issuer information.
+     *
+     * @param host The host this service runs under
+     * @param endpoint The endpoint path this service runs under
+     * @return The JWT issuer as a <code>String</code>
+     */
+    private String jwtIssuer(final String host, final String endpoint) {
+        return String.format("%s%s", host, endpoint);
+    }
+
+    /**
      * Starts the HTTP server provided by this application. This server runs the Cyface Collector REST-API.
      *
      * @param router The router for all the endpoints the HTTP server should serve.
      * @param startFuture Informs the caller about the successful or failed start of the server.
      * @param httpPort The HTTP port to run the server at.
      */
-    private void startHttpServer(final Router router, final Future<Void> startFuture, final int httpPort) {
+    private void startHttpServer(final Router router, final Promise<Void> startFuture, final int httpPort) {
         Validate.notNull(router);
         Validate.notNull(startFuture);
         Validate.isTrue(httpPort > 0);
@@ -305,7 +326,7 @@ public final class CollectorApiVerticle extends AbstractVerticle {
      * @param serverStartup The result of the server startup as provided by <code>Vertx</code>.
      * @param future A future to call to inform all waiting parties about success or failure of the startup process.
      */
-    private void completeStartup(final AsyncResult<HttpServer> serverStartup, final Future<Void> future) {
+    private void completeStartup(final AsyncResult<HttpServer> serverStartup, final Promise<Void> future) {
         if (serverStartup.succeeded()) {
             future.complete();
             LOGGER.info("Successfully started Collector API!");
@@ -327,20 +348,6 @@ public final class CollectorApiVerticle extends AbstractVerticle {
         if (keyFilePath == null) {
             return null;
         }
-
-        final var keyBuilder = new StringBuilder();
-        try (var keyFileInput = new BufferedReader(
-                new InputStreamReader(Files.newInputStream(Paths.get(keyFilePath)), StandardCharsets.UTF_8));) {
-
-            var line = keyFileInput.readLine();
-            while (line != null) {
-                line = keyFileInput.readLine();
-                if (!(line == null || line.startsWith("-----") || line.isEmpty())) {
-                    keyBuilder.append(line);
-                }
-            }
-
-        }
-        return keyBuilder.toString();
+        return Files.readString(Path.of(keyFilePath));
     }
 }

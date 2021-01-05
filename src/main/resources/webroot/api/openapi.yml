@@ -88,7 +88,7 @@ paths:
                 deviceId:
                   #description: The world wide unique identifier of the device that uploaded the data.
                   type: string
-                  example: a
+                  example: d329c6ec-2764-44b1-b56a-9e3506508424
                 measurementId:
                   #description: The device wide unique identifier of the uploaded measurement.
                   type: string

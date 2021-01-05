@@ -18,38 +18,38 @@
  */
 package de.cyface.collector;
 
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.notNullValue;
+
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.URL;
 import java.util.Locale;
 import java.util.UUID;
 
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
+import de.cyface.collector.commons.DataCollectorClient;
+import de.cyface.collector.commons.MongoTest;
 import de.cyface.collector.handler.FormAttributes;
 import de.cyface.collector.verticle.CollectorApiVerticle;
 import io.vertx.core.AsyncResult;
-import io.vertx.core.CompositeFuture;
-import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
-import io.vertx.core.eventbus.EventBus;
-import io.vertx.core.eventbus.Message;
-import io.vertx.core.logging.Logger;
-import io.vertx.core.logging.LoggerFactory;
-import io.vertx.ext.unit.Async;
-import io.vertx.ext.unit.TestContext;
-import io.vertx.ext.unit.junit.VertxUnitRunner;
 import io.vertx.ext.web.client.HttpRequest;
 import io.vertx.ext.web.client.HttpResponse;
 import io.vertx.ext.web.client.WebClient;
 import io.vertx.ext.web.multipart.MultipartForm;
+import io.vertx.junit5.VertxExtension;
+import io.vertx.junit5.VertxTestContext;
 
 /**
  * Tests that uploading measurements to the Cyface API works as expected.
@@ -59,7 +59,7 @@ import io.vertx.ext.web.multipart.MultipartForm;
  * @version 3.0.4
  * @since 2.0.0
  */
-@RunWith(VertxUnitRunner.class)
+@ExtendWith(VertxExtension.class)
 @SuppressWarnings("PMD.MethodNamingConventions")
 public final class FileUploadTest {
     /**
@@ -91,10 +91,6 @@ public final class FileUploadTest {
      */
     private static final String MEASUREMENTS_UPLOAD_ENDPOINT_PATH = "/api/v2/measurements";
     /**
-     * The test <code>Vertx</code> instance.
-     */
-    private Vertx vertx;
-    /**
      * A Mongo database lifecycle handler. This provides the test with the capabilities to run and shutdown a Mongo
      * database for testing purposes.
      */
@@ -124,24 +120,24 @@ public final class FileUploadTest {
     /**
      * Deploys the {@link CollectorApiVerticle} in a test context.
      *
-     * @param ctx The test context used to control the test <code>Vertx</code>.
-     * @throws IOException Fails the test if anything unexpected goes wrong.
+     * @param vertx The <code>Vertx</code> instance to deploy the verticle to
+     * @param ctx The test context used to control the test <code>Vertx</code>
+     * @throws IOException Fails the test if anything unexpected goes wrong
      */
-    private void deployVerticle(final TestContext ctx) throws IOException {
+    private void deployVerticle(final Vertx vertx, final VertxTestContext ctx) throws IOException {
         collectorClient = new DataCollectorClient();
-        vertx = Vertx.vertx();
         client = collectorClient.createWebClient(vertx, ctx, mongoTest.getMongoPort());
     }
 
     /**
      * Boots the Mongo database before this test starts.
      *
-     * @throws IOException If no socket was available for the Mongo database.
+     * @throws IOException If no socket was available for the Mongo database
      */
-    @BeforeClass
+    @BeforeAll
     public static void setUpMongoDatabase() throws IOException {
         mongoTest = new MongoTest();
-        try (ServerSocket socket = new ServerSocket(0);) {
+        try (ServerSocket socket = new ServerSocket(0)) {
             final int mongoPort = socket.getLocalPort();
             socket.close();
             mongoTest.setUpMongoDatabase(mongoPort);
@@ -151,12 +147,13 @@ public final class FileUploadTest {
     /**
      * Initializes the environment for each test case with a mock Mongo Database and a Vert.x set up for testing.
      *
-     * @param context The context of the test Vert.x.
-     * @throws IOException Fails the test on unexpected exceptions.
+     * @param vertx A <code>Vertx</code> instance injected to be used by this test
+     * @param context The context of the test Vert.x
+     * @throws IOException Fails the test on unexpected exceptions
      */
-    @Before
-    public void setUp(final TestContext context) throws IOException {
-        deployVerticle(context);
+    @BeforeEach
+    public void setUp(final Vertx vertx, final VertxTestContext context) throws IOException {
+        deployVerticle(vertx, context);
 
         this.deviceIdentifier = UUID.randomUUID().toString();
         this.measurementIdentifier = String.valueOf(1L);
@@ -179,19 +176,9 @@ public final class FileUploadTest {
     }
 
     /**
-     * Stops the test <code>Vertx</code> instance.
-     *
-     * @param context The test context for running <code>Vertx</code> under test.
-     */
-    @After
-    public void stopVertx(final TestContext context) {
-        vertx.close(context.asyncAssertSuccess());
-    }
-
-    /**
      * Finishes the mongo database after this test has finished.
      */
-    @AfterClass
+    @AfterAll
     public static void stopMongoDatabase() {
         mongoTest.stopMongoDb();
     }
@@ -199,21 +186,20 @@ public final class FileUploadTest {
     /**
      * Tests uploading a file to the Vertx API.
      *
-     * @param context The test context for running <code>Vertx</code> under test.
-     * @throws Exception Fails the test if anything unexpected happens.
+     * @param context The test context for running <code>Vertx</code> under test
      */
     @Test
-    public void testPostFile(final TestContext context) throws Exception {
+    public void testPostFile(final VertxTestContext context) {
         uploadAndCheckForSuccess(context, "/test.bin");
     }
 
     /**
      * Tests that uploading a larger file works as expected.
      *
-     * @param context The test context for running <code>Vertx</code> under test.
+     * @param context The test context for running <code>Vertx</code> under test
      */
     @Test
-    public void testPostLargeFile(final TestContext context) {
+    public void testPostLargeFile(final VertxTestContext context) {
         uploadAndCheckForSuccess(context, "/iphone-neu.ccyf");
     }
 
@@ -223,33 +209,22 @@ public final class FileUploadTest {
      * @param context The test context for running <code>Vertx</code> under test.
      */
     @Test
-    public void uploadWithWrongCredentials_Returns401(final TestContext context) {
-        final Async async = context.async();
-
+    public void uploadWithWrongCredentials_Returns401(final VertxTestContext context) {
         final HttpRequest<Buffer> builder = client.post(collectorClient.getPort(), "localhost",
                 MEASUREMENTS_UPLOAD_ENDPOINT_PATH);
-        builder.sendMultipartForm(form, ar -> {
-            if (ar.succeeded()) {
-                context.assertEquals(401, ar.result().statusCode());
-                context.assertTrue(ar.succeeded());
-            } else {
-                context.fail(ar.cause());
-            }
-            async.complete();
-        });
-
-        async.await(3_000L);
+        builder.sendMultipartForm(form, context.succeeding(ar -> context.verify(() -> {
+            assertThat("Wrong HTTP status code on invalid authentication!", ar.statusCode(), is(401));
+            context.completeNow();
+        })));
     }
 
     /**
      * Tests that an upload with unparsable meta data returns a 422 error.
      *
-     * @param context The test context for running <code>Vertx</code> under test.
+     * @param context The test context for running <code>Vertx</code> under test
      */
     @Test
-    public void testUploadWithUnParsableMetaData_Returns422(final TestContext context) {
-        final Async async = context.async();
-
+    public void testUploadWithUnParsableMetaData_Returns422(final VertxTestContext context) {
         // Set invalid value for a form attribute
         this.form = MultipartForm.create();
         form.attribute(FormAttributes.DEVICE_ID.getValue(), deviceIdentifier);
@@ -268,57 +243,28 @@ public final class FileUploadTest {
         form.attribute(FormAttributes.VEHICLE_TYPE.getValue(), "BICYCLE");
 
         // Execute
-        upload(context, "/test.bin", ar -> {
-            if (ar.succeeded()) {
-                context.assertEquals(422, ar.result().statusCode());
-            } else {
-                context.fail(ar.cause());
-            }
-            async.complete();
-        }, result -> context.fail("No file should be saved in case of this error!"),
-                result -> context.fail("No file should be saved in case of this error!"));
-
-        async.await(3_000L);
+        upload(context, "/test.bin", context.succeeding(ar -> context.verify(() -> {
+            assertThat("Wrong HTTP status code on uploading invalid data!", ar.statusCode(), is(422));
+            context.completeNow();
+        })));
     }
 
     /**
      * Uploads a file identified by a test resource location and checks that it was
      * uploaded successfully.
      *
-     * @param context The Vert.x test context to use to upload the
-     *            file.
-     * @param testFileResourceName A resource name of a file to upload for testing.
+     * @param context The Vert.x test context to use to upload the file
+     * @param testFileResourceName A resource name of a file to upload for testing
      */
-    private void uploadAndCheckForSuccess(final TestContext context, final String testFileResourceName) {
-        final Async async = context.async();
+    private void uploadAndCheckForSuccess(final VertxTestContext context,
+            final String testFileResourceName) {
 
-        final Future<Void> returnedRequestFuture = Future.future();
-        final Future<Void> measurementSavedFuture = Future.future();
-        CompositeFuture.all(returnedRequestFuture, measurementSavedFuture).setHandler(result -> {
-            if (result.succeeded()) {
-                async.complete();
-            } else {
-                context.fail("Unable to store measurement or send response!");
-            }
-        });
+        final var returnedRequestFuture = context.checkpoint();
 
-        upload(context, testFileResourceName, ar -> {
-            if (ar.succeeded()) {
-                context.assertEquals(201, ar.result().statusCode());
-                context.assertTrue(ar.succeeded());
-                context.assertNull(ar.cause());
-            } else {
-                context.fail(ar.cause());
-            }
-            returnedRequestFuture.complete();
-        }, message -> {
-            measurementSavedFuture.complete();
-        }, message -> {
-            context.fail("Unable to save measurement " + message.body());
-            measurementSavedFuture.complete();
-        });
-
-        async.await(5_000L);
+        upload(context, testFileResourceName, context.succeeding(ar -> context.verify(() -> {
+            assertThat("Wrong HTTP status code on uploading data!", ar.statusCode(), is(201));
+            returnedRequestFuture.flag();
+        })));
     }
 
     /**
@@ -328,13 +274,9 @@ public final class FileUploadTest {
      * @param context The test context to use.
      * @param testFileResourceName The Java resource name of a file to upload.
      * @param handler The handler called if the client received a response.
-     * @param measurementSavedHandler The handler called if the backend has saved the file successfully.
-     * @param measurementSavingFailedHandler The handler called if the file was not saved.
      */
-    private void upload(final TestContext context, final String testFileResourceName,
-            final Handler<AsyncResult<HttpResponse<Buffer>>> handler,
-            final Handler<Message<Object>> measurementSavedHandler,
-            final Handler<Message<Object>> measurementSavingFailedHandler) {
+    private void upload(final VertxTestContext context, final String testFileResourceName,
+            final Handler<AsyncResult<HttpResponse<Buffer>>> handler) {
 
         final URL testFileResource = this.getClass().getResource(testFileResourceName);
 
@@ -346,24 +288,18 @@ public final class FileUploadTest {
                 String.format(Locale.US, "%s_%s.ccyfe", deviceIdentifier, measurementIdentifier),
                 testFileResource.getFile(), "application/octet-stream");
 
-        final EventBus eventBus = vertx.eventBus();
-        eventBus.consumer(EventBusAddressUtils.MEASUREMENT_SAVED, measurementSavedHandler);
-        eventBus.consumer(EventBusAddressUtils.SAVING_MEASUREMENT_FAILED, measurementSavingFailedHandler);
-
         LOGGER.debug("Sending authentication request!");
-        TestUtils.authenticate(client, authResponse -> {
-            if (authResponse.succeeded()) {
-                context.assertEquals(authResponse.result().statusCode(), 200);
-                final String authToken = authResponse.result().getHeader("Authorization");
-                context.assertNotNull(authToken);
+        TestUtils.authenticate(client, context.succeeding(authResponse -> {
+            final var authToken = authResponse.getHeader("Authorization");
+            context.verify(() -> {
+                assertThat("Wrong HTTP status on authentication request!", authResponse.statusCode(), is(200));
+                assertThat("Auth token was missing from authentication request!", authToken, is(notNullValue()));
+            });
 
-                final HttpRequest<Buffer> builder = client.post(collectorClient.getPort(), "localhost",
-                        MEASUREMENTS_UPLOAD_ENDPOINT_PATH);
-                builder.putHeader("Authorization", "Bearer " + authToken);
-                builder.sendMultipartForm(form, handler);
-            } else {
-                context.fail(authResponse.cause());
-            }
-        }, collectorClient.getPort());
+            final var builder = client.post(collectorClient.getPort(), "localhost",
+                    MEASUREMENTS_UPLOAD_ENDPOINT_PATH);
+            builder.putHeader("Authorization", "Bearer " + authToken);
+            builder.sendMultipartForm(form, handler);
+        }), collectorClient.getPort());
     }
 }

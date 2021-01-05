@@ -18,26 +18,28 @@
  */
 package de.cyface.collector;
 
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.is;
+
 import java.io.IOException;
 import java.net.ServerSocket;
 
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 
+import de.cyface.collector.commons.MongoTest;
 import de.cyface.collector.verticle.ManagementApiVerticle;
 import io.vertx.core.DeploymentOptions;
-import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.mongo.MongoClient;
-import io.vertx.ext.unit.Async;
-import io.vertx.ext.unit.TestContext;
-import io.vertx.ext.unit.junit.VertxUnitRunner;
 import io.vertx.ext.web.client.WebClient;
+import io.vertx.junit5.VertxExtension;
+import io.vertx.junit5.VertxTestContext;
 
 /**
  * Tests whether user creation via the management API works as expected.
@@ -47,30 +49,22 @@ import io.vertx.ext.web.client.WebClient;
  * @version 1.0.4
  * @since 2.0.0
  */
-@RunWith(VertxUnitRunner.class)
+@ExtendWith(VertxExtension.class)
 @SuppressWarnings("PMD.MethodNamingConventions")
 public final class UserCreationTest {
     /**
      * A {@link MongoTest} instance used to start and stop an in memory Mongo database.
      */
     private static MongoTest mongoTest;
-
     /**
      * The port the management API under test runs at. The test tries to find a free port by itself as part of its set
      * up.
      */
     private int port;
-
     /**
      * The <code>WebClient</code> to simulate client requests.
      */
     private WebClient client;
-
-    /**
-     * The <code>Vertx</code> instance used to run a system under test.
-     */
-    private Vertx vertx;
-
     /**
      * The configuration for the simulated Mongo user database.
      */
@@ -81,10 +75,10 @@ public final class UserCreationTest {
      *
      * @throws IOException If no socket was available for the Mongo database.
      */
-    @BeforeClass
+    @BeforeAll
     public static void setUpMongoDatabase() throws IOException {
         mongoTest = new MongoTest();
-        try (ServerSocket socket = new ServerSocket(0);) {
+        try (ServerSocket socket = new ServerSocket(0)) {
             final int mongoPort = socket.getLocalPort();
             socket.close();
             mongoTest.setUpMongoDatabase(mongoPort);
@@ -94,23 +88,23 @@ public final class UserCreationTest {
     /**
      * Finishes the mongo database after this test has finished.
      */
-    @AfterClass
+    @AfterAll
     public static void stopMongoDatabase() {
         mongoTest.stopMongoDb();
     }
 
     /**
-     * Initializes the <code>vertx</code> instance and deploys all required verticles. Also provides a
+     * Deploys all required verticles. Also provides a
      * <code>WebClient</code> to simulate client requests.
      *
-     * @param context The Vert.x test context used to control the test process.
-     * @throws IOException If unable to open a socket for the test HTTP server.
+     * @param vertx A <code>Vertx</code> instance injected for this test to use
+     * @param context The Vert.x test context used to control the test process
+     * @throws IOException If unable to open a socket for the test HTTP server
      */
-    @Before
-    public void setUp(final TestContext context) throws IOException {
-        vertx = Vertx.vertx();
+    @BeforeEach
+    public void setUp(final Vertx vertx, final VertxTestContext context) throws IOException {
 
-        try (ServerSocket socket = new ServerSocket(0);) {
+        try (ServerSocket socket = new ServerSocket(0)) {
             port = socket.getLocalPort();
 
             mongoDbConfiguration = new JsonObject()
@@ -121,7 +115,7 @@ public final class UserCreationTest {
                     .put(Parameter.MONGO_USER_DB.key(), mongoDbConfiguration);
             final DeploymentOptions options = new DeploymentOptions().setConfig(config);
 
-            vertx.deployVerticle(ManagementApiVerticle.class.getName(), options, context.asyncAssertSuccess());
+            vertx.deployVerticle(ManagementApiVerticle.class.getName(), options, context.succeedingThenComplete());
 
             client = WebClient.create(vertx);
         }
@@ -130,61 +124,53 @@ public final class UserCreationTest {
     /**
      * Closes the <code>vertx</code> instance.
      *
-     * @param context The Vert.x test context used to control the test process.
+     * @param vertx A <code>Vertx</code> instance injected for this test to use
+     * @param context The Vert.x test context used to control the test process
      */
-    @After
-    public void tearDown(final TestContext context) {
+    @AfterEach
+    public void tearDown(final Vertx vertx, final VertxTestContext context) {
 
         // Delete entries so that the next tests are independent
         final MongoClient mongoClient = MongoDbUtils.createSharedMongoClient(vertx, mongoDbConfiguration);
-        final Async mongoQueryAsync = context.async();
-        mongoClient.removeDocuments("user", new JsonObject(), result -> {
-            context.assertTrue(result.succeeded());
-            mongoQueryAsync.complete();
-        });
-        mongoQueryAsync.await(3_000L);
-
-        vertx.close();
+        mongoClient.removeDocuments("user", new JsonObject(), context.succeedingThenComplete());
     }
 
     /**
      * Tests that the normal process of creating a test user via the management interface works as expected.
      *
-     * @param context The Vert.x test context used to control the test process.
+     * @param vertx A <code>Vertx</code> instance injected for this test to use
+     * @param context The Vert.x test context used to control the test process
      */
     @Test
-    public void testCreateUser_HappyPath(final TestContext context) {
-        final Async async = context.async();
+    public void testCreateUser_HappyPath(final Vertx vertx, final VertxTestContext context) {
+        // Arrange
+        final var postUserCompleteCheckpoint = context.checkpoint();
+        final var checkedIfUserIsInDataBase = context.checkpoint();
+        final var checkedThatCorrectUserIsInDatabase = context.checkpoint();
+        final var mongoClient = MongoDbUtils.createSharedMongoClient(vertx, mongoDbConfiguration);
 
-        client.post(port, "localhost", "/user").sendJsonObject(
+        // Act
+        final var requestPostedFuture = client.post(port, "localhost", "/user").sendJsonObject(
                 new JsonObject().put("username", "test-user").put("password", "test-password").put("role",
-                        "testGroup_user"),
-                result -> {
-                    if (result.succeeded()) {
-                        async.complete();
-                    } else {
-                        async.resolve(Future.failedFuture(result.cause()));
-                    }
-                });
+                        "testGroup_user"));
+        requestPostedFuture.onComplete(context.succeeding(result -> postUserCompleteCheckpoint.flag()));
 
-        async.await(3_000L);
-
-        final MongoClient mongoClient = MongoDbUtils.createSharedMongoClient(vertx, mongoDbConfiguration);
-
-        final Async mongoQueryCountAsync = context.async();
-        mongoClient.count("user", new JsonObject(), result -> {
-            context.assertTrue(result.succeeded());
-            context.assertEquals(result.result(), 1L);
-            mongoQueryCountAsync.complete();
+        final var countResultsFuture = requestPostedFuture.compose(response -> {
+            context.verify(() -> {
+                assertThat("Invalid HTTP status code on user insertion request!", response.statusCode(), is(201));
+            });
+            return mongoClient.count("user", new JsonObject());
         });
-        mongoQueryCountAsync.await(3_000L);
+        countResultsFuture.onComplete(context.succeeding(result -> context.verify(() -> {
+            assertThat("Database does not contain exactly one entry after inserting a user!", result, is(1L));
+            checkedIfUserIsInDataBase.flag();
+        })));
 
-        final Async mongoQueryAsync = context.async();
-        mongoClient.findOne("user", new JsonObject(), null, result -> {
-            context.assertTrue(result.succeeded());
-            context.assertEquals(result.result().getString("username"), "test-user");
-            mongoQueryAsync.complete();
-        });
-        mongoQueryAsync.await(3_000L);
+        final var checkUsernameFuture = countResultsFuture
+                .compose(res -> mongoClient.findOne("user", new JsonObject(), null));
+        checkUsernameFuture.onComplete(context.succeeding(result -> context.verify(() -> {
+            assertThat("Unable to load correct user from database!", result.getString("username"), is("test-user"));
+            checkedThatCorrectUserIsInDatabase.flag();
+        })));
     }
 }
