@@ -262,7 +262,7 @@ public final class CollectorApiVerticle extends AbstractVerticle {
                 .failureHandler(new AuthenticationFailureHandler());
         // Set up data collector route
         v2ApiRouter.post("/measurements").consumes("multipart/form-data")
-                .handler(BodyHandler.create().setBodyLimit(BYTES_IN_ONE_GIGABYTE).setDeleteUploadedFilesOnEnd(false))
+                .handler(BodyHandler.create().setBodyLimit(BYTES_IN_ONE_GIGABYTE).setDeleteUploadedFilesOnEnd(true))
                 .handler(LoggerHandler.create())
                 .handler(JWTAuthHandler.create(jwtAuthProvider))
                 .handler(new MeasurementHandler(MongoClient.create(vertx, config().getJsonObject("mongo.datadb"))))
