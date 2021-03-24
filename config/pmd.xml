@@ -33,9 +33,11 @@
 
 	<rule ref="category/java/design.xml">
 		<exclude name="DataClass" />
-	</rule>
-	<rule ref="category/java/design.xml/LawOfDemeter">
-		<priority>5</priority>
+		<!-- The LoosePackageCoupling rule is hard to configure so we are ignoring it for now! -->
+		<exclude name="LoosePackageCoupling" />
+		<!-- The law of demeter is a little controversial and we break it really often. -->
+		<!-- Following it would require a significant rewrite, so excluding it for now! -->
+		<exclude name="LawOfDemeter" />
 	</rule>
 	<rule ref="category/java/design.xml/ExcessiveImports">
 	    <properties>
@@ -68,7 +70,7 @@
 	</rule>
 
 	
-	<rule ref="category/java/multithreading.xml"></rule>
+	<rule ref="category/java/multithreading.xml" />
 	<rule ref="category/java/performance.xml">
 		<exclude name="RedundantFieldInitializer" />
 	</rule>
@@ -76,7 +78,7 @@
 		<priority>5</priority>
 	</rule>
 	
-	<rule ref="category/java/security.xml"></rule>
+	<rule ref="category/java/security.xml" />
 
 	<rule ref="category/java/bestpractices.xml/JUnitTestContainsTooManyAsserts">
 		<properties>

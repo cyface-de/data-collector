@@ -32,6 +32,14 @@ import io.vertx.junit5.VertxTestContext;
  */
 @ExtendWith(VertxExtension.class)
 public class AuthorisationTest {
+    /**
+     * Happy Path integration test for user authorisation.
+     *
+     * @param vertx A test Vert.x instance
+     * @param ctx The Vert.x test context
+     * @throws URISyntaxException If test key pair could not be loaded
+     * @throws IOException If test key pair could not be read
+     */
     @Test
     @DisplayName("Test that authenticating a user works via the happy path")
     void test(final Vertx vertx, final VertxTestContext ctx) throws URISyntaxException, IOException {
