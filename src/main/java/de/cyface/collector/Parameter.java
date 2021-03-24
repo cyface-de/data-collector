@@ -88,7 +88,11 @@ public enum Parameter {
     /**
      * A parameter telling the system, whether it should publish metrics using Micrometer to Prometheus or not.
      */
-    METRICS_ENABLED("metrics.enabled");
+    METRICS_ENABLED("metrics.enabled"),
+    /**
+     * A parameter telling the system how long a new JWT token stays valid in seconds.
+     */
+    TOKEN_EXPIRATION_TIME("jwt.expiration");
 
     /**
      * The logger used for objects of this class. You can change its configuration by changing the values in

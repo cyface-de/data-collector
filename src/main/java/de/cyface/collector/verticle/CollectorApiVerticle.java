@@ -19,6 +19,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.time.Duration;
 import java.util.Collections;
 
 import org.apache.commons.lang3.Validate;
@@ -238,6 +239,7 @@ public final class CollectorApiVerticle extends AbstractVerticle {
         final var endpoint = Parameter.COLLECTOR_ENDPOINT.stringValue(vertx);
         Validate.notEmpty(endpoint, "Endpoint not found. Please provide it using the %s parameter!",
                 Parameter.COLLECTOR_ENDPOINT.key());
+        final var tokenExpirationTime = Parameter.TOKEN_EXPIRATION_TIME.intValue(vertx, 60);
 
         // Set up authentication check
         final var keyOptions = new PubSecKeyOptions().setAlgorithm(JWT_HASH_ALGORITHM).setBuffer(publicKey)
@@ -258,7 +260,7 @@ public final class CollectorApiVerticle extends AbstractVerticle {
                 .handler(BodyHandler.create().setBodyLimit(2 * BYTES_IN_ONE_KILOBYTE))
                 .handler(LoggerHandler.create())
                 .handler(new AuthenticationHandler(mongoAuthProvider, jwtAuthProvider, issuer,
-                        jwtAudience(host, endpoint)))
+                        jwtAudience(host, endpoint), tokenExpirationTime))
                 .failureHandler(new AuthenticationFailureHandler());
         // Set up data collector route
         v2ApiRouter.post("/measurements").consumes("multipart/form-data")

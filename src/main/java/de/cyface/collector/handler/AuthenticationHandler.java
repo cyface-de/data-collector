@@ -19,6 +19,7 @@
 package de.cyface.collector.handler;
 
 import java.util.Collections;
+import java.util.Objects;
 
 import org.apache.commons.lang3.Validate;
 import org.slf4j.Logger;
@@ -66,6 +67,10 @@ public final class AuthenticationHandler implements Handler<RoutingContext> {
      * a certain server installation or a certain part of an application.
      */
     private final transient String audience;
+    /**
+     * The time in seconds a generated token is valid, before a new token must be acquired.
+     */
+    private final transient int tokenExpirationTime;
 
     /**
      * Creates a new completely initialized <code>AuthenticationHandler</code>.
@@ -76,19 +81,21 @@ public final class AuthenticationHandler implements Handler<RoutingContext> {
      *            server.
      * @param audience The entity allowed to process requests authenticated with the generated JWT token. This might be
      *            a certain server installation or a certain part of an application.
+     * @param tokenExpirationTime The time in seconds a generated token is valid, before a new token must be acquired
      */
     public AuthenticationHandler(final MongoAuthentication authProvider, final JWTAuth jwtAuthProvider,
-            final String issuer,
-            final String audience) {
-        Validate.notNull(authProvider);
-        Validate.notNull(jwtAuthProvider);
-        Validate.notEmpty(issuer);
-        Validate.notEmpty(audience);
+            final String issuer, final String audience, final int tokenExpirationTime) {
+        Objects.requireNonNull(authProvider, "Parameter authProvider may not be null!");
+        Objects.requireNonNull(jwtAuthProvider, "Parameter jwtAuthProvider may not be null!");
+        Validate.notEmpty(issuer, "Parameter issuer must not be empty or null!");
+        Validate.notEmpty(audience, "Parameter audience must not be empty or null!");
+        Validate.isTrue(tokenExpirationTime > 0, "Parameter tokenExpirationTime must be greater than 0!");
 
         this.authProvider = authProvider;
         this.jwtAuthProvider = jwtAuthProvider;
         this.issuer = issuer;
         this.audience = audience;
+        this.tokenExpirationTime = tokenExpirationTime;
     }
 
     @Override
@@ -100,7 +107,7 @@ public final class AuthenticationHandler implements Handler<RoutingContext> {
                 if (r.succeeded()) {
                     LOGGER.debug("Authentication successful for user {}", body.getString("username"));
 
-                    final var jwtOptions = new JWTOptions().setExpiresInSeconds(60);
+                    final var jwtOptions = new JWTOptions().setExpiresInSeconds(tokenExpirationTime);
                     jwtOptions.setIssuer(issuer);
                     jwtOptions.setAudience(Collections.singletonList(audience));
 

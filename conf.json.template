@@ -1,6 +1,7 @@
 {
 	"jwt.public":"src/test/resources/public.pem",
 	"jwt.private":"src/test/resources/private_key.pem"
+	"jwt.expiration":60
 	"metrics.enabled":false,
 	"mongo.userdb":{
 	    "db_name":"cyface-user",
