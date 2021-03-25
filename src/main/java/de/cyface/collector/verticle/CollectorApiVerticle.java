@@ -1,5 +1,5 @@
 /*
- * Copyright 2018, 2019, 2020 Cyface GmbH
+ * Copyright 2018-2021 Cyface GmbH
  * This file is part of the Cyface Data Collector.
  * The Cyface Data Collector is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
