@@ -105,7 +105,7 @@ shadowJar {
     mergeServiceFiles {
         include 'META-INF/services/io.vertx.core.spi.VerticleFactory'
     }
-    archiveFileName = "collector-fat.${archiveExtension}"
+    archiveFileName = "collector-fat.${archiveExtension.get()}"
 }
 
 run {

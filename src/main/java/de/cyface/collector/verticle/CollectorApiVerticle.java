@@ -19,7 +19,6 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.time.Duration;
 import java.util.Collections;
 import java.util.Objects;
 
@@ -104,7 +103,8 @@ public final class CollectorApiVerticle extends AbstractVerticle {
         // Setup mongo user database client with authProvider
         final var mongoUserDatabaseConfiguration = Parameter.MONGO_USER_DB.jsonValue(vertx);
         Objects.requireNonNull(mongoUserDatabaseConfiguration, String.format(
-                "Unable to load Mongo user database configuration. Please provide a valid configuration using the %s parameter!",
+                "Unable to load Mongo user database configuration. "
+                       + "Please provide a valid configuration using the %s parameter!",
                 Parameter.MONGO_USER_DB.key()));
         final var client = MongoDbUtils.createSharedMongoClient(vertx, mongoUserDatabaseConfiguration);
         final var salt = loadSalt(vertx);
@@ -114,7 +114,8 @@ public final class CollectorApiVerticle extends AbstractVerticle {
         final var httpPort = Parameter.COLLECTOR_HTTP_PORT.intValue(vertx, 8080);
         final var publicKey = extractKey(Parameter.JWT_PUBLIC_KEY_FILE_PATH);
         Validate.notNull(publicKey,
-                "Unable to load public key for JWT authentication. Did you provide a valid PEM file using the parameter "
+                "Unable to load public key for JWT authentication. "
+                       + "Did you provide a valid PEM file using the parameter "
                         + Parameter.JWT_PUBLIC_KEY_FILE_PATH.key() + ".");
         final var privateKey = extractKey(Parameter.JWT_PRIVATE_KEY_FILE_PATH);
         Validate.notNull(privateKey,

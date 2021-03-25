@@ -64,8 +64,8 @@ public class CollectorApiVerticleTest {
                 .put("http.endpoint", "/api/v2")
                 .put("mongo.datadb", new JsonObject()
                         .put("db_name", "cyface-data")
-                        .put("connection_string","mongodb://localhost:27019")
-                        .put("data_source_name","cyface-data"))
+                        .put("connection_string", "mongodb://localhost:27019")
+                        .put("data_source_name", "cyface-data"))
                 .put("mongo.userdb", mongoTest.clientConfiguration())
                 .put("jwt.expiration", 3600);
 
