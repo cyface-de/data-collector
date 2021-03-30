@@ -1,5 +1,5 @@
 /*
- * Copyright 2018,2019 Cyface GmbH
+ * Copyright 2018-2021 Cyface GmbH
  * 
  * This file is part of the Cyface Data Collector.
  *
@@ -24,16 +24,16 @@
 plugins {
     id 'java'
     id 'application'
-    id 'com.github.johnrengelman.shadow' version '4.0.4'
+    id 'com.github.johnrengelman.shadow' version '6.1.0'
     id 'checkstyle'
     id 'pmd'
-    id 'com.github.spotbugs' version '3.0.0'
+    id 'com.github.spotbugs' version '4.7.0'
     id 'jacoco'
 }
 
 ext {
     // We need to use the SNAPSHOT version, since testing of multipart form uploads is not supported with older versions.
-    vertxVersion = '4.0.0'
+    vertxVersion = '4.0.3'
     micrometerVersion = '1.0.6'
     logbackVersion = '1.2.3'
     commonsLangVersion = '3.8.1'
@@ -42,8 +42,7 @@ ext {
     hamcrestVersion = '2.2'
     flapdoodleVersion = '3.0.0'
 
-    jacocoVersion = '0.8.3'
-    gradleWrapperVersion = '6.0.1'
+    gradleWrapperVersion = '6.8.3'
 }
 
 repositories {
@@ -94,16 +93,19 @@ dependencies {
     testImplementation "org.hamcrest:hamcrest:$hamcrestVersion"
 }
 
-
-shadowJar {
-    classifier = 'fat'
+jar {
     manifest {
         attributes 'Main-Verticle': mainVerticleName
     }
+}
+
+shadowJar {
+    archiveClassifier.set 'fat'
+
     mergeServiceFiles {
         include 'META-INF/services/io.vertx.core.spi.VerticleFactory'
     }
-    archiveName = "collector-fat.${extension}"
+    archiveFileName = "collector-fat.${archiveExtension.get()}"
 }
 
 run {
@@ -114,30 +116,11 @@ wrapper {
     gradleVersion = "$gradleWrapperVersion"
 }
 
-jacoco {
-    toolVersion = "$jacocoVersion"
-    reportsDir = file("$buildDir/reports/jacoco")
-}
-
-jacocoTestReport {
+spotbugsMain {
     reports {
-        xml.enabled true
-        csv.enabled true
-        html.destination file("${buildDir}/reports/jacocoHtml")
+        xml.enabled false
+        html.enabled true
     }
-}
-
-spotbugs {
-    toolVersion = '4.0.0-beta4'
-    ignoreFailures = true
-}
-
-tasks.withType(com.github.spotbugs.SpotBugsTask) {
-    reports {
-        xml.enabled = false
-        html.enabled = true
-    }
-    pluginClasspath = project.configurations.spotbugsPlugins
 }
 
 checkstyle {
@@ -149,10 +132,10 @@ checkstyle {
 
 pmd {
     ignoreFailures = false
-    toolVersion = "6.20.0"
-    incrementalAnalysis = true
+    consoleOutput = true
+    toolVersion = "6.21.0"
     ruleSetFiles = files('config/pmd.xml')
-    rulePriority = 4
+    rulesMinimumPriority.set 4
     ruleSets = []
 }
 

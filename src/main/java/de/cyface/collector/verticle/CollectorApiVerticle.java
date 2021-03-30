@@ -1,5 +1,5 @@
 /*
- * Copyright 2018, 2019, 2020 Cyface GmbH
+ * Copyright 2018-2021 Cyface GmbH
  * This file is part of the Cyface Data Collector.
  * The Cyface Data Collector is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -20,6 +20,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Collections;
+import java.util.Objects;
 
 import org.apache.commons.lang3.Validate;
 import org.slf4j.Logger;
@@ -100,7 +101,11 @@ public final class CollectorApiVerticle extends AbstractVerticle {
         prepareEventBus();
 
         // Setup mongo user database client with authProvider
-        final var mongoUserDatabaseConfiguration = Parameter.MONGO_USER_DB.jsonValue(vertx, new JsonObject());
+        final var mongoUserDatabaseConfiguration = Parameter.MONGO_USER_DB.jsonValue(vertx);
+        Objects.requireNonNull(mongoUserDatabaseConfiguration, String.format(
+                "Unable to load Mongo user database configuration. "
+                       + "Please provide a valid configuration using the %s parameter!",
+                Parameter.MONGO_USER_DB.key()));
         final var client = MongoDbUtils.createSharedMongoClient(vertx, mongoUserDatabaseConfiguration);
         final var salt = loadSalt(vertx);
         final var authProvider = MongoDbUtils.buildMongoAuthProvider(client);
@@ -109,7 +114,8 @@ public final class CollectorApiVerticle extends AbstractVerticle {
         final var httpPort = Parameter.COLLECTOR_HTTP_PORT.intValue(vertx, 8080);
         final var publicKey = extractKey(Parameter.JWT_PUBLIC_KEY_FILE_PATH);
         Validate.notNull(publicKey,
-                "Unable to load public key for JWT authentication. Did you provide a valid PEM file using the parameter "
+                "Unable to load public key for JWT authentication. "
+                       + "Did you provide a valid PEM file using the parameter "
                         + Parameter.JWT_PUBLIC_KEY_FILE_PATH.key() + ".");
         final var privateKey = extractKey(Parameter.JWT_PRIVATE_KEY_FILE_PATH);
         Validate.notNull(privateKey,
@@ -238,6 +244,11 @@ public final class CollectorApiVerticle extends AbstractVerticle {
         final var endpoint = Parameter.COLLECTOR_ENDPOINT.stringValue(vertx);
         Validate.notEmpty(endpoint, "Endpoint not found. Please provide it using the %s parameter!",
                 Parameter.COLLECTOR_ENDPOINT.key());
+        final var tokenExpirationTime = Parameter.TOKEN_EXPIRATION_TIME.intValue(vertx, 60);
+        final var mongoDataDbConfiguration = config().getJsonObject("mongo.datadb");
+        Objects.requireNonNull(mongoDataDbConfiguration,
+                String.format("No Mongo data database configuration found. Please provide it using the %s parameter!",
+                        Parameter.MONGO_DATA_DB.key()));
 
         // Set up authentication check
         final var keyOptions = new PubSecKeyOptions().setAlgorithm(JWT_HASH_ALGORITHM).setBuffer(publicKey)
@@ -258,14 +269,14 @@ public final class CollectorApiVerticle extends AbstractVerticle {
                 .handler(BodyHandler.create().setBodyLimit(2 * BYTES_IN_ONE_KILOBYTE))
                 .handler(LoggerHandler.create())
                 .handler(new AuthenticationHandler(mongoAuthProvider, jwtAuthProvider, issuer,
-                        jwtAudience(host, endpoint)))
+                        jwtAudience(host, endpoint), tokenExpirationTime))
                 .failureHandler(new AuthenticationFailureHandler());
         // Set up data collector route
         v2ApiRouter.post("/measurements").consumes("multipart/form-data")
                 .handler(BodyHandler.create().setBodyLimit(BYTES_IN_ONE_GIGABYTE).setDeleteUploadedFilesOnEnd(true))
                 .handler(LoggerHandler.create())
                 .handler(JWTAuthHandler.create(jwtAuthProvider))
-                .handler(new MeasurementHandler(MongoClient.create(vertx, config().getJsonObject("mongo.datadb"))))
+                .handler(new MeasurementHandler(MongoClient.create(vertx, mongoDataDbConfiguration)))
                 .failureHandler(ErrorHandler.create(vertx));
         // .failureHandler(new AuthenticationFailureHandler());
         // Set up web api

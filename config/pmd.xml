@@ -1,4 +1,20 @@
 <?xml version="1.0"?>
+<!-- Copyright 2018-2021 Cyface GmbH -->
+<!--  -->
+<!--  This file is part of the Cyface Data Collector. -->
+<!--  -->
+<!--  The Cyface Data Collector is free software: you can redistribute it and/or modify -->
+<!--  it under the terms of the GNU General Public License as published by -->
+<!--  the Free Software Foundation, either version 3 of the License, or -->
+<!--  (at your option) any later version. -->
+<!--  -->
+<!--  The Cyface Data Collector is distributed in the hope that it will be useful, -->
+<!--  but WITHOUT ANY WARRANTY; without even the implied warranty of -->
+<!--  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the -->
+<!--  GNU General Public License for more details. -->
+<!--  -->
+<!--  You should have received a copy of the GNU General Public License -->
+<!--  along with the Cyface Data Collector. If not, see <http://www.gnu.org/licenses/>. -->
 
 <ruleset name="Custom Rules"
 	xmlns="http://pmd.sourceforge.net/ruleset/2.0.0"
@@ -33,9 +49,11 @@
 
 	<rule ref="category/java/design.xml">
 		<exclude name="DataClass" />
-	</rule>
-	<rule ref="category/java/design.xml/LawOfDemeter">
-		<priority>5</priority>
+		<!-- The LoosePackageCoupling rule is hard to configure so we are ignoring it for now! -->
+		<exclude name="LoosePackageCoupling" />
+		<!-- The law of demeter is a little controversial and we break it really often. -->
+		<!-- Following it would require a significant rewrite, so excluding it for now! -->
+		<exclude name="LawOfDemeter" />
 	</rule>
 	<rule ref="category/java/design.xml/ExcessiveImports">
 	    <properties>
@@ -68,7 +86,7 @@
 	</rule>
 
 	
-	<rule ref="category/java/multithreading.xml"></rule>
+	<rule ref="category/java/multithreading.xml" />
 	<rule ref="category/java/performance.xml">
 		<exclude name="RedundantFieldInitializer" />
 	</rule>
@@ -76,7 +94,7 @@
 		<priority>5</priority>
 	</rule>
 	
-	<rule ref="category/java/security.xml"></rule>
+	<rule ref="category/java/security.xml" />
 
 	<rule ref="category/java/bestpractices.xml/JUnitTestContainsTooManyAsserts">
 		<properties>

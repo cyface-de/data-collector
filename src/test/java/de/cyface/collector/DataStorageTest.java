@@ -1,5 +1,5 @@
 /*
- * Copyright 2018,2019 Cyface GmbH
+ * Copyright 2018-2021 Cyface GmbH
  *
  * This file is part of the Cyface Data Collector.
  *
@@ -131,7 +131,7 @@ public final class DataStorageTest {
             final List<Future> fileUploadFutures = uploads.stream().map(fileUpload -> {
                 final var fileOpenFuture = fileSystem.open(fileUpload.toAbsolutePath().toString(),
                         new OpenOptions());
-                final var uploadFuture = fileOpenFuture.compose(asyncFile -> {
+                return fileOpenFuture.compose(asyncFile -> {
 
                     final var gridFsOptions = new GridFsUploadOptions();
                     gridFsOptions.setMetadata(fixtureMetaData());
@@ -139,7 +139,6 @@ public final class DataStorageTest {
                     return gridFsClient.uploadByFileNameWithOptions(asyncFile,
                             fileUpload.getFileName().toString(), gridFsOptions);
                 });
-                return (Future)uploadFuture;
             }).collect(Collectors.toList());
 
             fileUploadFutures.add(fileSystem.createTempFile("de.cyface.collector", "test"));
@@ -151,7 +150,8 @@ public final class DataStorageTest {
                                 new JsonObject().put("$oid", new ObjectId(uploadedFileId).toHexString()))));
             }).onComplete(ctx.succeeding(loadedData -> {
                 final var downloadedBytes = (Long)loadedData.resultAt(0);
-                final var metaData = ((List<JsonObject>)loadedData.resultAt(1)).get(0).getJsonObject("metadata");
+                final List<JsonObject> loadedResult = loadedData.resultAt(1);
+                final var metaData = loadedResult.get(0).getJsonObject("metadata");
                 ctx.verify(() -> {
                     assertThat("Expect to receive a file with more than zero bytes!", downloadedBytes,
                             is(greaterThan(0L)));

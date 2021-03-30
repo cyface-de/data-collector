@@ -1,5 +1,5 @@
 /*
- * Copyright 2018, 2019 Cyface GmbH
+ * Copyright 2018-2021 Cyface GmbH
  *
  * This file is part of the Cyface Data Collector.
  *
@@ -20,8 +20,8 @@ package de.cyface.collector;
 
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
-import io.vertx.core.logging.Logger;
-import io.vertx.core.logging.LoggerFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * An enumeration of parameters, that may be provided upon application startup, to configure the application.
@@ -88,7 +88,11 @@ public enum Parameter {
     /**
      * A parameter telling the system, whether it should publish metrics using Micrometer to Prometheus or not.
      */
-    METRICS_ENABLED("metrics.enabled");
+    METRICS_ENABLED("metrics.enabled"),
+    /**
+     * A parameter telling the system how long a new JWT token stays valid in seconds.
+     */
+    TOKEN_EXPIRATION_TIME("jwt.expiration");
 
     /**
      * The logger used for objects of this class. You can change its configuration by changing the values in

@@ -1,5 +1,5 @@
 /*
- * Copyright 2018, 2019 Cyface GmbH
+ * Copyright 2018-2021 Cyface GmbH
  *
  * This file is part of the Cyface Data Collector.
  *
@@ -123,7 +123,9 @@ public final class RequestTest {
                 .send(context.succeeding(response -> context.verify(() -> {
                     assertThat("Invalid HTTP status code on request for API specification.", response.statusCode(), is(200));
                     final var body = response.bodyAsString();
-                    assertThat("Request for API specification seems to be missing a valid body.", body, containsString("<title>Cyface Data Collector</title>"));
+                    final var expectedcContent = "<title>Cyface Data Collector</title>";
+                    final var assertBodyReason = "Request for API specification seems to be missing a valid body.";
+                    assertThat(assertBodyReason, body, containsString(expectedcContent));
                     context.completeNow();
                 })));
     }
