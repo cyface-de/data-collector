@@ -20,31 +20,41 @@ When you updated the Swagger UI make sure to clear your browser cache or else it
 
 Versions of this project inside the master branch are always `0.0.0`. To release a new version:
 
-1. *Create a new release branch* following the format `release/x.y`.
-a. `x.y` is the number of the first two sections of the new version following link:http://semver.org[Semantic Versioning].
-b. *Hotfixes should be applied on top of the already existing release-branch*
-A. Apply the hotfix on the `master` branch, create a Pull-Request and pass reviewing.
-B. Cherry-pick the fix on top of the already existing `release/x.y` branch.
-C. No new features are allowed on a release-branch, only fixes and minor changes.
+**ATTENTION**: *Hotfixes should be applied on top of the already existing release-branch*. See below for further instructions.
 
-2. *Increase version numbers* in root `build.gradle`,
-a. and optional in any associated `docker-compose.yml` or OpenAPI documentation (usually located in `src/main/resources/webroot/openapi.yml`).
-b. If you need to version sub-projects differently, create a version attribute in the corresponding `build.gradle`.
+1. *Create a new release branch* following the format `release-x.y`, where `x.y` is the number of the first two sections of the new version following link:http://semver.org[Semantic Versioning].
+
+2. *Increase version numbers* in root `build.gradle` and in any associated `docker-compose.yml` or OpenAPI documentation located in `src/main/resources/webroot/api/openapi.yml` as well as `src/main/resources/webroot/management/openapi.yml`).
 
 3. *Commit version bump and push branch* to Github.
-a. Wait until the continuous integration system passes.
-b. Do *not* merge the release-branch back to master.
 
-4. *Tag the new release on the release branch*.
+4. *Wait* until the continuous integration system passes.
+
+5. *Create a Pull Request* to release and main
+
+6. *Squash and Merge both Pull Requests* onto release and main, rebasing and reapproving if necessary
+
+7. *Tag the new release on the release branch*.
 a. Ensure you are on the correct branch and commit.
 b. Follow the guidelines from link:https://keepachangelog.com["Keep a Changelog"] in your tag description.
 
-5. *Push the release tag to Github*.
+8. *Push the release tag to Github*.
 a. The docker image and Github packages are automatically published when a new version is tagged and pushed by our
 link:https://github.com/cyface-de/data-collector/actions[Github Actions] to the
 link:https://github.com/cyface-de/data-collector/packages[Github Registry].
 
 6. *Mark the released version as 'new Release' on link:https://github.com/cyface-de/data-collector/releases[Github]*.
+
+=== Apply a Hotfix
+
+No new features are allowed on a release-branch, only fixes and minor changes.
+
+1. Create a new fix/<tag>_<explanation> on release
+2. Make your hotfix
+3. Commit and Push and wait for CI to report success. If CI fails, fix the issue!
+4. Make a PR into release and into main
+5. Get both PRs approved
+6. Squash and merge both PRs on top of release and main, rebasing and reapproving if necessary
 
 == Execution
 This section describes how to execute the Cyface Data Collector.
