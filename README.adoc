@@ -1,6 +1,6 @@
 = Collector
 
-image:https://img.shields.io/badge/vert.x-4.0.0-purple.svg[link="https://vertx.io"]
+image:https://img.shields.io/badge/vert.x-4.0.3-purple.svg[link="https://vertx.io"]
 image:https://img.shields.io/badge/mongo-4.0.11-purple.svg[link="https://mongodb.com/"]
 image:https://github.com/cyface-de/data-collector/workflows/Cyface%20Data%20Collector/badge.svg[link="https://github.com/cyface-de/data-collector/actions"]
 
@@ -182,7 +182,7 @@ it under the terms of the GNU General Public License as published by
 the Free Software Foundation, either version 3 of the License, or
 (at your option) any later version.
 
-The Cyface Data Collector is distributed in the hope that it will be useful,
+The Cyface Data Collector isds distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
