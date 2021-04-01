@@ -1,5 +1,5 @@
 #!/bin/bash
-# Copyright 2018,2019,2020 Cyface GmbH
+# Copyright 2018-2021 Cyface GmbH
 # 
 # This file is part of the Cyface Data Collector.
 #
@@ -27,13 +27,21 @@ fi
 echo "Loading private key for JWT from: $JWT_PRIVATE_KEY_FILE_PATH"
 echo "Loading public key for JWT from: $JWT_PUBLIC_KEY_FILE_PATH"
 
-if [ -z $SALT ]; then
+if [ -z $JWT_EXPIRATION_TIME_SECONDS ]; then
+  JWT_EXPIRATION_TIME_SECONDS="60"
+fi
+
+echo "Setting JWT token expiration time to $JWT_EXPIRATION_TIME_SECONDS seconds."
+
+if [ -n "$SALT" ]; then
 	SALT_PARAMETER=",\"salt\":\"$SALT\""
-elif [ -f $SALT_FILE ]; then
+elif [ -f "$SALT_FILE" ]; then
 	SALT_PARAMETER=",\"salt.path\":\"$SALT_FILE\""
 else
 	SALT_PARAMETER=",\"salt\":\"cyface-salt\""
 fi
+
+echo "Using global salt $SALT_PARAMETER"
 
 if [ -z $CYFACE_API_PORT ]; then
 	CYFACE_API_PORT="8080"
@@ -53,6 +61,8 @@ if [ -z $CYFACE_MANAGEMENT_PORT ]; then
 	CYFACE_MANAGEMENT_PORT="13371"
 fi
 
+echo "Running Cyface Management API at $CYFACE_API_HOST:$CYFACE_MANAGEMENT_PORT"
+
 echo "Running Cyface Management API at port $CYFACE_MANAGEMENT_PORT"
 
 if [ -z $ADMIN_USER ]; then
@@ -68,6 +78,8 @@ fi
 if [ -z $METRICS_ENABLED ]; then
 	METRICS_ENABLED="false"
 fi
+
+echo "Enabling metrics reporting by API: $METRICS_ENABLED."
 
 echo "Waiting for Database to start!"
 
@@ -90,5 +102,5 @@ if [ $COUNTER -ge 10 ]; then
     exit 1
 fi
 
-echo "Starting API"
-java -Dvertx.cacheDirBase=/tmp/vertx-cache -Dlogback.configurationFile=/app/logback.xml -jar collector-fat.jar -conf "{\"jwt.private\":\"$JWT_PRIVATE_KEY_FILE_PATH\",\"jwt.public\":\"$JWT_PUBLIC_KEY_FILE_PATH\",\"metrics.enabled\":$METRICS_ENABLED,\"mongo.userdb\":{\"db_name\":\"cyface-user\",\"connection_string\":\"mongodb://mongo-user:27017\",\"data_source_name\":\"cyface-user\"},\"mongo.datadb\":{\"db_name\":\"cyface-data\",\"connection_string\":\"mongodb://mongo-data:27017\",\"data_source_name\":\"cyface-data\"},\"admin.user\":\"$ADMIN_USER\",\"admin.password\":\"$ADMIN_PASSWORD\",\"http.port\":$CYFACE_API_PORT,\"http.host\":\"$CYFACE_API_HOST\",\"http.endpoint\":\"$CYFACE_API_ENDPOINT\",\"http.port.management\":$CYFACE_MANAGEMENT_PORT$SALT_PARAMETER}" &> /logs/collector-out.log
+echo "Starting API. To view the logs refer to the logs folder on your hard drive!"
+java -Dvertx.cacheDirBase=/tmp/vertx-cache -Dlogback.configurationFile=/app/logback.xml -jar collector-fat.jar -conf "{\"jwt.private\":\"$JWT_PRIVATE_KEY_FILE_PATH\",\"jwt.public\":\"$JWT_PUBLIC_KEY_FILE_PATH\",\"jwt.expiration\":$JWT_EXPIRATION_TIME_SECONDS,\"metrics.enabled\":$METRICS_ENABLED,\"mongo.userdb\":{\"db_name\":\"cyface-user\",\"connection_string\":\"mongodb://mongo-user:27017\",\"data_source_name\":\"cyface-user\"},\"mongo.datadb\":{\"db_name\":\"cyface-data\",\"connection_string\":\"mongodb://mongo-data:27017\",\"data_source_name\":\"cyface-data\"},\"admin.user\":\"$ADMIN_USER\",\"admin.password\":\"$ADMIN_PASSWORD\",\"http.port\":$CYFACE_API_PORT,\"http.host\":\"$CYFACE_API_HOST\",\"http.endpoint\":\"$CYFACE_API_ENDPOINT\",\"http.port.management\":$CYFACE_MANAGEMENT_PORT$SALT_PARAMETER}" &> /logs/collector-out.log

@@ -1,5 +1,5 @@
 /*
- * Copyright 2018, 2019 Cyface GmbH
+ * Copyright 2018-2021 Cyface GmbH
  *
  * This file is part of the Cyface Data Collector.
  *
@@ -19,18 +19,18 @@
 package de.cyface.collector.handler;
 
 import java.util.Collections;
+import java.util.Objects;
 
 import org.apache.commons.lang3.Validate;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import de.cyface.collector.verticle.CollectorApiVerticle;
 import io.vertx.core.Handler;
 import io.vertx.core.json.DecodeException;
-import io.vertx.core.json.JsonObject;
-import io.vertx.core.logging.Logger;
-import io.vertx.core.logging.LoggerFactory;
+import io.vertx.ext.auth.JWTOptions;
 import io.vertx.ext.auth.jwt.JWTAuth;
-import io.vertx.ext.auth.mongo.MongoAuth;
-import io.vertx.ext.jwt.JWTOptions;
+import io.vertx.ext.auth.mongo.MongoAuthentication;
 import io.vertx.ext.web.RoutingContext;
 
 /**
@@ -52,7 +52,7 @@ public final class AuthenticationHandler implements Handler<RoutingContext> {
     /**
      * Authenticator that uses the Mongo user database to store and retrieve credentials.
      */
-    private final transient MongoAuth authProvider;
+    private final transient MongoAuthentication authProvider;
     /**
      * Authenticator that checks for valid authentications against Java Web Tokens.
      */
@@ -67,6 +67,10 @@ public final class AuthenticationHandler implements Handler<RoutingContext> {
      * a certain server installation or a certain part of an application.
      */
     private final transient String audience;
+    /**
+     * The time in seconds a generated token is valid, before a new token must be acquired.
+     */
+    private final transient int tokenExpirationTime;
 
     /**
      * Creates a new completely initialized <code>AuthenticationHandler</code>.
@@ -77,35 +81,38 @@ public final class AuthenticationHandler implements Handler<RoutingContext> {
      *            server.
      * @param audience The entity allowed to process requests authenticated with the generated JWT token. This might be
      *            a certain server installation or a certain part of an application.
+     * @param tokenExpirationTime The time in seconds a generated token is valid, before a new token must be acquired
      */
-    public AuthenticationHandler(final MongoAuth authProvider, final JWTAuth jwtAuthProvider, final String issuer,
-            final String audience) {
-        Validate.notNull(authProvider);
-        Validate.notNull(jwtAuthProvider);
-        Validate.notEmpty(issuer);
-        Validate.notEmpty(audience);
+    public AuthenticationHandler(final MongoAuthentication authProvider, final JWTAuth jwtAuthProvider,
+            final String issuer, final String audience, final int tokenExpirationTime) {
+        Objects.requireNonNull(authProvider, "Parameter authProvider may not be null!");
+        Objects.requireNonNull(jwtAuthProvider, "Parameter jwtAuthProvider may not be null!");
+        Validate.notEmpty(issuer, "Parameter issuer must not be empty or null!");
+        Validate.notEmpty(audience, "Parameter audience must not be empty or null!");
+        Validate.isTrue(tokenExpirationTime > 0, "Parameter tokenExpirationTime must be greater than 0!");
 
         this.authProvider = authProvider;
         this.jwtAuthProvider = jwtAuthProvider;
         this.issuer = issuer;
         this.audience = audience;
+        this.tokenExpirationTime = tokenExpirationTime;
     }
 
     @Override
     public void handle(final RoutingContext ctx) {
         try {
-            final JsonObject body = ctx.getBodyAsJson();
-            LOGGER.info(LOGGER.isDebugEnabled());
+            final var body = ctx.getBodyAsJson();
             LOGGER.debug("Receiving authentication request for user {}", body.getString("username"));
             authProvider.authenticate(body, r -> {
                 if (r.succeeded()) {
                     LOGGER.debug("Authentication successful for user {}", body.getString("username"));
 
-                    final JWTOptions jwtOptions = new JWTOptions().setExpiresInSeconds(60);
+                    final var jwtOptions = new JWTOptions().setExpiresInSeconds(tokenExpirationTime);
                     jwtOptions.setIssuer(issuer);
                     jwtOptions.setAudience(Collections.singletonList(audience));
 
-                    final String generatedToken = jwtAuthProvider.generateToken(body,
+                    final var jwtBody = body.put("aud", audience).put("iss", issuer);
+                    final var generatedToken = jwtAuthProvider.generateToken(jwtBody,
                             jwtOptions.setAlgorithm(CollectorApiVerticle.JWT_HASH_ALGORITHM));
                     LOGGER.trace("New JWT Token: {}", generatedToken);
                     ctx.response().putHeader("Authorization", generatedToken).setStatusCode(200).end();
@@ -119,5 +126,4 @@ public final class AuthenticationHandler implements Handler<RoutingContext> {
             ctx.fail(401);
         }
     }
-
 }

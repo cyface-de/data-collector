@@ -18,15 +18,18 @@
  */
 package de.cyface.collector.verticle;
 
+import java.nio.charset.StandardCharsets;
+
 import org.apache.commons.lang3.Validate;
 
+import de.cyface.collector.Hasher;
 import de.cyface.collector.MongoDbUtils;
 import de.cyface.collector.Parameter;
 import de.cyface.collector.handler.UserCreationHandler;
 import io.vertx.core.AbstractVerticle;
-import io.vertx.core.Future;
+import io.vertx.core.Promise;
 import io.vertx.core.json.JsonObject;
-import io.vertx.ext.auth.mongo.MongoAuth;
+import io.vertx.ext.auth.HashingStrategy;
 import io.vertx.ext.mongo.MongoClient;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.handler.BodyHandler;
@@ -42,38 +45,35 @@ import io.vertx.ext.web.handler.StaticHandler;
  */
 public final class ManagementApiVerticle extends AbstractVerticle {
     @Override
-    public void start(final Future<Void> startFuture) throws Exception {
+    public void start(final Promise<Void> startFuture) throws Exception {
         Validate.notNull(startFuture);
 
-        final JsonObject mongoUserDatabaseConfiguration = Parameter.MONGO_USER_DB.jsonValue(getVertx(),
+        final var mongoUserDatabaseConfiguration = Parameter.MONGO_USER_DB.jsonValue(getVertx(),
                 new JsonObject());
-        // if (mongoUserDatabaseConfiguration == null) {
-        // startFuture.fail("There was no configuration to access a user database. Please provide one by setting "
-        // + Parameter.MONGO_USER_DB.key()
-        // + " to the correct value. Please refer to the README for further instructions.");
-        // } else {
-        final int port = Parameter.MANAGEMENT_HTTP_PORT.intValue(getVertx(), 13_371);
-        final String salt = Parameter.SALT.stringValue(vertx, "cyface-salt");
+        final var port = Parameter.MANAGEMENT_HTTP_PORT.intValue(getVertx(), 13_371);
+        final var salt = Parameter.SALT.stringValue(vertx, "cyface-salt");
 
-        final MongoClient client = MongoDbUtils.createSharedMongoClient(getVertx(), mongoUserDatabaseConfiguration);
-        final MongoAuth mongoAuth = MongoDbUtils.buildMongoAuthProvider(client, salt);
-        final Router router = setupRouter(mongoAuth);
+        final var client = MongoDbUtils.createSharedMongoClient(getVertx(), mongoUserDatabaseConfiguration);
+        final var hasher = new Hasher(HashingStrategy.load(), salt.getBytes(StandardCharsets.UTF_8));
+        final var router = setupRouter(client, hasher);
         startHttpServer(startFuture, router, port);
-        // }
     }
 
     /**
      * Initializes the router used to provide the routes supported by the management API.
      *
-     * @param mongoAuth Authentication provider used to check for valid user accounts used to generate new JWT token.
+     * @param mongoClient Client to a Mongo database used to check for valid user accounts used to generate new JWT
+     *            token
+     * @param hasher The hashing algorithm to obfuscate new passwords
      * @return The router initialized with the correct routes.
      */
-    private Router setupRouter(final MongoAuth mongoAuth) {
-        Validate.notNull(mongoAuth);
+    private Router setupRouter(final MongoClient mongoClient, final Hasher hasher) {
+        Validate.notNull(mongoClient);
 
-        final Router router = Router.router(getVertx());
+        final var router = Router.router(getVertx());
 
-        router.post("/user").handler(BodyHandler.create()).blockingHandler(new UserCreationHandler(mongoAuth));
+        router.post("/user").handler(BodyHandler.create())
+                .blockingHandler(new UserCreationHandler(mongoClient, "user", hasher));
         router.get("/*").handler(StaticHandler.create("webroot/management"));
 
         return router;
@@ -86,7 +86,7 @@ public final class ManagementApiVerticle extends AbstractVerticle {
      * @param router The router containing the routes (i.e. HTTP endpoints) provided by the server.
      * @param port The port the management API will be available at.
      */
-    private void startHttpServer(final Future<Void> startFuture, final Router router, final int port) {
+    private void startHttpServer(final Promise<Void> startFuture, final Router router, final int port) {
         Validate.notNull(startFuture);
         Validate.notNull(router);
         Validate.isTrue(port > 0);

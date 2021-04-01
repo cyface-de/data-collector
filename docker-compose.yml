@@ -55,7 +55,7 @@ services:
   api:
     container_name: collector_api
     build: .
-    image: cyfacede/collector:5.1.3
+    image: cyfacede/collector:5.2.0
     ports: # It is ok that this entry manipulates the host's ip-tables since this compose file should only be used in dev environments.
       - "8080:8080"
       - "13371:13371"

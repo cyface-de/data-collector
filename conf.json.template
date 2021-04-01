@@ -1,0 +1,22 @@
+{
+	"jwt.public":"src/test/resources/public.pem",
+	"jwt.private":"src/test/resources/private_key.pem",
+	"jwt.expiration":60,
+	"metrics.enabled":false,
+	"mongo.userdb":{
+	    "db_name":"cyface-user",
+	    "connection_string":"mongodb://localhost:27018",
+	    "data_source_name":"cyface-user"
+	},
+	"mongo.datadb":{
+	    "db_name":"cyface-data",
+	    "connection_string":"mongodb://localhost:27019",
+	    "data_source_name":"cyface-data"
+	},
+	"admin.user":"admin",
+	"admin.password":"secret",
+	"http.port":8080,
+	"http.host":"localhost",
+	"http.endpoint":"/api/v2",
+	"http.port.management":13371
+}

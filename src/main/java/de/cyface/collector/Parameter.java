@@ -1,5 +1,5 @@
 /*
- * Copyright 2018, 2019 Cyface GmbH
+ * Copyright 2018-2021 Cyface GmbH
  *
  * This file is part of the Cyface Data Collector.
  *
@@ -20,8 +20,8 @@ package de.cyface.collector;
 
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
-import io.vertx.core.logging.Logger;
-import io.vertx.core.logging.LoggerFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * An enumeration of parameters, that may be provided upon application startup, to configure the application.
@@ -88,7 +88,11 @@ public enum Parameter {
     /**
      * A parameter telling the system, whether it should publish metrics using Micrometer to Prometheus or not.
      */
-    METRICS_ENABLED("metrics.enabled");
+    METRICS_ENABLED("metrics.enabled"),
+    /**
+     * A parameter telling the system how long a new JWT token stays valid in seconds.
+     */
+    TOKEN_EXPIRATION_TIME("jwt.expiration");
 
     /**
      * The logger used for objects of this class. You can change its configuration by changing the values in
@@ -126,8 +130,8 @@ public enum Parameter {
      * @return Either the value of the parameter as a <code>String</code> or the <code>defaultValue</code>.
      */
     public String stringValue(final Vertx vertx, final String defaultValue) {
-        final String value = vertx.getOrCreateContext().config().getString(key);
-        final String ret = value == null ? defaultValue : value;
+        final var value = vertx.getOrCreateContext().config().getString(key);
+        final var ret = value == null ? defaultValue : value;
         LOGGER.info("Using configuration value: {} for key: {}.", ret, key);
         return ret;
     }
@@ -140,7 +144,7 @@ public enum Parameter {
      * @return Either the value of the parameter as a <code>String</code> or <code>null</code>.
      */
     public String stringValue(final Vertx vertx) {
-        final String ret = vertx.getOrCreateContext().config().getString(key);
+        final var ret = vertx.getOrCreateContext().config().getString(key);
         LOGGER.info("Using configuration value: {} for key: {}.", ret, key);
         return ret;
     }
@@ -155,8 +159,8 @@ public enum Parameter {
      * @throws ClassCastException If the value was not an integer.
      */
     public int intValue(final Vertx vertx, final int defaultValue) {
-        final Integer value = vertx.getOrCreateContext().config().getInteger(key);
-        final int ret = value == null ? defaultValue : value;
+        final var value = vertx.getOrCreateContext().config().getInteger(key);
+        final var ret = value == null ? defaultValue : value;
         LOGGER.info("Using configuration value: {} for key: {}.", ret, key);
         return ret;
     }
@@ -170,8 +174,8 @@ public enum Parameter {
      * @return Either the value of the parameter as a JSON object or the <code>defaultValue</code>.
      */
     public JsonObject jsonValue(final Vertx vertx, final JsonObject defaultValue) {
-        final JsonObject value = vertx.getOrCreateContext().config().getJsonObject(key);
-        final JsonObject ret = value == null ? defaultValue : value;
+        final var value = vertx.getOrCreateContext().config().getJsonObject(key);
+        final var ret = value == null ? defaultValue : value;
         LOGGER.info("Read json value {} for key: {}.", ret, key);
         return ret;
     }
@@ -184,7 +188,7 @@ public enum Parameter {
      * @return Either the value of the parameter as a JSON object or the <code>defaultValue</code>.
      */
     public JsonObject jsonValue(final Vertx vertx) {
-        final JsonObject value = vertx.getOrCreateContext().config().getJsonObject(key);
+        final var value = vertx.getOrCreateContext().config().getJsonObject(key);
         LOGGER.info("Read json value {} for key: {}.", value, key);
         return value;
     }

@@ -18,24 +18,25 @@
  */
 package de.cyface.collector.handler;
 
-import static de.cyface.collector.EventBusAddressUtils.NEW_MEASUREMENT;
-
 import java.io.File;
 import java.util.HashSet;
-import java.util.Set;
+import java.util.List;
+import java.util.Objects;
+import java.util.stream.Collectors;
 
 import org.apache.commons.io.FilenameUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import de.cyface.collector.EventBusAddressUtils;
 import de.cyface.collector.model.GeoLocation;
 import de.cyface.collector.model.Measurement;
+import io.vertx.core.CompositeFuture;
+import io.vertx.core.Future;
 import io.vertx.core.Handler;
-import io.vertx.core.eventbus.EventBus;
-import io.vertx.core.http.HttpServerRequest;
-import io.vertx.core.http.HttpServerResponse;
-import io.vertx.core.logging.Logger;
-import io.vertx.core.logging.LoggerFactory;
-import io.vertx.ext.auth.User;
+import io.vertx.core.file.OpenOptions;
+import io.vertx.core.json.JsonObject;
+import io.vertx.ext.mongo.GridFsUploadOptions;
+import io.vertx.ext.mongo.MongoClient;
 import io.vertx.ext.web.RoutingContext;
 
 /**
@@ -51,7 +52,6 @@ import io.vertx.ext.web.RoutingContext;
  */
 @SuppressWarnings("PMD.AvoidCatchingNPE")
 public final class MeasurementHandler implements Handler<RoutingContext> {
-
     /**
      * The logger for objects of this class. You can change its configuration by
      * adapting the values in
@@ -59,71 +59,84 @@ public final class MeasurementHandler implements Handler<RoutingContext> {
      */
     private static final Logger LOGGER = LoggerFactory.getLogger(MeasurementHandler.class);
 
+    /**
+     * Vertx <code>MongoClient</code> used to access the database to write the received data to.
+     */
+    private final MongoClient mongoClient;
+
+    /**
+     * Creates a new, completely initialized instance of this class.
+     *
+     * @param mongoClient Vertx <code>MongoClient</code> used to access the database to write the received data to
+     */
+    public MeasurementHandler(final MongoClient mongoClient) {
+        Objects.requireNonNull(mongoClient);
+
+        this.mongoClient = mongoClient;
+    }
+
     @Override
     public void handle(final RoutingContext ctx) {
         LOGGER.info("Received new measurement request.");
-        final HttpServerRequest request = ctx.request();
-        final HttpServerResponse response = ctx.response();
+        final var request = ctx.request();
         LOGGER.debug("FormAttributes: {}", request.formAttributes());
-        final User user = ctx.user();
+        final var user = ctx.user();
 
         try {
-            final String deviceId = request.getFormAttribute(FormAttributes.DEVICE_ID.getValue());
-            final String deviceType = request.getFormAttribute(FormAttributes.DEVICE_TYPE.getValue());
-            final String measurementId = request.getFormAttribute(FormAttributes.MEASUREMENT_ID.getValue());
-            final String osVersion = request.getFormAttribute(FormAttributes.OS_VERSION.getValue());
-            final String applicationVersion = request.getFormAttribute(FormAttributes.APPLICATION_VERSION.getValue());
-            final double length = Double.parseDouble(request.getFormAttribute(FormAttributes.LENGTH.getValue()));
-            final long locationCount = Long
-                    .parseLong(request.getFormAttribute(FormAttributes.LOCATION_COUNT.getValue()));
-            final String vehicleType = request.getFormAttribute(FormAttributes.VEHICLE_TYPE.getValue());
-            final String username = user.principal().getString("username");
             GeoLocation startLocation = null;
             GeoLocation endLocation = null;
+            final var locationCount = Long
+                    .parseLong(request.getFormAttribute(FormAttributes.LOCATION_COUNT.getValue()));
             if (locationCount > 0) {
-                final String startLocationLatString = request
+                final var startLocationLatString = request
                         .getFormAttribute(FormAttributes.START_LOCATION_LAT.getValue());
-                final String startLocationLonString = request
+                final var startLocationLonString = request
                         .getFormAttribute(FormAttributes.START_LOCATION_LON.getValue());
-                final String startLocationTsString = request
+                final var startLocationTsString = request
                         .getFormAttribute(FormAttributes.START_LOCATION_TS.getValue());
-                final String endLocationLatString = request
+                final var endLocationLatString = request
                         .getFormAttribute(FormAttributes.END_LOCATION_LAT.getValue());
-                final String endLocationLonString = request
+                final var endLocationLonString = request
                         .getFormAttribute(FormAttributes.END_LOCATION_LON.getValue());
-                final String endLocationTsString = request.getFormAttribute(FormAttributes.END_LOCATION_TS.getValue());
+                final var endLocationTsString = request.getFormAttribute(FormAttributes.END_LOCATION_TS.getValue());
 
                 if (startLocationLatString == null || startLocationLonString == null || startLocationTsString == null
                         || endLocationLatString == null || endLocationLonString == null
                         || endLocationTsString == null) {
                     LOGGER.error("Data incomplete!");
                     ctx.fail(422);
+                    return;
+                } else {
+
+                    final var startLocationLat = Double.parseDouble(startLocationLatString);
+                    final var startLocationLon = Double.parseDouble(startLocationLonString);
+                    final var startLocationTs = Long.parseLong(startLocationTsString);
+                    final var endLocationLat = Double.parseDouble(endLocationLatString);
+                    final var endLocationLon = Double.parseDouble(endLocationLonString);
+                    final var endLocationTs = Long.parseLong(endLocationTsString);
+
+                    startLocation = new GeoLocation(startLocationLat, startLocationLon, startLocationTs);
+                    endLocation = new GeoLocation(endLocationLat, endLocationLon, endLocationTs);
                 }
-
-                final double startLocationLat = Double.parseDouble(startLocationLatString);
-                final double startLocationLon = Double.parseDouble(startLocationLonString);
-                final long startLocationTs = Long.parseLong(startLocationTsString);
-                final double endLocationLat = Double.parseDouble(endLocationLatString);
-                final double endLocationLon = Double.parseDouble(endLocationLonString);
-                final long endLocationTs = Long.parseLong(endLocationTsString);
-
-                startLocation = new GeoLocation(startLocationLat, startLocationLon, startLocationTs);
-                endLocation = new GeoLocation(endLocationLat, endLocationLon, endLocationTs);
             }
+            final var deviceId = request.getFormAttribute(FormAttributes.DEVICE_ID.getValue());
+            final var deviceType = request.getFormAttribute(FormAttributes.DEVICE_TYPE.getValue());
+            final var measurementId = request.getFormAttribute(FormAttributes.MEASUREMENT_ID.getValue());
+            final var osVersion = request.getFormAttribute(FormAttributes.OS_VERSION.getValue());
+            final var applicationVersion = request.getFormAttribute(FormAttributes.APPLICATION_VERSION.getValue());
+            final var length = Double.parseDouble(request.getFormAttribute(FormAttributes.LENGTH.getValue()));
+            final var vehicleType = request.getFormAttribute(FormAttributes.VEHICLE_TYPE.getValue());
+            final var username = user.principal().getString("username");
 
-            final Set<Measurement.FileUpload> uploads = new HashSet<>();
+            final var uploads = new HashSet<Measurement.FileUpload>();
             ctx.fileUploads()
                     .forEach(upload -> uploads.add(new Measurement.FileUpload(new File(upload.uploadedFileName()),
                             FilenameUtils.getExtension(upload.fileName()))));
 
-            informAboutNew(new Measurement(deviceId, measurementId, osVersion, deviceType, applicationVersion,
+            storeToMongoDB(new Measurement(deviceId, measurementId, osVersion, deviceType, applicationVersion,
                     length, locationCount, startLocation, endLocation, vehicleType, username, uploads), ctx);
 
-            response.setStatusCode(201);
-            LOGGER.debug("Request was successful!");
-            response.end();
-
-        } catch (final  IllegalArgumentException | NullPointerException e) {
+        } catch (final IllegalArgumentException | NullPointerException e) {
             LOGGER.error("Data was not parsable!", e);
             ctx.fail(422);
         }
@@ -131,15 +144,44 @@ public final class MeasurementHandler implements Handler<RoutingContext> {
     }
 
     /**
-     * Informs the system about a new measurement that has arrived.
+     * Stores a {@link Measurement} to a Mongo database. This method never fails. If a failure occurs it is logged and
+     * status code 422 is used for the response.
      *
-     * @param measurement The newly arrived measurement.
-     * @param context The routing context necessary to get access to the Vert.x
-     *            event bus.
-     * @see EventBusAddressUtils#NEW_MEASUREMENT
+     * @param measurement The measured data to write to the Mongo database
+     * @param ctx The Vertx <code>RoutingContext</code> used to write the response
      */
-    private void informAboutNew(final Measurement measurement, final RoutingContext context) {
-        final EventBus eventBus = context.vertx().eventBus();
-        eventBus.publish(NEW_MEASUREMENT, measurement);
+    public void storeToMongoDB(final Measurement measurement, final RoutingContext ctx) {
+        LOGGER.debug("Inserted measurement with id {}:{}!", measurement.getDeviceIdentifier(),
+                measurement.getMeasurementIdentifier());
+
+        final var gridFsBucketCreationFuture = mongoClient.createDefaultGridFsBucketService();
+
+        gridFsBucketCreationFuture.onSuccess(gridFsClient -> {
+            final var fileSystem = ctx.vertx().fileSystem();
+            final List<Future> fileUploadFutures = measurement.getFileUploads().stream().map(fileUpload -> {
+                final var fileOpenFuture = fileSystem.open(fileUpload.getFile().getAbsolutePath(),
+                        new OpenOptions());
+                final var uploadFuture = fileOpenFuture.compose(asyncFile -> {
+                    final var measurementJson = measurement.toJson();
+                    measurementJson.put("fileType", fileUpload.getFileType());
+
+                    final var gridFsOptions = new GridFsUploadOptions();
+                    gridFsOptions.setMetadata(new JsonObject(measurementJson.toString()));
+
+                    return gridFsClient.uploadByFileNameWithOptions(asyncFile,
+                            fileUpload.getFile().getName(), gridFsOptions);
+                });
+                return (Future)uploadFuture;
+            }).collect(Collectors.toList());
+
+            CompositeFuture.all(fileUploadFutures).onSuccess(result -> ctx.response().setStatusCode(201).end())
+                    .onFailure(cause -> {
+                        LOGGER.error("Unable to store file to MongoDatabase!", cause);
+                        ctx.fail(422);
+                    });
+        }).onFailure(cause -> {
+            LOGGER.error("Unable to open connection to Mongo Database!", cause);
+            ctx.fail(422);
+        });
     }
 }

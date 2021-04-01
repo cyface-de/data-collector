@@ -20,14 +20,14 @@ package de.cyface.collector.verticle;
 
 import java.nio.charset.Charset;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import de.cyface.collector.Parameter;
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.DeploymentOptions;
-import io.vertx.core.Future;
-import io.vertx.core.json.JsonObject;
-import io.vertx.core.logging.Logger;
-import io.vertx.core.logging.LoggerFactory;
+import io.vertx.core.Promise;
 
 /**
  * This Verticle starts the whole application, by deploying all required child Verticles.
@@ -44,19 +44,19 @@ public final class MainVerticle extends AbstractVerticle {
     private static final Logger LOGGER = LoggerFactory.getLogger(MainVerticle.class);
 
     @Override
-    public void start(final Future<Void> startFuture) throws Exception {
+    public void start(final Promise<Void> startFuture) throws Exception {
 
         final String saltPath = Parameter.SALT_PATH.stringValue(vertx, "secrets/salt");
         vertx.fileSystem().exists(saltPath, result -> {
             if (result.failed()) {
-                LOGGER.error(result.cause());
+                LOGGER.error("Unable to start application!", result.cause());
                 startFuture.fail(result.cause());
             }
 
             if (result.result()) {
                 vertx.fileSystem().readFile(saltPath, readSaltResult -> {
                     if (readSaltResult.failed()) {
-                        LOGGER.error(result.cause());
+                        LOGGER.error("Unable to start application!", result.cause());
                         startFuture.fail(result.cause());
                     }
 
@@ -78,14 +78,14 @@ public final class MainVerticle extends AbstractVerticle {
      * @param startFuture The future to complete or fail, depending on the success or failure of Verticle deployment.
      * @param salt Salt to use by all Verticles to encrypt and decrypt user passwords.
      */
-    private void deploy(final Future<Void> startFuture, final String salt) {
+    private void deploy(final Promise<Void> startFuture, final String salt) {
         // Create a few futures to synchronize the start up process
-        final Future<Void> collectorApiFuture = Future.future();
-        final Future<Void> managementApiFuture = Future.future();
-        final CompositeFuture startUpProcessFuture = CompositeFuture.all(collectorApiFuture, managementApiFuture);
-        final JsonObject config = config();
+        final Promise<Void> collectorApiFuture = Promise.promise();
+        final Promise<Void> managementApiFuture = Promise.promise();
+        final var startUpProcessFuture = CompositeFuture.all(collectorApiFuture.future(), managementApiFuture.future());
+        final var config = config();
         config.put(Parameter.SALT.key(), salt);
-        final DeploymentOptions verticleConfig = new DeploymentOptions().setConfig(config);
+        final var verticleConfig = new DeploymentOptions().setConfig(config);
 
         // Start the collector API as first verticle.
         vertx.deployVerticle(CollectorApiVerticle.class, verticleConfig, result -> {
@@ -106,7 +106,7 @@ public final class MainVerticle extends AbstractVerticle {
         });
 
         // As soon as both futures have a succeeded or one failed, finish the start up process.
-        startUpProcessFuture.setHandler(result -> {
+        startUpProcessFuture.onComplete(result -> {
             if (result.succeeded()) {
                 startFuture.complete();
             } else {

@@ -1,5 +1,5 @@
 /*
- * Copyright 2018 Cyface GmbH
+ * Copyright 2018-2021 Cyface GmbH
  *
  * This file is part of the Cyface Data Collector.
  *
@@ -19,9 +19,9 @@
 package de.cyface.collector.handler;
 
 import io.vertx.core.Handler;
-import io.vertx.core.logging.Logger;
-import io.vertx.core.logging.LoggerFactory;
 import io.vertx.ext.web.RoutingContext;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Handlers failures occuring during authentication and makes sure 401 is returned as HTTP status code on failed
@@ -41,10 +41,10 @@ public final class AuthenticationFailureHandler implements Handler<RoutingContex
     @Override
     public void handle(final RoutingContext context) {
         LOGGER.error("Received failure {}", context.failed());
-        LOGGER.error(context.failure());
+        LOGGER.error("Reason", context.failure());
 
-        final boolean closed = context.response().closed();
-        final boolean ended = context.response().ended();
+        final var closed = context.response().closed();
+        final var ended = context.response().ended();
         if (!closed && !ended) {
             LOGGER.error("Failing authentication request with 401 since response was closed: {}, ended: {}", closed,
                     ended);

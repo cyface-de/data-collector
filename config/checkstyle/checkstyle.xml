@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
- Copyright 2018 Cyface GmbH
+ Copyright 2018-2021 Cyface GmbH
  
  This file is part of the Cyface Data Collector.
 
@@ -55,7 +55,9 @@
         </module>
         <module name="MethodLength"/>
         <module name="ParameterNumber">
-            <property name="max" value="10"/>
+            <!-- The Measurement class requires such a high number. -->
+            <!-- We should probably introduce a parameter object to mitigate this! -->
+            <property name="max" value="12"/>
         </module>
         <module name="EmptyForIteratorPad"/>
         <module name="MethodParamPad"/>
