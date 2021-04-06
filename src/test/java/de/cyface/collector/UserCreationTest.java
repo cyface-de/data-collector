@@ -46,7 +46,7 @@ import io.vertx.junit5.VertxTestContext;
  *
  * @author Klemens Muthmann
  * @author Armin Schnabel
- * @version 1.0.4
+ * @version 1.0.5
  * @since 2.0.0
  */
 @ExtendWith(VertxExtension.class)
@@ -104,18 +104,19 @@ public final class UserCreationTest {
     @BeforeEach
     public void setUp(final Vertx vertx, final VertxTestContext context) throws IOException {
 
-        try (ServerSocket socket = new ServerSocket(0)) {
+        try (var socket = new ServerSocket(0)) {
             port = socket.getLocalPort();
 
             mongoDbConfiguration = new JsonObject()
                     .put("connection_string", "mongodb://localhost:" + mongoTest.getMongoPort())
                     .put("db_name", "cyface");
 
-            final JsonObject config = new JsonObject().put(Parameter.MANAGEMENT_HTTP_PORT.key(), port)
+            final var config = new JsonObject().put(Parameter.MANAGEMENT_HTTP_PORT.key(), port)
                     .put(Parameter.MONGO_USER_DB.key(), mongoDbConfiguration);
-            final DeploymentOptions options = new DeploymentOptions().setConfig(config);
+            final var options = new DeploymentOptions().setConfig(config);
 
-            vertx.deployVerticle(ManagementApiVerticle.class.getName(), options, context.succeedingThenComplete());
+            final var managamenetApiVerticle = new ManagementApiVerticle("test-salt");
+            vertx.deployVerticle(managamenetApiVerticle, options, context.succeedingThenComplete());
 
             client = WebClient.create(vertx);
         }
