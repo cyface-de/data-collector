@@ -47,8 +47,7 @@ ext {
 
 repositories {
     mavenLocal()
-    jcenter()
-
+    mavenCentral()
 }
 
 group = 'de.cyface'
