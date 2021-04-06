@@ -62,7 +62,7 @@ import io.vertx.ext.web.handler.StaticHandler;
  *
  * @author Klemens Muthmann
  * @author Armin Schnabel
- * @version 1.2.7
+ * @version 2.0.0
  * @since 2.0.0
  */
 public final class CollectorApiVerticle extends AbstractVerticle {

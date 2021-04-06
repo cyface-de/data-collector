@@ -37,6 +37,8 @@ import java.io.IOException;
  * Tests if running the {@link CollectorApiVerticle} works as expected.
  *
  * @author Klemens Muthmann
+ * @version 1.0.1
+ * @since 5.2.0
  */
 @ExtendWith(VertxExtension.class)
 public class CollectorApiVerticleTest {

@@ -31,7 +31,7 @@ import io.vertx.core.Vertx;
  * This Verticle starts the whole application, by deploying all required child Verticles.
  * 
  * @author Klemens Muthmann
- * @version 2.0.1
+ * @version 2.0.2
  * @since 2.0.0
  */
 public final class MainVerticle extends AbstractVerticle {
