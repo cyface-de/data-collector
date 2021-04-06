@@ -56,6 +56,7 @@ public final class ManagementApiVerticle extends AbstractVerticle {
      * @param salt The salt used to encrypt user passwords on this server
      */
     public ManagementApiVerticle(final String salt) {
+        super();
         Validate.notEmpty(salt);
 
         this.salt = salt;

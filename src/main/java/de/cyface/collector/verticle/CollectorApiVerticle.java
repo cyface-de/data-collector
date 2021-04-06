@@ -101,6 +101,7 @@ public final class CollectorApiVerticle extends AbstractVerticle {
      * @param salt The salt used to encrypt user passwords on this server
      */
     public CollectorApiVerticle(final String salt) {
+        super();
         Validate.notEmpty(salt);
 
         this.salt = salt;
