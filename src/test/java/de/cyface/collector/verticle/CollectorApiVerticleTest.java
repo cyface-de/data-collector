@@ -65,7 +65,7 @@ public class CollectorApiVerticleTest {
     }
 
     /**
-     * Runs a happy path test for starting the CollectorApiVerticle.
+     * Runs a happy path test for starting the CollectorApiVerticle
      *
      * @param vertx The test Vertx instance to use
      * @param testContext A test context to handle Vertx asynchronity
@@ -91,6 +91,6 @@ public class CollectorApiVerticleTest {
         deploymentOptions.setConfig(configuration);
 
         // Act, Assert
-        vertx.deployVerticle(new CollectorApiVerticle(), deploymentOptions, testContext.succeedingThenComplete());
+        vertx.deployVerticle(new CollectorApiVerticle("cyface-salt"), deploymentOptions, testContext.succeedingThenComplete());
     }
 }

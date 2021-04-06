@@ -44,6 +44,23 @@ import io.vertx.ext.web.handler.StaticHandler;
  * @since 2.0.0
  */
 public final class ManagementApiVerticle extends AbstractVerticle {
+
+    /**
+     * The salt used to encrypt user passwords on this server.
+     */
+    private final String salt;
+
+    /**
+     * Creates a new completely initialized object of this class.
+     *
+     * @param salt The salt used to encrypt user passwords on this server
+     */
+    public ManagementApiVerticle(final String salt) {
+        Validate.notEmpty(salt);
+
+        this.salt = salt;
+    }
+
     @Override
     public void start(final Promise<Void> startFuture) throws Exception {
         Validate.notNull(startFuture);
@@ -51,7 +68,6 @@ public final class ManagementApiVerticle extends AbstractVerticle {
         final var mongoUserDatabaseConfiguration = Parameter.MONGO_USER_DB.jsonValue(getVertx(),
                 new JsonObject());
         final var port = Parameter.MANAGEMENT_HTTP_PORT.intValue(getVertx(), 13_371);
-        final var salt = Parameter.SALT.stringValue(vertx, "cyface-salt");
 
         final var client = MongoDbUtils.createSharedMongoClient(getVertx(), mongoUserDatabaseConfiguration);
         final var hasher = new Hasher(HashingStrategy.load(), salt.getBytes(StandardCharsets.UTF_8));
