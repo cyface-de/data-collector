@@ -119,7 +119,8 @@ public final class CollectorApiVerticle extends AbstractVerticle {
         Objects.requireNonNull(mongoUserDatabaseConfiguration, String.format(
                 "Unable to load Mongo user database configuration. "
                         + "Please provide a valid configuration using the %s parameter and at least as \"db_name\", "
-                        + "a \"connection_string\" and a \"data_source_name\"! Also check if your database is running and accessible!",
+                        + "a \"connection_string\" and a \"data_source_name\"! Also check if your database is running "
+                        + "and accessible!",
                 Parameter.MONGO_USER_DB.key()));
         final var client = MongoDbUtils.createSharedMongoClient(vertx, mongoUserDatabaseConfiguration);
         final var authProvider = MongoDbUtils.buildMongoAuthProvider(client);

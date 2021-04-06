@@ -91,6 +91,7 @@ public class CollectorApiVerticleTest {
         deploymentOptions.setConfig(configuration);
 
         // Act, Assert
-        vertx.deployVerticle(new CollectorApiVerticle("cyface-salt"), deploymentOptions, testContext.succeedingThenComplete());
+        vertx.deployVerticle(new CollectorApiVerticle("cyface-salt"), deploymentOptions,
+                testContext.succeedingThenComplete());
     }
 }
