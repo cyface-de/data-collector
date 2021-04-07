@@ -173,7 +173,7 @@ To load files from the Mongo GridFS file storage use the https://docs.mongodb.co
 	* MongoDb
 
 == Licensing
-Copyright 2018,2019,2020 Cyface GmbH
+Copyright 2018-2021 Cyface GmbH
 
 This file is part of the Cyface Data Collector.
 
@@ -182,7 +182,7 @@ it under the terms of the GNU General Public License as published by
 the Free Software Foundation, either version 3 of the License, or
 (at your option) any later version.
 
-The Cyface Data Collector isds distributed in the hope that it will be useful,
+The Cyface Data Collector is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
