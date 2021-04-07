@@ -1,6 +1,6 @@
 = Collector
 
-image:https://img.shields.io/badge/vert.x-4.0.0-purple.svg[link="https://vertx.io"]
+image:https://img.shields.io/badge/vert.x-4.0.3-purple.svg[link="https://vertx.io"]
 image:https://img.shields.io/badge/mongo-4.0.11-purple.svg[link="https://mongodb.com/"]
 image:https://github.com/cyface-de/data-collector/workflows/Cyface%20Data%20Collector/badge.svg[link="https://github.com/cyface-de/data-collector/actions"]
 
@@ -173,7 +173,7 @@ To load files from the Mongo GridFS file storage use the https://docs.mongodb.co
 	* MongoDb
 
 == Licensing
-Copyright 2018,2019,2020 Cyface GmbH
+Copyright 2018-2021 Cyface GmbH
 
 This file is part of the Cyface Data Collector.
 

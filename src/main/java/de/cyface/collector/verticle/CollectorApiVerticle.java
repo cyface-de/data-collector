@@ -18,7 +18,6 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.Collections;
 import java.util.Objects;
 
@@ -35,14 +34,12 @@ import de.cyface.collector.handler.FailureHandler;
 import de.cyface.collector.handler.MeasurementHandler;
 import de.cyface.collector.handler.UserCreationHandler;
 import de.cyface.collector.model.Measurement;
-import io.micrometer.core.instrument.config.InvalidConfigurationException;
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Promise;
-import io.vertx.core.Vertx;
 import io.vertx.core.http.HttpServer;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.auth.HashingStrategy;
@@ -65,7 +62,7 @@ import io.vertx.ext.web.handler.StaticHandler;
  *
  * @author Klemens Muthmann
  * @author Armin Schnabel
- * @version 1.2.7
+ * @version 2.0.0
  * @since 2.0.0
  */
 public final class CollectorApiVerticle extends AbstractVerticle {
@@ -93,6 +90,23 @@ public final class CollectorApiVerticle extends AbstractVerticle {
      */
     private static final String ADMIN_ROLE = "admin";
 
+    /**
+     * The salt used to encrypt user passwords on this server
+     */
+    private final String salt;
+
+    /**
+     * Creates a new completely initialized object of this class.
+     *
+     * @param salt The salt used to encrypt user passwords on this server
+     */
+    public CollectorApiVerticle(final String salt) {
+        super();
+        Validate.notEmpty(salt);
+
+        this.salt = salt;
+    }
+
     @Override
     public void start(final Promise<Void> startFuture) throws Exception {
         Validate.notNull(startFuture);
@@ -104,10 +118,11 @@ public final class CollectorApiVerticle extends AbstractVerticle {
         final var mongoUserDatabaseConfiguration = Parameter.MONGO_USER_DB.jsonValue(vertx);
         Objects.requireNonNull(mongoUserDatabaseConfiguration, String.format(
                 "Unable to load Mongo user database configuration. "
-                       + "Please provide a valid configuration using the %s parameter!",
+                        + "Please provide a valid configuration using the %s parameter and at least as \"db_name\", "
+                        + "a \"connection_string\" and a \"data_source_name\"! Also check if your database is running "
+                        + "and accessible!",
                 Parameter.MONGO_USER_DB.key()));
         final var client = MongoDbUtils.createSharedMongoClient(vertx, mongoUserDatabaseConfiguration);
-        final var salt = loadSalt(vertx);
         final var authProvider = MongoDbUtils.buildMongoAuthProvider(client);
 
         // Start http server with auth config
@@ -115,7 +130,7 @@ public final class CollectorApiVerticle extends AbstractVerticle {
         final var publicKey = extractKey(Parameter.JWT_PUBLIC_KEY_FILE_PATH);
         Validate.notNull(publicKey,
                 "Unable to load public key for JWT authentication. "
-                       + "Did you provide a valid PEM file using the parameter "
+                        + "Did you provide a valid PEM file using the parameter "
                         + Parameter.JWT_PUBLIC_KEY_FILE_PATH.key() + ".");
         final var privateKey = extractKey(Parameter.JWT_PRIVATE_KEY_FILE_PATH);
         Validate.notNull(privateKey,
@@ -166,30 +181,6 @@ public final class CollectorApiVerticle extends AbstractVerticle {
             }
         });
 
-    }
-
-    /**
-     * Loads the external encryption salt from the Vertx configuration. If no value was provided the default value
-     * "cyface-salt" is used.
-     *
-     * @param vertx The current <code>Vertx</code> instance
-     * @return A value to be used as encryption salt
-     * @throws IOException If the salt is provided in a file and that file is not accessible
-     */
-    private String loadSalt(final Vertx vertx) throws IOException {
-        final var salt = Parameter.SALT.stringValue(vertx);
-        final var saltPath = Parameter.SALT_PATH.stringValue(vertx);
-        if (salt == null && saltPath == null) {
-            return "cyface-salt";
-        } else if (salt != null && saltPath != null) {
-            throw new InvalidConfigurationException(
-                    "Please provide either a salt value or a path to a salt file. "
-                            + "Encountered both and can not decide which to use. Aborting!");
-        } else if (salt != null) {
-            return salt;
-        } else {
-            return Files.readAllLines(Paths.get(saltPath)).get(0);
-        }
     }
 
     /**

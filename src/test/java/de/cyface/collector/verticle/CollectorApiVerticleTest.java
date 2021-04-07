@@ -37,6 +37,8 @@ import java.io.IOException;
  * Tests if running the {@link CollectorApiVerticle} works as expected.
  *
  * @author Klemens Muthmann
+ * @version 1.0.2
+ * @since 5.2.0
  */
 @ExtendWith(VertxExtension.class)
 public class CollectorApiVerticleTest {
@@ -65,14 +67,14 @@ public class CollectorApiVerticleTest {
     }
 
     /**
-     * Runs a happy path test for starting the CollectorApiVerticle.
+     * Runs a happy path test for starting the CollectorApiVerticle
      *
      * @param vertx The test Vertx instance to use
      * @param testContext A test context to handle Vertx asynchronity
      */
     @Test
     @DisplayName("Happy Path test for starting the collector API.")
-    void test(final Vertx vertx, final VertxTestContext testContext) {
+    void test(final Vertx vertx, final VertxTestContext testContext) throws IOException {
         // Arrange
 
         final var configuration = new JsonObject()
@@ -80,6 +82,7 @@ public class CollectorApiVerticleTest {
                 .put("jwt.public", this.getClass().getResource("/public.pem").getFile())
                 .put("http.host", "localhost")
                 .put("http.endpoint", "/api/v2")
+                .put("http.port", Network.getFreeServerPort())
                 .put("mongo.datadb", new JsonObject()
                         .put("db_name", "cyface-data")
                         .put("connection_string", "mongodb://localhost:27019")
@@ -91,6 +94,7 @@ public class CollectorApiVerticleTest {
         deploymentOptions.setConfig(configuration);
 
         // Act, Assert
-        vertx.deployVerticle(new CollectorApiVerticle(), deploymentOptions, testContext.succeedingThenComplete());
+        vertx.deployVerticle(new CollectorApiVerticle("cyface-salt"), deploymentOptions,
+                testContext.succeedingThenComplete());
     }
 }

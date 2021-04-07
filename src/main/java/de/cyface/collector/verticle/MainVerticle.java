@@ -18,57 +18,35 @@
  */
 package de.cyface.collector.verticle;
 
-import java.nio.charset.Charset;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import java.nio.charset.StandardCharsets;
 
 import de.cyface.collector.Parameter;
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.DeploymentOptions;
 import io.vertx.core.Promise;
+import io.vertx.core.Vertx;
 
 /**
  * This Verticle starts the whole application, by deploying all required child Verticles.
  * 
  * @author Klemens Muthmann
- * @version 2.0.1
+ * @version 2.0.2
  * @since 2.0.0
  */
 public final class MainVerticle extends AbstractVerticle {
 
-    /**
-     * Logger used for objects of this class. Configure it using <code>/src/main/resource/logback.xml</code>.
-     */
-    private static final Logger LOGGER = LoggerFactory.getLogger(MainVerticle.class);
-
     @Override
     public void start(final Promise<Void> startFuture) throws Exception {
 
-        final String saltPath = Parameter.SALT_PATH.stringValue(vertx, "secrets/salt");
-        vertx.fileSystem().exists(saltPath, result -> {
+        loadSalt(vertx).future().onComplete(result -> {
             if (result.failed()) {
-                LOGGER.error("Unable to start application!", result.cause());
                 startFuture.fail(result.cause());
-            }
-
-            if (result.result()) {
-                vertx.fileSystem().readFile(saltPath, readSaltResult -> {
-                    if (readSaltResult.failed()) {
-                        LOGGER.error("Unable to start application!", result.cause());
-                        startFuture.fail(result.cause());
-                    }
-
-                    final String salt = readSaltResult.result().toString(Charset.defaultCharset());
-                    deploy(startFuture, salt);
-                });
             } else {
-                // Deploy with default salt.
-                deploy(startFuture, "cyface-salt");
+                deploy(startFuture, result.result());
             }
-        });
 
+        });
     }
 
     /**
@@ -79,33 +57,19 @@ public final class MainVerticle extends AbstractVerticle {
      * @param salt Salt to use by all Verticles to encrypt and decrypt user passwords.
      */
     private void deploy(final Promise<Void> startFuture, final String salt) {
-        // Create a few futures to synchronize the start up process
-        final Promise<Void> collectorApiFuture = Promise.promise();
-        final Promise<Void> managementApiFuture = Promise.promise();
-        final var startUpProcessFuture = CompositeFuture.all(collectorApiFuture.future(), managementApiFuture.future());
         final var config = config();
-        config.put(Parameter.SALT.key(), salt);
         final var verticleConfig = new DeploymentOptions().setConfig(config);
+        final var collectorApiVerticle = new CollectorApiVerticle(salt);
+        final var managementApiVerticle = new ManagementApiVerticle(salt);
 
         // Start the collector API as first verticle.
-        vertx.deployVerticle(CollectorApiVerticle.class, verticleConfig, result -> {
-            if (result.succeeded()) {
-                collectorApiFuture.complete();
-            } else {
-                collectorApiFuture.fail(result.cause());
-            }
-        });
+        final var collectorApiFuture = vertx.deployVerticle(collectorApiVerticle, verticleConfig);
 
         // Start the management API as second verticle.
-        vertx.deployVerticle(ManagementApiVerticle.class, verticleConfig, result -> {
-            if (result.succeeded()) {
-                managementApiFuture.complete();
-            } else {
-                managementApiFuture.fail(result.cause());
-            }
-        });
+        final var managementApiFuture = vertx.deployVerticle(managementApiVerticle, verticleConfig);
 
         // As soon as both futures have a succeeded or one failed, finish the start up process.
+        final var startUpProcessFuture = CompositeFuture.all(collectorApiFuture, managementApiFuture);
         startUpProcessFuture.onComplete(result -> {
             if (result.succeeded()) {
                 startFuture.complete();
@@ -113,6 +77,39 @@ public final class MainVerticle extends AbstractVerticle {
                 startFuture.fail(result.cause());
             }
         });
+    }
+
+    /**
+     * Loads the external encryption salt from the Vertx configuration. If no value was provided the default value
+     * "cyface-salt" is used.
+     *
+     * @param vertx The current <code>Vertx</code> instance
+     * @return The <code>Promise</code> about a value to be used as encryption salt
+     */
+    private Promise<String> loadSalt(final Vertx vertx) {
+        final Promise<String> result = Promise.promise();
+        final var salt = Parameter.SALT.stringValue(vertx);
+        final var saltPath = Parameter.SALT_PATH.stringValue(vertx);
+        if (salt == null && saltPath == null) {
+            result.complete("cyface-salt");
+        } else if (salt != null && saltPath != null) {
+            result.fail("Please provide either a salt value or a path to a salt file. "
+                    + "Encountered both and can not decide which to use. Aborting!");
+        } else if (salt != null) {
+            result.complete(salt);
+        } else {
+            final var fileSystem = vertx.fileSystem();
+            fileSystem.readFile(saltPath, readFileResult -> {
+                if (readFileResult.failed()) {
+                    result.fail(readFileResult.cause());
+                } else {
+
+                    final var loadedSalt = readFileResult.result().toString(StandardCharsets.UTF_8);
+                    result.complete(loadedSalt);
+                }
+            });
+        }
+        return result;
     }
 
 }
