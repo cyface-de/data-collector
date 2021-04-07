@@ -33,7 +33,7 @@ import io.vertx.junit5.VertxTestContext;
  * A client providing capabilities for tests to communicate with a Cyface Data Collector server.
  *
  * @author Klemens Muthmann
- * @version 1.1.3
+ * @version 1.1.4
  * @since 2.0.0
  */
 public final class DataCollectorClient {
@@ -77,7 +77,8 @@ public final class DataCollectorClient {
                     .put(Parameter.COLLECTOR_ENDPOINT.key(), "/api/v2/");
             final DeploymentOptions options = new DeploymentOptions().setConfig(config);
 
-            vertx.deployVerticle(CollectorApiVerticle.class.getName(), options, ctx.succeedingThenComplete());
+            final var collectorVerticle = new CollectorApiVerticle("test-salt");
+            vertx.deployVerticle(collectorVerticle, options, ctx.succeedingThenComplete());
 
             return WebClient.create(vertx);
         }
