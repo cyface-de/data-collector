@@ -18,14 +18,15 @@
  */
 package de.cyface.collector;
 
-import io.vertx.ext.auth.HashingStrategy;
-import org.junit.jupiter.api.Test;
-
-import java.nio.charset.StandardCharsets;
-
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
+
+import java.nio.charset.StandardCharsets;
+
+import org.junit.jupiter.api.Test;
+
+import io.vertx.ext.auth.HashingStrategy;
 
 /**
  * @author Armin Schnabel
@@ -48,7 +49,7 @@ public class HasherTest {
         final var result = oocut.hash(password);
 
         // Assert
-        final var expected = "$pbkdf2$U1VHQVI=$ZK4ZDOf9i3AibLO23RwmTmwfSe4qCQl0Mxl1zSPPW1+tF593v3Ip5RjiWU8j6M251AYjic8V/lhLsxukCpi/Ig";
-        assertThat(result, is(equalTo(expected)));
+        assertThat("Compare generated hashcode", result, is(equalTo(
+                "$pbkdf2$U1VHQVI=$ZK4ZDOf9i3AibLO23RwmTmwfSe4qCQl0Mxl1zSPPW1+tF593v3Ip5RjiWU8j6M251AYjic8V/lhLsxukCpi/Ig")));
     }
 }
