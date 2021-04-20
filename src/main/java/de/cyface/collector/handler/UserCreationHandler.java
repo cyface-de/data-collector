@@ -99,7 +99,7 @@ public final class UserCreationHandler implements Handler<RoutingContext> {
      * @param username The name of the new user to add
      * @param password The clear text password of the new user
      * @param role The initial role of the new user
-     * @param onSuccess Some code carried out on a successful insert opertion
+     * @param onSuccess Some code carried out on a successful insert operation
      * @param onFailure Some code carried out on a failed insert operation
      */
     public void createUser(final String username, final String password, final String role,

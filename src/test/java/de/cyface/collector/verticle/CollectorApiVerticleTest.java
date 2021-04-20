@@ -18,6 +18,14 @@
  */
 package de.cyface.collector.verticle;
 
+import java.io.IOException;
+
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+
 import de.cyface.collector.commons.MongoTest;
 import de.flapdoodle.embed.process.runtime.Network;
 import io.vertx.core.DeploymentOptions;
@@ -25,13 +33,6 @@ import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-
-import java.io.IOException;
 
 /**
  * Tests if running the {@link CollectorApiVerticle} works as expected.
@@ -70,13 +71,15 @@ public class CollectorApiVerticleTest {
      * Runs a happy path test for starting the CollectorApiVerticle
      *
      * @param vertx The test Vertx instance to use
-     * @param testContext A test context to handle Vertx asynchronity
+     * @param testContext A test context to handle Vertx asynchronicity
+     * @throws IOException if no free port could be retrieved
      */
     @Test
     @DisplayName("Happy Path test for starting the collector API.")
     void test(final Vertx vertx, final VertxTestContext testContext) throws IOException {
         // Arrange
 
+        // noinspection SpellCheckingInspection
         final var configuration = new JsonObject()
                 .put("jwt.private", this.getClass().getResource("/private_key.pem").getFile())
                 .put("jwt.public", this.getClass().getResource("/public.pem").getFile())

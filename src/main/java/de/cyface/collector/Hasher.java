@@ -19,7 +19,7 @@ public class Hasher {
      */
     private final HashingStrategy hashingStrategy;
     /**
-     * A salt used to obfuscate the hased password, making it harder to decrypt passwords if the database is
+     * A salt used to obfuscate the hashed password, making it harder to decrypt passwords if the database is
      * compromised.
      */
     private final byte[] salt;
@@ -28,7 +28,7 @@ public class Hasher {
      * Creates a new completely initialized object of this class.
      *
      * @param hashingStrategy The Vertx <code>HashingStrategy</code> used for hashing
-     * @param salt A salt used to obfuscate the hased password, making it harder to decrypt passwords if the database is
+     * @param salt A salt used to obfuscate the hashed password, making it harder to decrypt passwords if the database is
      *            compromised
      */
     public Hasher(final HashingStrategy hashingStrategy, final byte[] salt) {
