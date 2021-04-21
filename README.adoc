@@ -18,7 +18,7 @@ When you updated the Swagger UI make sure to clear your browser cache or else it
 
 === Release a new Version
 
-Versions of this project inside the master branch are always `0.0.0`. To release a new version:
+Versions of this project inside the `main` branch are always `0.0.0`. To release a new version:
 
 **ATTENTION**: *Hotfixes should be applied on top of the already existing release-branch*. See below for further instructions.
 
