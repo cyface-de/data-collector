@@ -2,9 +2,6 @@ name: Cyface Data Collector
 
 on: 
   push:
-    branches: 
-      - dev
-      - master
     tags:
       - '*'
 
