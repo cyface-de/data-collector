@@ -22,7 +22,8 @@ MAINTAINER Cyface GmbH <mail@cyface.de>
 # Set the working directory to /app
 WORKDIR /app
 
-COPY build/libs/collector-fat.jar /app
+# Dev environment: version is always `0.0.0` (see root/README.adoc section `Build and release workflows`)
+COPY build/libs/collector-0.0.0-all.jar /app
 COPY entrypoint.sh /app
 COPY logback.xml /app
 RUN chmod +x /app/entrypoint.sh
