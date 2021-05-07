@@ -40,10 +40,6 @@ import io.vertx.ext.auth.JWTOptions;
 import io.vertx.ext.auth.PubSecKeyOptions;
 import io.vertx.ext.auth.jwt.JWTAuth;
 import io.vertx.ext.auth.jwt.JWTAuthOptions;
-import io.vertx.ext.auth.mongo.HashAlgorithm;
-import io.vertx.ext.auth.mongo.HashSaltStyle;
-import io.vertx.ext.auth.mongo.HashStrategy;
-import io.vertx.ext.auth.mongo.MongoAuth;
 import io.vertx.ext.mongo.MongoClient;
 
 /**
@@ -174,7 +170,7 @@ public class ServerConfig {
 
     public void lateInit(final String salt) {
         this.salt = salt;
-        this.authProvider = buildMongoAuthProvider(userDatabase, salt);
+        this.authProvider = buildMongoAuthProvider(userDatabase);
     }
 
     /**
@@ -307,11 +303,10 @@ public class ServerConfig {
 
     /**
      * @param client A Mongo client to access the user Mongo database.
-     * @param salt The salt used to make hacking passwords more complex.
      * @return The <code>Promise</code> about an Authentication provider used to check for valid user accounts used to
      *         generate new JWT token.
      */
-    public static MongoAuthentication buildMongoAuthProvider(final MongoClient client, final String salt) {
+    public static MongoAuthentication buildMongoAuthProvider(final MongoClient client) {
         // Old Backend libs api code
         // final JsonObject authProperties = new JsonObject();
         // final MongoAuth authProvider = MongoAuth.create(client, authProperties);
@@ -403,7 +398,7 @@ public class ServerConfig {
         return userDatabase;
     }
 
-    public MongoAuth getAuthProvider() {
+    public MongoAuthentication getAuthProvider() {
         return authProvider;
     }
 

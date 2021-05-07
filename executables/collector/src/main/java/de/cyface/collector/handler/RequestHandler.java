@@ -23,7 +23,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import io.vertx.core.Handler;
-import io.vertx.ext.auth.mongo.MongoAuth;
+import io.vertx.ext.auth.mongo.MongoAuthentication;
 import io.vertx.ext.web.RoutingContext;
 
 /**
@@ -36,7 +36,7 @@ import io.vertx.ext.web.RoutingContext;
  */
 abstract class RequestHandler implements Handler<RoutingContext> {
 
-    private final MongoAuth authProvider;
+    private final MongoAuthentication authProvider;
     private static final Logger LOGGER = LoggerFactory.getLogger(RequestHandler.class);
 
     /**
@@ -45,7 +45,7 @@ abstract class RequestHandler implements Handler<RoutingContext> {
      *
      * @param authProvider An auth provider used by this server to authenticate against the Mongo user database
      */
-    public RequestHandler(final MongoAuth authProvider) {
+    public RequestHandler(final MongoAuthentication authProvider) {
         Validate.notNull(authProvider);
         this.authProvider = authProvider;
     }
@@ -59,16 +59,16 @@ abstract class RequestHandler implements Handler<RoutingContext> {
         try {
             // Check authorization before requesting data to reduce DDoS risk
             final var user = ctx.user();
+            final var username = user.principal().getString("username");
 
             authProvider.authenticate(user.principal(), r -> {
                 if (!(r.succeeded())) {
-                    LOGGER.error("Authorization failed for user {}!",
-                            user.principal().getString(authProvider.getUsernameField()));
+                    LOGGER.error("Authorization failed for user {}!", username);
                     ctx.fail(403);
                     return;
                 }
 
-                LOGGER.trace("Request authorized for user {}", authProvider.getUsernameField());
+                LOGGER.trace("Request authorized for user {}", username);
                 handleAuthorizedRequest(ctx);
             });
         } catch (final NumberFormatException e) {

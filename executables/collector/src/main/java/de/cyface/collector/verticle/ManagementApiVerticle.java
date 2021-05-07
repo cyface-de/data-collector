@@ -24,7 +24,7 @@ import org.apache.commons.lang3.Validate;
 
 import de.cyface.api.Parameter;
 import de.cyface.api.ServerConfig;
-import de.cyface.collector.Hasher;
+import de.cyface.api.Hasher;
 import de.cyface.collector.handler.UserCreationHandler;
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.Promise;

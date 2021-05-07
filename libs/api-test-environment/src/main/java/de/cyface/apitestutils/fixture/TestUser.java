@@ -1,31 +1,44 @@
 /*
- * Copyright (C) 2020 Cyface GmbH - All Rights Reserved
- * This file is part of the Cyface Server Backend.
- * Unauthorized copying of this file, via any medium is strictly prohibited
- * Proprietary and confidential
+ * Copyright 2020-2021 Cyface GmbH
+ *
+ * This file is part of the Cyface Data Collector.
+ *
+ * The Cyface Data Collector is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * The Cyface Data Collector is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with the Cyface Data Collector. If not, see <http://www.gnu.org/licenses/>.
  */
 package de.cyface.apitestutils.fixture;
 
-import java.util.ArrayList;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.List;
 
-import io.vertx.core.Promise;
 import org.apache.commons.lang3.Validate;
 
-import de.cyface.api.ServerConfig;
+import de.cyface.api.Hasher;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
+import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
-import io.vertx.ext.auth.mongo.MongoAuth;
+import io.vertx.ext.auth.HashingStrategy;
 import io.vertx.ext.mongo.MongoClient;
 
 /**
  * A user to test data exports for.
  *
  * @author Klemens Muthmann
- * @version 1.0.0
+ * @author Armin Schnabel
+ * @version 1.1.0
  * @since 1.0.0
  */
 public final class TestUser implements MongoTestData {
@@ -62,8 +75,7 @@ public final class TestUser implements MongoTestData {
         Validate.notNull(mongoClient);
         Validate.notNull(resultHandler);
 
-        final String salt = "cyface-salt";
-        final MongoAuth authProvider = ServerConfig.buildMongoAuthProvider(mongoClient, salt);
+        final var salt = "cyface-salt";
         mongoClient.findOne(DatabaseConstants.COLLECTION_USER,
                 new JsonObject().put(DatabaseConstants.USER_USERNAME_FIELD, username),
                 null, result -> {
@@ -71,14 +83,15 @@ public final class TestUser implements MongoTestData {
                         resultHandler.handle(Future.failedFuture(result.cause()));
                     }
                     if (result.result() == null) {
-                        authProvider.insertUser(username, password, roles, new ArrayList<>(),
-                                userCreationResult -> {
-                                    if (userCreationResult.succeeded()) {
-                                        resultHandler.handle(Future.succeededFuture());
-                                    } else {
-                                        resultHandler.handle(Future.failedFuture(userCreationResult.cause()));
-                                    }
-                                });
+                        final var hasher = new Hasher(HashingStrategy.load(),
+                                salt.getBytes(StandardCharsets.UTF_8));
+                        final var hashedPassword = hasher.hash(password);
+                        final var newUserInsertCommand = new JsonObject().put("username", username)
+                                .put("roles", new JsonArray(roles)).put("password", hashedPassword);
+                        final var userInsertedFuture = mongoClient.insert(DatabaseConstants.COLLECTION_USER,
+                                newUserInsertCommand);
+                        userInsertedFuture.onSuccess(success -> resultHandler.handle(Future.succeededFuture()));
+                        userInsertedFuture.onFailure(failure -> resultHandler.handle(Future.failedFuture(failure)));
                     } else {
                         resultHandler.handle(Future.failedFuture(new IllegalStateException(
                                 "User already existent: " + result.result().encodePrettily())));

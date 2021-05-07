@@ -23,7 +23,7 @@ import org.slf4j.LoggerFactory;
 
 import de.cyface.api.Authenticator;
 import de.cyface.api.ServerConfig;
-import de.cyface.collector.Hasher;
+import de.cyface.api.Hasher;
 import de.cyface.collector.handler.FailureHandler;
 import de.cyface.collector.handler.MeasurementHandler;
 import de.cyface.collector.handler.UserCreationHandler;

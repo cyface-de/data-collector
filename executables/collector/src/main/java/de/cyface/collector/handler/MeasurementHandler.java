@@ -34,7 +34,7 @@ import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.core.file.OpenOptions;
 import io.vertx.core.json.JsonObject;
-import io.vertx.ext.auth.mongo.MongoAuth;
+import io.vertx.ext.auth.mongo.MongoAuthentication;
 import io.vertx.ext.mongo.GridFsUploadOptions;
 import io.vertx.ext.mongo.MongoClient;
 import io.vertx.ext.web.RoutingContext;
@@ -76,7 +76,7 @@ public final class MeasurementHandler extends RequestHandler {
     /**
      * @param dataClient The client to use to access the Mongo database.
      */
-    public MeasurementHandler(final MongoClient dataClient, final MongoAuth authProvider) {
+    public MeasurementHandler(final MongoClient dataClient, final MongoAuthentication authProvider) {
         super(authProvider);
         Validate.notNull(dataClient);
         this.dataClient = dataClient;
