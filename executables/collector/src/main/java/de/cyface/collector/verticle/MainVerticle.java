@@ -58,7 +58,7 @@ public final class MainVerticle extends AbstractVerticle {
         final var config = config();
         final var verticleConfig = new DeploymentOptions().setConfig(config);
         final var collectorApiVerticle = new CollectorApiVerticle(serverConfig);
-        final var managementApiVerticle = new ManagementApiVerticle(serverConfig);
+        final var managementApiVerticle = new ManagementApiVerticle(serverConfig.getSalt());
 
         // Start the collector API as first verticle.
         final var collectorApiFuture = vertx.deployVerticle(collectorApiVerticle, verticleConfig);

@@ -89,7 +89,7 @@ public final class CollectorApiVerticle extends AbstractVerticle {
         setupRoutes(serverConfig, result -> {
             if (result.succeeded()) {
                 final var router = result.result();
-                final var httpServer = new de.cyface.api.HttpServer(serverConfig);
+                final var httpServer = new de.cyface.api.HttpServer(serverConfig.getHttpPort());
                 httpServer.start(vertx, router, serverStartPromise);
             } else {
                 serverStartPromise.fail(result.cause());

@@ -24,7 +24,6 @@ import static org.hamcrest.Matchers.is;
 import java.io.IOException;
 import java.net.ServerSocket;
 
-import de.cyface.api.Parameter;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
@@ -32,6 +31,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
+import de.cyface.api.Parameter;
+import de.cyface.api.ServerConfig;
 import de.cyface.collector.commons.MongoTest;
 import de.cyface.collector.verticle.ManagementApiVerticle;
 import io.vertx.core.DeploymentOptions;
@@ -116,8 +117,8 @@ public final class UserCreationTest {
                     .put(Parameter.MONGO_USER_DB.key(), mongoDbConfiguration);
             final var options = new DeploymentOptions().setConfig(config);
 
-            final var managamenetApiVerticle = new ManagementApiVerticle("test-salt");
-            vertx.deployVerticle(managamenetApiVerticle, options, context.succeedingThenComplete());
+            final var managementApiVerticle = new ManagementApiVerticle("test-salt");
+            vertx.deployVerticle(managementApiVerticle, options, context.succeedingThenComplete());
 
             client = WebClient.create(vertx);
         }
@@ -133,7 +134,7 @@ public final class UserCreationTest {
     public void tearDown(final Vertx vertx, final VertxTestContext context) {
 
         // Delete entries so that the next tests are independent
-        final MongoClient mongoClient = MongoDbUtils.createSharedMongoClient(vertx, mongoDbConfiguration);
+        final MongoClient mongoClient = ServerConfig.createSharedMongoClient(vertx, mongoDbConfiguration);
         mongoClient.removeDocuments("user", new JsonObject(), context.succeedingThenComplete());
     }
 
@@ -149,7 +150,7 @@ public final class UserCreationTest {
         final var postUserCompleteCheckpoint = context.checkpoint();
         final var checkedIfUserIsInDataBase = context.checkpoint();
         final var checkedThatCorrectUserIsInDatabase = context.checkpoint();
-        final var mongoClient = MongoDbUtils.createSharedMongoClient(vertx, mongoDbConfiguration);
+        final var mongoClient = ServerConfig.createSharedMongoClient(vertx, mongoDbConfiguration);
 
         // Act
         final var requestPostedFuture = client.post(port, "localhost", "/user").sendJsonObject(

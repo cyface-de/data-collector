@@ -1,13 +1,27 @@
 /*
- * Copyright (C) 2018 - 2020 Cyface GmbH - All Rights Reserved
- * This file is part of the Cyface Server Backend.
- * Unauthorized copying of this file, via any medium is strictly prohibited
- * Proprietary and confidential
+ * Copyright 2018-2021 Cyface GmbH
+ *
+ * This file is part of the Cyface Data Collector.
+ *
+ * The Cyface Data Collector is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * The Cyface Data Collector is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with the Cyface Data Collector. If not, see <http://www.gnu.org/licenses/>.
  */
 package de.cyface.api;
 
 import java.util.Collections;
+import java.util.Objects;
 
+import io.vertx.ext.auth.mongo.MongoAuthentication;
 import io.vertx.ext.web.handler.ErrorHandler;
 import io.vertx.ext.web.handler.LoggerHandler;
 import org.apache.commons.lang3.Validate;
@@ -33,9 +47,10 @@ import org.slf4j.LoggerFactory;
  * To create a new object of this class call the static factory method
  * {@link #setupAuthentication(String, Router, ServerConfig)}.
  *
+ * @author Klemens Muthmann
  * @author Armin Schnabel
- * @version 2.0.0
- * @since 1.0.0
+ * @version 3.0.0
+ * @since 2.0.0
  */
 public final class Authenticator implements Handler<RoutingContext> {
 
@@ -59,13 +74,9 @@ public final class Authenticator implements Handler<RoutingContext> {
      */
     private static final long BYTES_IN_ONE_GIGABYTE = 1_073_741_824L;
     /**
-     * The number of seconds the JWT authentication token is valid after login.
-     */
-    private transient final int tokenValidationTime;
-    /**
      * Authenticator that uses the Mongo user database to store and retrieve credentials.
      */
-    private transient final MongoAuth authProvider;
+    private final transient MongoAuthentication authProvider;
     /**
      * Authenticator that checks for valid authentications against Java Web Tokens.
      */
@@ -81,6 +92,10 @@ public final class Authenticator implements Handler<RoutingContext> {
      */
     private transient final String audience;
     /**
+     * The number of seconds the JWT authentication token is valid after login.
+     */
+    private transient final int tokenValidationTime;
+    /**
      * The router handling requests that are authenticated by this <code>Authenticator</code>
      */
     private transient final Router authenticatedRouter;
@@ -90,7 +105,7 @@ public final class Authenticator implements Handler<RoutingContext> {
      * {@link #addAuthenticatedHandler(String, Handler, ErrorHandler)}. The rest of the new instances state is immutable.
      *
      * @param authenticatedRouter The router handling requests that are authenticated by this <code>Authenticator</code>
-     * @param authProvider Authenticator that uses the Mongo user database to store and retrieve credentials
+     * @param authProvider Authenticator that uses the Mongo user database to store and retrieve credentials.
      * @param jwtAuthProvider Authenticator that checks for valid authentications against Java Web Tokens
      * @param issuer The institution which issued the generated JWT token. Usually something like the name of this
      *            server
@@ -98,13 +113,15 @@ public final class Authenticator implements Handler<RoutingContext> {
      *            a certain server installation or a certain part of an application
      * @param tokenValidationTime The number of seconds the JWT authentication token is valid after login.
      */
-    private Authenticator(final Router authenticatedRouter, final MongoAuth authProvider, final JWTAuth jwtAuthProvider,
-            final String issuer, final String audience, final int tokenValidationTime) {
+    private Authenticator(final Router authenticatedRouter, final MongoAuthentication authProvider,
+                          final JWTAuth jwtAuthProvider, final String issuer, final String audience,
+                          final int tokenValidationTime) {
         Validate.notNull(authenticatedRouter);
-        Validate.notNull(authProvider);
-        Validate.notNull(jwtAuthProvider);
-        Validate.notEmpty(issuer);
-        Validate.notEmpty(audience);
+        Objects.requireNonNull(authProvider, "Parameter authProvider may not be null!");
+        Objects.requireNonNull(jwtAuthProvider, "Parameter jwtAuthProvider may not be null!");
+        Validate.notEmpty(issuer, "Parameter issuer must not be empty or null!");
+        Validate.notEmpty(audience, "Parameter audience must not be empty or null!");
+        Validate.isTrue(tokenValidationTime > 0, "Parameter tokenValidationTime must be greater than 0!");
 
         this.authenticatedRouter = authenticatedRouter;
         this.authProvider = authProvider;
@@ -117,22 +134,23 @@ public final class Authenticator implements Handler<RoutingContext> {
     @Override
     public void handle(final RoutingContext ctx) {
         try {
-            final JsonObject body = ctx.getBodyAsJson();
-            LOGGER.debug("Receiving authentication request: " + body);
+            final var body = ctx.getBodyAsJson();
+            LOGGER.debug("Receiving authentication request for user {}", body.getString("username"));
             authProvider.authenticate(body, r -> {
                 if (r.succeeded()) {
-                    LOGGER.debug("Authentication successful!");
+                    LOGGER.debug("Authentication successful for user {}", body.getString("username"));
 
-                    final JWTOptions jwtOptions = new JWTOptions().setExpiresInSeconds(tokenValidationTime);
+                    final var jwtOptions = new JWTOptions().setExpiresInSeconds(tokenValidationTime);
                     jwtOptions.setIssuer(issuer);
                     jwtOptions.setAudience(Collections.singletonList(audience));
 
-                    final String generatedToken = jwtAuthProvider.generateToken(body,
+                    final var jwtBody = body.put("aud", audience).put("iss", issuer);
+                    final var generatedToken = jwtAuthProvider.generateToken(jwtBody,
                             jwtOptions.setAlgorithm(JWT_HASH_ALGORITHM));
-                    LOGGER.trace("New JWT Token: " + generatedToken);
+                    LOGGER.trace("New JWT Token: {}", generatedToken);
                     ctx.response().putHeader("Authorization", generatedToken).setStatusCode(200).end();
                 } else {
-                    LOGGER.error("Unsuccessful authentication request: {}", body);
+                    LOGGER.error("Unsuccessful authentication request for user {}", body.getString("username"));
                     ctx.fail(401);
                 }
             });

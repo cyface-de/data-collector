@@ -26,17 +26,17 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.Collections;
 import java.util.Objects;
 
-import io.vertx.core.Promise;
-import io.vertx.ext.auth.JWTOptions;
+import io.vertx.ext.auth.mongo.MongoAuthentication;
+import io.vertx.ext.auth.mongo.MongoAuthenticationOptions;
 import org.apache.commons.lang3.Validate;
 
+import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
+import io.vertx.ext.auth.JWTOptions;
 import io.vertx.ext.auth.PubSecKeyOptions;
 import io.vertx.ext.auth.jwt.JWTAuth;
 import io.vertx.ext.auth.jwt.JWTAuthOptions;
@@ -72,9 +72,9 @@ public class ServerConfig {
      */
     private final MongoClient userDatabase;
     /**
-     * {@code null} or the Authentication provider used to check for valid user accounts used to generate new JWT token
+     * {@code null} or the Authenticator that uses the Mongo user database to store and retrieve credentials.
      */
-    private MongoAuth authProvider;
+    private MongoAuthentication authProvider;
     /**
      * The port on which the HTTP server should listen
      */
@@ -127,6 +127,11 @@ public class ServerConfig {
      * K-FIX> Just have multiple static method in here which can be used on demand by the different
      * verticles instead of creating an instance which has all parameters which might not be needed
      * by all verticles in the future.
+     *
+     * A> So far I only found one Verticle which does not need all parts of this class.
+     * This verticle just uses the static method createSharedMongoClient().
+     * I.e. all others can simply abstract the configuration states in here. Makes it more readable.
+     * the ManagementVerticle does not use the `ServerConfig` instances at all, just static access.
      *
      * @param vertx The Vertx instance to get the parameters from
      * @throws IOException if key files are inaccessible
@@ -303,19 +308,21 @@ public class ServerConfig {
     /**
      * @param client A Mongo client to access the user Mongo database.
      * @param salt The salt used to make hacking passwords more complex.
-     * @return The <code>Promise</code> about an Authentication provider used to check for valid user accounts used to generate new JWT token.
+     * @return The <code>Promise</code> about an Authentication provider used to check for valid user accounts used to
+     *         generate new JWT token.
      */
-    public static MongoAuth buildMongoAuthProvider(final MongoClient client, final String salt) {
-        final JsonObject authProperties = new JsonObject();
-        final MongoAuth authProvider = MongoAuth.create(client, authProperties);
+    public static MongoAuthentication buildMongoAuthProvider(final MongoClient client, final String salt) {
+        // Old Backend libs api code
+        // final JsonObject authProperties = new JsonObject();
+        // final MongoAuth authProvider = MongoAuth.create(client, authProperties);
+        // HashStrategy hashStrategy = authProvider.getHashStrategy();
+        // hashStrategy.setSaltStyle(HashSaltStyle.EXTERNAL);
+        // hashStrategy.setExternalSalt(salt);
+        // authProvider.setHashAlgorithm(HashAlgorithm.PBKDF2);
 
-        HashStrategy hashStrategy = authProvider.getHashStrategy();
-        hashStrategy.setSaltStyle(HashSaltStyle.EXTERNAL);
-        hashStrategy.setExternalSalt(salt);
-        authProvider.setHashAlgorithm(HashAlgorithm.PBKDF2);
-
-        Validate.notNull(authProvider);
-        return authProvider;
+        // From Collector.MongoDbUtils
+        final var authProperties = new MongoAuthenticationOptions();
+        return MongoAuthentication.create(client, authProperties);
     }
 
     /**
@@ -333,7 +340,7 @@ public class ServerConfig {
                         + "a \"connection_string\" and a \"data_source_name\"! Also check if your database is running "
                         + "and accessible!",
                 Parameter.MONGO_USER_DB.key()));
-        final String dataSourceName = config.getString("data_source_name", DEFAULT_MONGO_DATA_SOURCE_NAME);
+        final var dataSourceName = config.getString("data_source_name", DEFAULT_MONGO_DATA_SOURCE_NAME);
         return MongoClient.createShared(vertx, config, dataSourceName);
     }
 

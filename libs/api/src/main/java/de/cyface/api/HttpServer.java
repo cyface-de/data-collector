@@ -30,17 +30,16 @@ public class HttpServer {
      * <code>src/main/resources/vertx-default-jul-logging.properties</code>.
      */
     private static final Logger LOGGER = LoggerFactory.getLogger(HttpServer.class);
+    /**
+     * The port on which the HTTP server should listen
+     */
+    private final int port;
 
     /**
-     * HTTP server configuration parameters required to setup the routes
+     * @param port The port on which the HTTP server should listen
      */
-    private final ServerConfig serverConfig;
-
-    /**
-     * @param serverConfig HTTP server configuration parameters required to setup the routes
-     */
-    public HttpServer(final ServerConfig serverConfig) {
-        this.serverConfig = serverConfig;
+    public HttpServer(final int port) {
+        this.port = port;
     }
 
     /**
@@ -54,7 +53,7 @@ public class HttpServer {
         Validate.notNull(router);
         Validate.notNull(startPromise);
 
-        vertx.createHttpServer().requestHandler(router).listen(serverConfig.getHttpPort(),
+        vertx.createHttpServer().requestHandler(router).listen(port,
                 serverStartup -> completeStartup(serverStartup, startPromise));
     }
 
