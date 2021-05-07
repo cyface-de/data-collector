@@ -23,12 +23,14 @@
  */
 
 // Vert.x Gradle redeploy on file changes, see https://github.com/vert-x3/vertx-examples/tree/master/gradle-redeploy
-application {
-    mainClassName = 'io.vertx.core.Launcher'
+application { // FIXME: Do we need this here? The collector build.gradle did not have this wrapper
+    mainClassName = 'de.cyface.collector.Application'
 }
-def mainVerticleName = 'de.cyface.collector.Application'
+
+def mainVerticleName = 'de.cyface.collector.verticle.MainVerticle'
 def watchForChange = 'src/**/*'
 def doOnChange = './gradlew classes'
+
 run {
     args = ['run', mainVerticleName, "--redeploy=$watchForChange", "--launcher-class=$mainClassName", "--on-redeploy=$doOnChange"]
 }
