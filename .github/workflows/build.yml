@@ -19,8 +19,8 @@ jobs:
         with:
           java-version: 11
 
-    - name: Build with Gradle
-      run: ./gradlew build
-      env:
-        USERNAME: ${{ github.actor }}
-        PASSWORD: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build with Gradle
+        run: ./gradlew build
+        env:
+          USERNAME: ${{ github.actor }}
+          PASSWORD: ${{ secrets.GITHUB_TOKEN }}

@@ -65,7 +65,7 @@ public class Hasher {
      * @return The hashed and salted password
      */
     public String hash(final String password) {
-        return hashingStrategy.hash(HashAlgorithm.PBKDF2.name(), // FIXME: stronger hashing algorithm recommended
+        return hashingStrategy.hash(HashAlgorithm.PBKDF2.name().toLowerCase(), // FIXME: stronger hashing algorithm recommended
                 null,
                 Base64.getMimeEncoder().encodeToString(salt),
                 password);

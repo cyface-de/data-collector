@@ -63,10 +63,6 @@ public final class CollectorApiVerticle extends AbstractVerticle {
     private static final String ADMIN_ROLE = "admin";
     private static final String MEASUREMENTS_ENDPOINT = "/measurements";
     /**
-     * The config to be used on this verticle
-     */
-    private final ServerConfig serverConfig;
-    /**
      * The value to be used as encryption salt
      */
     private final String salt;
@@ -80,7 +76,6 @@ public final class CollectorApiVerticle extends AbstractVerticle {
     public CollectorApiVerticle(final String salt) throws IOException {
         super();
         this.salt = salt;
-        this.serverConfig = new ServerConfig(vertx);
     }
 
     @Override
@@ -92,6 +87,7 @@ public final class CollectorApiVerticle extends AbstractVerticle {
 
         // Start http server
         final Promise<Void> serverStartPromise = Promise.promise();
+        final ServerConfig serverConfig = new ServerConfig(vertx);
         setupRoutes(serverConfig, result -> {
             if (result.succeeded()) {
                 final var router = result.result();

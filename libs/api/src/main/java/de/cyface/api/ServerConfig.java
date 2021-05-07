@@ -269,6 +269,7 @@ public class ServerConfig {
         } else if (salt != null && saltPath != null) {
             result.fail("Please provide either a salt value or a path to a salt file. "
                     + "Encountered both and can not decide which to use. Aborting!");
+        } else if (salt != null) {
             result.complete(salt);
         } else {
             final var fileSystem = vertx.fileSystem();
