@@ -16,6 +16,7 @@ package de.cyface.collector.verticle;
 
 import java.nio.charset.StandardCharsets;
 
+import de.cyface.api.FailureHandler;
 import de.cyface.api.Parameter;
 import org.apache.commons.lang3.Validate;
 import org.slf4j.Logger;
@@ -24,7 +25,6 @@ import org.slf4j.LoggerFactory;
 import de.cyface.api.Authenticator;
 import de.cyface.api.ServerConfig;
 import de.cyface.api.Hasher;
-import de.cyface.collector.handler.FailureHandler;
 import de.cyface.collector.handler.MeasurementHandler;
 import de.cyface.collector.handler.UserCreationHandler;
 import de.cyface.collector.model.Measurement;
