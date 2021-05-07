@@ -82,6 +82,7 @@ public class MainVerticleTest {
      */
     private JsonObject config() throws IOException {
 
+        //noinspection SpellCheckingInspection
         return new JsonObject()
                 .put("mongo.userdb", mongoTest.clientConfiguration())
                 .put("jwt.public", this.getClass().getResource("/public.pem").getFile())

@@ -22,6 +22,7 @@ import java.io.File;
 import java.util.HashSet;
 import java.util.stream.Collectors;
 
+import de.cyface.api.RequestHandler;
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.lang3.Validate;
 import org.slf4j.Logger;

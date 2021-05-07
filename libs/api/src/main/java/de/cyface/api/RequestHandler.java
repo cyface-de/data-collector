@@ -1,77 +1,76 @@
 /*
- * Copyright (C) 2019, 2020 Cyface GmbH - All Rights Reserved
+ * Copyright 2019-2021 Cyface GmbH
  *
- * This file is part of the Cyface Server Backend.
- * Unauthorized copying of this file, via any medium is strictly prohibited
- * Proprietary and confidential
+ * This file is part of the Cyface Data Collector.
+ *
+ * The Cyface Data Collector is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * The Cyface Data Collector is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with the Cyface Data Collector. If not, see <http://www.gnu.org/licenses/>.
  */
 package de.cyface.api;
 
-import io.vertx.core.http.HttpHeaders;
-import io.vertx.core.http.HttpServerResponse;
 import org.apache.commons.lang3.Validate;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import io.vertx.core.Handler;
-import io.vertx.core.http.HttpServerRequest;
-import io.vertx.core.logging.Logger;
-import io.vertx.core.logging.LoggerFactory;
-import io.vertx.ext.auth.User;
-import io.vertx.ext.auth.mongo.MongoAuth;
-import io.vertx.ext.mongo.MongoClient;
+import io.vertx.ext.auth.mongo.MongoAuthentication;
 import io.vertx.ext.web.RoutingContext;
 
-import java.text.SimpleDateFormat;
-import java.util.Date;
-
 /**
- * Abstract base class for all requests to an provider endpoint. This class makes sure that such requests are properly
+ * Abstract base class for all requests to a collector endpoint. This class makes sure that such requests are properly
  * authorized.
  *
  * @author Klemens Muthmann
- * @version 1.0.1
+ * @author Armin Schnabel
+ * @version 2.0.0
  * @since 1.0.0
  */
 public abstract class RequestHandler implements Handler<RoutingContext> {
 
-    private final MongoAuth authProvider;
-    private final MongoClient mongoUserDatabase;
     private static final Logger LOGGER = LoggerFactory.getLogger(RequestHandler.class);
-    public final static String DEFAULT_CHARSET = "UTF-8";
+    private final MongoAuthentication authProvider;
 
     /**
-     * Creates a new completely initialized <code>ProviderRequestHandler</code> with access to all required
+     * Creates a new completely initialized <code>ExporterRequestHandler</code> with access to all required
      * authentication information to authorize a request and fetch the correct data.
      *
      * @param authProvider An auth provider used by this server to authenticate against the Mongo user database
-     * @param mongoUserDatabase The Mongo user database containing all information about users
      */
-    public RequestHandler(final MongoAuth authProvider, final MongoClient mongoUserDatabase) {
+    public RequestHandler(final MongoAuthentication authProvider) {
         Validate.notNull(authProvider);
-        Validate.notNull(mongoUserDatabase);
-
         this.authProvider = authProvider;
-        this.mongoUserDatabase = mongoUserDatabase;
     }
 
     @Override
     public void handle(final RoutingContext ctx) {
-        LOGGER.info("Received new request.");
-        final HttpServerRequest request = ctx.request();
+        LOGGER.info("Received new api request.");
+        final var request = ctx.request();
         LOGGER.debug("Request headers: {}", request.headers());
 
         try {
             // Check authorization before requesting data to reduce DDoS risk
-            final User user = ctx.user();
+            final var user = ctx.user();
+            final var username = user.principal().getString("username");
 
             authProvider.authenticate(user.principal(), r -> {
                 if (!(r.succeeded())) {
-                    LOGGER.error("Authorization failed for user %s!",
-                            user.principal().getString(authProvider.getUsernameField()));
+                    LOGGER.error("Authorization failed for user {}!", username);
                     ctx.fail(403);
                     return;
                 }
 
-                handleAuthorizedRequest(ctx, user.principal().getString("username"));
+                LOGGER.trace("Request authorized for user {}", username);
+                handleAuthorizedRequest(ctx);
             });
         } catch (final NumberFormatException e) {
             LOGGER.error("Data was not parsable!");
@@ -84,7 +83,6 @@ public abstract class RequestHandler implements Handler<RoutingContext> {
      * request.
      *
      * @param ctx Vert.x request context
-     * @param userName The usernames for which the request is authorized to provide data
      */
-    protected abstract void handleAuthorizedRequest(final RoutingContext ctx, final String userName);
+    protected abstract void handleAuthorizedRequest(final RoutingContext ctx);
 }

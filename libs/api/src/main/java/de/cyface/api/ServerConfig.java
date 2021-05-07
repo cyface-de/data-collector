@@ -29,8 +29,6 @@ import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import java.util.Objects;
 
-import io.vertx.ext.auth.mongo.MongoAuthentication;
-import io.vertx.ext.auth.mongo.MongoAuthenticationOptions;
 import org.apache.commons.lang3.Validate;
 
 import io.vertx.core.Promise;
@@ -40,6 +38,8 @@ import io.vertx.ext.auth.JWTOptions;
 import io.vertx.ext.auth.PubSecKeyOptions;
 import io.vertx.ext.auth.jwt.JWTAuth;
 import io.vertx.ext.auth.jwt.JWTAuthOptions;
+import io.vertx.ext.auth.mongo.MongoAuthentication;
+import io.vertx.ext.auth.mongo.MongoAuthenticationOptions;
 import io.vertx.ext.mongo.MongoClient;
 
 /**

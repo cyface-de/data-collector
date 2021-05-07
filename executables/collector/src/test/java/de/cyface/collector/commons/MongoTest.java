@@ -34,7 +34,7 @@ import io.vertx.core.json.JsonObject;
  * restart.
  * 
  * @author Klemens Muthmann
- * @version 2.0.1
+ * @version 2.0.2
  * @since 2.0.0
  */
 public final class MongoTest {
@@ -46,6 +46,7 @@ public final class MongoTest {
      * The executable running the <code>MongodProcess</code>. This must be shut down after finishing this Mongo database
      * run.
      */
+    @SuppressWarnings("SpellCheckingInspection")
     private MongodExecutable mongodExecutable;
     /**
      * The port to run the test Mongo database under.
@@ -75,6 +76,7 @@ public final class MongoTest {
     public void setUpMongoDatabase(final int mongoPort) throws IOException {
         this.mongoPort = mongoPort;
         final var starter = MongodStarter.getDefaultInstance();
+        //noinspection SpellCheckingInspection
         final var mongodConfig = MongodConfig.builder().version(Version.Main.V3_6)
                 .net(new Net("localhost", mongoPort, Network.localhostIsIPv6())).build();
         mongodExecutable = starter.prepare(mongodConfig);
@@ -83,7 +85,7 @@ public final class MongoTest {
 
     /**
      * Stops the test Mongo database after all tests have been finished and waits a little so that a new test may
-     * restart the database, without intererence.
+     * restart the database, without interference.
      */
     public void stopMongoDb() {
         mongo.stop();

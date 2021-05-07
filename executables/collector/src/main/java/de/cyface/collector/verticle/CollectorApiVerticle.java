@@ -147,8 +147,7 @@ public final class CollectorApiVerticle extends AbstractVerticle {
      * @param serverConfig HTTP server configuration parameters required to setup the routes
      * @param next The handler to call when the router has been created.
      */
-    private void setupRoutes(final ServerConfig serverConfig,
-            final Handler<AsyncResult<Router>> next) {
+    private void setupRoutes(final ServerConfig serverConfig, final Handler<AsyncResult<Router>> next) {
         Validate.notNull(next);
 
         // Setup 'v2/api' route

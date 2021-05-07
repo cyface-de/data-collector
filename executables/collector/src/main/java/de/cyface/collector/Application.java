@@ -18,6 +18,7 @@
  */
 package de.cyface.collector;
 
+import de.cyface.api.InvalidConfiguration;
 import de.cyface.api.Parameter;
 import de.cyface.collector.verticle.MainVerticle;
 import io.vertx.core.Launcher;
@@ -105,7 +106,7 @@ public class Application extends Launcher {
     private void checkValidConfiguration(final JsonObject config) {
         if (config.getString(Parameter.HTTP_HOST.key()) == null
                 || config.getString(Parameter.HTTP_ENDPOINT.key()) == null) {
-            throw new InvalidConfigurationException(config);
+            throw new InvalidConfiguration(config);
         }
     }
 }

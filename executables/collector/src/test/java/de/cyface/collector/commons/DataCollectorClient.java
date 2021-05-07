@@ -21,7 +21,8 @@ package de.cyface.collector.commons;
 import java.io.IOException;
 import java.net.ServerSocket;
 
-import de.cyface.collector.Parameter;
+import de.cyface.api.Parameter;
+import de.cyface.api.ServerConfig;
 import de.cyface.collector.verticle.CollectorApiVerticle;
 import io.vertx.core.DeploymentOptions;
 import io.vertx.core.Vertx;
@@ -33,7 +34,8 @@ import io.vertx.junit5.VertxTestContext;
  * A client providing capabilities for tests to communicate with a Cyface Data Collector server.
  *
  * @author Klemens Muthmann
- * @version 1.1.4
+ * @author Armin Schnabel
+ * @version 1.2.0
  * @since 2.0.0
  */
 public final class DataCollectorClient {
@@ -60,7 +62,8 @@ public final class DataCollectorClient {
      * @return A completely configured <code>WebClient</code> capable of accessing the started Cyface Data Collector.
      * @throws IOException If the server port could not be opened.
      */
-    public WebClient createWebClient(final Vertx vertx, final VertxTestContext ctx, final int mongoPort) throws IOException {
+    public WebClient createWebClient(final Vertx vertx, final VertxTestContext ctx, final int mongoPort)
+            throws IOException {
         try (ServerSocket socket = new ServerSocket(0)) {
             port = socket.getLocalPort();
 
@@ -69,15 +72,16 @@ public final class DataCollectorClient {
                     .put("db_name", "cyface");
 
             final JsonObject config = new JsonObject().put(Parameter.MONGO_DATA_DB.key(), mongoDbConfig)
-                    .put(Parameter.MONGO_USER_DB.key(), mongoDbConfig).put(Parameter.COLLECTOR_HTTP_PORT.key(), port)
+                    .put(Parameter.MONGO_USER_DB.key(), mongoDbConfig).put(Parameter.HTTP_PORT.key(), port)
                     .put(Parameter.JWT_PRIVATE_KEY_FILE_PATH.key(),
                             this.getClass().getResource("/private_key.pem").getFile())
                     .put(Parameter.JWT_PUBLIC_KEY_FILE_PATH.key(), this.getClass().getResource("/public.pem").getFile())
-                    .put(Parameter.COLLECTOR_HOST.key(), "localhost")
-                    .put(Parameter.COLLECTOR_ENDPOINT.key(), "/api/v2/");
+                    .put(Parameter.HTTP_HOST.key(), "localhost")
+                    .put(Parameter.HTTP_ENDPOINT.key(), "/api/v2/");
             final DeploymentOptions options = new DeploymentOptions().setConfig(config);
 
-            final var collectorVerticle = new CollectorApiVerticle("test-salt");
+            final var serverConfig = new ServerConfig(vertx);
+            final var collectorVerticle = new CollectorApiVerticle(serverConfig);
             vertx.deployVerticle(collectorVerticle, options, ctx.succeedingThenComplete());
 
             return WebClient.create(vertx);

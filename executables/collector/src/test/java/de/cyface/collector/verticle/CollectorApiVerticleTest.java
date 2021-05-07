@@ -20,6 +20,7 @@ package de.cyface.collector.verticle;
 
 import java.io.IOException;
 
+import de.cyface.api.ServerConfig;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -97,7 +98,8 @@ public class CollectorApiVerticleTest {
         deploymentOptions.setConfig(configuration);
 
         // Act, Assert
-        vertx.deployVerticle(new CollectorApiVerticle("cyface-salt"), deploymentOptions,
+        final var serverConfig = new ServerConfig(vertx);
+        vertx.deployVerticle(new CollectorApiVerticle(serverConfig/*"cyface-salt"*/), deploymentOptions,
                 testContext.succeedingThenComplete());
     }
 }
