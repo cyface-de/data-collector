@@ -20,21 +20,21 @@ package de.cyface.collector.handler;
 
 import java.io.File;
 import java.util.HashSet;
-import java.util.List;
-import java.util.Objects;
 import java.util.stream.Collectors;
 
 import org.apache.commons.io.FilenameUtils;
+import org.apache.commons.lang3.Validate;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import de.cyface.api.ServerConfig;
 import de.cyface.collector.model.GeoLocation;
 import de.cyface.collector.model.Measurement;
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
-import io.vertx.core.Handler;
 import io.vertx.core.file.OpenOptions;
 import io.vertx.core.json.JsonObject;
+import io.vertx.ext.auth.mongo.MongoAuth;
 import io.vertx.ext.mongo.GridFsUploadOptions;
 import io.vertx.ext.mongo.MongoClient;
 import io.vertx.ext.web.RoutingContext;
@@ -51,32 +51,39 @@ import io.vertx.ext.web.RoutingContext;
  * @since 2.0.0
  */
 @SuppressWarnings("PMD.AvoidCatchingNPE")
-public final class MeasurementHandler implements Handler<RoutingContext> {
+public final class MeasurementHandler extends RequestHandler {
+
     /**
      * The logger for objects of this class. You can change its configuration by
-     * adapting the values in
-     * <code>src/main/resources/logback.xml</code>.
+     * adapting the values in <code>src/main/resources/logback.xml</code>.
      */
     private static final Logger LOGGER = LoggerFactory.getLogger(MeasurementHandler.class);
 
     /**
      * Vertx <code>MongoClient</code> used to access the database to write the received data to.
      */
-    private final MongoClient mongoClient;
+    private final MongoClient dataClient;
 
     /**
      * Creates a new, completely initialized instance of this class.
      *
-     * @param mongoClient Vertx <code>MongoClient</code> used to access the database to write the received data to
+     * @param serverConfig the configuration setting required to start the HTTP server
      */
-    public MeasurementHandler(final MongoClient mongoClient) {
-        Objects.requireNonNull(mongoClient);
+    public MeasurementHandler(final ServerConfig serverConfig) {
+        this(serverConfig.getDataDatabase(), serverConfig.getAuthProvider());
+    }
 
-        this.mongoClient = mongoClient;
+    /**
+     * @param dataClient The client to use to access the Mongo database.
+     */
+    public MeasurementHandler(final MongoClient dataClient, final MongoAuth authProvider) {
+        super(authProvider);
+        Validate.notNull(dataClient);
+        this.dataClient = dataClient;
     }
 
     @Override
-    public void handle(final RoutingContext ctx) {
+    protected void handleAuthorizedRequest(RoutingContext ctx) {
         LOGGER.info("Received new measurement request.");
         final var request = ctx.request();
         LOGGER.debug("FormAttributes: {}", request.formAttributes());
@@ -154,11 +161,11 @@ public final class MeasurementHandler implements Handler<RoutingContext> {
         LOGGER.debug("Inserted measurement with id {}:{}!", measurement.getDeviceIdentifier(),
                 measurement.getMeasurementIdentifier());
 
-        final var gridFsBucketCreationFuture = mongoClient.createDefaultGridFsBucketService();
+        final var gridFsBucketCreationFuture = dataClient.createDefaultGridFsBucketService();
 
         gridFsBucketCreationFuture.onSuccess(gridFsClient -> {
             final var fileSystem = ctx.vertx().fileSystem();
-            final List<Future> fileUploadFutures = measurement.getFileUploads().stream().map(fileUpload -> {
+            final var fileUploadFutures = measurement.getFileUploads().stream().map(fileUpload -> {
                 final var fileOpenFuture = fileSystem.open(fileUpload.getFile().getAbsolutePath(),
                         new OpenOptions());
                 final var uploadFuture = fileOpenFuture.compose(asyncFile -> {

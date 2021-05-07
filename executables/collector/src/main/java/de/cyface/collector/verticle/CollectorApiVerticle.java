@@ -14,22 +14,16 @@
  */
 package de.cyface.collector.verticle;
 
-import java.io.IOException;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.util.Collections;
-import java.util.Objects;
 
+import de.cyface.api.Parameter;
 import org.apache.commons.lang3.Validate;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import de.cyface.api.Authenticator;
+import de.cyface.api.ServerConfig;
 import de.cyface.collector.Hasher;
-import de.cyface.collector.MongoDbUtils;
-import de.cyface.collector.Parameter;
-import de.cyface.collector.handler.AuthenticationFailureHandler;
-import de.cyface.collector.handler.AuthenticationHandler;
 import de.cyface.collector.handler.FailureHandler;
 import de.cyface.collector.handler.MeasurementHandler;
 import de.cyface.collector.handler.UserCreationHandler;
@@ -40,20 +34,10 @@ import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Promise;
-import io.vertx.core.http.HttpServer;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.auth.HashingStrategy;
-import io.vertx.ext.auth.JWTOptions;
-import io.vertx.ext.auth.PubSecKeyOptions;
-import io.vertx.ext.auth.jwt.JWTAuth;
-import io.vertx.ext.auth.jwt.JWTAuthOptions;
-import io.vertx.ext.auth.mongo.MongoAuthentication;
-import io.vertx.ext.mongo.MongoClient;
 import io.vertx.ext.web.Router;
-import io.vertx.ext.web.handler.BodyHandler;
 import io.vertx.ext.web.handler.ErrorHandler;
-import io.vertx.ext.web.handler.JWTAuthHandler;
-import io.vertx.ext.web.handler.LoggerHandler;
 import io.vertx.ext.web.handler.StaticHandler;
 
 /**
@@ -73,38 +57,24 @@ public final class CollectorApiVerticle extends AbstractVerticle {
      */
     private static final Logger LOGGER = LoggerFactory.getLogger(CollectorApiVerticle.class);
     /**
-     * The hashing algorithm used for public and private keys to generate and check JWT tokens.
-     */
-    public static final String JWT_HASH_ALGORITHM = "HS256";
-    /**
-     * The number of bytes in one gigabyte. This can be used to limit the amount of data accepted by the server.
-     */
-    private static final long BYTES_IN_ONE_GIGABYTE = 1_073_741_824L;
-    /**
-     * The number of bytes in one kilobyte. This is used to limit the amount of bytes accepted by an authentication
-     * request.
-     */
-    private static final long BYTES_IN_ONE_KILOBYTE = 1024L;
-    /**
      * The role which identifies users with "admin" privileges.
      */
     private static final String ADMIN_ROLE = "admin";
+    private static final String MEASUREMENTS_ENDPOINT = "/measurements";
 
     /**
-     * The salt used to encrypt user passwords on this server
+     * The config to be used on this verticle
      */
-    private final String salt;
+    private final ServerConfig serverConfig;
 
     /**
      * Creates a new completely initialized object of this class.
      *
-     * @param salt The salt used to encrypt user passwords on this server
+     * @param serverConfig The config to be used on this verticle
      */
-    public CollectorApiVerticle(final String salt) {
+    public CollectorApiVerticle(final ServerConfig serverConfig) {
         super();
-        Validate.notEmpty(salt);
-
-        this.salt = salt;
+        this.serverConfig = serverConfig;
     }
 
     @Override
@@ -114,35 +84,15 @@ public final class CollectorApiVerticle extends AbstractVerticle {
         // Setup Measurement event bus
         prepareEventBus();
 
-        // Setup mongo user database client with authProvider
-        final var mongoUserDatabaseConfiguration = Parameter.MONGO_USER_DB.jsonValue(vertx);
-        Objects.requireNonNull(mongoUserDatabaseConfiguration, String.format(
-                "Unable to load Mongo user database configuration. "
-                        + "Please provide a valid configuration using the %s parameter and at least as \"db_name\", "
-                        + "a \"connection_string\" and a \"data_source_name\"! Also check if your database is running "
-                        + "and accessible!",
-                Parameter.MONGO_USER_DB.key()));
-        final var client = MongoDbUtils.createSharedMongoClient(vertx, mongoUserDatabaseConfiguration);
-        final var authProvider = MongoDbUtils.buildMongoAuthProvider(client);
-
-        // Start http server with auth config
-        final var httpPort = Parameter.COLLECTOR_HTTP_PORT.intValue(vertx, 8080);
-        final var publicKey = extractKey(Parameter.JWT_PUBLIC_KEY_FILE_PATH);
-        Validate.notNull(publicKey,
-                "Unable to load public key for JWT authentication. "
-                        + "Did you provide a valid PEM file using the parameter "
-                        + Parameter.JWT_PUBLIC_KEY_FILE_PATH.key() + ".");
-        final var privateKey = extractKey(Parameter.JWT_PRIVATE_KEY_FILE_PATH);
-        Validate.notNull(privateKey,
-                "Unable to load private key for JWT authentication. Did you provide a valid PEM file using the parameter "
-                        + Parameter.JWT_PRIVATE_KEY_FILE_PATH.key() + ".");
-        final Promise<Void> serverStartFuture = Promise.promise();
-        setupRoutes(publicKey, privateKey, authProvider, result -> {
+        // Start http server
+        final Promise<Void> serverStartPromise = Promise.promise();
+        setupRoutes(serverConfig, result -> {
             if (result.succeeded()) {
                 final var router = result.result();
-                startHttpServer(router, serverStartFuture, httpPort);
+                final var httpServer = new de.cyface.api.HttpServer(serverConfig);
+                httpServer.start(vertx, router, serverStartPromise);
             } else {
-                serverStartFuture.fail(result.cause());
+                serverStartPromise.fail(result.cause());
             }
         });
 
@@ -150,14 +100,16 @@ public final class CollectorApiVerticle extends AbstractVerticle {
         final var adminUsername = Parameter.ADMIN_USER_NAME.stringValue(vertx, "admin");
         final var adminPassword = Parameter.ADMIN_PASSWORD.stringValue(vertx, "secret");
         final var defaultUserCreatedFuture = Promise.promise();
-        client.findOne("user", new JsonObject().put("username", adminUsername), null, result -> {
+        final var userClient = serverConfig.getUserDatabase();
+        userClient.findOne("user", new JsonObject().put("username", adminUsername), null, result -> {
             if (result.failed()) {
                 defaultUserCreatedFuture.fail(result.cause());
                 return;
             }
             if (result.result() == null) {
-                final var hasher = new Hasher(HashingStrategy.load(), salt.getBytes(StandardCharsets.UTF_8));
-                final var userCreationHandler = new UserCreationHandler(client, "user", hasher);
+                final var hasher = new Hasher(HashingStrategy.load(),
+                        serverConfig.getSalt().getBytes(StandardCharsets.UTF_8));
+                final var userCreationHandler = new UserCreationHandler(userClient, "user", hasher);
                 userCreationHandler.createUser(adminUsername, adminPassword, ADMIN_ROLE, success -> {
                     LOGGER.info("Identifier of new user id: {}", success);
                     defaultUserCreatedFuture.complete();
@@ -171,7 +123,7 @@ public final class CollectorApiVerticle extends AbstractVerticle {
         });
 
         // Block until all futures completed
-        final var startUpFinishedFuture = CompositeFuture.all(serverStartFuture.future(),
+        final var startUpFinishedFuture = CompositeFuture.all(serverStartPromise.future(),
                 defaultUserCreatedFuture.future());
         startUpFinishedFuture.onComplete(r -> {
             if (r.succeeded()) {
@@ -180,7 +132,6 @@ public final class CollectorApiVerticle extends AbstractVerticle {
                 startFuture.fail(r.cause());
             }
         });
-
     }
 
     /**
@@ -193,163 +144,33 @@ public final class CollectorApiVerticle extends AbstractVerticle {
     /**
      * Initializes all the routes available via the Cyface Data Collector.
      *
-     * @param publicKey The public key used to check the validity of JWT tokens used for authentication.
-     * @param privateKey The private key used to issue new valid JWT tokens.
-     * @param mongoAuthProvider Authentication provider used to check for valid user accounts used to generate new JWT
-     *            token.
+     * @param serverConfig HTTP server configuration parameters required to setup the routes
      * @param next The handler to call when the router has been created.
      */
-    private void setupRoutes(final String publicKey, final String privateKey,
-            final MongoAuthentication mongoAuthProvider,
+    private void setupRoutes(final ServerConfig serverConfig,
             final Handler<AsyncResult<Router>> next) {
-        Validate.notEmpty(publicKey);
-        Validate.notEmpty(privateKey);
-        Validate.notNull(mongoAuthProvider);
         Validate.notNull(next);
 
-        // Routing
-        // OpenAPI3RouterFactory.create(vertx, this.getClass().getResource("/webroot/openapi.yml").getFile(), r -> {
-        // if (r.succeeded()) {
-        // OpenAPI3RouterFactory routerFactory = r.result();
-        // routerFactory.setBodyHandler(BodyHandler.create().setDeleteUploadedFilesOnEnd(false));
-        // routerFactory.addHandlerByOperationId("uploadMeasurement", new MeasurementHandler());
-        // routerFactory.addHandlerByOperationId("login",
-        // new AuthenticationHandler(mongoAuthProvider, jwtAuthProvider));
-        // routerFactory.addSecurityHandler("bearerAuth", JWTAuthHandler.create(jwtAuthProvider));
-        // routerFactory.addFailureHandlerByOperationId("uploadMeasurement", new FailureHandler());
-        // routerFactory.addFailureHandlerByOperationId("login", new FailureHandler());
-        // routerFactory.setNotImplementedFailureHandler(result -> result.response().setStatusCode(501).end());
-        // routerFactory.setValidationFailureHandler(result -> result.response().setStatusCode(400).end());
-        // final Router router = routerFactory.getRouter();
-        // next.handle(Future.succeededFuture(router));
-        // } else {
-        // LOGGER.error("Failed loading API specification!");
-        // next.handle(Future.failedFuture(r.cause()));
-        // }
-        // });
+        // Setup 'v2/api' route
         final var mainRouter = Router.router(vertx);
         final var v2ApiRouter = Router.router(vertx);
-        final var host = Parameter.COLLECTOR_HOST.stringValue(vertx);
-        Validate.notEmpty(host, "Hostname not found. Please provide it using the %s parameter!",
-                Parameter.COLLECTOR_HOST.key());
-        final var endpoint = Parameter.COLLECTOR_ENDPOINT.stringValue(vertx);
-        Validate.notEmpty(endpoint, "Endpoint not found. Please provide it using the %s parameter!",
-                Parameter.COLLECTOR_ENDPOINT.key());
-        final var tokenExpirationTime = Parameter.TOKEN_EXPIRATION_TIME.intValue(vertx, 60);
-        final var mongoDataDbConfiguration = config().getJsonObject("mongo.datadb");
-        Objects.requireNonNull(mongoDataDbConfiguration,
-                String.format("No Mongo data database configuration found. Please provide it using the %s parameter!",
-                        Parameter.MONGO_DATA_DB.key()));
+        mainRouter.mountSubRouter(serverConfig.getEndpoint(), v2ApiRouter);
 
-        // Set up authentication check
-        final var keyOptions = new PubSecKeyOptions().setAlgorithm(JWT_HASH_ALGORITHM).setBuffer(publicKey)
-                .setBuffer(privateKey);
-        final var issuer = jwtIssuer(host, endpoint);
-        final var config = new JWTAuthOptions().addPubSecKey(keyOptions)
-                .setJWTOptions(new JWTOptions().setIssuer(issuer)
-                        .setAudience(Collections.singletonList(jwtAudience(host, endpoint))));
-        final var jwtAuthProvider = JWTAuth.create(vertx, config);
-        // jwtAuthProvider.
+        // Setup measurement routes
+        final var measurementHandler = new MeasurementHandler(serverConfig);
+        final var failureHandler = ErrorHandler.create(vertx);
 
-        // Set up default routes
-        mainRouter.mountSubRouter(endpoint, v2ApiRouter);
+        // Setup authentication
+        Authenticator.setupAuthentication("/login", v2ApiRouter, serverConfig)
+                .addAuthenticatedHandler(MEASUREMENTS_ENDPOINT, measurementHandler, failureHandler);
 
-        // Set up v2 API
-        // Set up authentication route
-        v2ApiRouter.route("/login").consumes("application/json")
-                .handler(BodyHandler.create().setBodyLimit(2 * BYTES_IN_ONE_KILOBYTE))
-                .handler(LoggerHandler.create())
-                .handler(new AuthenticationHandler(mongoAuthProvider, jwtAuthProvider, issuer,
-                        jwtAudience(host, endpoint), tokenExpirationTime))
-                .failureHandler(new AuthenticationFailureHandler());
-        // Set up data collector route
-        v2ApiRouter.post("/measurements").consumes("multipart/form-data")
-                .handler(BodyHandler.create().setBodyLimit(BYTES_IN_ONE_GIGABYTE).setDeleteUploadedFilesOnEnd(true))
-                .handler(LoggerHandler.create())
-                .handler(JWTAuthHandler.create(jwtAuthProvider))
-                .handler(new MeasurementHandler(MongoClient.create(vertx, mongoDataDbConfiguration)))
-                .failureHandler(ErrorHandler.create(vertx));
-        // .failureHandler(new AuthenticationFailureHandler());
-        // Set up web api
+        // Setup web-api route
         v2ApiRouter.route().handler(StaticHandler.create("webroot/api"));
-        // Set up failure handler for all other resources
+
+        // Setup unknown-resource handler
         mainRouter.route("/*").last().handler(new FailureHandler());
 
-        /*
-         * This implementation does not require a future since everything is synchronous but it will require this if we
-         * add the OpenApi generated route.
-         */
+        // Only requires a `future` because we add the OpenApi generated route. Else this would be synchronous.
         next.handle(Future.succeededFuture(mainRouter));
-    }
-
-    /**
-     * Provides the value for the JWT audience information.
-     *
-     * @param host The host this service runs under
-     * @param endpoint The endpoint path this service runs under
-     * @return The JWT audience as a <code>String</code>
-     */
-    private String jwtAudience(final String host, final String endpoint) {
-        return String.format("%s%s", host, endpoint);
-    }
-
-    /**
-     * Provides the value for the JWT issuer information.
-     *
-     * @param host The host this service runs under
-     * @param endpoint The endpoint path this service runs under
-     * @return The JWT issuer as a <code>String</code>
-     */
-    private String jwtIssuer(final String host, final String endpoint) {
-        return String.format("%s%s", host, endpoint);
-    }
-
-    /**
-     * Starts the HTTP server provided by this application. This server runs the Cyface Collector REST-API.
-     *
-     * @param router The router for all the endpoints the HTTP server should serve.
-     * @param startFuture Informs the caller about the successful or failed start of the server.
-     * @param httpPort The HTTP port to run the server at.
-     */
-    private void startHttpServer(final Router router, final Promise<Void> startFuture, final int httpPort) {
-        Validate.notNull(router);
-        Validate.notNull(startFuture);
-        Validate.isTrue(httpPort > 0);
-
-        vertx.createHttpServer().requestHandler(router).listen(httpPort,
-                serverStartup -> completeStartup(serverStartup, startFuture));
-    }
-
-    /**
-     * Finishes the <code>CollectorApiVerticle</code> startup process and informs all interested parties about whether
-     * it has
-     * been successful or not.
-     *
-     * @param serverStartup The result of the server startup as provided by <code>Vertx</code>.
-     * @param future A future to call to inform all waiting parties about success or failure of the startup process.
-     */
-    private void completeStartup(final AsyncResult<HttpServer> serverStartup, final Promise<Void> future) {
-        if (serverStartup.succeeded()) {
-            future.complete();
-            LOGGER.info("Successfully started Collector API!");
-        } else {
-            future.fail(serverStartup.cause());
-            LOGGER.info("Starting Collector API failed!");
-        }
-    }
-
-    /**
-     * Extracts a key from a PEM keyfile.
-     *
-     * @param keyParameter The Vertx configuration parameter specifying the location of the file containing the key.
-     * @return The extracted key.
-     * @throws IOException If the key file was not accessible.
-     */
-    private String extractKey(final Parameter keyParameter) throws IOException {
-        final var keyFilePath = keyParameter.stringValue(vertx, null);
-        if (keyFilePath == null) {
-            return null;
-        }
-        return Files.readString(Path.of(keyFilePath));
     }
 }

@@ -20,11 +20,12 @@ package de.cyface.collector.verticle;
 
 import java.nio.charset.StandardCharsets;
 
+import de.cyface.api.Parameter;
+import de.cyface.api.ServerConfig;
 import org.apache.commons.lang3.Validate;
 
 import de.cyface.collector.Hasher;
 import de.cyface.collector.MongoDbUtils;
-import de.cyface.collector.Parameter;
 import de.cyface.collector.handler.UserCreationHandler;
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.Promise;
@@ -40,26 +41,25 @@ import io.vertx.ext.web.handler.StaticHandler;
  * This is separated from the Upload API as we do not want to expose this unintentionally to the public.
  *
  * @author Klemens Muthmann
- * @version 2.0.0
+ * @author Armin Schnabel
+ * @version 3.0.0
  * @since 2.0.0
  */
 public final class ManagementApiVerticle extends AbstractVerticle {
 
     /**
-     * The salt used to encrypt user passwords on this server.
+     * The config to be used on this verticle
      */
-    private final String salt;
+    private final ServerConfig serverConfig;
 
     /**
      * Creates a new completely initialized object of this class.
      *
-     * @param salt The salt used to encrypt user passwords on this server
+     * @param serverConfig The config to be used on this verticle
      */
-    public ManagementApiVerticle(final String salt) {
+    public ManagementApiVerticle(final ServerConfig serverConfig) {
         super();
-        Validate.notEmpty(salt);
-
-        this.salt = salt;
+        this.serverConfig = serverConfig;
     }
 
     @Override
@@ -70,10 +70,14 @@ public final class ManagementApiVerticle extends AbstractVerticle {
                 new JsonObject());
         final var port = Parameter.MANAGEMENT_HTTP_PORT.intValue(getVertx(), 13_371);
 
+        // TODO: Reuse code from serverConfig, but we don't need a dataClient here.
+        // I.e. make this method a static method to be used
         final var client = MongoDbUtils.createSharedMongoClient(getVertx(), mongoUserDatabaseConfiguration);
-        final var hasher = new Hasher(HashingStrategy.load(), salt.getBytes(StandardCharsets.UTF_8));
+        final var hasher = new Hasher(HashingStrategy.load(), serverConfig.getSalt().getBytes(StandardCharsets.UTF_8));
         final var router = setupRouter(client, hasher);
-        startHttpServer(startFuture, router, port);
+
+        final var httpServer = new de.cyface.api.HttpServer(serverConfig);
+        httpServer.start(vertx, router, startFuture);
     }
 
     /**

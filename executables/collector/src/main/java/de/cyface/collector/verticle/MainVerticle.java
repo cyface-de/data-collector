@@ -18,14 +18,11 @@
  */
 package de.cyface.collector.verticle;
 
-import java.nio.charset.StandardCharsets;
-
-import de.cyface.collector.Parameter;
+import de.cyface.api.ServerConfig;
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.DeploymentOptions;
 import io.vertx.core.Promise;
-import io.vertx.core.Vertx;
 
 /**
  * This Verticle starts the whole application, by deploying all required child Verticles.
@@ -39,28 +36,29 @@ public final class MainVerticle extends AbstractVerticle {
     @Override
     public void start(final Promise<Void> startFuture) throws Exception {
 
-        loadSalt(vertx).future().onComplete(result -> {
+        final var serverConfig = new ServerConfig(vertx);
+        serverConfig.loadSalt(vertx).future().onComplete(result -> {
             if (result.failed()) {
                 startFuture.fail(result.cause());
             } else {
-                deploy(startFuture, result.result());
+                final String salt = result.result();
+                serverConfig.lateInit(salt);
+                deploy(startFuture, serverConfig);
             }
-
         });
     }
 
     /**
      * Deploys all required Verticles and tells the system when deployment has finished via the provided
      * <code>startFuture</code>.
-     * 
-     * @param startFuture The future to complete or fail, depending on the success or failure of Verticle deployment.
-     * @param salt Salt to use by all Verticles to encrypt and decrypt user passwords.
+     *  @param startFuture The future to complete or fail, depending on the success or failure of Verticle deployment.
+     * @param serverConfig Configurations to be used by all verticles.
      */
-    private void deploy(final Promise<Void> startFuture, final String salt) {
+    private void deploy(final Promise<Void> startFuture, final ServerConfig serverConfig) {
         final var config = config();
         final var verticleConfig = new DeploymentOptions().setConfig(config);
-        final var collectorApiVerticle = new CollectorApiVerticle(salt);
-        final var managementApiVerticle = new ManagementApiVerticle(salt);
+        final var collectorApiVerticle = new CollectorApiVerticle(serverConfig);
+        final var managementApiVerticle = new ManagementApiVerticle(serverConfig);
 
         // Start the collector API as first verticle.
         final var collectorApiFuture = vertx.deployVerticle(collectorApiVerticle, verticleConfig);
@@ -78,38 +76,4 @@ public final class MainVerticle extends AbstractVerticle {
             }
         });
     }
-
-    /**
-     * Loads the external encryption salt from the Vertx configuration. If no value was provided the default value
-     * "cyface-salt" is used.
-     *
-     * @param vertx The current <code>Vertx</code> instance
-     * @return The <code>Promise</code> about a value to be used as encryption salt
-     */
-    private Promise<String> loadSalt(final Vertx vertx) {
-        final Promise<String> result = Promise.promise();
-        final var salt = Parameter.SALT.stringValue(vertx);
-        final var saltPath = Parameter.SALT_PATH.stringValue(vertx);
-        if (salt == null && saltPath == null) {
-            result.complete("cyface-salt");
-        } else if (salt != null && saltPath != null) {
-            result.fail("Please provide either a salt value or a path to a salt file. "
-                    + "Encountered both and can not decide which to use. Aborting!");
-        } else if (salt != null) {
-            result.complete(salt);
-        } else {
-            final var fileSystem = vertx.fileSystem();
-            fileSystem.readFile(saltPath, readFileResult -> {
-                if (readFileResult.failed()) {
-                    result.fail(readFileResult.cause());
-                } else {
-
-                    final var loadedSalt = readFileResult.result().toString(StandardCharsets.UTF_8);
-                    result.complete(loadedSalt);
-                }
-            });
-        }
-        return result;
-    }
-
 }

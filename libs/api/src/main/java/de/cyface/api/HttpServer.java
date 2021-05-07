@@ -8,12 +8,12 @@
 package de.cyface.api;
 
 import org.apache.commons.lang3.Validate;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
-import io.vertx.core.logging.Logger;
-import io.vertx.core.logging.LoggerFactory;
 import io.vertx.ext.web.Router;
 
 /**
@@ -69,10 +69,10 @@ public class HttpServer {
             final Promise<Void> promise) {
         if (serverStartup.succeeded()) {
             promise.complete();
-            LOGGER.info("Successfully started Provider API!");
+            LOGGER.info("Successfully started API!");
         } else {
             promise.fail(serverStartup.cause());
-            LOGGER.info("Starting Provider API failed!");
+            LOGGER.info("Starting API failed!");
         }
     }
 }

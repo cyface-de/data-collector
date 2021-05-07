@@ -18,6 +18,7 @@
  */
 package de.cyface.collector;
 
+import de.cyface.api.Parameter;
 import de.cyface.collector.verticle.MainVerticle;
 import io.vertx.core.Launcher;
 import io.vertx.core.VertxOptions;
@@ -39,6 +40,11 @@ import org.slf4j.LoggerFactory;
  * @author Klemens Muthmann
  * @version 1.0.3
  * @since 2.0.0
+ *
+ * FIXME: What is this and do we still need this or can this move into `MainVerticle`?
+ * Else we have to adjust our "common" build files we ported from backend.
+ *
+ * Stuff that needs to be done before the verticle start
  */
 public class Application extends Launcher {
 
@@ -97,8 +103,8 @@ public class Application extends Launcher {
      * @param config The configuration to check.
      */
     private void checkValidConfiguration(final JsonObject config) {
-        if (config.getString(Parameter.COLLECTOR_HOST.key()) == null
-                || config.getString(Parameter.COLLECTOR_ENDPOINT.key()) == null) {
+        if (config.getString(Parameter.HTTP_HOST.key()) == null
+                || config.getString(Parameter.HTTP_ENDPOINT.key()) == null) {
             throw new InvalidConfigurationException(config);
         }
     }

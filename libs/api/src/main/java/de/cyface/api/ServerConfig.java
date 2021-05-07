@@ -1,9 +1,20 @@
 /*
- * Copyright (C) 2020 Cyface GmbH - All Rights Reserved
+ * Copyright 2020-2021 Cyface GmbH
  *
- * This file is part of the Cyface Server Backend.
- * Unauthorized copying of this file, via any medium is strictly prohibited
- * Proprietary and confidential
+ * This file is part of the Cyface Data Collector.
+ *
+ * The Cyface Data Collector is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * The Cyface Data Collector is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with the Cyface Data Collector. If not, see <http://www.gnu.org/licenses/>.
  */
 package de.cyface.api;
 
@@ -16,9 +27,12 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
-import java.nio.file.Paths;
+import java.nio.file.Path;
+import java.util.Collections;
 import java.util.Objects;
 
+import io.vertx.core.Promise;
+import io.vertx.ext.auth.JWTOptions;
 import org.apache.commons.lang3.Validate;
 
 import io.vertx.core.Vertx;
@@ -36,19 +50,19 @@ import io.vertx.ext.mongo.MongoClient;
  * Configuration parameters required to start the HTTP server which also handles routing.
  *
  * @author Armin Schnabel
- * @version 1.0.1
- * @since 1.0.0
+ * @version 2.0.0
+ * @since 5.3.0
  */
 public class ServerConfig {
 
     /**
      * The port on which the HTTP server should listen if no port was specified.
      */
-    private static final int DEFAULT_HTTP_PORT = 8081;
+    private static final int DEFAULT_HTTP_PORT = 8080;
     /**
      * The default number of seconds the JWT authentication token is valid after login.
      */
-    private static final int DEFAULT_TOKEN_VALIDATION_TIME = 3600;
+    private static final int DEFAULT_TOKEN_VALIDATION_TIME = 60;
     /**
      * The client to use to access the Mongo database holding the uploaded data
      */
@@ -58,9 +72,9 @@ public class ServerConfig {
      */
     private final MongoClient userDatabase;
     /**
-     * Authentication provider used to check for valid user accounts used to generate new JWT token
+     * {@code null} or the Authentication provider used to check for valid user accounts used to generate new JWT token
      */
-    private final MongoAuth authProvider;
+    private MongoAuth authProvider;
     /**
      * The port on which the HTTP server should listen
      */
@@ -94,15 +108,26 @@ public class ServerConfig {
      */
     private final String audience;
     /**
-     * The number of seconds the JWT authentication token is valid after login.
+     * {@code null} or the salt used to encrypt user passwords on this server
      */
-    private final int tokenValidationTime;
+    private String salt;
+    /**
+     * A parameter telling the system how long a new JWT token stays valid in seconds.
+     */
+    private final int tokenExpirationTime;
     /**
      * The default data source name to use for user and data database if none is provided via configuration.
      */
     private static final String DEFAULT_MONGO_DATA_SOURCE_NAME = "cyface";
 
     /**
+     * Creates a *not fully* initialized instance of this class.
+     * FIXME: You need to call `loadSalt()` and if the promise is successful call `lateInit(salt)`.
+     *
+     * K-FIX> Just have multiple static method in here which can be used on demand by the different
+     * verticles instead of creating an instance which has all parameters which might not be needed
+     * by all verticles in the future.
+     *
      * @param vertx The Vertx instance to get the parameters from
      * @throws IOException if key files are inaccessible
      */
@@ -110,37 +135,41 @@ public class ServerConfig {
         checkValidConfiguration(vertx.getOrCreateContext().config());
 
         // Data-database client
-        final JsonObject mongoDatabaseConfiguration = Parameter.MONGO_DATA_DB.jsonValue(vertx, new JsonObject());
+        final var mongoDatabaseConfiguration = Parameter.MONGO_DATA_DB.jsonValue(vertx);
         this.dataDatabase = createSharedMongoClient(vertx, mongoDatabaseConfiguration);
 
         // User-database client
-        final JsonObject mongoUserDatabaseConfiguration = Parameter.MONGO_USER_DB.jsonValue(vertx, new JsonObject());
+        final var mongoUserDatabaseConfiguration = Parameter.MONGO_USER_DB.jsonValue(vertx, new JsonObject());
         this.userDatabase = createSharedMongoClient(vertx, mongoUserDatabaseConfiguration);
 
         // Http config
         this.host = Parameter.HTTP_HOST.stringValue(vertx);
         this.endpoint = Parameter.HTTP_ENDPOINT.stringValue(vertx);
+        this.httpPort = Parameter.HTTP_PORT.intValue(vertx, DEFAULT_HTTP_PORT);
 
         // Auth provider config
-        final String salt = loadSalt(vertx);
-        this.authProvider = buildMongoAuthProvider(userDatabase, salt);
-        this.httpPort = Parameter.HTTP_PORT.intValue(vertx, DEFAULT_HTTP_PORT);
+        // FIXME: currently needs to be called from outside: `loadSalt(vertx);` and after resolving `lateInit(salt)`
         this.publicKey = extractKey(vertx, Parameter.JWT_PUBLIC_KEY_FILE_PATH);
         this.privateKey = extractKey(vertx, Parameter.JWT_PRIVATE_KEY_FILE_PATH);
         this.jwtAuthProvider = createAuthProvider(vertx, publicKey, privateKey);
         this.issuer = String.format("%s%s", host, endpoint);
         this.audience = issuer;
-        this.tokenValidationTime = Parameter.TOKEN_VALIDATION_TIME.intValue(vertx, DEFAULT_TOKEN_VALIDATION_TIME);
+        this.tokenExpirationTime = Parameter.TOKEN_EXPIRATION_TIME.intValue(vertx, DEFAULT_TOKEN_VALIDATION_TIME);
 
         Validate.notNull(publicKey);
         Validate.notNull(privateKey);
         Validate.notEmpty(publicKey);
         Validate.notEmpty(privateKey);
-        Validate.notNull(authProvider);
         Validate.notEmpty(host, "Hostname not found. Please provide it using the %s parameter!",
                 Parameter.HTTP_HOST.key());
         Validate.notEmpty(endpoint, "Endpoint not found. Please provide it using the %s parameter!",
                 Parameter.HTTP_ENDPOINT.key());
+        Validate.isTrue(httpPort > 0);
+    }
+
+    public void lateInit(final String salt) {
+        this.salt = salt;
+        this.authProvider = buildMongoAuthProvider(userDatabase, salt);
     }
 
     /**
@@ -164,11 +193,36 @@ public class ServerConfig {
      * @return The auth provider
      */
     public JWTAuth createAuthProvider(final Vertx vertx, final String publicKey, final String privateKey) {
-        final PubSecKeyOptions keyOptions = new PubSecKeyOptions().setAlgorithm(JWT_HASH_ALGORITHM)
-                .setPublicKey(publicKey)
-                .setSecretKey(privateKey);
-        final JWTAuthOptions config = new JWTAuthOptions().addPubSecKey(keyOptions);
+        final var keyOptions = new PubSecKeyOptions().setAlgorithm(JWT_HASH_ALGORITHM)
+                .setBuffer(publicKey)
+                .setBuffer(privateKey);
+        final var issuer = jwtIssuer(host, endpoint);
+        final var config = new JWTAuthOptions().addPubSecKey(keyOptions)
+                .setJWTOptions(new JWTOptions().setIssuer(issuer)
+                        .setAudience(Collections.singletonList(jwtAudience(host, endpoint))));
         return JWTAuth.create(vertx, config);
+    }
+
+    /**
+     * Provides the value for the JWT audience information.
+     *
+     * @param host The host this service runs under
+     * @param endpoint The endpoint path this service runs under
+     * @return The JWT audience as a <code>String</code>
+     */
+    private String jwtAudience(final String host, final String endpoint) {
+        return String.format("%s%s", host, endpoint);
+    }
+
+    /**
+     * Provides the value for the JWT issuer information.
+     *
+     * @param host The host this service runs under
+     * @param endpoint The endpoint path this service runs under
+     * @return The JWT issuer as a <code>String</code>
+     */
+    private String jwtIssuer(final String host, final String endpoint) {
+        return String.format("%s%s", host, endpoint);
     }
 
     /**
@@ -186,6 +240,8 @@ public class ServerConfig {
         if (keyFilePath == null) {
             return null;
         }
+        // FIXME: why did the Collector just use this simple code instead here?
+        // return Files.readString(Path.of(keyFilePath));
 
         final StringBuilder keyBuilder = new StringBuilder();
         try (BufferedReader keyFileInput = new BufferedReader(
@@ -215,39 +271,50 @@ public class ServerConfig {
      * Loads the external encryption salt from the Vertx configuration. If no value was provided the default value
      * "cyface-salt" is used.
      *
+     * Promise as you can only access files asynchronously
+     *
      * @param vertx The current <code>Vertx</code> instance
-     * @return A value to be used as encryption salt
-     * @throws IOException If the salt is provided in a file and that file is not accessible
+     * @return The <code>Promise</code> about a value to be used as encryption salt
      */
-    private String loadSalt(final Vertx vertx) throws IOException {
-        final String salt = Parameter.SALT.stringValue(vertx);
-        final String saltPath = Parameter.SALT_PATH.stringValue(vertx);
+    public Promise<String> loadSalt(final Vertx vertx) {
+        final Promise<String> result = Promise.promise();
+        final var salt = Parameter.SALT.stringValue(vertx);
+        final var saltPath = Parameter.SALT_PATH.stringValue(vertx);
         if (salt == null && saltPath == null) {
-            return "cyface-salt";
+            result.complete("cyface-salt");
         } else if (salt != null && saltPath != null) {
-            throw new InvalidConfigurationException(
-                    "Please provide either a salt value or a path to a salt file. "
-                            + "Encountered both and can not decide which to use. Aborting!");
-        } else if (salt != null) {
-            return salt;
+            result.fail("Please provide either a salt value or a path to a salt file. "
+                    + "Encountered both and can not decide which to use. Aborting!");
+            result.complete(salt);
         } else {
-            return Files.readAllLines(Paths.get(saltPath)).get(0);
+            final var fileSystem = vertx.fileSystem();
+            fileSystem.readFile(saltPath, readFileResult -> {
+                if (readFileResult.failed()) {
+                    result.fail(readFileResult.cause());
+                } else {
+                    final var loadedSalt = readFileResult.result().toString(StandardCharsets.UTF_8);
+                    result.complete(loadedSalt);
+                }
+            });
         }
+        return result;
     }
 
     /**
      * @param client A Mongo client to access the user Mongo database.
      * @param salt The salt used to make hacking passwords more complex.
-     * @return Authentication provider used to check for valid user accounts used to generate new JWT token.
+     * @return The <code>Promise</code> about an Authentication provider used to check for valid user accounts used to generate new JWT token.
      */
     public static MongoAuth buildMongoAuthProvider(final MongoClient client, final String salt) {
         final JsonObject authProperties = new JsonObject();
         final MongoAuth authProvider = MongoAuth.create(client, authProperties);
+
         HashStrategy hashStrategy = authProvider.getHashStrategy();
         hashStrategy.setSaltStyle(HashSaltStyle.EXTERNAL);
         hashStrategy.setExternalSalt(salt);
         authProvider.setHashAlgorithm(HashAlgorithm.PBKDF2);
 
+        Validate.notNull(authProvider);
         return authProvider;
     }
 
@@ -260,6 +327,12 @@ public class ServerConfig {
      * @return A <code>MongoClient</code> ready for usage.
      */
     public static MongoClient createSharedMongoClient(final Vertx vertx, final JsonObject config) {
+        Objects.requireNonNull(config, String.format(
+                "Unable to load Mongo user database configuration. "
+                        + "Please provide a valid configuration using the %s parameter and at least as \"db_name\", "
+                        + "a \"connection_string\" and a \"data_source_name\"! Also check if your database is running "
+                        + "and accessible!",
+                Parameter.MONGO_USER_DB.key()));
         final String dataSourceName = config.getString("data_source_name", DEFAULT_MONGO_DATA_SOURCE_NAME);
         return MongoClient.createShared(vertx, config, dataSourceName);
     }
@@ -278,7 +351,8 @@ public class ServerConfig {
                 ", jwtAuthProvider=" + jwtAuthProvider +
                 ", issuer='" + issuer + '\'' +
                 ", audience='" + audience + '\'' +
-                ", tokenValidationTime=" + tokenValidationTime +
+                ", salt='" + salt + '\'' +
+                ", tokenExpirationTime=" + tokenExpirationTime +
                 '}';
     }
 
@@ -300,17 +374,18 @@ public class ServerConfig {
                 Objects.equals(jwtAuthProvider, that.jwtAuthProvider) &&
                 Objects.equals(issuer, that.issuer) &&
                 Objects.equals(audience, that.audience) &&
-                Objects.equals(tokenValidationTime, that.tokenValidationTime);
+                Objects.equals(tokenExpirationTime, that.tokenExpirationTime) &&
+                Objects.equals(salt, that.salt);
     }
 
     @Override
     public int hashCode() {
         return Objects.hash(dataDatabase, userDatabase, authProvider, httpPort, publicKey, privateKey, host, endpoint,
-                jwtAuthProvider, issuer, audience, tokenValidationTime);
+                jwtAuthProvider, issuer, audience, tokenExpirationTime, salt);
     }
 
-    public int getTokenValidationTime() {
-        return tokenValidationTime;
+    public int getTokenExpirationTime() {
+        return tokenExpirationTime;
     }
 
     public MongoClient getDataDatabase() {
@@ -357,5 +432,9 @@ public class ServerConfig {
 
     public String getAudience() {
         return audience;
+    }
+
+    public String getSalt() {
+        return salt;
     }
 }

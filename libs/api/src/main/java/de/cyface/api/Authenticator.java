@@ -8,13 +8,13 @@ package de.cyface.api;
 
 import java.util.Collections;
 
+import io.vertx.ext.web.handler.ErrorHandler;
+import io.vertx.ext.web.handler.LoggerHandler;
 import org.apache.commons.lang3.Validate;
 
 import io.vertx.core.Handler;
 import io.vertx.core.json.DecodeException;
 import io.vertx.core.json.JsonObject;
-import io.vertx.core.logging.Logger;
-import io.vertx.core.logging.LoggerFactory;
 import io.vertx.ext.auth.JWTOptions;
 import io.vertx.ext.auth.jwt.JWTAuth;
 import io.vertx.ext.auth.mongo.MongoAuth;
@@ -22,6 +22,8 @@ import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.BodyHandler;
 import io.vertx.ext.web.handler.JWTAuthHandler;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Handles authentication request on the Cyface Collector API. This is implemented with JSON Web Token (JWT). To get a
@@ -36,19 +38,26 @@ import io.vertx.ext.web.handler.JWTAuthHandler;
  * @since 1.0.0
  */
 public final class Authenticator implements Handler<RoutingContext> {
+
     /**
      * The logger used by objects of this class. Configure it using <tt>src/main/resources/logback.xml</tt>.
      */
     private static final Logger LOGGER = LoggerFactory.getLogger(Authenticator.class);
     /**
      * The hashing algorithm used for public and private keys to generate and check JWT tokens.
+     *
+     * FIXME: Backend was using RS256, Collector HS256 ... is there a reason we switched to one or the other?
      */
-    public static final String JWT_HASH_ALGORITHM = "RS256";
+    public static final String JWT_HASH_ALGORITHM = "HS256";
     /**
      * The number of bytes in one kilobyte. This is used to limit the amount of bytes accepted by an authentication
      * request.
      */
     public static final long BYTES_IN_ONE_KILOBYTE = 1024L;
+    /**
+     * The number of bytes in one gigabyte. This can be used to limit the amount of data accepted by the server.
+     */
+    private static final long BYTES_IN_ONE_GIGABYTE = 1_073_741_824L;
     /**
      * The number of seconds the JWT authentication token is valid after login.
      */
@@ -78,7 +87,7 @@ public final class Authenticator implements Handler<RoutingContext> {
 
     /**
      * Creates a new completely initialized <code>Authenticator</code>. You may add handlers to be authenticated via
-     * {@link #addAuthenticatedHandler(String, Handler)}. The rest of the new instances state is immutable.
+     * {@link #addAuthenticatedHandler(String, Handler, ErrorHandler)}. The rest of the new instances state is immutable.
      *
      * @param authenticatedRouter The router handling requests that are authenticated by this <code>Authenticator</code>
      * @param authProvider Authenticator that uses the Mongo user database to store and retrieve credentials
@@ -99,7 +108,7 @@ public final class Authenticator implements Handler<RoutingContext> {
 
         this.authenticatedRouter = authenticatedRouter;
         this.authProvider = authProvider;
-       this.jwtAuthProvider = jwtAuthProvider;
+        this.jwtAuthProvider = jwtAuthProvider;
         this.issuer = issuer;
         this.audience = audience;
         this.tokenValidationTime = tokenValidationTime;
@@ -113,7 +122,6 @@ public final class Authenticator implements Handler<RoutingContext> {
             authProvider.authenticate(body, r -> {
                 if (r.succeeded()) {
                     LOGGER.debug("Authentication successful!");
-                    LOGGER.trace(body);
 
                     final JWTOptions jwtOptions = new JWTOptions().setExpiresInSeconds(tokenValidationTime);
                     jwtOptions.setIssuer(issuer);
@@ -145,11 +153,14 @@ public final class Authenticator implements Handler<RoutingContext> {
      */
     public static Authenticator setupAuthentication(final String loginEndpoint, final Router router,
             final ServerConfig serverConfig) {
-        final Authenticator authenticator = new Authenticator(router, serverConfig.getAuthProvider(),
+        final var authenticator = new Authenticator(router, serverConfig.getAuthProvider(),
                 serverConfig.getJwtAuthProvider(), serverConfig.getHost(), serverConfig.getEndpoint(),
-                serverConfig.getTokenValidationTime());
-        router.route(loginEndpoint).consumes("application/json")
-                .handler(BodyHandler.create().setBodyLimit(2 * BYTES_IN_ONE_KILOBYTE)).handler(authenticator)
+                serverConfig.getTokenExpirationTime());
+        router.route(loginEndpoint)
+                .consumes("application/json")
+                .handler(BodyHandler.create().setBodyLimit(2 * BYTES_IN_ONE_KILOBYTE))
+                .handler(LoggerHandler.create())
+                .handler(authenticator)
                 .failureHandler(new AuthenticationFailureHandler());
         return authenticator;
     }
@@ -159,11 +170,18 @@ public final class Authenticator implements Handler<RoutingContext> {
      *
      * @param endpoint The URL endpoint to wrap
      * @param handler The handler to add with authentication to the <code>Router</code>
+     * @param failureHandler The handler to add to handle failures.
      * @return the handler
      */
-    public Authenticator addAuthenticatedHandler(final String endpoint, final Handler<RoutingContext> handler) {
-        authenticatedRouter.get(endpoint).handler(JWTAuthHandler.create(jwtAuthProvider).setIssuer(issuer)
-                .setAudience(Collections.singletonList(audience))).handler(handler);
+    public Authenticator addAuthenticatedHandler(final String endpoint, final Handler<RoutingContext> handler, ErrorHandler failureHandler) {
+        final var authHandler = JWTAuthHandler.create(jwtAuthProvider);
+        authenticatedRouter.post(endpoint)
+                .consumes("multipart/form-data")
+                .handler(BodyHandler.create().setBodyLimit(BYTES_IN_ONE_GIGABYTE).setDeleteUploadedFilesOnEnd(true))
+                .handler(LoggerHandler.create())
+                .handler(authHandler)
+                .handler(handler)
+                .failureHandler(failureHandler);
         return this;
     }
 }
