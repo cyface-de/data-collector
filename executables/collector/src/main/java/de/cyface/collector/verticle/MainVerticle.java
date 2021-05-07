@@ -24,26 +24,30 @@ import io.vertx.core.CompositeFuture;
 import io.vertx.core.DeploymentOptions;
 import io.vertx.core.Promise;
 
+import java.io.IOException;
+
 /**
  * This Verticle starts the whole application, by deploying all required child Verticles.
  * 
  * @author Klemens Muthmann
- * @version 2.0.2
+ * @author Armin Schnabel
+ * @version 2.1.0
  * @since 2.0.0
  */
 public final class MainVerticle extends AbstractVerticle {
 
     @Override
     public void start(final Promise<Void> startFuture) throws Exception {
-
-        final var serverConfig = new ServerConfig(vertx);
-        serverConfig.loadSalt(vertx).future().onComplete(result -> {
+        ServerConfig.loadSalt(vertx).future().onComplete(result -> {
             if (result.failed()) {
                 startFuture.fail(result.cause());
             } else {
-                final String salt = result.result();
-                serverConfig.lateInit(salt);
-                deploy(startFuture, serverConfig);
+                final var salt = result.result();
+                try {
+                    deploy(startFuture, salt);
+                } catch (IOException e) {
+                    startFuture.fail(e);
+                }
             }
         });
     }
@@ -51,14 +55,15 @@ public final class MainVerticle extends AbstractVerticle {
     /**
      * Deploys all required Verticles and tells the system when deployment has finished via the provided
      * <code>startFuture</code>.
-     *  @param startFuture The future to complete or fail, depending on the success or failure of Verticle deployment.
-     * @param serverConfig Configurations to be used by all verticles.
+     * @param startFuture The future to complete or fail, depending on the success or failure of Verticle deployment.
+     * @param salt The value to be used as encryption salt
+     * @throws IOException if key files are inaccessible
      */
-    private void deploy(final Promise<Void> startFuture, final ServerConfig serverConfig) {
+    private void deploy(final Promise<Void> startFuture, final String salt) throws IOException {
         final var config = config();
         final var verticleConfig = new DeploymentOptions().setConfig(config);
-        final var collectorApiVerticle = new CollectorApiVerticle(serverConfig);
-        final var managementApiVerticle = new ManagementApiVerticle(serverConfig.getSalt());
+        final var collectorApiVerticle = new CollectorApiVerticle(salt);
+        final var managementApiVerticle = new ManagementApiVerticle(salt);
 
         // Start the collector API as first verticle.
         final var collectorApiFuture = vertx.deployVerticle(collectorApiVerticle, verticleConfig);

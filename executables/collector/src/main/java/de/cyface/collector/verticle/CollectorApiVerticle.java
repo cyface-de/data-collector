@@ -14,6 +14,7 @@
  */
 package de.cyface.collector.verticle;
 
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 
 import de.cyface.api.FailureHandler;
@@ -61,20 +62,25 @@ public final class CollectorApiVerticle extends AbstractVerticle {
      */
     private static final String ADMIN_ROLE = "admin";
     private static final String MEASUREMENTS_ENDPOINT = "/measurements";
-
     /**
      * The config to be used on this verticle
      */
     private final ServerConfig serverConfig;
+    /**
+     * The value to be used as encryption salt
+     */
+    private final String salt;
 
     /**
      * Creates a new completely initialized object of this class.
      *
-     * @param serverConfig The config to be used on this verticle
+     * @param salt The value to be used as encryption salt
+     * @throws IOException if key files are inaccessible
      */
-    public CollectorApiVerticle(final ServerConfig serverConfig) {
+    public CollectorApiVerticle(final String salt) throws IOException {
         super();
-        this.serverConfig = serverConfig;
+        this.salt = salt;
+        this.serverConfig = new ServerConfig(vertx);
     }
 
     @Override
@@ -108,7 +114,7 @@ public final class CollectorApiVerticle extends AbstractVerticle {
             }
             if (result.result() == null) {
                 final var hasher = new Hasher(HashingStrategy.load(),
-                        serverConfig.getSalt().getBytes(StandardCharsets.UTF_8));
+                        salt.getBytes(StandardCharsets.UTF_8));
                 final var userCreationHandler = new UserCreationHandler(userClient, "user", hasher);
                 userCreationHandler.createUser(adminUsername, adminPassword, ADMIN_ROLE, success -> {
                     LOGGER.info("Identifier of new user id: {}", success);

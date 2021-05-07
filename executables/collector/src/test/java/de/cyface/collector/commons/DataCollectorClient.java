@@ -22,7 +22,6 @@ import java.io.IOException;
 import java.net.ServerSocket;
 
 import de.cyface.api.Parameter;
-import de.cyface.api.ServerConfig;
 import de.cyface.collector.verticle.CollectorApiVerticle;
 import io.vertx.core.DeploymentOptions;
 import io.vertx.core.Vertx;
@@ -64,24 +63,23 @@ public final class DataCollectorClient {
      */
     public WebClient createWebClient(final Vertx vertx, final VertxTestContext ctx, final int mongoPort)
             throws IOException {
-        try (ServerSocket socket = new ServerSocket(0)) {
+        try (var socket = new ServerSocket(0)) {
             port = socket.getLocalPort();
 
-            final JsonObject mongoDbConfig = new JsonObject()
+            final var mongoDbConfig = new JsonObject()
                     .put("connection_string", "mongodb://localhost:" + mongoPort)
                     .put("db_name", "cyface");
 
-            final JsonObject config = new JsonObject().put(Parameter.MONGO_DATA_DB.key(), mongoDbConfig)
+            final var config = new JsonObject().put(Parameter.MONGO_DATA_DB.key(), mongoDbConfig)
                     .put(Parameter.MONGO_USER_DB.key(), mongoDbConfig).put(Parameter.HTTP_PORT.key(), port)
                     .put(Parameter.JWT_PRIVATE_KEY_FILE_PATH.key(),
                             this.getClass().getResource("/private_key.pem").getFile())
                     .put(Parameter.JWT_PUBLIC_KEY_FILE_PATH.key(), this.getClass().getResource("/public.pem").getFile())
                     .put(Parameter.HTTP_HOST.key(), "localhost")
                     .put(Parameter.HTTP_ENDPOINT.key(), "/api/v2/");
-            final DeploymentOptions options = new DeploymentOptions().setConfig(config);
+            final var options = new DeploymentOptions().setConfig(config);
 
-            final var serverConfig = new ServerConfig(vertx);
-            final var collectorVerticle = new CollectorApiVerticle(serverConfig);
+            final var collectorVerticle = new CollectorApiVerticle("cyface-salt");
             vertx.deployVerticle(collectorVerticle, options, ctx.succeedingThenComplete());
 
             return WebClient.create(vertx);

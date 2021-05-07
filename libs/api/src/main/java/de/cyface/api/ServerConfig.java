@@ -60,6 +60,10 @@ public class ServerConfig {
      */
     private static final int DEFAULT_TOKEN_VALIDATION_TIME = 60;
     /**
+     * If no salt value was provided this default value is used.
+     */
+    public static final String DEFAULT_CYFACE_SALT = "cyface-salt";
+    /**
      * The client to use to access the Mongo database holding the uploaded data
      */
     private final MongoClient dataDatabase;
@@ -70,7 +74,7 @@ public class ServerConfig {
     /**
      * {@code null} or the Authenticator that uses the Mongo user database to store and retrieve credentials.
      */
-    private MongoAuthentication authProvider;
+    private final MongoAuthentication authProvider;
     /**
      * The port on which the HTTP server should listen
      */
@@ -104,10 +108,6 @@ public class ServerConfig {
      */
     private final String audience;
     /**
-     * {@code null} or the salt used to encrypt user passwords on this server
-     */
-    private String salt;
-    /**
      * A parameter telling the system how long a new JWT token stays valid in seconds.
      */
     private final int tokenExpirationTime;
@@ -117,17 +117,7 @@ public class ServerConfig {
     private static final String DEFAULT_MONGO_DATA_SOURCE_NAME = "cyface";
 
     /**
-     * Creates a *not fully* initialized instance of this class.
-     * FIXME: You need to call `loadSalt()` and if the promise is successful call `lateInit(salt)`.
-     *
-     * K-FIX> Just have multiple static method in here which can be used on demand by the different
-     * verticles instead of creating an instance which has all parameters which might not be needed
-     * by all verticles in the future.
-     *
-     * A> So far I only found one Verticle which does not need all parts of this class.
-     * This verticle just uses the static method createSharedMongoClient().
-     * I.e. all others can simply abstract the configuration states in here. Makes it more readable.
-     * the ManagementVerticle does not use the `ServerConfig` instances at all, just static access.
+     * Creates a fully initialized instance of this class.
      *
      * @param vertx The Vertx instance to get the parameters from
      * @throws IOException if key files are inaccessible
@@ -149,13 +139,13 @@ public class ServerConfig {
         this.httpPort = Parameter.HTTP_PORT.intValue(vertx, DEFAULT_HTTP_PORT);
 
         // Auth provider config
-        // FIXME: currently needs to be called from outside: `loadSalt(vertx);` and after resolving `lateInit(salt)`
         this.publicKey = extractKey(vertx, Parameter.JWT_PUBLIC_KEY_FILE_PATH);
         this.privateKey = extractKey(vertx, Parameter.JWT_PRIVATE_KEY_FILE_PATH);
         this.jwtAuthProvider = createAuthProvider(vertx, publicKey, privateKey);
         this.issuer = String.format("%s%s", host, endpoint);
         this.audience = issuer;
         this.tokenExpirationTime = Parameter.TOKEN_EXPIRATION_TIME.intValue(vertx, DEFAULT_TOKEN_VALIDATION_TIME);
+        this.authProvider = buildMongoAuthProvider(userDatabase);
 
         Validate.notNull(publicKey);
         Validate.notNull(privateKey);
@@ -166,11 +156,6 @@ public class ServerConfig {
         Validate.notEmpty(endpoint, "Endpoint not found. Please provide it using the %s parameter!",
                 Parameter.HTTP_ENDPOINT.key());
         Validate.isTrue(httpPort > 0);
-    }
-
-    public void lateInit(final String salt) {
-        this.salt = salt;
-        this.authProvider = buildMongoAuthProvider(userDatabase);
     }
 
     /**
@@ -237,18 +222,17 @@ public class ServerConfig {
      */
     public String extractKey(final Vertx vertx, final Parameter keyParameter)
             throws FileNotFoundException, IOException {
-        final String keyFilePath = keyParameter.stringValue(vertx, null);
+        final var keyFilePath = keyParameter.stringValue(vertx, null);
         if (keyFilePath == null) {
             return null;
         }
         // FIXME: why did the Collector just use this simple code instead here?
         // return Files.readString(Path.of(keyFilePath));
 
-        final StringBuilder keyBuilder = new StringBuilder();
-        try (BufferedReader keyFileInput = new BufferedReader(
+        final var keyBuilder = new StringBuilder();
+        try (var keyFileInput = new BufferedReader(
                 new InputStreamReader(new FileInputStream(keyFilePath), StandardCharsets.UTF_8))) {
-
-            String line = keyFileInput.readLine();
+            var line = keyFileInput.readLine();
             while (line != null) {
                 line = keyFileInput.readLine();
                 if (line == null || line.startsWith("-----") || line.isEmpty()) {
@@ -258,10 +242,9 @@ public class ServerConfig {
                     keyBuilder.append(line);
                 }
             }
-
         }
 
-        final String key = keyBuilder.toString();
+        final var key = keyBuilder.toString();
         Validate.notNull(key, String.format(
                 "Unable to load key for JWT authentication. Did you provide a valid PEM file using the parameter %s.",
                 keyParameter.key()));
@@ -270,19 +253,19 @@ public class ServerConfig {
 
     /**
      * Loads the external encryption salt from the Vertx configuration. If no value was provided the default value
-     * "cyface-salt" is used.
-     *
-     * Promise as you can only access files asynchronously
+     * {@code #DEFAULT_CYFACE_SALT} is used.
+     * <p>
+     * Asynchronous implementation as in Vert.X you can only access files asynchronously.
      *
      * @param vertx The current <code>Vertx</code> instance
      * @return The <code>Promise</code> about a value to be used as encryption salt
      */
-    public Promise<String> loadSalt(final Vertx vertx) {
+    public static Promise<String> loadSalt(final Vertx vertx) {
         final Promise<String> result = Promise.promise();
         final var salt = Parameter.SALT.stringValue(vertx);
         final var saltPath = Parameter.SALT_PATH.stringValue(vertx);
         if (salt == null && saltPath == null) {
-            result.complete("cyface-salt");
+            result.complete(DEFAULT_CYFACE_SALT);
         } else if (salt != null && saltPath != null) {
             result.fail("Please provide either a salt value or a path to a salt file. "
                     + "Encountered both and can not decide which to use. Aborting!");
@@ -307,7 +290,7 @@ public class ServerConfig {
      *         generate new JWT token.
      */
     public static MongoAuthentication buildMongoAuthProvider(final MongoClient client) {
-        // Old Backend libs api code
+        // FIXME: Cleanup when everything works - Old Backend libs api code
         // final JsonObject authProperties = new JsonObject();
         // final MongoAuth authProvider = MongoAuth.create(client, authProperties);
         // HashStrategy hashStrategy = authProvider.getHashStrategy();
@@ -353,7 +336,6 @@ public class ServerConfig {
                 ", jwtAuthProvider=" + jwtAuthProvider +
                 ", issuer='" + issuer + '\'' +
                 ", audience='" + audience + '\'' +
-                ", salt='" + salt + '\'' +
                 ", tokenExpirationTime=" + tokenExpirationTime +
                 '}';
     }
@@ -376,14 +358,13 @@ public class ServerConfig {
                 Objects.equals(jwtAuthProvider, that.jwtAuthProvider) &&
                 Objects.equals(issuer, that.issuer) &&
                 Objects.equals(audience, that.audience) &&
-                Objects.equals(tokenExpirationTime, that.tokenExpirationTime) &&
-                Objects.equals(salt, that.salt);
+                Objects.equals(tokenExpirationTime, that.tokenExpirationTime);
     }
 
     @Override
     public int hashCode() {
         return Objects.hash(dataDatabase, userDatabase, authProvider, httpPort, publicKey, privateKey, host, endpoint,
-                jwtAuthProvider, issuer, audience, tokenExpirationTime, salt);
+                jwtAuthProvider, issuer, audience, tokenExpirationTime);
     }
 
     public int getTokenExpirationTime() {
@@ -434,9 +415,5 @@ public class ServerConfig {
 
     public String getAudience() {
         return audience;
-    }
-
-    public String getSalt() {
-        return salt;
     }
 }
