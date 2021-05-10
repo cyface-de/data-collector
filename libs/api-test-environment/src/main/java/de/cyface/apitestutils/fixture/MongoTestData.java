@@ -29,7 +29,7 @@ import io.vertx.ext.mongo.MongoClient;
  * @version 1.0.0
  * @since 1.0.0
  */
-interface MongoTestData {
+public interface MongoTestData {
     /**
      * Inserts the data via the provided client and calls the provided <code>resultHandler</code> after completion.
      *
