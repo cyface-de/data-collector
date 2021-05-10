@@ -51,6 +51,12 @@ import io.vertx.junit5.VertxTestContext;
  */
 @ExtendWith(VertxExtension.class)
 public class AuthorisationTest {
+
+    /**
+     * The hashing algorithm used for public and private keys to generate and check JWT tokens.
+     */
+    public static final String JWT_HASH_ALGORITHM = RS256;
+
     /**
      * Happy Path integration test for user authorisation.
      *
@@ -64,26 +70,29 @@ public class AuthorisationTest {
     void test(final Vertx vertx, final VertxTestContext ctx) throws URISyntaxException, IOException {
         final var publicKey = Files.readString(Path.of(this.getClass().getResource("/public.pem").toURI()));
         final var privateKey = Files.readString(Path.of(this.getClass().getResource("/private_key.pem").toURI()));
-        final var keyOptions = new PubSecKeyOptions().setAlgorithm(RS256).setBuffer(publicKey)
-                .setBuffer(privateKey);
-        final var options = new JWTAuthOptions();
-        final var issuer = "localhost:8080/api/v2/";
 
-        options.addPubSecKey(keyOptions)
-                .setJWTOptions(new JWTOptions().setIssuer(issuer).setAudience(Collections.singletonList(issuer)));
-        final var authorizer = JWTAuth.create(vertx, options);
-        final var body = new JsonObject().put("username", "test").put("password", "test-password").put("aud", issuer)
-                .put("iss", issuer);
-        final var token = authorizer.generateToken(body);
-        final var authenticationFuture = authorizer.authenticate(new TokenCredentials(token));
+        final var provider = JWTAuth.create(vertx, new JWTAuthOptions()
+                .addPubSecKey(new PubSecKeyOptions()
+                        .setAlgorithm(JWT_HASH_ALGORITHM)
+                        .setBuffer(publicKey))
+                .addPubSecKey(new PubSecKeyOptions()
+                        .setAlgorithm(JWT_HASH_ALGORITHM)
+                        .setBuffer(privateKey)));
+
+        final var issuer = "localhost:8080/api/v2/";
+        final var body = new JsonObject().put("username", "test").put("password", "test-password")
+                .put("aud", issuer).put("iss", issuer);
+        final var jwtOptions = new JWTOptions()
+                .setAlgorithm(JWT_HASH_ALGORITHM).setIssuer(issuer).setAudience(Collections.singletonList(issuer));
+        final var token = provider.generateToken(body, jwtOptions);
+
+        final var authenticationFuture = provider.authenticate(new TokenCredentials(token));
         authenticationFuture.onComplete(ctx.succeeding(user -> {
             final var expectedPrincipal = new JsonObject().put("access_token", token).put("username", "test")
                     .put("password", "test-password")
                     .put("aud", issuer).put("iss", issuer);
-            ctx.verify(() -> {
-                assertThat("User prinicpal did not match expected user!", user.principal(),
-                        is(equalTo(expectedPrincipal)));
-            });
+            ctx.verify(() -> assertThat("User principal did not match expected user!", user.principal(),
+                    is(equalTo(expectedPrincipal))));
             ctx.completeNow();
         }));
     }

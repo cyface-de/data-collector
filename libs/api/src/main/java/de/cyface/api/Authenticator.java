@@ -18,26 +18,26 @@
  */
 package de.cyface.api;
 
+import static io.vertx.ext.auth.impl.jose.JWS.RS256;
+
 import java.util.Collections;
 import java.util.Objects;
 
-import io.vertx.ext.auth.mongo.MongoAuthentication;
-import io.vertx.ext.web.handler.ErrorHandler;
-import io.vertx.ext.web.handler.LoggerHandler;
 import org.apache.commons.lang3.Validate;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import io.vertx.core.Handler;
 import io.vertx.core.json.DecodeException;
-import io.vertx.core.json.JsonObject;
 import io.vertx.ext.auth.JWTOptions;
 import io.vertx.ext.auth.jwt.JWTAuth;
-import io.vertx.ext.auth.mongo.MongoAuth;
+import io.vertx.ext.auth.mongo.MongoAuthentication;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.BodyHandler;
+import io.vertx.ext.web.handler.ErrorHandler;
 import io.vertx.ext.web.handler.JWTAuthHandler;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import io.vertx.ext.web.handler.LoggerHandler;
 
 /**
  * Handles authentication request on the Cyface Collector API. This is implemented with JSON Web Token (JWT). To get a
@@ -61,7 +61,7 @@ public final class Authenticator implements Handler<RoutingContext> {
     /**
      * The hashing algorithm used for public and private keys to generate and check JWT tokens.
      */
-    public static final String JWT_HASH_ALGORITHM = "HS256";
+    public static final String JWT_HASH_ALGORITHM = RS256;
     /**
      * The number of bytes in one kilobyte. This is used to limit the amount of bytes accepted by an authentication
      * request.
@@ -100,7 +100,8 @@ public final class Authenticator implements Handler<RoutingContext> {
 
     /**
      * Creates a new completely initialized <code>Authenticator</code>. You may add handlers to be authenticated via
-     * {@link #addAuthenticatedHandler(String, Handler, ErrorHandler)}. The rest of the new instances state is immutable.
+     * {@link #addAuthenticatedHandler(String, Handler, ErrorHandler)}. The rest of the new instances state is
+     * immutable.
      *
      * @param authenticatedRouter The router handling requests that are authenticated by this <code>Authenticator</code>
      * @param authProvider Authenticator that uses the Mongo user database to store and retrieve credentials.
@@ -112,8 +113,8 @@ public final class Authenticator implements Handler<RoutingContext> {
      * @param tokenValidationTime The number of seconds the JWT authentication token is valid after login.
      */
     private Authenticator(final Router authenticatedRouter, final MongoAuthentication authProvider,
-                          final JWTAuth jwtAuthProvider, final String issuer, final String audience,
-                          final int tokenValidationTime) {
+            final JWTAuth jwtAuthProvider, final String issuer, final String audience,
+            final int tokenValidationTime) {
         Validate.notNull(authenticatedRouter);
         Objects.requireNonNull(authProvider, "Parameter authProvider may not be null!");
         Objects.requireNonNull(jwtAuthProvider, "Parameter jwtAuthProvider may not be null!");
@@ -138,14 +139,15 @@ public final class Authenticator implements Handler<RoutingContext> {
                 if (r.succeeded()) {
                     LOGGER.debug("Authentication successful for user {}", body.getString("username"));
 
-                    final var jwtOptions = new JWTOptions().setExpiresInSeconds(tokenValidationTime);
-                    jwtOptions.setIssuer(issuer);
-                    jwtOptions.setAudience(Collections.singletonList(audience));
-
+                    final var jwtOptions = new JWTOptions()
+                            .setAlgorithm(JWT_HASH_ALGORITHM)
+                            .setExpiresInSeconds(tokenValidationTime)
+                            .setIssuer(issuer)
+                            .setAudience(Collections.singletonList(audience));
                     final var jwtBody = body.put("aud", audience).put("iss", issuer);
-                    final var generatedToken = jwtAuthProvider.generateToken(jwtBody,
-                            jwtOptions.setAlgorithm(JWT_HASH_ALGORITHM));
+                    final var generatedToken = jwtAuthProvider.generateToken(jwtBody, jwtOptions);
                     LOGGER.trace("New JWT Token: {}", generatedToken);
+
                     ctx.response().putHeader("Authorization", generatedToken).setStatusCode(200).end();
                 } else {
                     LOGGER.error("Unsuccessful authentication request for user {}", body.getString("username"));
@@ -189,7 +191,8 @@ public final class Authenticator implements Handler<RoutingContext> {
      * @param failureHandler The handler to add to handle failures.
      * @return the handler
      */
-    public Authenticator addAuthenticatedHandler(final String endpoint, final Handler<RoutingContext> handler, ErrorHandler failureHandler) {
+    public Authenticator addAuthenticatedHandler(final String endpoint, final Handler<RoutingContext> handler,
+            ErrorHandler failureHandler) {
         final var authHandler = JWTAuthHandler.create(jwtAuthProvider);
         authenticatedRouter.post(endpoint)
                 .consumes("multipart/form-data")

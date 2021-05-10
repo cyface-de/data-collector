@@ -18,15 +18,11 @@
  */
 package de.cyface.api;
 
-import static de.cyface.api.Authenticator.JWT_HASH_ALGORITHM;
-
-import java.io.BufferedReader;
-import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
-import java.util.Collections;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.Objects;
 
 import org.apache.commons.lang3.Validate;
@@ -34,13 +30,14 @@ import org.apache.commons.lang3.Validate;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
-import io.vertx.ext.auth.JWTOptions;
 import io.vertx.ext.auth.PubSecKeyOptions;
 import io.vertx.ext.auth.jwt.JWTAuth;
 import io.vertx.ext.auth.jwt.JWTAuthOptions;
 import io.vertx.ext.auth.mongo.MongoAuthentication;
 import io.vertx.ext.auth.mongo.MongoAuthenticationOptions;
 import io.vertx.ext.mongo.MongoClient;
+
+import static de.cyface.api.Authenticator.JWT_HASH_ALGORITHM;
 
 /**
  * Configuration parameters required to start the HTTP server which also handles routing.
@@ -144,8 +141,8 @@ public class ServerConfig {
         this.publicKey = extractKey(vertx, Parameter.JWT_PUBLIC_KEY_FILE_PATH);
         this.privateKey = extractKey(vertx, Parameter.JWT_PRIVATE_KEY_FILE_PATH);
         this.jwtAuthProvider = createAuthProvider(vertx, publicKey, privateKey);
-        this.issuer = String.format("%s%s", host, endpoint);
-        this.audience = issuer;
+        this.issuer = jwtIssuer(host, endpoint);
+        this.audience = jwtAudience(host, endpoint);
         this.tokenExpirationTime = Parameter.TOKEN_EXPIRATION_TIME.intValue(vertx, DEFAULT_TOKEN_VALIDATION_TIME);
         this.authProvider = buildMongoAuthProvider(userDatabase);
 
@@ -181,14 +178,13 @@ public class ServerConfig {
      * @return The auth provider
      */
     public JWTAuth createAuthProvider(final Vertx vertx, final String publicKey, final String privateKey) {
-        final var keyOptions = new PubSecKeyOptions().setAlgorithm(JWT_HASH_ALGORITHM)
-                .setBuffer(publicKey)
-                .setBuffer(privateKey);
-        final var issuer = jwtIssuer(host, endpoint);
-        final var config = new JWTAuthOptions().addPubSecKey(keyOptions)
-                .setJWTOptions(new JWTOptions().setIssuer(issuer)
-                        .setAudience(Collections.singletonList(jwtAudience(host, endpoint))));
-        return JWTAuth.create(vertx, config);
+        return JWTAuth.create(vertx, new JWTAuthOptions()
+                .addPubSecKey(new PubSecKeyOptions()
+                        .setAlgorithm(JWT_HASH_ALGORITHM)
+                        .setBuffer(publicKey))
+                .addPubSecKey(new PubSecKeyOptions()
+                        .setAlgorithm(JWT_HASH_ALGORITHM)
+                        .setBuffer(privateKey)));
     }
 
     /**
@@ -218,7 +214,7 @@ public class ServerConfig {
      *
      * @param vertx The Vertx instance to get the parameters from
      * @param keyParameter The Vertx configuration parameter specifying the location of the file containing the key
-     * @return The extracted key
+     * @return The extracted key, including the lines starting with `-----`, as required when using {@code RS256}.
      * @throws FileNotFoundException If the key file was not found
      * @throws IOException If the key file was not accessible
      */
@@ -229,26 +225,7 @@ public class ServerConfig {
             return null;
         }
 
-        final var keyBuilder = new StringBuilder();
-        try (var keyFileInput = new BufferedReader(
-                new InputStreamReader(new FileInputStream(keyFilePath), StandardCharsets.UTF_8))) {
-            var line = keyFileInput.readLine();
-            while (line != null) {
-                line = keyFileInput.readLine();
-                if (line == null || line.startsWith("-----") || line.isEmpty()) {
-                    // noinspection UnnecessaryContinue
-                    continue;
-                } else {
-                    keyBuilder.append(line);
-                }
-            }
-        }
-
-        final var key = keyBuilder.toString();
-        Validate.notNull(key, String.format(
-                "Unable to load key for JWT authentication. Did you provide a valid PEM file using the parameter %s.",
-                keyParameter.key()));
-        return key;
+        return Files.readString(Path.of(keyFilePath));
     }
 
     /**
