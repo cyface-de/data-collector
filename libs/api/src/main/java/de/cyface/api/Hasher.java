@@ -23,7 +23,6 @@ import java.util.Base64;
 import java.util.Objects;
 
 import io.vertx.ext.auth.HashingStrategy;
-import io.vertx.ext.auth.mongo.HashAlgorithm;
 
 /**
  * Used to properly hash passwords for storage to the database.
@@ -65,7 +64,7 @@ public class Hasher {
      * @return The hashed and salted password
      */
     public String hash(final String password) {
-        return hashingStrategy.hash(HashAlgorithm.PBKDF2.name().toLowerCase(), // FIXME: stronger hashing algorithm recommended
+        return hashingStrategy.hash("pbkdf2", // TODO: Is there a better option for Vert.X ? [CY-5601]
                 null,
                 Base64.getMimeEncoder().encodeToString(salt),
                 password);

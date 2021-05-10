@@ -18,6 +18,7 @@
  */
 package de.cyface.collector;
 
+import static io.vertx.ext.auth.impl.jose.JWS.RS256;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.is;
@@ -63,7 +64,7 @@ public class AuthorisationTest {
     void test(final Vertx vertx, final VertxTestContext ctx) throws URISyntaxException, IOException {
         final var publicKey = Files.readString(Path.of(this.getClass().getResource("/public.pem").toURI()));
         final var privateKey = Files.readString(Path.of(this.getClass().getResource("/private_key.pem").toURI()));
-        final var keyOptions = new PubSecKeyOptions().setAlgorithm("HS256").setBuffer(publicKey)
+        final var keyOptions = new PubSecKeyOptions().setAlgorithm(RS256).setBuffer(publicKey)
                 .setBuffer(privateKey);
         final var options = new JWTAuthOptions();
         final var issuer = "localhost:8080/api/v2/";

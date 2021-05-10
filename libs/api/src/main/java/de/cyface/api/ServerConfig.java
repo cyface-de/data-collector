@@ -44,6 +44,8 @@ import io.vertx.ext.mongo.MongoClient;
 
 /**
  * Configuration parameters required to start the HTTP server which also handles routing.
+ * <p>
+ * TODO: Should be refactored [CY-5602]
  *
  * @author Armin Schnabel
  * @version 2.0.0
@@ -226,8 +228,6 @@ public class ServerConfig {
         if (keyFilePath == null) {
             return null;
         }
-        // FIXME: why did the Collector just use this simple code instead here?
-        // return Files.readString(Path.of(keyFilePath));
 
         final var keyBuilder = new StringBuilder();
         try (var keyFileInput = new BufferedReader(
