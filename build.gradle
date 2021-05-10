@@ -1,4 +1,4 @@
-import com.github.spotbugs.SpotBugsTask
+import com.github.spotbugs.snom.SpotBugsTask
 
 /*
  * Copyright 2020-2021 Cyface GmbH
@@ -39,7 +39,7 @@ plugins {
   id 'idea'
   //noinspection SpellCheckingInspection
   id 'com.github.johnrengelman.shadow' version '6.1.0' apply false
-  id "com.github.spotbugs" version "3.0.0" apply false
+  id "com.github.spotbugs" version "4.7.1" apply false
   // Plugin to display the Gradle task graph
   //noinspection SpellCheckingInspection
   id 'org.barfuin.gradle.taskinfo' version '1.0.5'
@@ -97,7 +97,7 @@ subprojects {
     flapdoodleVersion = '3.0.0'
 
     jacocoVersion = '0.8.5'
-    spotBugsPluginVersion = '1.10.1'
+    spotBugsPluginVersion = '1.11.0'
   }
 
   wrapper {
@@ -139,7 +139,7 @@ subprojects {
   }
 
   spotbugs {
-    toolVersion = '4.0.2'
+    toolVersion = '4.2.3'
     ignoreFailures = true
     excludeFilter = file("$rootProject.projectDir/config/spotbugs/excludeFilter.xml")
   }
@@ -149,7 +149,7 @@ subprojects {
       xml.enabled = false
       html.enabled = true
     }
-    pluginClasspath = project.configurations.spotbugsPlugins
+    //pluginClasspath = project.configurations.spotbugsPlugins
   }
 
   pmd {
