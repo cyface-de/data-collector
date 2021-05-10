@@ -172,7 +172,7 @@ public final class Authenticator implements Handler<RoutingContext> {
     public static Authenticator setupAuthentication(final String loginEndpoint, final Router router,
             final ServerConfig serverConfig) {
         final var authenticator = new Authenticator(router, serverConfig.getAuthProvider(),
-                serverConfig.getJwtAuthProvider(), serverConfig.getHost(), serverConfig.getEndpoint(),
+                serverConfig.getJwtAuthProvider(), serverConfig.getIssuer(), serverConfig.getAudience(),
                 serverConfig.getTokenExpirationTime());
         router.route(loginEndpoint)
                 .consumes("application/json")
