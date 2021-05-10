@@ -1,0 +1,10 @@
+dependencies {
+  implementation project(':libs:model')
+
+  implementation "io.vertx:vertx-web:$vertxVersion" // Api
+  implementation "io.vertx:vertx-mongo-client:$vertxVersion" // DatabaseUtils
+
+  // Authentication
+  implementation "io.vertx:vertx-auth-mongo:$vertxVersion" // DatabaseUtils
+  implementation "io.vertx:vertx-auth-jwt:$vertxVersion" // Api
+}

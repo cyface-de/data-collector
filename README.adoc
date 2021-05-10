@@ -5,58 +5,57 @@ image:https://img.shields.io/badge/mongo-4.0.11-purple.svg[link="https://mongodb
 image:https://github.com/cyface-de/data-collector/workflows/Cyface%20Data%20Collector/badge.svg[link="https://github.com/cyface-de/data-collector/actions"]
 
 This application represents the https://cyface.de[Cyface] data collector software.
+
 It is used to collect traffic data from Cyface measurement devices, such as our sensor box or our smartphone application.
+
 Our smartphone SDK is available as GPL application for https://github.com/cyface-de/android-backend[Android] and https://github.com/cyface-de/ios-backend[iOS] (or as https://github.com/cyface-de/ios-podspecs[Podspec]) as well.
+
 If you require this software under a closed source license for you own projects, please https://www.cyface.de/#kontakt[contact us].
 
-== Building
+Changes between versions are found in the link:https://github.com/cyface-de/data-collector/releases[Release Section].
+
+The project uses link:https://gradle.org/[Gradle] as the build system.
+It is set up as a Gradle multi project build.
+There are two general categories of sub projects.
+One are executable programs fulfilling a certain task of the Cyface backend.
+Others are libraries shared by several Cyface executables.
+The executables are grouped in the sub-project `executables` while the libraries are grouped in `libs`.
+The following sections provide an overview about those projects.
+
+== Overview
+
+.link:#_executables[Executables]
+* link:#_collector[Collector]
+
+.link:#_libraries[Libraries]
+* link:#_api[API]
+* link:#_model[Model]
+
+.General information
+* link:#_build-and-release-workflows[Build and release workflows]
+* link:#_release_a_new_version[Release a new Version]
+* link:#_publishing_artifacts_to_github_packages_manually[Publishing Artifacts to GitHub Packages manually]
+* link:#_to-do[To Do]
+* link:#_licensing[Licensing]
+
+
+== Executables
+
+All directly executable programs within this project
+
+[#_collector]
+=== Collector
+
+A program which provides the ability to collect data, as e.g. sent by the Cyface SDKs.
+
+==== Building
 
 Simply run `build.sh` inside the root of this project.
 This builds the jar file which is then packed into the Docker container which is build afterwards.
 This script also makes sure all required subdirectories are created.
 When you updated the Swagger UI make sure to clear your browser cache or else it might not update.
 
-=== Release a new Version
-
-Versions of this project inside the master branch are always `0.0.0`. To release a new version:
-
-**ATTENTION**: *Hotfixes should be applied on top of the already existing release-branch*. See below for further instructions.
-
-1. *Create a new release branch* following the format `release-x.y`, where `x.y` is the number of the first two sections of the new version following link:http://semver.org[Semantic Versioning].
-
-2. *Increase version numbers* in root `build.gradle` and in any associated `docker-compose.yml` or OpenAPI documentation located in `src/main/resources/webroot/api/openapi.yml` as well as `src/main/resources/webroot/management/openapi.yml`).
-
-3. *Commit version bump and push branch* to Github.
-
-4. *Wait* until the continuous integration system passes.
-
-5. *Create a Pull Request* to release and main
-
-6. *Squash and Merge both Pull Requests* onto release and main, rebasing and reapproving if necessary
-
-7. *Tag the new release on the release branch*.
-a. Ensure you are on the correct branch and commit.
-b. Follow the guidelines from link:https://keepachangelog.com["Keep a Changelog"] in your tag description.
-
-8. *Push the release tag to Github*.
-a. The docker image and Github packages are automatically published when a new version is tagged and pushed by our
-link:https://github.com/cyface-de/data-collector/actions[Github Actions] to the
-link:https://github.com/cyface-de/data-collector/packages[Github Registry].
-
-6. *Mark the released version as 'new Release' on link:https://github.com/cyface-de/data-collector/releases[Github]*.
-
-=== Apply a Hotfix
-
-No new features are allowed on a release-branch, only fixes and minor changes.
-
-1. Create a new fix/<tag>_<explanation> on release
-2. Make your hotfix
-3. Commit and Push and wait for CI to report success. If CI fails, fix the issue!
-4. Make a PR into release and into main
-5. Get both PRs approved
-6. Squash and merge both PRs on top of release and main, rebasing and reapproving if necessary
-
-== Execution
+==== Execution
 This section describes how to execute the Cyface Data Collector.
 
 It starts with an explanation on how to set up all the required certificates.
@@ -72,7 +71,7 @@ If you are not using the Docker environment, you will probably have to set a few
 The last two sections provide explanations on how to run the software directly from the terminal or from within an IDE such as Eclipse or IntelliJ.
 For these execution variants you need the parameters explained in the preceding section.
 
-=== Certificates
+===== Certificates
 The Cyface Data Collector provides keys you may use for testing and during development.
 Those keys are located in `src/test/resources`.
 To use them outside of Unit tests you need to copy them to an appropriate location.
@@ -84,7 +83,7 @@ Just place the appropriate files as `private_key.pem` and `public.pem` in `secre
 
 To generate new keys follow the instructions in the https://vertx.io/docs/vertx-auth-jwt/java/#_loading_keys[Vert.x documentation] for *Using RSA keys*.
 
-=== Running from Docker
+===== Running from Docker
 After you did build the system (see Building above) simply run `docker-compose up` inside the root of this project. This calls docker to bring up two Mongo-database containers and a container running the Cyface data collector API.
 
 The Collector API is by default available via port 8080. This means if you boot up everything using the default settings, the Collector API is accessible via `http://localhost:8080/api/v2`.
@@ -94,11 +93,11 @@ It exposes the Cyface data collector as well as the ports of both Mongo database
 Use `docker-compose ps` to see which ports are mapped to which by Docker.
 For using such a setup in production, you may create your own Docker setup, based on our development one.
 
-=== Running without Docker
+===== Running without Docker
 Running the Cyface data collector without Docker, like for example from the terminal or from within your IDE is a little more complex.
 It requires a few set up steps and command knowledge as explained in the following paragraphs.
 
-==== Running a Mongo Database for Data and User Storage
+====== Running a Mongo Database for Data and User Storage
 Before you can run the Cyface data collector you need to set up a Mongo database.
 
 If you use the Docker environment as explained above, this is done for you.
@@ -109,7 +108,7 @@ For information on how to install and run a Mongo database on your machine pleas
 If you take the default installation, the default settings of the Cyface data collector should be sufficient to connect to that instance.
 **ATTENTION: However be aware this is not recommended as a production environment.**
 
-==== Data Collector Arguments
+===== Data Collector Arguments
 The Cyface data collector supports a few parameters to fine tune the runtime.
 All of these parameters also provide reasonable defaults for a quick setup.
 The parameters are provided using the typical https://vertx.io/docs/vertx-core/java/#_the_vertx_command_line[Vertx `-conf` parameter] with a value in JSON notation.
@@ -128,7 +127,7 @@ The following parameters are supported:
 * **mongo.datadb:** Settings for a Mongo database storing all data uploaded via the Cyface data collector. This defaults to a Mongo database available at `mongodb://127.0.0.1:27017`. The value of this should be a JSON object configured as described https://vertx.io/docs/vertx-mongo-client/java/#_configuring_the_client[here]. In addition, if you use two different Mongo databases for credentials and data you should provide different values for the JSON key `data_source_name`.
 * **metrics.enabled:** Set to either `true` or `false`. If `true` the collector API publishes metrics using micrometer. These metrics are accessible by a https://prometheus.io/[Prometheus] server (Which you need to set up yourself) at port `8081`.
 
-==== Running from Command Line
+===== Running from Command Line
 
 To launch your tests:
 
@@ -151,27 +150,93 @@ To run your application:
 ./gradlew run --args="run de.cyface.collector.verticle.MainVerticle -conf conf.json"
 ----
 
-==== Running from IDE
+===== Running from IDE
 To run directly from within your IDE you need to use the `de.cyface.collector.Application` class, which is a subclass of the https://vertx.io/docs/vertx-core/java/#_the_vert_x_launcher[Vert.x launcher]. Just specify it as the main class in your launch configuration with the program argument `run de.cyface.collector.verticle.MainVerticle`.
 
-=== Mongo Database
+==== Mongo Database
 
-==== Setup
+===== Setup
 The following is not strictly necessary but advised if you run in production or if you encounter strange problems related to data persistence.
 Consider reading the https://docs.mongodb.com/manual/administration/[Mongo Database Administration Guide] and follow the advice mentioned there.
 
-==== Administration
+===== Administration
 To load files from the Mongo GridFS file storage use the https://docs.mongodb.com/manual/reference/program/mongofiles/[Mongofiles] tool.
 
 * Showing files: `mongofiles --port 27019 -d cyface-data list`
 * Downloading files: `mongofiles --port 27019 -d cyface-data get f5823cbc-b8f5-4c80-a4b1-7bf28a3c7944`
 * Unzipping files: `printf "\x78\x9c" | cat - f5823cbc-b8f5-4c80-a4b1-7bf28a3c7944 | zlib-flate -uncompress > test2`
 
-== TODO
+
+== Libraries
+
+[#_model]
+=== Model
+
+Model classes shared between multiple projects.
+
+[#_api]
+=== API
+
+Vert.X classes shared between multiple projects.
+
+
+[#_release_a_new_version]
+== Release a new Version
+
+To release a new version:
+
+1. *Create a new release branch* following the format `release-x.y.z`.
+a. `x.y.z` is the number of the new version following link:http://semver.org[Semantic Versioning].
+b. *Hotfixes could be branched from the already existing release-branch*
+A. Merge the hotfix into the `main` and `release` branch, create pull requests and pass reviewing.
+C. No new features are allowed on a release-branch, only fixes and minor changes.
+
+2. *Increase version numbers* in root `build.gradle`,
+a. and optional in any associated `docker-compose.yml` or OpenAPI documentation (usually located in `src/main/resources/webroot/openapi.yml`).
+b. If you need to version sub-projects differently, create a version attribute in the corresponding `build.gradle`.
+
+3. *Commit version bump and push branch* to GitHub.
+a. Wait until the continuous integration system passes.
+b. Create Pull Requests from your `release-x.y.z` branch to `release` and `main`.
+c. Get those Pull Requests accepted and merge them to both branches
+
+4. *Tag the new release on the release branch*.
+a. Ensure you are on the correct branch and commit.
+b. Follow the guidelines from link:https://keepachangelog.com["Keep a Changelog"] in your tag description.
+
+5. *Push the release tag to GitHub*.
+a. The docker image and GitHub packages are automatically published when a new version is tagged and pushed by our
+link:https://github.com/cyface-de/backend/actions[GitHub Actions] to the
+link:https://github.com/cyface-de/backend/packages[GitHub Registry].
+
+6. *Mark the released version as 'new Release' on link:https://github.com/cyface-de/backend/releases[GitHub]*.
+
+
+[#_publishing_artifacts_to_github_packages_manually]
+== Publishing artifacts to GitHub Packages manually
+
+The artifacts produced by this project are distributed via link:https://github.com/features/packages[GitHubPackages].
+Before you can publish artifacts you need to rename `gradle.properties.template` to `gradle.properties` and enter your GitHub credentials.
+How to obtain these credentials is described link:https://help.github.com/en/github/managing-packages-with-github-packages/about-github-packages#about-tokens[here].
+
+To publish a new version of an artifact you need to:
+
+1. Increase the version number of the sub-project within the `build.gradle` file
+2. Call `./gradlew publish`
+
+This will upload a new artifact to GitHub packages with the new version.
+The artifact will be minified, optimized and obfuscated using link:https://www.guardsquare.com/en/products/proguard[Proguard].
+You need to always increase the version of the new artifact.
+GitHub Packages will not accept to overwrite an existing version or to upload a lower version.
+This project uses link:https://semver.org/[semantic versioning].
+
+[#_to-do]
+== To Do
 * Setup Cluster
 	* Vertx
 	* MongoDb
 
+[#_licensing]
 == Licensing
 Copyright 2018-2021 Cyface GmbH
 

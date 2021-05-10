@@ -22,16 +22,15 @@
 <!--
     This configuration file was written by the eclipse-cs plugin configuration editor
 -->
-<!--
-    Checkstyle-Configuration: ModelSpace
-    Description: none
--->
 <module name="Checker">
     <property name="severity" value="warning"/>
     <module name="TreeWalker">
         <module name="JavadocMethod">
             <property name="severity" value="info"/>
-            <property name="suppressLoadErrors" value="true"/>
+            <!--<property name="suppressLoadErrors" value="true"/>-->
+            <!-- Caused by: com.puppycrawl.tools.checkstyle.api.CheckstyleException: cannot initialize module TreeWalker - cannot initialize module JavadocMethod - Property 'suppressLoadErrors' does not exist, please check the documentation -->
+            <!-- Caused by: com.puppycrawl.tools.checkstyle.api.CheckstyleException: cannot initialize module JavadocMethod - Property 'suppressLoadErrors' does not exist, please check the documentation -->
+            <!-- Caused by: com.puppycrawl.tools.checkstyle.api.CheckstyleException: Property 'suppressLoadErrors' does not exist, please check the documentation -->
         </module>
         <module name="JavadocType"/>
         <module name="JavadocVariable"/>
@@ -55,9 +54,7 @@
         </module>
         <module name="MethodLength"/>
         <module name="ParameterNumber">
-            <!-- The Measurement class requires such a high number. -->
-            <!-- We should probably introduce a parameter object to mitigate this! -->
-            <property name="max" value="12"/>
+            <property name="max" value="10"/>
         </module>
         <module name="EmptyForIteratorPad"/>
         <module name="MethodParamPad"/>
@@ -107,12 +104,12 @@
         <module name="LocalVariableName"/>
         <module name="MemberName"/>
         <module name="MethodName">
-      		<property name="id" value="MethodNameRegular"/>
-    	</module>
-    	<module name="MethodName">
-      		<property name="id" value="MethodNameTest"/>
-      		<property name="format" value="^[a-z][a-zA-Z0-9_]*$"/>
-    	</module>
+            <property name="id" value="MethodNameRegular"/>
+        </module>
+        <module name="MethodName">
+            <property name="id" value="MethodNameTest"/>
+            <property name="format" value="^[a-z][a-zA-Z0-9_]*$"/>
+        </module>
         <module name="PackageName"/>
         <module name="StaticVariableName"/>
         <module name="TypecastParenPad">
@@ -121,13 +118,14 @@
             <property name="tokens" value="RPAREN,TYPECAST"/>
             <metadata name="net.sf.eclipsecs.core.lastEnabledSeverity" value="inherit"/>
         </module>
-        <module name="LineLength">
-            <property name="max" value="125"/>
-        </module>
+    </module>
+    <module name="LineLength">
+        <property name="max" value="125"/>
+        <property name="tabWidth" value="4"/>
     </module>
     <module name="Translation"/>
     <module name="FileLength"/>
     <module name="SuppressionFilter">
-    <property name="file" value="${suppressionFile}" default="config/checkstyle/suppressions.xml"/>
-  </module>
+        <property name="file" value="${suppressionFile}" default="config/checkstyle/suppressions.xml"/>
+    </module>
 </module>
