@@ -1,0 +1,15 @@
+<FindBugsFilter>
+    <Match>
+        <!-- The following is reported by try - close blocks. The workaround produces unreadable code. Therefore we ignore the error for our projects
+        see: https://stackoverflow.com/questions/59423396/correctness-nullcheck-of-value-previously-dereferenced-fod-issue-in-try-with-->
+        <Bug pattern="RCN_REDUNDANT_NULLCHECK_WOULD_HAVE_BEEN_A_NPE"/>
+    </Match>
+    <Match>
+        <!-- Excluded since we do not create security relevant randoms. Otherwise this would be important!-->
+        <Bug pattern="PREDICTABLE_RANDOM"/>
+    </Match>
+    <Match>
+        <!-- Excluded since we do not write command line application for the general public and the solution requires to import apache commons.-->
+        <Bug pattern="PATH_TRAVERSAL_IN"/>
+    </Match>
+</FindBugsFilter>
