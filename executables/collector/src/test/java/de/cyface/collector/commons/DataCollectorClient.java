@@ -1,5 +1,5 @@
 /*
- * Copyright 2018, 2019 Cyface GmbH
+ * Copyright 2018-2019 Cyface GmbH
  *
  * This file is part of the Cyface Data Collector.
  *
@@ -79,7 +79,7 @@ public final class DataCollectorClient {
                     .put(Parameter.HTTP_ENDPOINT.key(), "/api/v2/");
             final var options = new DeploymentOptions().setConfig(config);
 
-            final var collectorVerticle = new CollectorApiVerticle("cyface-salt");
+            final var collectorVerticle = new CollectorApiVerticle("test-salt");
             vertx.deployVerticle(collectorVerticle, options, ctx.succeedingThenComplete());
 
             return WebClient.create(vertx);

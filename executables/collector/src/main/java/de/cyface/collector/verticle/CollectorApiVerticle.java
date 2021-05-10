@@ -87,7 +87,7 @@ public final class CollectorApiVerticle extends AbstractVerticle {
 
         // Start http server
         final Promise<Void> serverStartPromise = Promise.promise();
-        final ServerConfig serverConfig = new ServerConfig(vertx);
+        final var serverConfig = new ServerConfig(vertx);
         setupRoutes(serverConfig, result -> {
             if (result.succeeded()) {
                 final var router = result.result();

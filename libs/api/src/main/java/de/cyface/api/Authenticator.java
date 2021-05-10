@@ -60,8 +60,6 @@ public final class Authenticator implements Handler<RoutingContext> {
     private static final Logger LOGGER = LoggerFactory.getLogger(Authenticator.class);
     /**
      * The hashing algorithm used for public and private keys to generate and check JWT tokens.
-     *
-     * FIXME: Backend was using RS256, Collector HS256 ... is there a reason we switched to one or the other?
      */
     public static final String JWT_HASH_ALGORITHM = "HS256";
     /**

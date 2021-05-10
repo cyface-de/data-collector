@@ -58,7 +58,7 @@ public class ServerConfig {
     /**
      * The default number of seconds the JWT authentication token is valid after login.
      */
-    private static final int DEFAULT_TOKEN_VALIDATION_TIME = 60;
+    private static final int DEFAULT_TOKEN_VALIDATION_TIME = 120;
     /**
      * If no salt value was provided this default value is used.
      */
@@ -291,13 +291,6 @@ public class ServerConfig {
      *         generate new JWT token.
      */
     public static MongoAuthentication buildMongoAuthProvider(final MongoClient client) {
-        // FIXME: Cleanup when everything works - Old Backend libs api code
-        // final JsonObject authProperties = new JsonObject();
-        // final MongoAuth authProvider = MongoAuth.create(client, authProperties);
-        // HashStrategy hashStrategy = authProvider.getHashStrategy();
-        // hashStrategy.setSaltStyle(HashSaltStyle.EXTERNAL);
-        // hashStrategy.setExternalSalt(salt);
-        // authProvider.setHashAlgorithm(HashAlgorithm.PBKDF2);
 
         // From Collector.MongoDbUtils
         final var authProperties = new MongoAuthenticationOptions();

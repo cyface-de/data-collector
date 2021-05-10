@@ -23,7 +23,7 @@
  */
 
 // Vert.x Gradle redeploy on file changes, see https://github.com/vert-x3/vertx-examples/tree/master/gradle-redeploy
-application { // FIXME: Do we need this here? The collector build.gradle did not have this wrapper
+application {
     mainClassName = 'de.cyface.collector.Application'
 }
 
@@ -38,7 +38,6 @@ run {
 dependencies {
     implementation project(':libs:api')
 
-    //implementation "io.vertx:vertx-core:$vertxVersion"
     implementation "io.vertx:vertx-web:$vertxVersion"
     implementation "io.vertx:vertx-mongo-client:$vertxVersion"
     implementation "io.vertx:vertx-web-api-contract:$vertxVersion"

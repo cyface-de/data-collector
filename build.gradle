@@ -19,10 +19,10 @@ import com.github.spotbugs.snom.SpotBugsTask
  *  along with the Cyface Data Collector.  If not, see <http://www.gnu.org/licenses/>.
  */
 /**
- * The build gradle file for the Cyface server backend.
+ * The build gradle file for the Cyface Data Collector.
  *
  * @author Klemens Muthmann
- * @version 1.0.0
+ * @version 1.0.1
  * @since 1.0.0
  */
 buildscript {

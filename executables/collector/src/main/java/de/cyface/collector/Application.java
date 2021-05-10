@@ -37,15 +37,13 @@ import org.slf4j.LoggerFactory;
  * as a parameter to this class using <code>run de.cyface.collector.verticle.MainVerticle</code>.
  * <p>
  * You may also provide additional parameters in JSON format as described in the <code>README.md</code> file.
+ * <p>
+ * This class allows to set up things which need to be set up before the vehicle start, like logging.
  *
  * @author Klemens Muthmann
- * @version 1.0.3
+ * @author Armin Schnabel
+ * @version 1.0.4
  * @since 2.0.0
- *
- * FIXME: What is this and do we still need this or can this move into `MainVerticle`?
- * Else we have to adjust our "common" build files we ported from backend.
- *
- * Stuff that needs to be done before the verticle start
  */
 public class Application extends Launcher {
 
