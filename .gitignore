@@ -15,36 +15,45 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with the Cyface Data Collector.  If not, see <http://www.gnu.org/licenses/>.
-# 
-.idea
+#
+# Eclipse Files
 .classpath
-.editorconfig
-.project
 .settings
-.gradle
 bin
-build
+.project
+
+# Intellij Idea Files
+.idea
+.editorconfig
 out
-file-uploads
-.vertx
-collector.iml
+*.iml
+
+# Gradle Temporary Files
+.gradle
+build
 local.properties
+gradle.properties
 
-# Folders created by docker container
-data
-user-data
-secrets
+# Ignore local test maven repositories
+**/repo
 
-# Ignore configuration file, since this is environment specific
-conf.json
-
-# Ignore temporary git and vim files
-**/*.orig
+# Vim Temporary Files
 **/*.swp
+
+# Cyface Temporary Files
+**/file-uploads
+**/.vertx
+**/conf.json
+**/*.log
+**/secrets
+*.json
+
+# Temporary Git Files
+**/*.orig
 
 # Ignore logging configurations
 **/logback.xml
 
-# Ignore log files
-**/*.log
+# Vertx Config files
+**/config.json
 
