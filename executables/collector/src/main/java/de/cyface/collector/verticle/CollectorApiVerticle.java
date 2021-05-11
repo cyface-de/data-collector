@@ -17,15 +17,15 @@ package de.cyface.collector.verticle;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 
-import de.cyface.api.FailureHandler;
-import de.cyface.api.Parameter;
 import org.apache.commons.lang3.Validate;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import de.cyface.api.Authenticator;
-import de.cyface.api.ServerConfig;
+import de.cyface.api.FailureHandler;
 import de.cyface.api.Hasher;
+import de.cyface.api.Parameter;
+import de.cyface.api.ServerConfig;
 import de.cyface.collector.handler.MeasurementHandler;
 import de.cyface.collector.handler.UserCreationHandler;
 import de.cyface.collector.model.Measurement;
@@ -37,8 +37,13 @@ import io.vertx.core.Handler;
 import io.vertx.core.Promise;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.auth.HashingStrategy;
+import io.vertx.ext.auth.jwt.JWTAuth;
 import io.vertx.ext.web.Router;
+import io.vertx.ext.web.RoutingContext;
+import io.vertx.ext.web.handler.BodyHandler;
 import io.vertx.ext.web.handler.ErrorHandler;
+import io.vertx.ext.web.handler.JWTAuthHandler;
+import io.vertx.ext.web.handler.LoggerHandler;
 import io.vertx.ext.web.handler.StaticHandler;
 
 /**
@@ -62,6 +67,10 @@ public final class CollectorApiVerticle extends AbstractVerticle {
      */
     private static final String ADMIN_ROLE = "admin";
     private static final String MEASUREMENTS_ENDPOINT = "/measurements";
+    /**
+     * The number of bytes in one gigabyte. This can be used to limit the amount of data accepted by the server.
+     */
+    private static final long BYTES_IN_ONE_GIGABYTE = 1_073_741_824L;
     /**
      * The value to be used as encryption salt
      */
@@ -162,8 +171,11 @@ public final class CollectorApiVerticle extends AbstractVerticle {
         final var failureHandler = ErrorHandler.create(vertx);
 
         // Setup authentication
-        Authenticator.setupAuthentication("/login", v2ApiRouter, serverConfig)
-                .addAuthenticatedHandler(MEASUREMENTS_ENDPOINT, measurementHandler, failureHandler);
+        Authenticator.setupAuthentication("/login", v2ApiRouter, serverConfig);
+
+        // Register handlers
+        addAuthenticatedPostHandler(v2ApiRouter, serverConfig.getJwtAuthProvider(), MEASUREMENTS_ENDPOINT,
+                measurementHandler, failureHandler);
 
         // Setup web-api route
         v2ApiRouter.route().handler(StaticHandler.create("webroot/api"));
@@ -173,5 +185,27 @@ public final class CollectorApiVerticle extends AbstractVerticle {
 
         // Only requires a `future` because we add the OpenApi generated route. Else this would be synchronous.
         next.handle(Future.succeededFuture(mainRouter));
+    }
+
+    /**
+     * Adds a handler for an endpoint and makes sure that handler is wrapped in the correct authentication handlers.
+     *
+     * @param router The {@code Router} to register the handler to.
+     * @param jwtAuth The {@code JWTAuth} provider to be used for handling the authentication.
+     * @param endpoint The URL endpoint to wrap
+     * @param handler The handler to add with authentication to the <code>Router</code>
+     * @param failureHandler The handler to add to handle failures.
+     */
+    private void addAuthenticatedPostHandler(Router router, JWTAuth jwtAuth,
+            @SuppressWarnings("SameParameterValue") final String endpoint, final Handler<RoutingContext> handler,
+            ErrorHandler failureHandler) {
+        final var authHandler = JWTAuthHandler.create(jwtAuth);
+        router.post(endpoint)
+                .consumes("multipart/form-data")
+                .handler(BodyHandler.create().setBodyLimit(BYTES_IN_ONE_GIGABYTE).setDeleteUploadedFilesOnEnd(true))
+                .handler(LoggerHandler.create())
+                .handler(authHandler)
+                .handler(handler)
+                .failureHandler(failureHandler);
     }
 }
