@@ -35,8 +35,6 @@ import io.vertx.ext.auth.mongo.MongoAuthentication;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.BodyHandler;
-import io.vertx.ext.web.handler.ErrorHandler;
-import io.vertx.ext.web.handler.JWTAuthHandler;
 import io.vertx.ext.web.handler.LoggerHandler;
 
 /**
@@ -49,7 +47,7 @@ import io.vertx.ext.web.handler.LoggerHandler;
  *
  * @author Klemens Muthmann
  * @author Armin Schnabel
- * @version 3.0.0
+ * @version 4.0.0
  * @since 2.0.0
  */
 public final class Authenticator implements Handler<RoutingContext> {
@@ -67,10 +65,6 @@ public final class Authenticator implements Handler<RoutingContext> {
      * request.
      */
     public static final long BYTES_IN_ONE_KILOBYTE = 1024L;
-    /**
-     * The number of bytes in one gigabyte. This can be used to limit the amount of data accepted by the server.
-     */
-    private static final long BYTES_IN_ONE_GIGABYTE = 1_073_741_824L;
     /**
      * Authenticator that uses the Mongo user database to store and retrieve credentials.
      */
@@ -93,17 +87,10 @@ public final class Authenticator implements Handler<RoutingContext> {
      * The number of seconds the JWT authentication token is valid after login.
      */
     private transient final int tokenValidationTime;
-    /**
-     * The router handling requests that are authenticated by this <code>Authenticator</code>
-     */
-    private transient final Router authenticatedRouter;
 
     /**
-     * Creates a new completely initialized <code>Authenticator</code>. You may add handlers to be authenticated via
-     * {@link #addAuthenticatedHandler(String, Handler, ErrorHandler)}. The rest of the new instances state is
-     * immutable.
+     * Creates a new completely initialized <code>Authenticator</code>.
      *
-     * @param authenticatedRouter The router handling requests that are authenticated by this <code>Authenticator</code>
      * @param authProvider Authenticator that uses the Mongo user database to store and retrieve credentials.
      * @param jwtAuthProvider Authenticator that checks for valid authentications against Java Web Tokens
      * @param issuer The institution which issued the generated JWT token. Usually something like the name of this
@@ -112,17 +99,15 @@ public final class Authenticator implements Handler<RoutingContext> {
      *            a certain server installation or a certain part of an application
      * @param tokenValidationTime The number of seconds the JWT authentication token is valid after login.
      */
-    private Authenticator(final Router authenticatedRouter, final MongoAuthentication authProvider,
+    private Authenticator(final MongoAuthentication authProvider,
             final JWTAuth jwtAuthProvider, final String issuer, final String audience,
             final int tokenValidationTime) {
-        Validate.notNull(authenticatedRouter);
         Objects.requireNonNull(authProvider, "Parameter authProvider may not be null!");
         Objects.requireNonNull(jwtAuthProvider, "Parameter jwtAuthProvider may not be null!");
         Validate.notEmpty(issuer, "Parameter issuer must not be empty or null!");
         Validate.notEmpty(audience, "Parameter audience must not be empty or null!");
         Validate.isTrue(tokenValidationTime > 0, "Parameter tokenValidationTime must be greater than 0!");
 
-        this.authenticatedRouter = authenticatedRouter;
         this.authProvider = authProvider;
         this.jwtAuthProvider = jwtAuthProvider;
         this.issuer = issuer;
@@ -171,7 +156,7 @@ public final class Authenticator implements Handler<RoutingContext> {
      */
     public static Authenticator setupAuthentication(final String loginEndpoint, final Router router,
             final ServerConfig serverConfig) {
-        final var authenticator = new Authenticator(router, serverConfig.getAuthProvider(),
+        final var authenticator = new Authenticator(serverConfig.getAuthProvider(),
                 serverConfig.getJwtAuthProvider(), serverConfig.getIssuer(), serverConfig.getAudience(),
                 serverConfig.getTokenExpirationTime());
         router.route(loginEndpoint)
@@ -181,26 +166,5 @@ public final class Authenticator implements Handler<RoutingContext> {
                 .handler(authenticator)
                 .failureHandler(new AuthenticationFailureHandler());
         return authenticator;
-    }
-
-    /**
-     * Adds a handler for an endpoint and makes sure that handler is wrapped in the correct authentication handlers.
-     *
-     * @param endpoint The URL endpoint to wrap
-     * @param handler The handler to add with authentication to the <code>Router</code>
-     * @param failureHandler The handler to add to handle failures.
-     * @return the handler
-     */
-    public Authenticator addAuthenticatedHandler(final String endpoint, final Handler<RoutingContext> handler,
-            ErrorHandler failureHandler) {
-        final var authHandler = JWTAuthHandler.create(jwtAuthProvider);
-        authenticatedRouter.post(endpoint)
-                .consumes("multipart/form-data")
-                .handler(BodyHandler.create().setBodyLimit(BYTES_IN_ONE_GIGABYTE).setDeleteUploadedFilesOnEnd(true))
-                .handler(LoggerHandler.create())
-                .handler(authHandler)
-                .handler(handler)
-                .failureHandler(failureHandler);
-        return this;
     }
 }
