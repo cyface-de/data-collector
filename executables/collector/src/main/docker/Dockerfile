@@ -1,4 +1,4 @@
-# Copyright 2018 Cyface GmbH
+# Copyright 2018-2021 Cyface GmbH
 # 
 # This file is part of the Cyface Data Collector.
 # 
@@ -15,15 +15,15 @@
 # You should have received a copy of the GNU General Public License
 # along with the Cyface Data Collector. If not, see <http://www.gnu.org/licenses/>.
 
-# Use the official JDK Repo for version 8 as target (use slim version to remove all UI stuff, and since we do only need to run software, we just use the JRE).
+# Use the official JDK Repo for version 11 as target (use slim version to remove all UI stuff, and since we do only need to run software, we just use the JRE).
 FROM openjdk:11-jre-slim
 MAINTAINER Cyface GmbH <mail@cyface.de>
 
 # Set the working directory to /app
 WORKDIR /app
 
-# Dev environment: version is always `0.0.0` (see root/README.adoc section `Build and release workflows`)
-COPY build/libs/collector-0.0.0-all.jar /app
+# Used in dev environment, version-less
+COPY collector-all.jar /app
 COPY entrypoint.sh /app
 COPY logback.xml /app
 RUN chmod +x /app/entrypoint.sh
