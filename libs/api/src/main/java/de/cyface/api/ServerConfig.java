@@ -232,6 +232,9 @@ public class ServerConfig {
      * Loads the external encryption salt from the Vertx configuration. If no value was provided the default value
      * {@code #DEFAULT_CYFACE_SALT} is used.
      * <p>
+     * The salt is only needed to generate a hash, not to check a password against a hash as the salt is stored at the
+     * beginning of the hash. This way the salt can be changed without invalidating all previous hashes.
+     * <p>
      * Asynchronous implementation as in Vert.X you can only access files asynchronously.
      *
      * @param vertx The current <code>Vertx</code> instance
