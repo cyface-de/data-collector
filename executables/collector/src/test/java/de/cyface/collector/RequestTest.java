@@ -123,9 +123,9 @@ public final class RequestTest {
                 .send(context.succeeding(response -> context.verify(() -> {
                     assertThat("Invalid HTTP status code on request for API specification.", response.statusCode(), is(200));
                     final var body = response.bodyAsString();
-                    final var expectedcContent = "<title>Cyface Data Collector</title>";
+                    final var expectedContent = "<title>Cyface Data Collector</title>";
                     final var assertBodyReason = "Request for API specification seems to be missing a valid body.";
-                    assertThat(assertBodyReason, body, containsString(expectedcContent));
+                    assertThat(assertBodyReason, body, containsString(expectedContent));
                     context.completeNow();
                 })));
     }

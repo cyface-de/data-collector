@@ -66,6 +66,8 @@ public class Hasher {
     public String hash(final String password) {
         return hashingStrategy.hash("pbkdf2", // TODO: Is there a better option for Vert.X ? [CY-5601]
                 null,
+                // The salt is stored at the beginning of the resulting hash.
+                // This way the salt can be changed without invalidating all previous hashes.
                 Base64.getMimeEncoder().encodeToString(salt),
                 password);
     }
