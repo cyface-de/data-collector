@@ -32,7 +32,6 @@ The following sections provide an overview about those projects.
 * link:#_model[Model]
 
 .General information
-* link:#_build-and-release-workflows[Build and release workflows]
 * link:#_release_a_new_version[Release a new Version]
 * link:#_publishing_artifacts_to_github_packages_manually[Publishing Artifacts to GitHub Packages manually]
 * link:#_to-do[To Do]
@@ -48,21 +47,34 @@ All directly executable programs within this project
 
 A program which provides the ability to collect data, as e.g. sent by the Cyface SDKs.
 
+The following sections start with an explanation on how to set up all the required certificates.
+This is a necessary prerequisite for all the following steps.
+So **DO NOT** skip it.
+
+==== Certificates
+The Cyface Data Collector provides keys you may use for testing and during development.
+Those keys are located in `src/test/resources`.
+To use them outside of Unit tests you need to copy them to an appropriate location.
+**ATTENTION: DO NOT USE THOSE KEYS IN A PRODUCTION ENVIRONMENT.**
+Since they are in our repository, they are openly available to everyone on the internet, so everyone can compromise security on your server if you use the default keys.
+
+The Cyface Data Collector requires two keys to issue and authenticate JWT tokens for users trying to communicate with the service.
+Just place the appropriate files as `private_key.pem` and `public.pem` in `secrets/jwt`, right next to the `docker-compose.yml` file, or in the "working directory" selected in your run configuration in your IDE (e.g. `data-collector/`).
+
+To generate new keys follow the instructions in the https://vertx.io/docs/vertx-auth-jwt/java/#_loading_keys[Vert.x documentation] for *Using RSA keys*.
+
 ==== Building
 
-Simply run `build.sh` inside the root of this project.
+To build the docker container running the API simply execute `./gradlew :executables:collector:clean :executables:collector:build :executables:collector:copyToDockerBuildFolder`.
 This builds the jar file which is then packed into the Docker container which is build afterwards.
-This script also makes sure all required subdirectories are created.
+Please refer to the previous section about **Certificates** prior to building.
+
 When you updated the Swagger UI make sure to clear your browser cache or else it might not update.
 
 ==== Execution
 This section describes how to execute the Cyface Data Collector.
 
-It starts with an explanation on how to set up all the required certificates.
-This is a necessary prerequisite for all the following steps.
-So **DO NOT** skip it.
-
-Following the certificate setup is an explanation on how to run the Cyface Data Collector from a Docker environment.
+It begins with an explanation on how to run the Cyface Data Collector from a Docker environment.
 This is the recommended variant if you do not need to change the collector itself, but only need to develop against its API.
 
 The section continues with an explanation on the supported configuration parameters.
@@ -71,20 +83,8 @@ If you are not using the Docker environment, you will probably have to set a few
 The last two sections provide explanations on how to run the software directly from the terminal or from within an IDE such as Eclipse or IntelliJ.
 For these execution variants you need the parameters explained in the preceding section.
 
-===== Certificates
-The Cyface Data Collector provides keys you may use for testing and during development.
-Those keys are located in `src/test/resources`.
-To use them outside of Unit tests you need to copy them to an appropriate location.
-**ATTENTION: DO NOT USE THOSE KEYS IN A PRODUCTION ENVIRONMENT.**
-Since they are in our repository, they are openly available to everyone on the internet, so everyone can compromise security on your server if you use the default keys.
-
-The Cyface Data Collector requires two keys to issue and authenticate JWT tokens for users trying to communicate with the service.
-Just place the appropriate files as `private_key.pem` and `public.pem` in `secrets/jwt`, right next to the `docker-compose.yml` file .
-
-To generate new keys follow the instructions in the https://vertx.io/docs/vertx-auth-jwt/java/#_loading_keys[Vert.x documentation] for *Using RSA keys*.
-
 ===== Running from Docker
-After you did build the system (see Building above) simply run `docker-compose up` inside the root of this project. This calls docker to bring up two Mongo-database containers and a container running the Cyface data collector API.
+After you did build the system (see Building above) simply run `docker-compose up` inside `executables/collector/build/docker`. This calls docker to bring up two Mongo-database containers and a container running the Cyface data collector API.
 
 The Collector API is by default available via port 8080. This means if you boot up everything using the default settings, the Collector API is accessible via `http://localhost:8080/api/v2`.
 
@@ -112,6 +112,7 @@ If you take the default installation, the default settings of the Cyface data co
 The Cyface data collector supports a few parameters to fine tune the runtime.
 All of these parameters also provide reasonable defaults for a quick setup.
 The parameters are provided using the typical https://vertx.io/docs/vertx-core/java/#_the_vertx_command_line[Vertx `-conf` parameter] with a value in JSON notation.
+
 The following parameters are supported:
 
 * **jwt.private:** The path of the file containing the private key used to sign JWT keys. This defaults to `secrets/private_key.pem`, **which you should never use in production**.
