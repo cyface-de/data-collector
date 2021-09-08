@@ -32,27 +32,49 @@ import io.vertx.ext.web.RoutingContext;
  *
  * @author Klemens Muthmann
  * @author Armin Schnabel
- * @version 2.0.0
+ * @version 3.0.0
  * @since 1.0.0
  */
-public abstract class RequestHandler implements Handler<RoutingContext> {
+public final class MongoAuthHandler implements Handler<RoutingContext> {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(RequestHandler.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(MongoAuthHandler.class);
+    /**
+     * Http code which indicates that the upload request syntax was incorrect.
+     */
+    public static final int ENTITY_UNPARSABLE = 422;
+    /**
+     * Http code which indicates that the request is not authorized.
+     */
+    public static final int UNAUTHORIZED = 403;
+    /**
+     * An auth provider used by this server to authenticate against the Mongo user database.
+     */
     private final MongoAuthentication authProvider;
+    /**
+     * {@code True} if the {@code #request} needs to be paused when waiting for an async result.
+     * <p>
+     * This is necessary when the request body is parsed after this handler or else `403: request body already read` if
+     * thrown [DAT-749].
+     */
+    private final boolean pauseAndResume;
 
     /**
      * Creates a new completely initialized <code>ExporterRequestHandler</code> with access to all required
      * authentication information to authorize a request and fetch the correct data.
      *
-     * @param authProvider An auth provider used by this server to authenticate against the Mongo user database
+     * @param authProvider An auth provider used by this server to authenticate against the Mongo user database.
+     * @param pauseAndResume {@code True} if the {@code #request} needs to be paused when waiting for an async result.
+     *            This is necessary when the request body is parsed after this handler or else `403: request body
+     *            already read` if thrown [DAT-749].
      */
-    public RequestHandler(final MongoAuthentication authProvider) {
+    public MongoAuthHandler(final MongoAuthentication authProvider, final boolean pauseAndResume) {
         Validate.notNull(authProvider);
         this.authProvider = authProvider;
+        this.pauseAndResume = pauseAndResume;
     }
 
     @Override
-    public void handle(final RoutingContext ctx) {
+    public void handle(RoutingContext ctx) {
         LOGGER.info("Received new api request.");
         final var request = ctx.request();
         LOGGER.debug("Request headers: {}", request.headers());
@@ -62,27 +84,27 @@ public abstract class RequestHandler implements Handler<RoutingContext> {
             final var user = ctx.user();
             final var username = user.principal().getString("username");
 
+            // No need to `pause()` the request if the `BodyHandler` is installed first [DAT-749]
+            if (pauseAndResume) {
+                request.pause();
+            }
             authProvider.authenticate(user.principal(), r -> {
+                if (pauseAndResume) {
+                    request.resume();
+                }
+
                 if (!(r.succeeded())) {
                     LOGGER.error("Authorization failed for user {}!", username);
-                    ctx.fail(403);
+                    ctx.fail(UNAUTHORIZED);
                     return;
                 }
 
                 LOGGER.trace("Request authorized for user {}", username);
-                handleAuthorizedRequest(ctx);
+                ctx.next();
             });
         } catch (final NumberFormatException e) {
             LOGGER.error("Data was not parsable!");
-            ctx.fail(422);
+            ctx.fail(ENTITY_UNPARSABLE);
         }
     }
-
-    /**
-     * This is the method that should be implemented by subclasses to carry out the business logic on an authorized
-     * request.
-     *
-     * @param ctx Vert.x request context
-     */
-    protected abstract void handleAuthorizedRequest(final RoutingContext ctx);
 }

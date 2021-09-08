@@ -47,7 +47,7 @@ public final class ApiServer {
     /**
      * The endpoint on which the test {@code ApiVerticle} listens to.
      */
-    public static final String HTTP_ENDPOINT = "/api/v2/";
+    public static final String HTTP_ENDPOINT_V2 = "/api/v2/";
     /**
      * The host to run the test {@code ApiVerticle}
      */
@@ -81,7 +81,7 @@ public final class ApiServer {
                 .put(Parameter.JWT_PRIVATE_KEY_FILE_PATH.key(), privateTestKey.getFile())
                 .put(Parameter.JWT_PUBLIC_KEY_FILE_PATH.key(), this.getClass().getResource("/public.pem").getFile())
                 .put(Parameter.HTTP_HOST.key(), HTTP_HOST)
-                .put(Parameter.HTTP_ENDPOINT.key(), HTTP_ENDPOINT);
+                .put(Parameter.HTTP_ENDPOINT_V2.key(), HTTP_ENDPOINT_V2);
         final DeploymentOptions options = new DeploymentOptions().setConfig(config);
 
         vertx.deployVerticle(verticleClassName, options, testContext
@@ -99,7 +99,7 @@ public final class ApiServer {
         body.put("username", "admin");
         body.put("password", "secret");
 
-        client.post(port(), HTTP_HOST, HTTP_ENDPOINT + "login").sendJsonObject(body, handler);
+        client.post(port(), HTTP_HOST, HTTP_ENDPOINT_V2 + "login").sendJsonObject(body, handler);
     }
 
     /**
@@ -119,7 +119,7 @@ public final class ApiServer {
             final String authToken = response.getHeader("Authorization");
 
             if (response.statusCode() == 200 && authToken != null) {
-                final HttpRequest<Buffer> builder = client.get(port(), HTTP_HOST, HTTP_ENDPOINT + endpoint);
+                final HttpRequest<Buffer> builder = client.get(port(), HTTP_HOST, HTTP_ENDPOINT_V2 + endpoint);
                 builder.putHeader("Authorization", "Bearer " + authToken);
                 builder.putHeader("group", groupName);
                 builder.putHeader("format", format);

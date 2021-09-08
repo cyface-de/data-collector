@@ -18,7 +18,7 @@
  */
 package de.cyface.collector.verticle;
 
-import de.cyface.api.ServerConfig;
+import de.cyface.api.AuthenticatedEndpointConfig;
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.DeploymentOptions;
@@ -38,7 +38,7 @@ public final class MainVerticle extends AbstractVerticle {
 
     @Override
     public void start(final Promise<Void> startFuture) throws Exception {
-        ServerConfig.loadSalt(vertx).future().onComplete(result -> {
+        AuthenticatedEndpointConfig.loadSalt(vertx).future().onComplete(result -> {
             if (result.failed()) {
                 startFuture.fail(result.cause());
             } else {
@@ -71,7 +71,7 @@ public final class MainVerticle extends AbstractVerticle {
         // Start the management API as second verticle.
         final var managementApiFuture = vertx.deployVerticle(managementApiVerticle, verticleConfig);
 
-        // As soon as both futures have a succeeded or one failed, finish the start up process.
+        // As soon as both futures have a succeeded or one failed, finish the startup process.
         final var startUpProcessFuture = CompositeFuture.all(collectorApiFuture, managementApiFuture);
         startUpProcessFuture.onComplete(result -> {
             if (result.succeeded()) {

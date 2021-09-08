@@ -18,6 +18,7 @@
  */
 package de.cyface.collector;
 
+import static de.cyface.api.Authenticator.BYTES_IN_ONE_KILOBYTE;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.is;
@@ -53,18 +54,17 @@ import io.vertx.junit5.VertxTestContext;
 /**
  * Tests that uploading measurements to the Cyface API works as expected.
  *
- * @author Klemens Muthmann
  * @author Armin Schnabel
- * @version 4.0.0
- * @since 2.0.0
+ * @version 1.0.0
+ * @since 6.0.0
  */
 @ExtendWith(VertxExtension.class)
 @SuppressWarnings("PMD.MethodNamingConventions")
-public final class FileUploadTest {
+public final class FileUploadTooLargeTest {
     /**
      * Logger used to log messages from this class. Configure it using <tt>src/test/resource/logback-test.xml</tt>.
      */
-    private static final Logger LOGGER = LoggerFactory.getLogger(FileUploadTest.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(FileUploadTooLargeTest.class);
     /**
      * The geographical latitude of the end of the test measurement.
      */
@@ -100,10 +100,6 @@ public final class FileUploadTest {
      */
     private DataCollectorClient collectorClient;
     /**
-     * A <code>WebClient</code> to access the test API.
-     */
-    private WebClient client;
-    /**
      * A globally unique identifier of the simulated upload device. The actual value does not really matter.
      */
     private String deviceIdentifier = UUID.randomUUID().toString();
@@ -112,7 +108,12 @@ public final class FileUploadTest {
      * simulates a device wide unique identifier.
      */
     private String measurementIdentifier = String.valueOf(1L);
+    /**
+     * A <code>WebClient</code> to access the test API.
+     */
+    private WebClient client;
     private Vertx vertx;
+    private static final int UPLOAD_SIZE = 134_697;
 
     /**
      * Deploys the {@link CollectorApiVerticle} in a test context.
@@ -123,7 +124,9 @@ public final class FileUploadTest {
      */
     private void deployVerticle(final Vertx vertx, final VertxTestContext ctx) throws IOException {
         this.vertx = vertx;
-        collectorClient = new DataCollectorClient();
+        // FIXME: can we somehow overwrite the @setup method to reuse {@link FileUploadTest}?
+        // Set maximal payload size to 1 KB (test upload is 130 KB)
+        collectorClient = new DataCollectorClient(BYTES_IN_ONE_KILOBYTE);
         client = collectorClient.createWebClient(vertx, ctx, mongoTest.getMongoPort());
     }
 
@@ -162,93 +165,37 @@ public final class FileUploadTest {
     }
 
     /**
-     * Tests that sending a pre-request using wrong credentials returns HTTP status code 401 as expected.
-     *
-     * @param context The test context for running <code>Vertx</code> under test.
-     */
-    @Test
-    public void preRequestWithWrongCredentials_Returns401(final VertxTestContext context) {
-        preRequest(context, 2, true, context.succeeding(ar -> context.verify(() -> {
-            assertThat("Wrong HTTP status code on invalid authentication!", ar.statusCode(), is(equalTo(401)));
-            context.completeNow();
-        })));
-    }
-
-    /**
-     * Tests that trying to upload something using wrong credentials returns HTTP status code 401 as expected.
-     *
-     * @param context The test context for running <code>Vertx</code> under test.
-     */
-    @Test
-    public void uploadWithWrongCredentials_Returns401(final VertxTestContext context) {
-        final var returnedRequestFuture = context.checkpoint();
-        upload(context, "/test.bin", "0.0", 4, true, context.succeeding(ar -> context.verify(() -> {
-            assertThat("Wrong HTTP status code on invalid authentication!", ar.statusCode(), is(equalTo(401)));
-            returnedRequestFuture.flag();
-        })));
-    }
-
-    /**
-     * Tests that sending a pre-request without locations returns HTTP status code 412 as expected.
-     *
-     * @param context The test context for running <code>Vertx</code> under test.
-     */
-    @Test
-    public void preRequestWithoutLocations_Returns412(final VertxTestContext context) {
-        preRequest(context, 0, false, context.succeeding(ar -> context.verify(() -> {
-            assertThat("Wrong HTTP status code on pre-request without locations!", ar.statusCode(), is(equalTo(412)));
-            context.completeNow();
-        })));
-    }
-
-    /**
-     * Tests that an upload with unparsable metadata returns a 422 error.
+     * Tests that an upload with a too large payload returns a 413 error.
      *
      * @param context The test context for running <code>Vertx</code> under test
      */
     @Test
-    public void testUploadWithUnParsableMetaData_Returns422(final VertxTestContext context) {
+    public void testPreRequestWithTooLargePayload_Returns413(final VertxTestContext context) {
         // Set invalid value for a form attribute
         // Execute
-        upload(context, "/test.bin", "Sir! You are being hacked!", 4, false,
+        preRequest(context, 2, false,
                 context.succeeding(ar -> context.verify(() -> {
                     assertThat("Wrong HTTP status code when uploading unparsable meta data!", ar.statusCode(),
-                            is(equalTo(422)));
+                            is(equalTo(413)));
                     context.completeNow();
                 })));
     }
 
     /**
-     * Tests that sending a pre-request without locations returns HTTP status code 412 as expected.
-     *
-     * @param context The test context for running <code>Vertx</code> under test.
-     */
-    @Test
-    public void preRequest_happyPath(final VertxTestContext context) {
-        preRequest(context, 2, false, context.succeeding(ar -> context.verify(() -> {
-            assertThat("Wrong HTTP status code on happy path pre-request test!", ar.statusCode(), is(equalTo(200)));
-            context.completeNow();
-        })));
-    }
-
-    /**
-     * Tests uploading a file to the Vertx API.
+     * Tests that an upload with a too large payload returns a 413 error.
      *
      * @param context The test context for running <code>Vertx</code> under test
      */
     @Test
-    public void upload_happyPath(final VertxTestContext context) {
-        uploadAndCheckForSuccess(context, "/test.bin", 4);
-    }
-
-    /**
-     * Tests that uploading a larger file works as expected.
-     *
-     * @param context The test context for running <code>Vertx</code> under test
-     */
-    @Test
-    public void upload_largeFile(final VertxTestContext context) {
-        uploadAndCheckForSuccess(context, "/iphone-neu.ccyf", 134697);
+    public void testUploadWithTooLargePayload_Returns413(final VertxTestContext context) {
+        // Set invalid value for a form attribute
+        // Execute
+        upload(context, "/iphone-neu.ccyf", "0.0", UPLOAD_SIZE, false,
+                context.succeeding(ar -> context.verify(() -> {
+                    assertThat("Wrong HTTP status code when uploading unparsable meta data!", ar.statusCode(),
+                            is(equalTo(413)));
+                    context.completeNow();
+                })));
     }
 
     /**
@@ -258,7 +205,8 @@ public final class FileUploadTest {
      * @param context The test context to use.
      * @param preRequestResponseHandler The handler called if the client received a response.
      */
-    private void preRequest(final VertxTestContext context, final int locationCount,
+    private void preRequest(final VertxTestContext context,
+            @SuppressWarnings("SameParameterValue") final int locationCount,
             @SuppressWarnings("SameParameterValue") final boolean useInvalidToken,
             final Handler<AsyncResult<HttpResponse<Buffer>>> preRequestResponseHandler) {
 
@@ -297,33 +245,13 @@ public final class FileUploadTest {
                     builder.putHeader("Accept-Encoding", "gzip");
                     builder.putHeader("User-Agent", "Google-HTTP-Java-Client/1.39.2 (gzip)");
                     builder.putHeader("x-upload-content-type", "application/octet-stream");
-                    builder.putHeader("x-upload-content-length", "9522");
+                    builder.putHeader("x-upload-content-length", String.valueOf(UPLOAD_SIZE));
                     builder.putHeader("Content-Type", "application/json; charset=UTF-8");
                     builder.putHeader("Host", "10.0.2.2:8081");
                     builder.putHeader("Connection", "Keep-Alive");
-                    builder.putHeader("content-length", "406"); // random value, must be correct for the upload
+                    builder.putHeader("content-length", "406"); // random metadata length for this test
                     builder.sendJson(metaDataBody, preRequestResponseHandler);
                 }));
-    }
-
-    /**
-     * Uploads a file identified by a test resource location and checks that it was
-     * uploaded successfully.
-     *
-     * @param context The Vert.x test context to use to upload the file
-     * @param testFileResourceName A resource name of a file to upload for testing
-     * @param binaryLength number of bytes in the binary to upload
-     */
-    private void uploadAndCheckForSuccess(final VertxTestContext context,
-            final String testFileResourceName, int binaryLength) {
-
-        final var returnedRequestFuture = context.checkpoint();
-
-        upload(context, testFileResourceName, "0.0", binaryLength, false,
-                context.succeeding(ar -> context.verify(() -> {
-                    assertThat("Wrong HTTP status code on uploading data!", ar.statusCode(), is(equalTo(201)));
-                    returnedRequestFuture.flag();
-                })));
     }
 
     /**
@@ -336,8 +264,11 @@ public final class FileUploadTest {
      * @param binaryLength number of bytes in the binary to upload
      * @param handler The handler called if the client received a response.
      */
-    private void upload(final VertxTestContext context, final String testFileResourceName, final String length,
-            @SuppressWarnings("SameParameterValue") final int binaryLength, final boolean useInvalidToken,
+    private void upload(final VertxTestContext context,
+            @SuppressWarnings("SameParameterValue") final String testFileResourceName,
+            @SuppressWarnings("SameParameterValue") final String length,
+            @SuppressWarnings("SameParameterValue") final int binaryLength,
+            @SuppressWarnings("SameParameterValue") final boolean useInvalidToken,
             final Handler<AsyncResult<HttpResponse<Buffer>>> handler) {
 
         LOGGER.debug("Sending authentication request!");

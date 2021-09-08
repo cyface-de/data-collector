@@ -63,6 +63,7 @@ services:
     volumes:
       - ./secrets:/app/secrets
       - ./logs:/logs
+      - ./file-uploads:/app/file-uploads
     depends_on:
       - mongo-data
       - mongo-user

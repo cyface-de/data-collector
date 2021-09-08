@@ -60,7 +60,7 @@ dependencies {
 
     // Test Dependencies
     testImplementation "io.vertx:vertx-junit5:$vertxVersion"
-    testImplementation('org.junit.jupiter:junit-jupiter')
+    testImplementation "org.junit.jupiter:junit-jupiter:$junitVersion"
     testImplementation "io.vertx:vertx-web-client:$vertxVersion"
     // This is required to run an embedded Mongo instance for integration testing.
     testImplementation "de.flapdoodle.embed:de.flapdoodle.embed.mongo:$flapdoodleVersion"

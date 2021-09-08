@@ -43,7 +43,7 @@ import io.vertx.ext.web.handler.LoggerHandler;
  * issues a new token. This token can then be used to transmit the actual request.
  * <p>
  * To create a new object of this class call the static factory method
- * {@link #setupAuthentication(String, Router, ServerConfig)}.
+ * {@link #setupAuthentication(String, Router, AuthenticatedEndpointConfig)}.
  *
  * @author Klemens Muthmann
  * @author Armin Schnabel
@@ -79,7 +79,7 @@ public final class Authenticator implements Handler<RoutingContext> {
      */
     private transient final String issuer;
     /**
-     * The entity allowed to process requests authenticated with the generated JWT token. This might be
+     * The entity allowed processing requests authenticated with the generated JWT token. This might be
      * a certain server installation or a certain part of an application.
      */
     private transient final String audience;
@@ -95,7 +95,7 @@ public final class Authenticator implements Handler<RoutingContext> {
      * @param jwtAuthProvider Authenticator that checks for valid authentications against Java Web Tokens
      * @param issuer The institution which issued the generated JWT token. Usually something like the name of this
      *            server
-     * @param audience The entity allowed to process requests authenticated with the generated JWT token. This might be
+     * @param audience The entity allowed processing requests authenticated with the generated JWT token. This might be
      *            a certain server installation or a certain part of an application
      * @param tokenValidationTime The number of seconds the JWT authentication token is valid after login.
      */
@@ -150,21 +150,19 @@ public final class Authenticator implements Handler<RoutingContext> {
      *
      * @param loginEndpoint The endpoint to be used for login. This endpoint is added to the current path of the
      *            provided <code>router</code>
-     * @param router The router to setup authentication on
-     * @param serverConfig The HTTP server configuration parameters required
-     * @return the authenticator created
+     * @param router The router to set up authentication on
+     * @param config The HTTP server configuration parameters required
      */
-    public static Authenticator setupAuthentication(final String loginEndpoint, final Router router,
-            final ServerConfig serverConfig) {
-        final var authenticator = new Authenticator(serverConfig.getAuthProvider(),
-                serverConfig.getJwtAuthProvider(), serverConfig.getIssuer(), serverConfig.getAudience(),
-                serverConfig.getTokenExpirationTime());
+    public static void setupAuthentication(final String loginEndpoint, final Router router,
+            final AuthenticatedEndpointConfig config) {
+        final var authenticator = new Authenticator(config.getAuthProvider(),
+                config.getJwtAuthProvider(), config.getIssuer(), config.getAudience(),
+                config.getTokenExpirationTime());
         router.route(loginEndpoint)
                 .consumes("application/json")
                 .handler(BodyHandler.create().setBodyLimit(2 * BYTES_IN_ONE_KILOBYTE))
                 .handler(LoggerHandler.create())
                 .handler(authenticator)
                 .failureHandler(new AuthenticationFailureHandler());
-        return authenticator;
     }
 }

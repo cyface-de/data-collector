@@ -81,15 +81,15 @@ subprojects {
   }
 
   ext {
-    vertxVersion = '4.0.3'
-    micrometerVersion = '1.0.6'
+    vertxVersion = '4.1.2'
+    micrometerVersion = '1.7.2'
     slf4jVersion = '1.7.29'
-    commonsLangVersion = '3.8.1'
-    logbackVersion = '1.2.3'
+    commonsLangVersion = '3.12.0'
+    logbackVersion = '1.2.5'
     gradleWrapperVersion = '6.8.3'
 
     // Versions of testing dependencies
-    junitVersion = '5.7.0'
+    junitVersion = '5.7.2'
     mockitoVersion = '3.3.3'
     //dockerJavaVersion = '3.0.14'
     hamcrestVersion = '2.2'
@@ -121,6 +121,13 @@ subprojects {
     useJUnitPlatform()
     testLogging {
       events "passed", "skipped", "failed"
+
+      // Also show assert message (e.g. on the CI) when tests fail to identify cause
+      showExceptions true
+      exceptionFormat "full"
+      showCauses false // not working with vertx fail() so we disable this
+      showStackTraces false
+      showStandardStreams = false
     }
   }
 

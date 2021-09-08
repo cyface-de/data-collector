@@ -18,8 +18,14 @@
  */
 package de.cyface.collector.verticle;
 
-import java.io.IOException;
+import static org.hamcrest.CoreMatchers.equalTo;
+import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.MatcherAssert.assertThat;
 
+import java.io.IOException;
+import java.util.concurrent.TimeUnit;
+
+import org.apache.commons.lang3.Validate;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -38,7 +44,7 @@ import io.vertx.junit5.VertxTestContext;
  * Tests if running the {@link CollectorApiVerticle} works as expected.
  *
  * @author Klemens Muthmann
- * @version 1.0.2
+ * @version 1.0.3
  * @since 5.2.0
  */
 @ExtendWith(VertxExtension.class)
@@ -76,15 +82,20 @@ public class CollectorApiVerticleTest {
      */
     @Test
     @DisplayName("Happy Path test for starting the collector API.")
-    void test(final Vertx vertx, final VertxTestContext testContext) throws IOException {
+    void test(final Vertx vertx, final VertxTestContext testContext) throws Throwable {
         // Arrange
 
+        final var privateKey = this.getClass().getResource("/private_key.pem");
+        final var publicKey = this.getClass().getResource("/public.pem");
+        Validate.notNull(privateKey);
+        Validate.notNull(publicKey);
         // noinspection SpellCheckingInspection
         final var configuration = new JsonObject()
-                .put("jwt.private", this.getClass().getResource("/private_key.pem").getFile())
-                .put("jwt.public", this.getClass().getResource("/public.pem").getFile())
+                .put("jwt.private", privateKey.getFile())
+                .put("jwt.public", publicKey.getFile())
                 .put("http.host", "localhost")
-                .put("http.endpoint", "/api/v2")
+                .put("http.endpoint.v2", "/api/v2/")
+                .put("http.endpoint.v3", "/api/v3/")
                 .put("http.port", Network.getFreeServerPort())
                 .put("mongo.datadb", new JsonObject()
                         .put("db_name", "cyface-data")
@@ -99,5 +110,11 @@ public class CollectorApiVerticleTest {
         // Act, Assert
         vertx.deployVerticle(new CollectorApiVerticle("cyface-salt"), deploymentOptions,
                 testContext.succeedingThenComplete());
+
+        // https://vertx.io/docs/vertx-junit5/java/#_a_test_context_for_asynchronous_executions
+        assertThat(testContext.awaitCompletion(5, TimeUnit.SECONDS), is(equalTo(true)));
+        if (testContext.failed()) {
+            throw testContext.causeOfFailure();
+        }
     }
 }

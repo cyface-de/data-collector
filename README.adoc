@@ -119,7 +119,8 @@ The following parameters are supported:
 * **jwt.public:** The path of the file containing the public key used to sign JWT keys. This defaults to `secrets/public.pem`, **which you should never use in production**.
 * **http.port:** The port the API  is available at. This defaults to `8080`.
 * **http.host:** The hostname under which the Cyface Data Collector is running. This can be something like `localhost`.
-* **http.endpoint:** The path to the endpoint the Cyface Data Collector is running. This can be something like `/api/v2`.
+* **http.endpoint.v3:** The path to the endpoint the Cyface Data Collector is running. This can be something like `/api/v3`.
+* **http.endpoint.v2:** The path to the endpoint the Cyface Data Collector is running. This can be something like `/api/v2`.
 * **http.port.management:** The port the management API is available at. This defaults to `13371`.
 * **mongo.userdb:** Settings for a Mongo database storing credential information about all the users capable of logging into the system. This defaults to a Mongo database available at `mongodb://127.0.0.1:27017`. The value of this should be a JSON object configured as described https://vertx.io/docs/vertx-mongo-client/java/#_configuring_the_client[here]. In addition, if you use two different Mongo databases for credentials and data you should provide different values for the JSON key `data_source_name`.
 * **admin.user:** The username of a default administration account which is created if it does not exist upon start up. This defaults to `admin`. **You must change this in a production environment**.

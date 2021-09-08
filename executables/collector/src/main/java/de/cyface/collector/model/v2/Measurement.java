@@ -16,9 +16,10 @@
  * You should have received a copy of the GNU General Public License
  * along with the Cyface Data Collector. If not, see <http://www.gnu.org/licenses/>.
  */
-package de.cyface.collector.model;
+package de.cyface.collector.model.v2;
 
 import de.cyface.collector.handler.FormAttributes;
+import de.cyface.collector.model.GeoLocation;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.eventbus.MessageCodec;
 import io.vertx.core.json.JsonObject;
@@ -26,15 +27,16 @@ import org.apache.commons.lang3.Validate;
 
 import java.io.File;
 import java.nio.charset.Charset;
-
-import static de.cyface.collector.handler.PreRequestHandler.CURRENT_TRANSFER_FILE_FORMAT_VERSION;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.HashSet;
 
 /**
- * A POJO representing a single measurement, which has arrived at the API version 3 and needs to be stored to persistent storage.
+ * A POJO representing a single measurement, which has arrived at the API version 2 and needs to be stored to persistent storage.
  *
  * @author Klemens Muthmann
  * @author Armin Schnabel
- * @version 6.0.0
+ * @version 5.1.0
  * @since 2.0.0
  */
 public final class Measurement {
@@ -61,9 +63,19 @@ public final class Measurement {
      */
     private static final double MINIMUM_TRACK_LENGTH = 0.0;
     /**
+     * The number of files uploaded with a single request for API v2.
+     */
+    private static final int ACCEPTED_NUMBER_OF_FILES_V2 = 2;
+    /**
      * The minimum valid amount of locations stored inside a measurement.
      */
     private static final long MINIMUM_LOCATION_COUNT = 0L;
+    /**
+     * The supported file extensions for the uploaded files. The file extensions have semantically meaning as they are
+     * used to choose the deserialization method depending on the file type for transfer format 2.
+     */
+    @SuppressWarnings("SpellCheckingInspection")
+    private static final String[] SUPPORTED_FILE_EXTENSIONS_V2 = {"ccyf", "ccyfe"};
     /**
      * The worldwide unique identifier of the device uploading the data.
      */
@@ -109,13 +121,9 @@ public final class Measurement {
      */
     private final String username;
     /**
-     * The binary uploaded with the measurement. This contains the actual data.
+     * A list of files uploaded together with the measurement. These files contain the actual data.
      */
-    private final File binary;
-    /**
-     * The format version of the {@link #binary}.
-     */
-    private final int formatVersion;
+    private final Collection<FileUpload> fileUploads;
 
     /**
      * Creates a new completely initialized object of this class.
@@ -133,15 +141,14 @@ public final class Measurement {
      *                               measurement.
      * @param vehicle                The type of the vehicle that has captured the measurement.
      * @param username               The name of the user uploading the measurement.
-     * @param binary                 The binary uploaded together with the measurement. This contains the actual data.
-     * @param formatVersion          The format version of the {@link #binary}.
+     * @param fileUploads            A list of {@link FileUpload}s uploaded together with the measurement. These files contain the
+     *                               actual data.
      */
     public Measurement(final String deviceIdentifier, final String measurementIdentifier,
                        final String operatingSystemVersion, final String deviceType, final String applicationVersion,
                        final double length, final long locationCount, final GeoLocation startLocation,
                        final GeoLocation endLocation, final String vehicle, final String username,
-                       final File binary, final int formatVersion) {
-
+                       final Collection<FileUpload> fileUploads) {
         Validate.notNull(deviceIdentifier, "Field deviceId was null!");
         Validate.isTrue(deviceIdentifier.getBytes(Charset.forName(DEFAULT_CHARSET)).length == UUID_LENGTH,
                 "Field deviceId was not exactly 128 Bit, which is required for UUIDs!");
@@ -175,7 +182,6 @@ public final class Measurement {
         Validate.notNull(username, "Field username was null!");
         Validate.isTrue(!username.isEmpty() && username.length() <= MAX_GENERIC_METADATA_FIELD_LENGTH,
                 "Field username had an invalid length of %d!", username.length());
-        Validate.isTrue(formatVersion == CURRENT_TRANSFER_FILE_FORMAT_VERSION, "Unsupported formatVersion: %d", formatVersion);
 
         this.deviceIdentifier = deviceIdentifier;
         this.measurementIdentifier = measurementIdentifier;
@@ -188,8 +194,18 @@ public final class Measurement {
         this.endLocation = endLocation;
         this.vehicle = vehicle;
         this.username = username;
-        this.binary = binary;
-        this.formatVersion = formatVersion;
+
+        Validate.isTrue(fileUploads.size() == ACCEPTED_NUMBER_OF_FILES_V2,
+                String.format("Measurement contained %d files but should contain exactly %d", fileUploads.size(),
+                        ACCEPTED_NUMBER_OF_FILES_V2));
+
+        for (final FileUpload fileUpload : fileUploads) {
+            Validate.isTrue(Arrays.asList(SUPPORTED_FILE_EXTENSIONS_V2).contains(fileUpload.getFileType()),
+                    "Measurement contained file with unsupported file type (file extension): %s",
+                    fileUpload.getFileType());
+        }
+
+        this.fileUploads = fileUploads;
     }
 
     /**
@@ -218,6 +234,13 @@ public final class Measurement {
      */
     public String getDeviceType() {
         return deviceType;
+    }
+
+    /**
+     * @return A list of files uploaded together with the measurement. These files contain the actual data.
+     */
+    public Collection<FileUpload> getFileUploads() {
+        return fileUploads;
     }
 
     /**
@@ -270,20 +293,6 @@ public final class Measurement {
     }
 
     /**
-     * @return The binary uploaded with the measurement. This contains the actual data.
-     */
-    public File getBinary() {
-        return binary;
-    }
-
-    /**
-     * @return The format version of the {@link #binary}.
-     */
-    public int getFormatVersion() {
-        return formatVersion;
-    }
-
-    /**
      * @return A JSON representation of this measurement.
      */
     public JsonObject toJson() {
@@ -306,7 +315,6 @@ public final class Measurement {
         }
         ret.put(FormAttributes.VEHICLE_TYPE.getValue(), vehicle);
         ret.put(FormAttributes.USERNAME.getValue(), username);
-        ret.put(FormAttributes.FORMAT_VERSION.getValue(), formatVersion);
 
         return ret;
     }
@@ -324,12 +332,10 @@ public final class Measurement {
      * event bus.
      *
      * @author Klemens Muthmann
-     * @author Armin Schnabel
-     * @version 2.0.0
+     * @version 1.0.0
      * @since 1.0.0
      */
     static final class EventBusCodec implements MessageCodec<Measurement, Measurement> {
-
         @Override
         public void encodeToWire(final Buffer buffer, final Measurement serializable) {
             final var deviceIdentifier = serializable.getDeviceIdentifier();
@@ -350,7 +356,8 @@ public final class Measurement {
             buffer.appendInt(vehicle.length());
             buffer.appendInt(username.length());
 
-            buffer.appendInt(serializable.getFormatVersion());
+            buffer.appendInt(serializable.getFileUploads().size());
+
             buffer.appendString(deviceIdentifier);
             buffer.appendString(measurementIdentifier);
             buffer.appendString(deviceType);
@@ -376,10 +383,12 @@ public final class Measurement {
                 buffer.appendLong(endLocationTimestamp);
             }
 
-            // file upload (always one binary in version 3)
-            final var fu = serializable.binary;
-            buffer.appendInt(fu.getAbsolutePath().length());
-            buffer.appendString(fu.getAbsolutePath());
+            serializable.getFileUploads().forEach(fu -> {
+                buffer.appendInt(fu.file.getAbsolutePath().length());
+                buffer.appendString(fu.file.getAbsolutePath());
+                buffer.appendInt(fu.fileType.length());
+                buffer.appendString(fu.fileType);
+            });
         }
 
         @Override
@@ -393,8 +402,7 @@ public final class Measurement {
             final var applicationVersionLength = buffer.getInt(4 * Integer.BYTES);
             final var vehicleTypeLength = buffer.getInt(5 * Integer.BYTES);
             final var usernameLength = buffer.getInt(6 * Integer.BYTES);
-            final var formatVersion = buffer.getInt(7 * Integer.BYTES);
-            Validate.isTrue(formatVersion == 2);
+            final var numberOfFileUploads = buffer.getInt(7 * Integer.BYTES);
 
             final var deviceIdentifierEnd = 8 * Integer.BYTES + deviceIdentifierLength;
             final var deviceIdentifier = buffer.getString(8 * Integer.BYTES, deviceIdentifierEnd);
@@ -440,15 +448,26 @@ public final class Measurement {
                 startOfFileUploads = endLocationTimestampEnd;
             }
 
-            final var entryLengthEnd = startOfFileUploads + Integer.BYTES;
-            final var entryLength = buffer.getInt(startOfFileUploads);
-            final var fileNameEnd = entryLengthEnd + entryLength;
-            final var fileName = buffer.getString(entryLengthEnd, fileNameEnd);
-            final var uploadFile = new File(fileName);
+            final var fileUploads = new HashSet<FileUpload>();
+            var iterationStartByte = startOfFileUploads;
+            for (int i = 0; i < numberOfFileUploads; i++) {
+                final var entryLengthEnd = iterationStartByte + Integer.BYTES;
+                final var entryLength = buffer.getInt(iterationStartByte);
+                final var fileNameEnd = entryLengthEnd + entryLength;
+                final var fileName = buffer.getString(entryLengthEnd, fileNameEnd);
+                final var extensionLengthEnd = fileNameEnd + Integer.BYTES;
+                final var extensionLength = buffer.getInt(fileNameEnd);
+                final var fileTypeEnd = extensionLengthEnd + extensionLength;
+                final var fileType = buffer.getString(extensionLengthEnd, fileTypeEnd);
+                iterationStartByte = fileTypeEnd;
+
+                final var uploadFile = new File(fileName);
+                fileUploads.add(new FileUpload(uploadFile, fileType));
+            }
 
             return new Measurement(deviceIdentifier, measurementIdentifier, operatingSystemVersion, deviceType,
                     applicationVersion, length, locationCount, startLocation, endLocation, vehicle, username,
-                    uploadFile, formatVersion);
+                    fileUploads);
         }
 
         @Override
@@ -458,7 +477,7 @@ public final class Measurement {
 
         @Override
         public String name() {
-            return "v3.Measurement";
+            return "v2.Measurement";
         }
 
         @Override

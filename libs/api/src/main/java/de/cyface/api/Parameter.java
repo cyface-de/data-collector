@@ -29,7 +29,7 @@ import io.vertx.core.json.JsonObject;
  *
  * @author Klemens Muthmann
  * @author Armin Schnabel
- * @version 2.0.0
+ * @version 2.1.0
  * @since 5.3.0
  */
 public enum Parameter {
@@ -47,9 +47,17 @@ public enum Parameter {
      */
     HTTP_HOST("http.host"),
     /**
-     * A parameter for the endpoint path the API service is available at.
+     * A parameter for the endpoint path the API V3 service is available at.
      */
-    HTTP_ENDPOINT("http.endpoint"),
+    HTTP_ENDPOINT_V3("http.endpoint.v3"),
+    /**
+     * A parameter for the endpoint path the API V2 service is available at.
+     */
+    HTTP_ENDPOINT_V2("http.endpoint.v2"),
+    /**
+     * A parameter for the endpoint path the API V1 service is available at.
+     */
+    HTTP_ENDPOINT_V1("http.endpoint.v1"),
     /**
      * The server port the API shall be available at.
      */
@@ -90,6 +98,10 @@ public enum Parameter {
      * A parameter telling the system how long a new JWT token stays valid in seconds.
      */
     TOKEN_EXPIRATION_TIME("jwt.expiration"),
+    /**
+     * A parameter telling the system how large measurement uploads may be.
+     */
+    MEASUREMENT_PAYLOAD_LIMIT("measurement.payload.limit"),
     /**
      * The server port the management interface for the API shall be available at.
      */
@@ -165,6 +177,22 @@ public enum Parameter {
      */
     public int intValue(final Vertx vertx, final int defaultValue) {
         final var value = vertx.getOrCreateContext().config().getInteger(key);
+        final var ret = value == null ? defaultValue : value;
+        LOGGER.info("Using configuration value: {} for key: {}.", ret, key);
+        return ret;
+    }
+
+    /**
+     * Provides the lon value of this parameter from the Vert.x configuration or the <code>defaultValue</code> if
+     * there was none.
+     *
+     * @param vertx The <code>Vertx</code> instance containing the configuration.
+     * @param defaultValue A default value if the parameter was missing.
+     * @return Either the value of the parameter as an <code>int</code> or the <code>defaultValue</code>.
+     * @throws ClassCastException If the value was not a long.
+     */
+    public long longValue(final Vertx vertx, final long defaultValue) {
+        final var value = vertx.getOrCreateContext().config().getLong(key);
         final var ret = value == null ? defaultValue : value;
         LOGGER.info("Using configuration value: {} for key: {}.", ret, key);
         return ret;
