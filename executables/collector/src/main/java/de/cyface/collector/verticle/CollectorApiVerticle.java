@@ -16,6 +16,7 @@ package de.cyface.collector.verticle;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 
 import org.apache.commons.lang3.Validate;
 import org.slf4j.Logger;
@@ -46,7 +47,11 @@ import io.vertx.ext.web.handler.BodyHandler;
 import io.vertx.ext.web.handler.ErrorHandler;
 import io.vertx.ext.web.handler.JWTAuthHandler;
 import io.vertx.ext.web.handler.LoggerHandler;
+import io.vertx.ext.web.handler.SessionHandler;
 import io.vertx.ext.web.handler.StaticHandler;
+import io.vertx.ext.web.sstore.LocalSessionStore;
+
+import static de.cyface.collector.handler.MeasurementHandler.FILE_UPLOADS_FOLDER;
 
 /**
  * This Verticle is the Cyface collectors main entry point. It orchestrates all other Verticles and configures the
@@ -122,6 +127,28 @@ public final class CollectorApiVerticle extends AbstractVerticle {
         final var adminPassword = Parameter.ADMIN_PASSWORD.stringValue(vertx, "secret");
         final var defaultUserCreated = Promise.promise();
         createDefaultUser(defaultUserCreated, configV3.getUserDatabase(), adminUsername, adminPassword);
+
+        // Schedule upload file cleaner task
+        vertx.setPeriodic(configV3.getUploadExpirationTime(), timerId -> {
+            // Remove deprecated temp files
+            // There is no way to look through all sessions to identify unreferenced files. Thus, we remove files which
+            // have not been changed for a long time. The MeasurementHandler handles sessions with "missing" files.
+            final var uploadFolder = FILE_UPLOADS_FOLDER.toFile();
+            final var uploadFiles = uploadFolder.listFiles();
+            if (uploadFiles != null) {
+                Arrays.stream(uploadFiles).parallel().forEach(file -> {
+                    Validate.isTrue(file.isFile());
+                    final var lastModifiedMillis = file.lastModified();
+                    if (lastModifiedMillis > configV3.getUploadExpirationTime()) {
+                        LOGGER.debug(String.format("Cleaning up temp file: %s", file.getPath()));
+                        final var deleted = file.delete();
+                        if (!deleted) {
+                            LOGGER.warn(String.format("Failed to remove temp file: %s", file.getPath()));
+                        }
+                    }
+                });
+            }
+        });
 
         // Block until all futures completed
         final var startUpFinishedFuture = CompositeFuture.all(serverStartPromise.future(), defaultUserCreated.future());
@@ -233,7 +260,7 @@ public final class CollectorApiVerticle extends AbstractVerticle {
         // Setup measurement routes
         final var preRequestMongoAuthHandler = new MongoAuthHandler(config.getAuthProvider(), false);
         final var measurementMongoAuthHandler = new MongoAuthHandler(config.getAuthProvider(), true);
-        final var preRequestHandler = new PreRequestHandler(config.getMeasurementLimit());
+        final var preRequestHandler = new PreRequestHandler(config.getDataDatabase(), config.getMeasurementLimit());
         final var measurementHandler = new de.cyface.collector.handler.MeasurementHandler(
                 config.getDataDatabase(), config.getMeasurementLimit());
         final var failureHandler = ErrorHandler.create(vertx);
@@ -241,6 +268,13 @@ public final class CollectorApiVerticle extends AbstractVerticle {
 
         // Setup authentication
         Authenticator.setupAuthentication("/login", apiV3Router, config);
+
+        // Setup session-handler
+        // - for all handlers but login and, thus, registering this *after* login
+        // - using `cookieless` as our clients pass the session-ID via URI
+        final var store = LocalSessionStore.create(vertx);
+        final var sessionHandler = SessionHandler.create(store).setCookieless(true);
+        apiV3Router.route().handler(sessionHandler);
 
         // Register handlers
         addAuthenticatedPostHandler(apiV3Router, config.getJwtAuthProvider(), MEASUREMENTS_ENDPOINT,
@@ -319,7 +353,7 @@ public final class CollectorApiVerticle extends AbstractVerticle {
             final Handler<RoutingContext> handler,
             final ErrorHandler failureHandler) {
         final var jwtAuthHandler = JWTAuthHandler.create(jwtAuth);
-        router.put(endpoint)
+        router.putWithRegex(String.format("\\%s\\/\\([a-z0-9]{32}\\)\\/", endpoint))
                 .consumes("application/octet-stream")
                 // Not using BodyHandler as the `request.body()` can only be read once and the {@code #handler} does so.
                 .handler(LoggerHandler.create())

@@ -171,8 +171,6 @@ paths:
           description: The measurement from the device already exists on the server.
         '412':
           description: The server is not interested in the data, e.g. upload file too large or data from a location of no interest.
-        '413':
-          description: The payload is too large. Should not happen on a working client. Contains a body with additional information.
         '422':
           description: The request is erroneous. There for example is for example a syntax error.
         '429':
@@ -285,8 +283,6 @@ paths:
           description: The measurement from the device already exists on the server.
         '412':
           description: The server is not interested in the data, e.g. upload file too large or data from a location of no interest.
-        '413':
-          description: The payload is too large. Should not happen on a working client. Contains a body with additional information.
         '422':
           description: The request is erroneous. There for example is for example a syntax error.
         '429':

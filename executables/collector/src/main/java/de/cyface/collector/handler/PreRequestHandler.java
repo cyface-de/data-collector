@@ -19,11 +19,11 @@
 package de.cyface.collector.handler;
 
 import static de.cyface.api.MongoAuthHandler.ENTITY_UNPARSABLE;
-import static de.cyface.collector.handler.MeasurementHandler.PAYLOAD_TOO_LARGE;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import de.cyface.collector.handler.exception.IllegalSession;
 import de.cyface.collector.handler.exception.InvalidMetaData;
 import de.cyface.collector.handler.exception.PayloadTooLarge;
 import de.cyface.collector.handler.exception.SkipUpload;
@@ -31,7 +31,9 @@ import de.cyface.collector.handler.exception.Unparsable;
 import io.vertx.core.Handler;
 import io.vertx.core.MultiMap;
 import io.vertx.core.json.JsonObject;
+import io.vertx.ext.mongo.MongoClient;
 import io.vertx.ext.web.RoutingContext;
+import io.vertx.ext.web.Session;
 
 /**
  * A handler for receiving HTTP POST requests on the "measurements" end point.
@@ -60,6 +62,7 @@ public class PreRequestHandler implements Handler<RoutingContext> {
      * The server is not interested in the data, e.g. missing location data or data from a location of no interest.
      */
     public static final int PRECONDITION_FAILED = 412;
+    public static final int HTTP_CONFLICT = 409;
 
     /**
      * The current version of the transferred file. This is always specified by the first two bytes of the file
@@ -73,54 +76,151 @@ public class PreRequestHandler implements Handler<RoutingContext> {
     private static final String X_UPLOAD_CONTENT_LENGTH_FIELD = "x-upload-content-length";
 
     /**
+     * The field name for the session entry which contains the measurement id.
+     * <p>
+     * This field is set in the {@link PreRequestHandler} to make sure sessions are bound to measurements and uploads
+     * are only accepted with an accepted pre request.
+     */
+    static final String MEASUREMENT_ID_FIELD = "measurement-id";
+
+    /**
+     * The field name for the session entry which contains the device id.
+     * <p>
+     * This field is set in the {@link PreRequestHandler} to make sure sessions are bound to measurements and uploads
+     * are only accepted with an accepted pre request.
+     */
+    static final String DEVICE_ID_FIELD = "device-id";
+
+    /**
      * The maximal number of {@code Byte}s which may be uploaded in the upload request.
      */
     private final long measurementLimit;
+    /**
+     * Vertx <code>MongoClient</code> used to access the database to write the received data to.
+     */
+    private final MongoClient dataClient;
 
     /**
      * Creates a fully initialized instance of this class.
      *
+     * @param dataDatabase Vertx <code>MongoClient</code> used to access the database to write the received data to.
      * @param measurementLimit The maximal number of {@code Byte}s which may be uploaded in the upload request.
      */
-    public PreRequestHandler(final long measurementLimit) {
+    public PreRequestHandler(final MongoClient dataDatabase, final long measurementLimit) {
+        this.dataClient = dataDatabase;
         this.measurementLimit = measurementLimit;
     }
 
     @Override
-    public void handle(RoutingContext ctx) {
+    public void handle(final RoutingContext ctx) {
         LOGGER.info("Received new pre-request.");
         final var request = ctx.request();
-        // Do not use `request.body()` as the Vert.X `BodyHandler` already read the body and throws 403 [DAT-749]
+        final var session = ctx.session();
+
+        // Do not use `request.body()` as the Vert.X `BodyHandler` already reads the body and throws 403 [DAT-749]
         final var metaData = ctx.getBodyAsJson();
         try {
-            checkUploadSize(request.headers(), measurementLimit, X_UPLOAD_CONTENT_LENGTH_FIELD);
+            bodySize(request.headers(), measurementLimit, X_UPLOAD_CONTENT_LENGTH_FIELD);
             check(metaData);
-        } catch (final InvalidMetaData | Unparsable e) {
+            check(session);
+
+            // Check if measurement already exists in database
+            final var measurementId = metaData.getString(FormAttributes.MEASUREMENT_ID.getValue());
+            final var deviceId = metaData.getString(FormAttributes.DEVICE_ID.getValue());
+            if (measurementId == null || deviceId == null) {
+                throw new InvalidMetaData("Data incomplete!");
+            }
+            final var access = dataClient.createDefaultGridFsBucketService();
+            access.onSuccess(gridFs -> {
+                final var query = new JsonObject();
+                query.put("metadata.deviceId", deviceId);
+                query.put("metadata.measurementId", measurementId);
+                gridFs.findIds(query)
+                        .onFailure(failure -> {
+                            LOGGER.error(failure.getMessage(), failure);
+                            ctx.fail(500, failure);
+                        })
+                        .onSuccess(success -> {
+
+                            if (success.size() > 1) {
+                                LOGGER.error(String.format("More than one measurement found for did %s mid %s",
+                                        deviceId, measurementId));
+                                ctx.fail(500);
+                                return;
+                            }
+                            if (success.size() == 1) {
+                                LOGGER.debug("Response: 409, measurement already exists, no upload needed");
+                                ctx.response().setStatusCode(HTTP_CONFLICT).end();
+                                return;
+                            }
+
+                            // Bind session to this measurement and mark as "pre-request accepted"
+                            session.put(MEASUREMENT_ID_FIELD, measurementId);
+                            session.put(DEVICE_ID_FIELD, deviceId);
+
+                            // Google uses the `Location` format:
+                            // `https://host/endpoint?uploadType=resumable&upload_id=SESSION_ID`
+                            // To use the Vert.X session parsing we use:
+                            // `https://host/endpoint?uploadType=resumable&upload_id=(SESSION_ID)"
+                            final var requestUri = request.absoluteURI();
+                            final var protocol = request.getHeader("X-Forwarded-Proto");
+                            final var locationUri = locationUri(requestUri, protocol, session.id());
+                            LOGGER.debug("Response 200, Location: " + locationUri);
+                            ctx.response()
+                                    .putHeader("Location", locationUri)
+                                    .putHeader("Content-Length", "0")
+                                    .setStatusCode(200).end();
+                        });
+            });
+        } catch (final InvalidMetaData | Unparsable | IllegalSession | PayloadTooLarge e) {
             LOGGER.error(e.getMessage(), e);
             ctx.fail(ENTITY_UNPARSABLE);
-            return;
         } catch (SkipUpload e) {
             LOGGER.debug(e.getMessage(), e);
             // Ask the client to skip the upload, e.g. b/c of geo-fencing, deprecated Binary, missing locations, ...
             // We can add information to the response body to distinguish different causes.
             ctx.fail(PRECONDITION_FAILED);
-            return;
-        } catch (PayloadTooLarge e) {
-            LOGGER.debug(e.getMessage(), e);
-            ctx.fail(PAYLOAD_TOO_LARGE);
-            return;
         }
+    }
 
-        // We don't support resumable uploads yet, thus the Location needs to equal the pre-request URL
-        // Otherwise Location should contain the upload id: "https://entpoint?uploadType=resumable&upload_id=*****";
-        final var requestUri = request.absoluteURI();
-        final var protocol = request.getHeader("X-Forwarded-Proto");
-        final var locationUri = protocol != null ? requestUri.replace("http:", protocol + ":") : requestUri;
-        LOGGER.debug("Returning Location: " + locationUri);
-        ctx.response()
-                .putHeader("Location", locationUri)
-                .putHeader("Content-Length", "0")
-                .setStatusCode(200).end();
+    /**
+     * Checks that no pre-existing session was passed in the pre-request.
+     *
+     * @param session the session to check
+     * @throws IllegalSession if an existing session was passed
+     */
+    private void check(final Session session) throws IllegalSession {
+        // The purpose of the `pre-request` is to generate an upload session for `upload requests`.
+        // Thus, we're expecting that the `SessionHandler` automatically created a new session for this pre-request.
+        final var measurementId = session.get(MEASUREMENT_ID_FIELD);
+        final var deviceId = session.get(DEVICE_ID_FIELD);
+        if (measurementId != null) {
+            throw new IllegalSession(String.format("Unexpected measurement id: %s.", measurementId));
+        }
+        if (deviceId != null) {
+            throw new IllegalSession(String.format("Unexpected device id: %s.", deviceId));
+        }
+    }
+
+    /**
+     * Assembles the {@code Uri} for the `Location` header required by the client who sent the upload request.
+     * <p>
+     * This contains the upload session id which is needed to start an upload.
+     *
+     * @param requestUri the {@code Uri} to which the upload request was sent.
+     * @param protocol the protocol used in the upload request as defined in the request header `X-Forwarded-Proto`
+     * @param sessionId the upload session id to be added to the `Location` header assembled.
+     * @return The assembled `Location` {@code Uri} to be returned to the client
+     */
+    private String locationUri(final String requestUri, final String protocol, final String sessionId) {
+        // Our current setup forwards https requests to http internally. As the `Location` returned is automatically
+        // used by the Google Client API library for the upload request we make sure the original protocol use returned.
+        final var protocolReplaced = protocol != null ? requestUri.replace("http:", protocol + ":") : requestUri;
+        // The Google Client API library automatically adds the parameter `uploadType` to the Uri. As our upload API
+        // offers an endpoint address in the format `measurement/(SID)` we remove the `uploadType` parameter.
+        // We don't need to process the `uploadType` as we're only offering one upload type: resumable.
+        final var uploadTypeRemoved = protocolReplaced.replace("?uploadType=resumable", "");
+        return String.format("%s/(%s)/", uploadTypeRemoved, sessionId);
     }
 
     /**
@@ -129,10 +229,11 @@ public class PreRequestHandler implements Handler<RoutingContext> {
      * @param headers The header to check.
      * @param measurementLimit The maximal number of {@code Byte}s which may be uploaded in the upload request.
      * @param uploadLengthField The name of the header field to check.
+     * @return the number of bytes to be uploaded
      * @throws Unparsable If the header is missing the expected field about the upload size.
      * @throws PayloadTooLarge If the requested upload is too large.
      */
-    static void checkUploadSize(final MultiMap headers, final long measurementLimit, String uploadLengthField)
+    static long bodySize(final MultiMap headers, final long measurementLimit, String uploadLengthField)
             throws Unparsable, PayloadTooLarge {
         if (!headers.contains(uploadLengthField)) {
             throw new Unparsable(String.format("The header is missing the field %s", uploadLengthField));
@@ -145,6 +246,7 @@ public class PreRequestHandler implements Handler<RoutingContext> {
                         String.format("Upload size in the pre-request (%d) is too large, limit is %d bytes.",
                                 uploadLength, measurementLimit));
             }
+            return uploadLength;
         } catch (NumberFormatException e) {
             throw new Unparsable(
                     String.format("The header field %s is unparsable: %s", uploadLengthField, uploadLengthString));
@@ -181,6 +283,12 @@ public class PreRequestHandler implements Handler<RoutingContext> {
 
             if (startLocationLat == null || startLocationLon == null || startLocationTs == null
                     || endLocationLat == null || endLocationLon == null || endLocationTs == null) {
+                throw new InvalidMetaData("Data incomplete!");
+            }
+
+            final var measurementId = body.getString(FormAttributes.MEASUREMENT_ID.getValue());
+            final var deviceId = body.getString(FormAttributes.DEVICE_ID.getValue());
+            if (measurementId == null || deviceId == null) {
                 throw new InvalidMetaData("Data incomplete!");
             }
         } catch (final IllegalArgumentException | NullPointerException e) {

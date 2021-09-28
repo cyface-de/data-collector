@@ -50,6 +50,10 @@ public class Config implements AuthenticatedEndpointConfig {
      */
     private static final int DEFAULT_PAYLOAD_LIMIT = Math.toIntExact(BYTES_IN_ONE_MEGABYTE * 100L);
     /**
+     * The default number of milliseconds to wait before removing cached uploads after last modification: 7 days.
+     */
+    private static final long DEFAULT_UPLOAD_EXPIRATION_TIME = 1000 * 60 * 60 * 24 * 7;
+    /**
      * A parameter for the endpoint path the API service is available at.
      */
     private static final Parameter HTTP_ENDPOINT = Parameter.HTTP_ENDPOINT_V3;
@@ -105,6 +109,10 @@ public class Config implements AuthenticatedEndpointConfig {
      * A parameter telling the system how large measurement uploads may be.
      */
     private final long measurementLimit;
+    /**
+     * A parameter telling the system the milliseconds to wait before removing cached uploads after last modification.
+     */
+    private final long uploadExpirationTime;
 
     /**
      * Creates a fully initialized instance of this class.
@@ -137,6 +145,7 @@ public class Config implements AuthenticatedEndpointConfig {
         this.audience = AuthenticatedEndpointConfig.jwtAudience(host, endpoint);
         this.tokenExpirationTime = Parameter.TOKEN_EXPIRATION_TIME.intValue(vertx, DEFAULT_TOKEN_VALIDATION_TIME);
         this.measurementLimit = Parameter.MEASUREMENT_PAYLOAD_LIMIT.longValue(vertx, DEFAULT_PAYLOAD_LIMIT);
+        this.uploadExpirationTime = Parameter.UPLOAD_EXPIRATION_TIME.longValue(vertx, DEFAULT_UPLOAD_EXPIRATION_TIME);
 
         Validate.notNull(publicKey);
         Validate.notNull(privateKey);
@@ -145,6 +154,8 @@ public class Config implements AuthenticatedEndpointConfig {
         Validate.notEmpty(host, "Hostname not found. Please use the parameter %s.", Parameter.HTTP_HOST.key());
         Validate.isTrue(httpPort > 0);
         Validate.notEmpty(endpoint, "Endpoint not found. Please use the parameter %s.", HTTP_ENDPOINT.key());
+        Validate.isTrue(tokenExpirationTime > 0);
+        Validate.isTrue(uploadExpirationTime > 0);
     }
 
     /**
@@ -208,5 +219,9 @@ public class Config implements AuthenticatedEndpointConfig {
 
     public long getMeasurementLimit() {
         return measurementLimit;
+    }
+
+    public long getUploadExpirationTime() {
+        return uploadExpirationTime;
     }
 }

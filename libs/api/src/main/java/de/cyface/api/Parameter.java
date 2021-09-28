@@ -99,6 +99,10 @@ public enum Parameter {
      */
     TOKEN_EXPIRATION_TIME("jwt.expiration"),
     /**
+     * A parameter telling the system the milliseconds to wait before removing cached uploads after last modification.
+     */
+    UPLOAD_EXPIRATION_TIME("upload.expiration"),
+    /**
      * A parameter telling the system how large measurement uploads may be.
      */
     MEASUREMENT_PAYLOAD_LIMIT("measurement.payload.limit"),

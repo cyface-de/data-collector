@@ -18,15 +18,16 @@
  */
 package de.cyface.collector.model;
 
-import io.vertx.core.buffer.Buffer;
-import org.junit.jupiter.api.Test;
+import static org.hamcrest.CoreMatchers.equalTo;
+import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.MatcherAssert.assertThat;
 
 import java.nio.file.Paths;
 import java.util.UUID;
 
-import static org.hamcrest.CoreMatchers.equalTo;
-import static org.hamcrest.CoreMatchers.is;
-import static org.hamcrest.MatcherAssert.assertThat;
+import org.junit.jupiter.api.Test;
+
+import io.vertx.core.buffer.Buffer;
 
 /**
  * Tests the inner workings of the {@link Measurement} class.
@@ -53,7 +54,9 @@ public class MeasurementTest {
         final var username = "guest";
         final var binary = Paths.get("testDir", "testFile").toAbsolutePath().toFile();
         final var formatVersion = 2;
-        final var measurement = new Measurement(did, mid, osVersion, deviceType, appVersion, length, locationCount, startLocation, endLocation, vehicle, username, binary, formatVersion);
+        final var metaData = new RequestMetaData(did, mid, osVersion, deviceType, appVersion, length, locationCount,
+                startLocation, endLocation, vehicle, formatVersion);
+        final var measurement = new Measurement(metaData, username, binary);
 
         // Act: encode
         final var codec = new Measurement.EventBusCodec();
@@ -64,16 +67,17 @@ public class MeasurementTest {
         final var decoded = codec.decodeFromWire(0, buffer);
 
         // Assert
-        assertThat(decoded.getDeviceIdentifier(), is(equalTo(did)));
-        assertThat(decoded.getMeasurementIdentifier(), is(equalTo(mid)));
-        assertThat(decoded.getOperatingSystemVersion(), is(equalTo(osVersion)));
-        assertThat(decoded.getDeviceType(), is(equalTo(deviceType)));
-        assertThat(decoded.getApplicationVersion(), is(equalTo(appVersion)));
-        assertThat(decoded.getLength(), is(equalTo(length)));
-        assertThat(decoded.getLocationCount(), is(equalTo(locationCount)));
+        final var decodedMetaData = decoded.getMetaData();
+        assertThat(decodedMetaData.getDeviceIdentifier(), is(equalTo(did)));
+        assertThat(decodedMetaData.getMeasurementIdentifier(), is(equalTo(mid)));
+        assertThat(decodedMetaData.getOperatingSystemVersion(), is(equalTo(osVersion)));
+        assertThat(decodedMetaData.getDeviceType(), is(equalTo(deviceType)));
+        assertThat(decodedMetaData.getApplicationVersion(), is(equalTo(appVersion)));
+        assertThat(decodedMetaData.getLength(), is(equalTo(length)));
+        assertThat(decodedMetaData.getLocationCount(), is(equalTo(locationCount)));
 
-        final var decodedStart = decoded.getStartLocation();
-        final var decodedEnd = decoded.getEndLocation();
+        final var decodedStart = decodedMetaData.getStartLocation();
+        final var decodedEnd = decodedMetaData.getEndLocation();
         assertThat(decodedStart.getLat(), is(equalTo(startLocation.getLat())));
         assertThat(decodedStart.getLon(), is(equalTo(startLocation.getLon())));
         assertThat(decodedStart.getTimestamp(), is(equalTo(startLocation.getTimestamp())));
@@ -81,9 +85,9 @@ public class MeasurementTest {
         assertThat(decodedEnd.getLon(), is(equalTo(endLocation.getLon())));
         assertThat(decodedEnd.getTimestamp(), is(equalTo(endLocation.getTimestamp())));
 
-        assertThat(decoded.getVehicle(), is(equalTo(vehicle)));
+        assertThat(decodedMetaData.getVehicle(), is(equalTo(vehicle)));
         assertThat(decoded.getUsername(), is(equalTo(username)));
         assertThat(decoded.getBinary(), is(equalTo(binary)));
-        assertThat(decoded.getFormatVersion(), is(equalTo(formatVersion)));
+        assertThat(decodedMetaData.getFormatVersion(), is(equalTo(formatVersion)));
     }
 }

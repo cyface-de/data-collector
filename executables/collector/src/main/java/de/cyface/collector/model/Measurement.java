@@ -18,19 +18,20 @@
  */
 package de.cyface.collector.model;
 
+import static de.cyface.collector.model.RequestMetaData.MAX_GENERIC_METADATA_FIELD_LENGTH;
+
+import java.io.File;
+
+import org.apache.commons.lang3.Validate;
+
 import de.cyface.collector.handler.FormAttributes;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.eventbus.MessageCodec;
 import io.vertx.core.json.JsonObject;
-import org.apache.commons.lang3.Validate;
-
-import java.io.File;
-import java.nio.charset.Charset;
-
-import static de.cyface.collector.handler.PreRequestHandler.CURRENT_TRANSFER_FILE_FORMAT_VERSION;
 
 /**
- * A POJO representing a single measurement, which has arrived at the API version 3 and needs to be stored to persistent storage.
+ * A POJO representing a single measurement, which has arrived at the API version 3 and needs to be stored to persistent
+ * storage.
  *
  * @author Klemens Muthmann
  * @author Armin Schnabel
@@ -39,71 +40,9 @@ import static de.cyface.collector.handler.PreRequestHandler.CURRENT_TRANSFER_FIL
  */
 public final class Measurement {
     /**
-     * The length of a universal unique identifier.
+     * the metadata from the request header.
      */
-    private static final int UUID_LENGTH = 36;
-    /**
-     * The default char set to use for encoding and decoding strings transmitted as metadata.
-     */
-    private static final String DEFAULT_CHARSET = "UTF-8";
-    /**
-     * Maximum size of a metadata field, with plenty space for future development. This prevents attackers from putting
-     * arbitrary long data into these fields.
-     */
-    private static final int MAX_GENERIC_METADATA_FIELD_LENGTH = 30;
-    /**
-     * The maximum length of the measurement identifier in characters (this is the amount of characters of
-     * {@value Long#MAX_VALUE}).
-     */
-    private static final int MAX_MEASUREMENT_ID_LENGTH = 20;
-    /**
-     * The minimum length of a track stored with a measurement.
-     */
-    private static final double MINIMUM_TRACK_LENGTH = 0.0;
-    /**
-     * The minimum valid amount of locations stored inside a measurement.
-     */
-    private static final long MINIMUM_LOCATION_COUNT = 0L;
-    /**
-     * The worldwide unique identifier of the device uploading the data.
-     */
-    private final String deviceIdentifier;
-    /**
-     * The device wide unique identifier of the uploaded measurement.
-     */
-    private final String measurementIdentifier;
-    /**
-     * The operating system version, such as Android 9.0.0 or iOS 11.2.
-     */
-    private final String operatingSystemVersion;
-    /**
-     * The type of device uploading the data, such as Pixel 3 or iPhone 6 Plus.
-     */
-    private final String deviceType;
-    /**
-     * The version of the app that transmitted the measurement.
-     */
-    private final String applicationVersion;
-    /**
-     * The length of the measurement in meters.
-     */
-    private final double length;
-    /**
-     * The count of geolocations in the transmitted measurement.
-     */
-    private final long locationCount;
-    /**
-     * The <code>GeoLocation</code> at the beginning of the track represented by the transmitted measurement.
-     */
-    private final GeoLocation startLocation;
-    /**
-     * The <code>GeoLocation</code> at the end of the track represented by the transmitted measurement.
-     */
-    private final GeoLocation endLocation;
-    /**
-     * The type of the vehicle that has captured the measurement.
-     */
-    private final String vehicle;
+    private final RequestMetaData metaData;
     /**
      * The name of the user uploading the measurement.
      */
@@ -112,154 +51,30 @@ public final class Measurement {
      * The binary uploaded with the measurement. This contains the actual data.
      */
     private final File binary;
-    /**
-     * The format version of the {@link #binary}.
-     */
-    private final int formatVersion;
 
     /**
      * Creates a new completely initialized object of this class.
      *
-     * @param deviceIdentifier       The worldwide unique identifier of the device uploading the data.
-     * @param measurementIdentifier  The device wide unique identifier of the uploaded measurement.
-     * @param operatingSystemVersion The operating system version, such as Android 9.0.0 or iOS 11.2.
-     * @param deviceType             The type of device uploading the data, such as Pixel 3 or iPhone 6 Plus.
-     * @param applicationVersion     The version of the app that transmitted the measurement.
-     * @param length                 The length of the measurement in meters.
-     * @param locationCount          The count of geolocations in the transmitted measurement.
-     * @param startLocation          The <code>GeoLocation</code> at the beginning of the track represented by the transmitted
-     *                               measurement.
-     * @param endLocation            The <code>GeoLocation</code> at the end of the track represented by the transmitted
-     *                               measurement.
-     * @param vehicle                The type of the vehicle that has captured the measurement.
-     * @param username               The name of the user uploading the measurement.
-     * @param binary                 The binary uploaded together with the measurement. This contains the actual data.
-     * @param formatVersion          The format version of the {@link #binary}.
+     * @param metaData the metadata from the request header.
+     * @param username The name of the user uploading the measurement.
+     * @param binary The binary uploaded together with the measurement. This contains the actual data.
      */
-    public Measurement(final String deviceIdentifier, final String measurementIdentifier,
-                       final String operatingSystemVersion, final String deviceType, final String applicationVersion,
-                       final double length, final long locationCount, final GeoLocation startLocation,
-                       final GeoLocation endLocation, final String vehicle, final String username,
-                       final File binary, final int formatVersion) {
+    public Measurement(final RequestMetaData metaData, final String username, final File binary) {
 
-        Validate.notNull(deviceIdentifier, "Field deviceId was null!");
-        Validate.isTrue(deviceIdentifier.getBytes(Charset.forName(DEFAULT_CHARSET)).length == UUID_LENGTH,
-                "Field deviceId was not exactly 128 Bit, which is required for UUIDs!");
-        Validate.notNull(deviceType, "Field deviceType was null!");
-        Validate.isTrue(!deviceType.isEmpty() && deviceType.length() <= MAX_GENERIC_METADATA_FIELD_LENGTH,
-                "Field deviceType had an invalid length of %d!", deviceType.length());
-        Validate.notNull(measurementIdentifier, "Field measurementId was null!");
-        Validate.isTrue(
-                !measurementIdentifier.isEmpty() && measurementIdentifier.length() <= MAX_MEASUREMENT_ID_LENGTH,
-                "Field measurementId had an invalid length of %d!", measurementIdentifier.length());
-        Validate.notNull(operatingSystemVersion, "Field osVersion was null!");
-        Validate.isTrue(
-                !operatingSystemVersion.isEmpty()
-                        && operatingSystemVersion.length() <= MAX_GENERIC_METADATA_FIELD_LENGTH,
-                "Field osVersion had an invalid length of %d!", operatingSystemVersion.length());
-        Validate.notNull(applicationVersion, "Field applicationVersion was null!");
-        Validate.isTrue(
-                !applicationVersion.isEmpty() && applicationVersion.length() <= MAX_GENERIC_METADATA_FIELD_LENGTH,
-                "Field applicationVersion had an invalid length of %d!", applicationVersion.length());
-        Validate.isTrue(length >= MINIMUM_TRACK_LENGTH,
-                "Field length had an invalid value %d which is smaller then 0.0!", length);
-        Validate.isTrue(locationCount >= MINIMUM_LOCATION_COUNT,
-                "Field locationCount had an invalid value %d which is smaller then 0!", locationCount);
-        Validate.isTrue(locationCount == MINIMUM_LOCATION_COUNT || startLocation != null,
-                "Start location should only be defined if there is at least one location in the uploaded track!");
-        Validate.isTrue(locationCount == MINIMUM_LOCATION_COUNT || endLocation != null,
-                "End location should only be defined if there is at least one location in the uploaded track!");
-        Validate.notNull(vehicle, "Field vehicleType was null!");
-        Validate.isTrue(!vehicle.isEmpty() && vehicle.length() <= MAX_GENERIC_METADATA_FIELD_LENGTH,
-                "Field vehicleType had an invalid length of %d!", vehicle.length());
         Validate.notNull(username, "Field username was null!");
         Validate.isTrue(!username.isEmpty() && username.length() <= MAX_GENERIC_METADATA_FIELD_LENGTH,
                 "Field username had an invalid length of %d!", username.length());
-        Validate.isTrue(formatVersion == CURRENT_TRANSFER_FILE_FORMAT_VERSION, "Unsupported formatVersion: %d", formatVersion);
 
-        this.deviceIdentifier = deviceIdentifier;
-        this.measurementIdentifier = measurementIdentifier;
-        this.operatingSystemVersion = operatingSystemVersion;
-        this.deviceType = deviceType;
-        this.applicationVersion = applicationVersion;
-        this.length = length;
-        this.locationCount = locationCount;
-        this.startLocation = startLocation;
-        this.endLocation = endLocation;
-        this.vehicle = vehicle;
+        this.metaData = metaData;
         this.username = username;
         this.binary = binary;
-        this.formatVersion = formatVersion;
     }
 
     /**
-     * @return The worldwide unique identifier of the device uploading the data.
+     * @return the metadata from the request header.
      */
-    public String getDeviceIdentifier() {
-        return deviceIdentifier;
-    }
-
-    /**
-     * @return The device wide unique identifier of the uploaded measurement.
-     */
-    public String getMeasurementIdentifier() {
-        return measurementIdentifier;
-    }
-
-    /**
-     * @return The operating system version, such as Android 9.0.0 or iOS 11.2.
-     */
-    public String getOperatingSystemVersion() {
-        return operatingSystemVersion;
-    }
-
-    /**
-     * @return The type of device uploading the data, such as Pixel 3 or iPhone 6 Plus.
-     */
-    public String getDeviceType() {
-        return deviceType;
-    }
-
-    /**
-     * @return The version of the app that transmitted the measurement.
-     */
-    public String getApplicationVersion() {
-        return applicationVersion;
-    }
-
-    /**
-     * @return The length of the measurement in meters.
-     */
-    public double getLength() {
-        return length;
-    }
-
-    /**
-     * @return The count of geolocations in the transmitted measurement.
-     */
-    public long getLocationCount() {
-        return locationCount;
-    }
-
-    /**
-     * @return The <code>GeoLocation</code> at the beginning of the track represented by the transmitted measurement.
-     */
-    public GeoLocation getStartLocation() {
-        return startLocation;
-    }
-
-    /**
-     * @return The <code>GeoLocation</code> at the end of the track represented by the transmitted measurement.
-     */
-    public GeoLocation getEndLocation() {
-        return endLocation;
-    }
-
-    /**
-     * @return The type of the vehicle that has captured the measurement.
-     */
-    public String getVehicle() {
-        return vehicle;
+    public RequestMetaData getMetaData() {
+        return metaData;
     }
 
     /**
@@ -277,36 +92,29 @@ public final class Measurement {
     }
 
     /**
-     * @return The format version of the {@link #binary}.
-     */
-    public int getFormatVersion() {
-        return formatVersion;
-    }
-
-    /**
      * @return A JSON representation of this measurement.
      */
     public JsonObject toJson() {
         final JsonObject ret = new JsonObject();
 
-        ret.put(FormAttributes.DEVICE_ID.getValue(), deviceIdentifier);
-        ret.put(FormAttributes.MEASUREMENT_ID.getValue(), measurementIdentifier);
-        ret.put(FormAttributes.OS_VERSION.getValue(), operatingSystemVersion);
-        ret.put(FormAttributes.DEVICE_TYPE.getValue(), deviceType);
-        ret.put(FormAttributes.APPLICATION_VERSION.getValue(), applicationVersion);
-        ret.put(FormAttributes.LENGTH.getValue(), length);
-        ret.put(FormAttributes.LOCATION_COUNT.getValue(), locationCount);
-        if (locationCount > 0) {
-            ret.put(FormAttributes.START_LOCATION_LAT.getValue(), startLocation.getLat());
-            ret.put(FormAttributes.START_LOCATION_LON.getValue(), startLocation.getLon());
-            ret.put(FormAttributes.START_LOCATION_TS.getValue(), startLocation.getTimestamp());
-            ret.put(FormAttributes.END_LOCATION_LAT.getValue(), endLocation.getLat());
-            ret.put(FormAttributes.END_LOCATION_LON.getValue(), endLocation.getLon());
-            ret.put(FormAttributes.END_LOCATION_TS.getValue(), endLocation.getTimestamp());
+        ret.put(FormAttributes.DEVICE_ID.getValue(), metaData.deviceIdentifier);
+        ret.put(FormAttributes.MEASUREMENT_ID.getValue(), metaData.measurementIdentifier);
+        ret.put(FormAttributes.OS_VERSION.getValue(), metaData.operatingSystemVersion);
+        ret.put(FormAttributes.DEVICE_TYPE.getValue(), metaData.deviceType);
+        ret.put(FormAttributes.APPLICATION_VERSION.getValue(), metaData.applicationVersion);
+        ret.put(FormAttributes.LENGTH.getValue(), metaData.length);
+        ret.put(FormAttributes.LOCATION_COUNT.getValue(), metaData.locationCount);
+        if (metaData.locationCount > 0) {
+            ret.put(FormAttributes.START_LOCATION_LAT.getValue(), metaData.startLocation.getLat());
+            ret.put(FormAttributes.START_LOCATION_LON.getValue(), metaData.startLocation.getLon());
+            ret.put(FormAttributes.START_LOCATION_TS.getValue(), metaData.startLocation.getTimestamp());
+            ret.put(FormAttributes.END_LOCATION_LAT.getValue(), metaData.endLocation.getLat());
+            ret.put(FormAttributes.END_LOCATION_LON.getValue(), metaData.endLocation.getLon());
+            ret.put(FormAttributes.END_LOCATION_TS.getValue(), metaData.endLocation.getTimestamp());
         }
-        ret.put(FormAttributes.VEHICLE_TYPE.getValue(), vehicle);
+        ret.put(FormAttributes.VEHICLE_TYPE.getValue(), metaData.vehicle);
         ret.put(FormAttributes.USERNAME.getValue(), username);
-        ret.put(FormAttributes.FORMAT_VERSION.getValue(), formatVersion);
+        ret.put(FormAttributes.FORMAT_VERSION.getValue(), metaData.formatVersion);
 
         return ret;
     }
@@ -332,14 +140,15 @@ public final class Measurement {
 
         @Override
         public void encodeToWire(final Buffer buffer, final Measurement serializable) {
-            final var deviceIdentifier = serializable.getDeviceIdentifier();
-            final var measurementIdentifier = serializable.getMeasurementIdentifier();
-            final var deviceType = serializable.getDeviceType();
-            final var operatingSystemVersion = serializable.getOperatingSystemVersion();
-            final var applicationVersion = serializable.getApplicationVersion();
-            final var length = serializable.getLength();
-            final var locationCount = serializable.getLocationCount();
-            final var vehicle = serializable.getVehicle();
+            final var metaData = serializable.metaData;
+            final var deviceIdentifier = metaData.getDeviceIdentifier();
+            final var measurementIdentifier = metaData.getMeasurementIdentifier();
+            final var deviceType = metaData.getDeviceType();
+            final var operatingSystemVersion = metaData.getOperatingSystemVersion();
+            final var applicationVersion = metaData.getApplicationVersion();
+            final var length = metaData.getLength();
+            final var locationCount = metaData.getLocationCount();
+            final var vehicle = metaData.getVehicle();
             final var username = serializable.getUsername();
 
             buffer.appendInt(deviceIdentifier.length());
@@ -350,7 +159,7 @@ public final class Measurement {
             buffer.appendInt(vehicle.length());
             buffer.appendInt(username.length());
 
-            buffer.appendInt(serializable.getFormatVersion());
+            buffer.appendInt(metaData.getFormatVersion());
             buffer.appendString(deviceIdentifier);
             buffer.appendString(measurementIdentifier);
             buffer.appendString(deviceType);
@@ -362,12 +171,12 @@ public final class Measurement {
             buffer.appendString(username);
 
             if (locationCount > 0) {
-                final var startLocationLat = serializable.getStartLocation().getLat();
-                final var startLocationLon = serializable.getStartLocation().getLon();
-                final var startLocationTimestamp = serializable.getStartLocation().getTimestamp();
-                final var endLocationLat = serializable.getEndLocation().getLat();
-                final var endLocationLon = serializable.getEndLocation().getLon();
-                final var endLocationTimestamp = serializable.getEndLocation().getTimestamp();
+                final var startLocationLat = metaData.getStartLocation().getLat();
+                final var startLocationLon = metaData.getStartLocation().getLon();
+                final var startLocationTimestamp = metaData.getStartLocation().getTimestamp();
+                final var endLocationLat = metaData.getEndLocation().getLat();
+                final var endLocationLon = metaData.getEndLocation().getLon();
+                final var endLocationTimestamp = metaData.getEndLocation().getTimestamp();
                 buffer.appendDouble(startLocationLat);
                 buffer.appendDouble(startLocationLon);
                 buffer.appendLong(startLocationTimestamp);
@@ -445,10 +254,11 @@ public final class Measurement {
             final var fileNameEnd = entryLengthEnd + entryLength;
             final var fileName = buffer.getString(entryLengthEnd, fileNameEnd);
             final var uploadFile = new File(fileName);
+            final var metaData = new RequestMetaData(deviceIdentifier, measurementIdentifier, operatingSystemVersion,
+                    deviceType, applicationVersion, length, locationCount, startLocation, endLocation, vehicle,
+                    formatVersion);
 
-            return new Measurement(deviceIdentifier, measurementIdentifier, operatingSystemVersion, deviceType,
-                    applicationVersion, length, locationCount, startLocation, endLocation, vehicle, username,
-                    uploadFile, formatVersion);
+            return new Measurement(metaData, username, uploadFile);
         }
 
         @Override
@@ -464,55 +274,6 @@ public final class Measurement {
         @Override
         public byte systemCodecID() {
             return -1;
-        }
-    }
-
-    /**
-     * A class which holds the uploaded file, and it's type, required to choose a deserialization strategy.
-     *
-     * @author Armin Schnabel
-     * @version 1.0.0
-     * @since 5.1.0
-     */
-    public static final class FileUpload {
-        /**
-         * A handle for the uploaded file on the local file system.
-         */
-        private final File file;
-        /**
-         * The type of the data stored in this file. This corresponds to the extension of the file. Compressed sensor
-         * data for example is identified via the <tt>ccyf</tt> extension, while event files use <tt>ccyfe</tt>.
-         */
-        @SuppressWarnings("SpellCheckingInspection")
-        private final String fileType;
-
-        /**
-         * @param file     A handle for the uploaded file on the local file system.
-         * @param fileType The type of the data stored in this file. This corresponds to the extension of the file.
-         *                 Compressed sensor data for example is identified via the <tt>ccyf</tt> extension, while event
-         *                 files use <tt>ccyfe</tt>.
-         */
-        @SuppressWarnings("SpellCheckingInspection")
-        public FileUpload(final File file, final String fileType) {
-            this.file = file;
-            this.fileType = fileType;
-        }
-
-        /**
-         * @return A handle for the uploaded file on the local file system.
-         */
-        public File getFile() {
-            return file;
-        }
-
-        /**
-         * @return The type of the data stored in this file. This corresponds to the extension of the file. Compressed
-         * sensor data for example is identified via the <tt>ccyf</tt> extension, while event files use
-         * <tt>ccyfe</tt>.
-         */
-        @SuppressWarnings("SpellCheckingInspection")
-        public String getFileType() {
-            return fileType;
         }
     }
 }

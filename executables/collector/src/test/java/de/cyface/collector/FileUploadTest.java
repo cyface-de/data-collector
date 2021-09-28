@@ -21,7 +21,9 @@ package de.cyface.collector;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.matchesPattern;
 import static org.hamcrest.Matchers.notNullValue;
+import static org.hamcrest.Matchers.nullValue;
 
 import java.io.IOException;
 import java.util.UUID;
@@ -89,7 +91,7 @@ public final class FileUploadTest {
      * The endpoint to upload measurements to. The parameter `uploadType=resumable` is added automatically by the
      * Google API client library used on Android, so we make sure the endpoints can handle this.
      */
-    private static final String MEASUREMENTS_UPLOAD_ENDPOINT_PATH = "/api/v3/measurements?uploadType=resumable";
+    private static final String UPLOAD_PATH_WITH_INVALID_SESSION = "/api/v3/measurements/(random78901234567890123456789012)/";
     /**
      * A Mongo database lifecycle handler. This provides the test with the capabilities to run and shutdown a Mongo
      * database for testing purposes.
@@ -182,10 +184,12 @@ public final class FileUploadTest {
     @Test
     public void uploadWithWrongCredentials_Returns401(final VertxTestContext context) {
         final var returnedRequestFuture = context.checkpoint();
-        upload(context, "/test.bin", "0.0", 4, true, context.succeeding(ar -> context.verify(() -> {
-            assertThat("Wrong HTTP status code on invalid authentication!", ar.statusCode(), is(equalTo(401)));
-            returnedRequestFuture.flag();
-        })));
+        upload(context, "/test.bin", "0.0", 4, true, UPLOAD_PATH_WITH_INVALID_SESSION,
+                0, 3, 4, deviceIdentifier,
+                context.succeeding(ar -> context.verify(() -> {
+                    assertThat("Wrong HTTP status code on invalid authentication!", ar.statusCode(), is(equalTo(401)));
+                    returnedRequestFuture.flag();
+                })));
     }
 
     /**
@@ -208,12 +212,99 @@ public final class FileUploadTest {
      */
     @Test
     public void testUploadWithUnParsableMetaData_Returns422(final VertxTestContext context) {
-        // Set invalid value for a form attribute
-        // Execute
-        upload(context, "/test.bin", "Sir! You are being hacked!", 4, false,
+        // Create upload session
+        preRequestAndReturnLocation(context, uploadUri -> {
+
+            // Set invalid value for a form attribute
+            upload(context, "/test.bin", "Sir! You are being hacked!", 4, false, uploadUri,
+                    0, 3, 4, deviceIdentifier,
+                    context.succeeding(ar -> context.verify(() -> {
+                        assertThat("Wrong HTTP status code when uploading unparsable meta data!", ar.statusCode(),
+                                is(equalTo(422)));
+                        context.completeNow();
+                    })));
+        });
+    }
+
+    @Test
+    public void testUploadStatusWithoutPriorUpload_happyPath(final VertxTestContext context) {
+        // Create upload session
+        preRequestAndReturnLocation(context, uploadUri -> {
+
+            uploadStatus(context, uploadUri, "bytes */4",
+                    context.succeeding(ar -> context.verify(() -> {
+                        assertThat("Wrong HTTP status code when asking for upload status!", ar.statusCode(),
+                                is(equalTo(308)));
+                        final var range = ar.getHeader("Range");
+                        // As we did not upload data yet, the server should respond without Range header
+                        assertThat("Unexpected Range header!", range, nullValue());
+                        context.completeNow();
+                    })));
+        });
+    }
+
+    @Test
+    public void testUploadStatusAfterPartialUpload_happyPath(final VertxTestContext context) {
+        // Create upload session
+        preRequestAndReturnLocation(context, uploadUri -> {
+
+            upload(context, "/test.bin", "0.0", 4, false, uploadUri,
+                    0, 3, 8 /* partial */, deviceIdentifier,
+                    context.succeeding(ar -> context.verify(() -> {
+                        assertThat("Wrong HTTP status code when uploading a file chunk!", ar.statusCode(),
+                                is(equalTo(308)));
+
+                        uploadStatus(context, uploadUri, "bytes */8",
+                                context.succeeding(res -> context.verify(() -> {
+                                    // The upload should be successful, expecting to return 200/201 here
+                                    assertThat("Wrong HTTP status code when asking for upload status!",
+                                            res.statusCode(),
+                                            is(equalTo(308)));
+
+                                    final var range = ar.getHeader("Range");
+                                    // The server tells us what data it's holding for us to calculate where to resume
+                                    assertThat("Unexpected Range header!", range, is(equalTo("bytes=0-3")));
+
+                                    context.completeNow();
+                                })));
+                    })));
+        });
+    }
+
+    @Test
+    public void testUploadStatusAfterSuccessfulUpload_happyPath(final VertxTestContext context) {
+        // Create upload session
+        preRequestAndReturnLocation(context, uploadUri -> {
+
+            upload(context, "/test.bin", "0.0", 4, false, uploadUri,
+                    0, 3, 4, deviceIdentifier,
+                    context.succeeding(ar -> context.verify(() -> {
+                        assertThat("Wrong HTTP status code when uploading unparsable meta data!", ar.statusCode(),
+                                is(equalTo(201)));
+
+                        uploadStatus(context, uploadUri, "bytes */4",
+                                context.succeeding(res -> context.verify(() -> {
+                                    // The upload should be successful, expecting to return 200/201 here
+                                    assertThat("Wrong HTTP status code when asking for upload status!",
+                                            res.statusCode(),
+                                            is(equalTo(200)));
+
+                                    context.completeNow();
+                                })));
+                    })));
+        });
+    }
+
+    @Test
+    public void testUploadWithInvalidSession_returns404(final VertxTestContext context) {
+        upload(context, "/test.bin", "0.0", 4, false, UPLOAD_PATH_WITH_INVALID_SESSION,
+                0, 3, 4, deviceIdentifier,
                 context.succeeding(ar -> context.verify(() -> {
-                    assertThat("Wrong HTTP status code when uploading unparsable meta data!", ar.statusCode(),
-                            is(equalTo(422)));
+                    assertThat("Wrong HTTP status code when uploading with invalid session!", ar.statusCode(),
+                            is(equalTo(404)));
+                    assertThat("Wrong HTTP status message when uploading with invalid session!", ar.statusMessage(),
+                            is(equalTo("Not Found")));
+
                     context.completeNow();
                 })));
     }
@@ -249,6 +340,24 @@ public final class FileUploadTest {
     @Test
     public void upload_largeFile(final VertxTestContext context) {
         uploadAndCheckForSuccess(context, "/iphone-neu.ccyf", 134697);
+    }
+
+    /**
+     * Tests uploading a file to the Vertx API.
+     *
+     * @param context The test context for running <code>Vertx</code> under test
+     */
+    @Test
+    public void uploadWithWrongDeviceId_Returns422(final VertxTestContext context) {
+
+        preRequestAndReturnLocation(context,
+                uploadUri -> upload(context, "/test.bin", "0.0", 4, false, uploadUri,
+                        0, 3, 4, "deviceIdHack",
+                        context.succeeding(ar -> context.verify(() -> {
+                            assertThat("Wrong HTTP status code when uploading with a wrong device id!",
+                                    ar.statusCode(), is(equalTo(422)));
+                            context.completeNow();
+                        }))));
     }
 
     /**
@@ -292,7 +401,7 @@ public final class FileUploadTest {
 
                     // Send Pre-Request
                     final var builder = client.post(collectorClient.getPort(), "localhost",
-                            MEASUREMENTS_UPLOAD_ENDPOINT_PATH);
+                            "/api/v3/measurements?uploadType=resumable");
                     builder.putHeader("Authorization", "Bearer " + (useInvalidToken ? "invalidToken" : authToken));
                     builder.putHeader("Accept-Encoding", "gzip");
                     builder.putHeader("User-Agent", "Google-HTTP-Java-Client/1.39.2 (gzip)");
@@ -319,11 +428,26 @@ public final class FileUploadTest {
 
         final var returnedRequestFuture = context.checkpoint();
 
-        upload(context, testFileResourceName, "0.0", binaryLength, false,
-                context.succeeding(ar -> context.verify(() -> {
-                    assertThat("Wrong HTTP status code on uploading data!", ar.statusCode(), is(equalTo(201)));
-                    returnedRequestFuture.flag();
-                })));
+        preRequestAndReturnLocation(context,
+                uploadUri -> upload(context, testFileResourceName, "0.0", binaryLength, false, uploadUri,
+                        0, binaryLength - 1, binaryLength, deviceIdentifier,
+                        context.succeeding(ar -> context.verify(() -> {
+                            assertThat("Wrong HTTP status code on uploading data!", ar.statusCode(), is(equalTo(201)));
+                            returnedRequestFuture.flag();
+                        }))));
+    }
+
+    private void preRequestAndReturnLocation(final VertxTestContext context, final Handler<String> uploadUriHandler) {
+
+        preRequest(context, 2, false, context.succeeding(res -> context.verify(() -> {
+            assertThat("Wrong HTTP status code on happy path pre-request test!", res.statusCode(), is(equalTo(200)));
+            final var location = res.getHeader("Location");
+            assertThat("Missing HTTP Location header in pre-request response!", location, notNullValue());
+            final var locationPattern = "http://10\\.0\\.2\\.2:8081/api/v3/measurements/\\([a-z0-9]{32}\\)/";
+            assertThat("Wrong HTTP Location header on pre-request!", location, matchesPattern(locationPattern));
+
+            uploadUriHandler.handle(location);
+        })));
     }
 
     /**
@@ -333,11 +457,13 @@ public final class FileUploadTest {
      * @param context The test context to use.
      * @param testFileResourceName The Java resource name of a file to upload.
      * @param length the km-length of the track
-     * @param binaryLength number of bytes in the binary to upload
+     * @param binarySize number of bytes in the binary to upload
      * @param handler The handler called if the client received a response.
      */
     private void upload(final VertxTestContext context, final String testFileResourceName, final String length,
-            @SuppressWarnings("SameParameterValue") final int binaryLength, final boolean useInvalidToken,
+            @SuppressWarnings("SameParameterValue") final int binarySize, final boolean useInvalidToken,
+            final String requestUri, @SuppressWarnings("SameParameterValue") long from, long to, long total,
+            String deviceId,
             final Handler<AsyncResult<HttpResponse<Buffer>>> handler) {
 
         LOGGER.debug("Sending authentication request!");
@@ -353,19 +479,19 @@ public final class FileUploadTest {
                     Validate.notNull(testFileResource);
 
                     // Upload data (4 Bytes of data)
-                    final var builder = client.put(collectorClient.getPort(), "localhost",
-                            MEASUREMENTS_UPLOAD_ENDPOINT_PATH);
+                    final var path = requestUri.substring(requestUri.indexOf("/api"));
+                    final var builder = client.put(collectorClient.getPort(), "localhost", path);
                     final var jwtBearer = "Bearer " + (useInvalidToken ? "invalidToken" : authToken);
                     builder.putHeader("Authorization", jwtBearer);
                     builder.putHeader("Accept-Encoding", "gzip");
-                    builder.putHeader("Content-Range", "bytes 0-3/4");
+                    builder.putHeader("Content-Range", String.format("bytes %d-%d/%d", from, to, total));
                     builder.putHeader("User-Agent", "Google-HTTP-Java-Client/1.39.2 (gzip)");
                     builder.putHeader("Content-Type", "application/octet-stream");
                     builder.putHeader("Host", "localhost:" + collectorClient.getPort());
                     builder.putHeader("Connection", "Keep-Alive");
                     // If the binary length is not set correctly, the connection is closed and no handler called
                     // [DAT-735]
-                    builder.putHeader("content-length", String.valueOf(binaryLength));
+                    builder.putHeader("content-length", String.valueOf(binarySize));
                     // metaData
                     builder.putHeader("deviceType", "testDeviceType");
                     builder.putHeader("appVersion", "testAppVersion");
@@ -374,18 +500,66 @@ public final class FileUploadTest {
                     builder.putHeader("startLocLon", "9.185135040263333");
                     builder.putHeader("length", length);
                     builder.putHeader("endLocLon", "9.492934709138925");
-                    builder.putHeader("deviceId", "testDevi-ce00-42b6-a840-1b70d30094b8");
+                    builder.putHeader("deviceId", deviceId);
                     builder.putHeader("endLocTS", "1503055141001");
                     builder.putHeader("vehicle", "BICYCLE");
                     builder.putHeader("startLocTS", "1503055141000");
                     builder.putHeader("endLocLat", "50.59502970913889");
                     builder.putHeader("osVersion", "testOsVersion");
-                    builder.putHeader("measurementId", "239");
+                    builder.putHeader("measurementId", measurementIdentifier);
                     builder.putHeader("formatVersion", "2");
 
                     final var file = vertx.fileSystem().openBlocking(testFileResource.getFile(), new OpenOptions());
-                    // builder.timeout(5000); // To fix TimeoutException which only occurs on the CI
                     builder.sendStream(file, handler);
+                }));
+    }
+
+    private void uploadStatus(final VertxTestContext context, final String requestUri,
+            @SuppressWarnings("SameParameterValue") final String contentRange,
+            final Handler<AsyncResult<HttpResponse<Buffer>>> handler) {
+
+        LOGGER.debug("Sending authentication request!");
+        TestUtils.authenticate(client, collectorClient.getPort(), LOGIN_UPLOAD_ENDPOINT_PATH,
+                context.succeeding(authResponse -> {
+                    final var authToken = authResponse.getHeader("Authorization");
+                    context.verify(() -> {
+                        assertThat("Wrong HTTP status on authentication request!", authResponse.statusCode(), is(200));
+                        assertThat("Auth token was missing from authentication request!", authToken,
+                                is(notNullValue()));
+                    });
+
+                    // Send empty PUT request to ask where to continue the upload
+                    final var path = requestUri.substring(requestUri.indexOf("/api"));
+                    final var builder = client.put(collectorClient.getPort(), "localhost", path);
+                    final var jwtBearer = "Bearer " + authToken;
+                    builder.putHeader("Authorization", jwtBearer);
+                    builder.putHeader("Accept-Encoding", "gzip");
+                    builder.putHeader("User-Agent", "Google-HTTP-Java-Client/1.39.2 (gzip)");
+                    builder.putHeader("Content-Type", "application/octet-stream"); // really?
+                    builder.putHeader("Host", "localhost:" + collectorClient.getPort());
+                    builder.putHeader("Connection", "Keep-Alive");
+                    // empty body
+                    builder.putHeader("content-length", "0");
+                    // ask where to continue
+                    builder.putHeader("Content-Range", contentRange);
+                    // metaData
+                    builder.putHeader("deviceType", "testDeviceType");
+                    builder.putHeader("appVersion", "testAppVersion");
+                    builder.putHeader("startLocLat", "50.2872300402633");
+                    builder.putHeader("locationCount", "2");
+                    builder.putHeader("startLocLon", "9.185135040263333");
+                    builder.putHeader("length", "0.0");
+                    builder.putHeader("endLocLon", "9.492934709138925");
+                    builder.putHeader("deviceId", deviceIdentifier);
+                    builder.putHeader("endLocTS", "1503055141001");
+                    builder.putHeader("vehicle", "BICYCLE");
+                    builder.putHeader("startLocTS", "1503055141000");
+                    builder.putHeader("endLocLat", "50.59502970913889");
+                    builder.putHeader("osVersion", "testOsVersion");
+                    builder.putHeader("measurementId", measurementIdentifier);
+                    builder.putHeader("formatVersion", "2");
+
+                    builder.send(handler);
                 }));
     }
 }

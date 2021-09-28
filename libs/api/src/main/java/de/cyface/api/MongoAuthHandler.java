@@ -23,6 +23,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import io.vertx.core.Handler;
+import io.vertx.core.http.HttpHeaders;
 import io.vertx.ext.auth.mongo.MongoAuthentication;
 import io.vertx.ext.web.RoutingContext;
 
@@ -84,12 +85,18 @@ public final class MongoAuthHandler implements Handler<RoutingContext> {
             final var user = ctx.user();
             final var username = user.principal().getString("username");
 
-            // No need to `pause()` the request if the `BodyHandler` is installed first [DAT-749]
+            // `pauseAndResume` when the `BodyHandler` is not executed before this handler [DAT-749]
+            final var parseEnded = request.isEnded();
             if (pauseAndResume) {
-                request.pause();
+                // Before async operations, pause request body parsing to not lose the body or protocol upgrades.
+                if (!parseEnded) {
+                    request.pause();
+                }
             }
             authProvider.authenticate(user.principal(), r -> {
-                if (pauseAndResume) {
+                // As in `SessionHandlerImpl.handle(RoutingContext)`
+                final var upgraded = request.headers().contains(HttpHeaders.UPGRADE, HttpHeaders.WEBSOCKET, true);
+                if (pauseAndResume && !parseEnded && !upgraded) {
                     request.resume();
                 }
 

@@ -22,6 +22,7 @@ import static de.cyface.api.Authenticator.BYTES_IN_ONE_KILOBYTE;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.matchesPattern;
 import static org.hamcrest.Matchers.notNullValue;
 
 import java.io.IOException;
@@ -165,37 +166,35 @@ public final class FileUploadTooLargeTest {
     }
 
     /**
-     * Tests that an upload with a too large payload returns a 413 error.
+     * Tests that an upload with a too large payload returns a 422 error.
      *
      * @param context The test context for running <code>Vertx</code> under test
      */
     @Test
-    public void testPreRequestWithTooLargePayload_Returns413(final VertxTestContext context) {
-        // Set invalid value for a form attribute
-        // Execute
-        preRequest(context, 2, false,
+    public void testPreRequestWithTooLargePayload_Returns422(final VertxTestContext context) {
+        preRequest(context, 2, false, UPLOAD_SIZE,
                 context.succeeding(ar -> context.verify(() -> {
                     assertThat("Wrong HTTP status code when uploading unparsable meta data!", ar.statusCode(),
-                            is(equalTo(413)));
+                            is(equalTo(422)));
                     context.completeNow();
                 })));
     }
 
     /**
-     * Tests that an upload with a too large payload returns a 413 error.
+     * Tests that an upload with a too large payload returns a 422 error.
      *
      * @param context The test context for running <code>Vertx</code> under test
      */
     @Test
-    public void testUploadWithTooLargePayload_Returns413(final VertxTestContext context) {
-        // Set invalid value for a form attribute
-        // Execute
-        upload(context, "/iphone-neu.ccyf", "0.0", UPLOAD_SIZE, false,
-                context.succeeding(ar -> context.verify(() -> {
-                    assertThat("Wrong HTTP status code when uploading unparsable meta data!", ar.statusCode(),
-                            is(equalTo(413)));
-                    context.completeNow();
-                })));
+    public void testUploadWithTooLargePayload_Returns422(final VertxTestContext context) {
+        preRequestAndReturnLocation(context, 1000 /* fake a small upload to bypass pre-request size check */,
+                uploadUri -> upload(context, "/iphone-neu.ccyf", "0.0", UPLOAD_SIZE, false, uploadUri,
+                        0, UPLOAD_SIZE - 1, UPLOAD_SIZE, deviceIdentifier,
+                        context.succeeding(ar -> context.verify(() -> {
+                            assertThat("Wrong HTTP status code when uploading too large payload!", ar.statusCode(),
+                                    is(equalTo(422)));
+                            context.completeNow();
+                        }))));
     }
 
     /**
@@ -208,6 +207,7 @@ public final class FileUploadTooLargeTest {
     private void preRequest(final VertxTestContext context,
             @SuppressWarnings("SameParameterValue") final int locationCount,
             @SuppressWarnings("SameParameterValue") final boolean useInvalidToken,
+            final long uploadSize,
             final Handler<AsyncResult<HttpResponse<Buffer>>> preRequestResponseHandler) {
 
         LOGGER.debug("Sending authentication request!");
@@ -245,13 +245,27 @@ public final class FileUploadTooLargeTest {
                     builder.putHeader("Accept-Encoding", "gzip");
                     builder.putHeader("User-Agent", "Google-HTTP-Java-Client/1.39.2 (gzip)");
                     builder.putHeader("x-upload-content-type", "application/octet-stream");
-                    builder.putHeader("x-upload-content-length", String.valueOf(UPLOAD_SIZE));
+                    builder.putHeader("x-upload-content-length", String.valueOf(uploadSize));
                     builder.putHeader("Content-Type", "application/json; charset=UTF-8");
                     builder.putHeader("Host", "10.0.2.2:8081");
                     builder.putHeader("Connection", "Keep-Alive");
                     builder.putHeader("content-length", "406"); // random metadata length for this test
                     builder.sendJson(metaDataBody, preRequestResponseHandler);
                 }));
+    }
+
+    private void preRequestAndReturnLocation(final VertxTestContext context, final long uploadSize,
+            final Handler<String> uploadUriHandler) {
+
+        preRequest(context, 2, false, uploadSize, context.succeeding(res -> context.verify(() -> {
+            assertThat("Wrong HTTP status code on happy path pre-request test!", res.statusCode(), is(equalTo(200)));
+            final var location = res.getHeader("Location");
+            assertThat("Missing HTTP Location header in pre-request response!", location, notNullValue());
+            final var locationPattern = "http://10\\.0\\.2\\.2:8081/api/v3/measurements/\\([a-z0-9]{32}\\)/";
+            assertThat("Wrong HTTP Location header on pre-request!", location, matchesPattern(locationPattern));
+
+            uploadUriHandler.handle(location);
+        })));
     }
 
     /**
@@ -261,15 +275,17 @@ public final class FileUploadTooLargeTest {
      * @param context The test context to use.
      * @param testFileResourceName The Java resource name of a file to upload.
      * @param length the km-length of the track
-     * @param binaryLength number of bytes in the binary to upload
+     * @param binarySize number of bytes in the binary to upload
      * @param handler The handler called if the client received a response.
      */
     private void upload(final VertxTestContext context,
             @SuppressWarnings("SameParameterValue") final String testFileResourceName,
             @SuppressWarnings("SameParameterValue") final String length,
-            @SuppressWarnings("SameParameterValue") final int binaryLength,
+            @SuppressWarnings("SameParameterValue") final int binarySize,
             @SuppressWarnings("SameParameterValue") final boolean useInvalidToken,
-            final Handler<AsyncResult<HttpResponse<Buffer>>> handler) {
+            final String requestUri, @SuppressWarnings("SameParameterValue") long from,
+            @SuppressWarnings("SameParameterValue") long to, @SuppressWarnings("SameParameterValue") long total,
+            String deviceId, final Handler<AsyncResult<HttpResponse<Buffer>>> handler) {
 
         LOGGER.debug("Sending authentication request!");
         TestUtils.authenticate(client, collectorClient.getPort(), LOGIN_UPLOAD_ENDPOINT_PATH,
@@ -284,19 +300,19 @@ public final class FileUploadTooLargeTest {
                     Validate.notNull(testFileResource);
 
                     // Upload data (4 Bytes of data)
-                    final var builder = client.put(collectorClient.getPort(), "localhost",
-                            MEASUREMENTS_UPLOAD_ENDPOINT_PATH);
+                    final var path = requestUri.substring(requestUri.indexOf("/api"));
+                    final var builder = client.put(collectorClient.getPort(), "localhost", path);
                     final var jwtBearer = "Bearer " + (useInvalidToken ? "invalidToken" : authToken);
                     builder.putHeader("Authorization", jwtBearer);
                     builder.putHeader("Accept-Encoding", "gzip");
-                    builder.putHeader("Content-Range", "bytes 0-3/4");
+                    builder.putHeader("Content-Range", String.format("bytes %d-%d/%d", from, to, total));
                     builder.putHeader("User-Agent", "Google-HTTP-Java-Client/1.39.2 (gzip)");
                     builder.putHeader("Content-Type", "application/octet-stream");
                     builder.putHeader("Host", "localhost:" + collectorClient.getPort());
                     builder.putHeader("Connection", "Keep-Alive");
                     // If the binary length is not set correctly, the connection is closed and no handler called
                     // [DAT-735]
-                    builder.putHeader("content-length", String.valueOf(binaryLength));
+                    builder.putHeader("content-length", String.valueOf(binarySize));
                     // metaData
                     builder.putHeader("deviceType", "testDeviceType");
                     builder.putHeader("appVersion", "testAppVersion");
@@ -305,17 +321,16 @@ public final class FileUploadTooLargeTest {
                     builder.putHeader("startLocLon", "9.185135040263333");
                     builder.putHeader("length", length);
                     builder.putHeader("endLocLon", "9.492934709138925");
-                    builder.putHeader("deviceId", "testDevi-ce00-42b6-a840-1b70d30094b8");
+                    builder.putHeader("deviceId", deviceId);
                     builder.putHeader("endLocTS", "1503055141001");
                     builder.putHeader("vehicle", "BICYCLE");
                     builder.putHeader("startLocTS", "1503055141000");
                     builder.putHeader("endLocLat", "50.59502970913889");
                     builder.putHeader("osVersion", "testOsVersion");
-                    builder.putHeader("measurementId", "239");
+                    builder.putHeader("measurementId", measurementIdentifier);
                     builder.putHeader("formatVersion", "2");
 
                     final var file = vertx.fileSystem().openBlocking(testFileResource.getFile(), new OpenOptions());
-                    // builder.timeout(5000); // To fix TimeoutException which only occurs on the CI
                     builder.sendStream(file, handler);
                 }));
     }
