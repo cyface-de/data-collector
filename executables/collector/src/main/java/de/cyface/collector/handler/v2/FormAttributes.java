@@ -16,10 +16,10 @@
  * You should have received a copy of the GNU General Public License
  * along with the Cyface Data Collector. If not, see <http://www.gnu.org/licenses/>.
  */
-package de.cyface.collector.handler;
+package de.cyface.collector.handler.v2;
 
 /**
- * Attributes supported by the APIs upload endpoint.
+ * Attributes supported by the APIs multipart form upload POST endpoint.
  * 
  * @author Klemens Muthmann
  * @author Armin Schnabel
@@ -52,7 +52,7 @@ public enum FormAttributes {
      */
     LENGTH("length"),
     /**
-     * The count of geo locations in the transmitted measurement.
+     * The count of geolocations in the transmitted measurement.
      */
     LOCATION_COUNT("locationCount"),
     /**
@@ -92,9 +92,9 @@ public enum FormAttributes {
      */
     END_LOCATION_TS("endLocTS"),
     /**
-     * The modality type used to capture the measurement.
+     * The vehicle type used to capture the measurement.
      */
-    MODALITY("modality"),
+    VEHICLE_TYPE("vehicle"),
     /**
      * The name of the user uploading the measurement.
      */

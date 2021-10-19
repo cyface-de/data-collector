@@ -23,7 +23,9 @@ import java.io.Serializable;
  */
 public final class MeasurementIdentifier implements Comparable<MeasurementIdentifier>, Serializable {
 
-
+    /**
+     * Used to serialize objects of this class. Only change this value if this classes attribute set changes.
+     */
     private static final long serialVersionUID = 181303400330020850L;
     /**
      * The world wide unique identifier of the device that captured this measurement.

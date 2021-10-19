@@ -16,7 +16,9 @@
  * You should have received a copy of the GNU General Public License
  * along with the Cyface Data Collector. If not, see <http://www.gnu.org/licenses/>.
  */
-package de.cyface.collector.model;
+package de.cyface.collector.model.v2;
+
+import java.io.Serializable;
 
 /**
  * A model of a geo location with latitude and longitude captured at a certain time.
@@ -25,7 +27,12 @@ package de.cyface.collector.model;
  * @version 1.0.0
  * @since 3.0.0
  */
-public final class GeoLocation {
+public final class GeoLocation implements Serializable {
+
+    /**
+     * Used to serialize objects of this class. Only change this value if this classes attribute set changes.
+     */
+    private static final long serialVersionUID = -8668827679439438824L;
     /**
      * The geographical latitude of this location.
      */

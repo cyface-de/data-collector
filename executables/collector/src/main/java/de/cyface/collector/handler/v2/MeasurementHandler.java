@@ -22,13 +22,12 @@ import java.io.File;
 import java.util.HashSet;
 import java.util.stream.Collectors;
 
-import de.cyface.collector.handler.FormAttributes;
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.lang3.Validate;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import de.cyface.collector.model.GeoLocation;
+import de.cyface.collector.model.v2.GeoLocation;
 import de.cyface.collector.model.v2.Measurement;
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
@@ -168,6 +167,7 @@ public final class MeasurementHandler implements Handler<RoutingContext> {
                     return gridFsClient.uploadByFileNameWithOptions(asyncFile,
                             fileUpload.getFile().getName(), gridFsOptions);
                 });
+                // noinspection rawtypes
                 return (Future)uploadFuture;
             }).collect(Collectors.toList());
 

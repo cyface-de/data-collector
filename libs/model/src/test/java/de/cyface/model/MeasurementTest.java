@@ -77,8 +77,8 @@ public class MeasurementTest {
     @Test
     void testWriteLocationAsCsvRows_withoutModalityChanges() {
         // Arrange
-        final var point3DS = new ArrayList<Point3D>();
-        point3DS.add(new Point3D(1.0f, -2.0f, 3.0f, 1_000L));
+        final var point3DS = new ArrayList<Point3DImpl>();
+        point3DS.add(new Point3DImpl(1.0f, -2.0f, 3.0f, 1_000L));
         final var metaData = metaData();
         final var identifier = metaData.getIdentifier();
         final var tracks = Arrays.asList(
@@ -118,8 +118,8 @@ public class MeasurementTest {
     @Test
     void testWriteLocationAsCsvRows_withModalityTypeChanges() {
         // Arrange
-        final var point3DS = new ArrayList<Point3D>();
-        point3DS.add(new Point3D(1.0f, -2.0f, 3.0f, 1_000L));
+        final var point3DS = new ArrayList<Point3DImpl>();
+        point3DS.add(new Point3DImpl(1.0f, -2.0f, 3.0f, 1_000L));
         final var metaData = metaData();
         final var identifier = metaData.getIdentifier();
         final var tracks = Arrays.asList(
@@ -172,8 +172,8 @@ public class MeasurementTest {
     @Test
     void testWriteMeasurementAsGeoJson() {
         // Arrange
-        final var point3DS = new ArrayList<Point3D>();
-        point3DS.add(new Point3D(1.0f, -2.0f, 3.0f, 1_000L));
+        final var point3DS = new ArrayList<Point3DImpl>();
+        point3DS.add(new Point3DImpl(1.0f, -2.0f, 3.0f, 1_000L));
         final var metaData = metaData();
         final var identifier = metaData.getIdentifier();
         final var tracks = Arrays.asList(
@@ -205,8 +205,8 @@ public class MeasurementTest {
     @Test
     void testWriteMeasurementAsJson() {
         // Arrange
-        final var point3DS = new ArrayList<Point3D>();
-        point3DS.add(new Point3D(1.0f, -2.0f, 3.0f, 1_000L));
+        final var point3DS = new ArrayList<Point3DImpl>();
+        point3DS.add(new Point3DImpl(1.0f, -2.0f, 3.0f, 1_000L));
         final var metaData = metaData();
         final var identifier = metaData.getIdentifier();
         final var tracks = Collections.singletonList(

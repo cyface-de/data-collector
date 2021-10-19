@@ -7,6 +7,8 @@ package de.cyface.model;
 
 import org.apache.commons.lang3.Validate;
 
+import java.io.Serializable;
+
 /**
  * A pair of two {@link GeoLocationRecord} objects from the same measurement, captured right after each other.
  * 
@@ -14,7 +16,12 @@ import org.apache.commons.lang3.Validate;
  * @version 1.0.0
  * @since 2.0.0
  */
-public final class LocationPair {
+public final class LocationPair implements Serializable {
+
+    /**
+     * Used to serialize objects of this class. Only change this value if this classes attribute set changes.
+     */
+    private static final long serialVersionUID = -4505569568509058747L;
     /**
      * The {@link GeoLocationRecord} that has been captured first.
      */

@@ -18,15 +18,18 @@
  */
 package de.cyface.collector.model;
 
-import static de.cyface.collector.model.RequestMetaData.MAX_GENERIC_METADATA_FIELD_LENGTH;
+import static de.cyface.model.RequestMetaData.MAX_GENERIC_METADATA_FIELD_LENGTH;
 
 import java.io.File;
+import java.io.Serializable;
 
 import org.apache.commons.lang3.Validate;
 
 import de.cyface.collector.handler.FormAttributes;
+import de.cyface.model.RequestMetaData;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.eventbus.MessageCodec;
+import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 
 /**
@@ -38,7 +41,12 @@ import io.vertx.core.json.JsonObject;
  * @version 6.0.0
  * @since 2.0.0
  */
-public final class Measurement {
+public final class Measurement implements Serializable {
+
+    /**
+     * Used to serialize objects of this class. Only change this value if this classes attribute set changes.
+     */
+    private static final long serialVersionUID = -8304842300727933736L;
     /**
      * the metadata from the request header.
      */
@@ -95,28 +103,43 @@ public final class Measurement {
      * @return A JSON representation of this measurement.
      */
     public JsonObject toJson() {
-        final JsonObject ret = new JsonObject();
+        final var ret = new JsonObject();
 
-        ret.put(FormAttributes.DEVICE_ID.getValue(), metaData.deviceIdentifier);
-        ret.put(FormAttributes.MEASUREMENT_ID.getValue(), metaData.measurementIdentifier);
-        ret.put(FormAttributes.OS_VERSION.getValue(), metaData.operatingSystemVersion);
-        ret.put(FormAttributes.DEVICE_TYPE.getValue(), metaData.deviceType);
-        ret.put(FormAttributes.APPLICATION_VERSION.getValue(), metaData.applicationVersion);
-        ret.put(FormAttributes.LENGTH.getValue(), metaData.length);
-        ret.put(FormAttributes.LOCATION_COUNT.getValue(), metaData.locationCount);
-        if (metaData.locationCount > 0) {
-            ret.put(FormAttributes.START_LOCATION_LAT.getValue(), metaData.startLocation.getLat());
-            ret.put(FormAttributes.START_LOCATION_LON.getValue(), metaData.startLocation.getLon());
-            ret.put(FormAttributes.START_LOCATION_TS.getValue(), metaData.startLocation.getTimestamp());
-            ret.put(FormAttributes.END_LOCATION_LAT.getValue(), metaData.endLocation.getLat());
-            ret.put(FormAttributes.END_LOCATION_LON.getValue(), metaData.endLocation.getLon());
-            ret.put(FormAttributes.END_LOCATION_TS.getValue(), metaData.endLocation.getTimestamp());
+        ret.put(FormAttributes.DEVICE_ID.getValue(), metaData.getDeviceIdentifier());
+        ret.put(FormAttributes.MEASUREMENT_ID.getValue(), metaData.getMeasurementIdentifier());
+        ret.put(FormAttributes.OS_VERSION.getValue(), metaData.getOperatingSystemVersion());
+        ret.put(FormAttributes.DEVICE_TYPE.getValue(), metaData.getDeviceType());
+        ret.put(FormAttributes.APPLICATION_VERSION.getValue(), metaData.getApplicationVersion());
+        ret.put(FormAttributes.LENGTH.getValue(), metaData.getLength());
+        ret.put(FormAttributes.LOCATION_COUNT.getValue(), metaData.getLocationCount());
+        if (metaData.getLocationCount() > 0) {
+            ret.put("start", geoJson(metaData.getStartLocation()));
+            ret.put("end", geoJson(metaData.getEndLocation()));
         }
-        ret.put(FormAttributes.VEHICLE_TYPE.getValue(), metaData.vehicle);
+        ret.put(FormAttributes.MODALITY.getValue(), metaData.getModality());
         ret.put(FormAttributes.USERNAME.getValue(), username);
-        ret.put(FormAttributes.FORMAT_VERSION.getValue(), metaData.formatVersion);
+        ret.put(FormAttributes.FORMAT_VERSION.getValue(), metaData.getFormatVersion());
 
         return ret;
+    }
+
+    /**
+     * Converts a location record into {@code JSON} which supports the mongoDB {@code GeoJSON} format:
+     * https://docs.mongodb.com/manual/geospatial-queries/
+     *
+     * @param record the location record to be converted
+     * @return the converted location record as JSON
+     */
+    private JsonObject geoJson(final RequestMetaData.GeoLocation record) {
+        final var lat = record.getLongitude();
+        final var lon = record.getLongitude();
+        final var ts = record.getTimestamp();
+        final var geometry = new JsonObject()
+                .put("type", "Point")
+                .put("coordinates", new JsonArray().add(lon).add(lat));
+        return new JsonObject()
+                .put("location", geometry)
+                .put("timestamp", ts);
     }
 
     /**
@@ -148,7 +171,7 @@ public final class Measurement {
             final var applicationVersion = metaData.getApplicationVersion();
             final var length = metaData.getLength();
             final var locationCount = metaData.getLocationCount();
-            final var vehicle = metaData.getVehicle();
+            final var modality = metaData.getModality();
             final var username = serializable.getUsername();
 
             buffer.appendInt(deviceIdentifier.length());
@@ -156,7 +179,7 @@ public final class Measurement {
             buffer.appendInt(deviceType.length());
             buffer.appendInt(operatingSystemVersion.length());
             buffer.appendInt(applicationVersion.length());
-            buffer.appendInt(vehicle.length());
+            buffer.appendInt(modality.length());
             buffer.appendInt(username.length());
 
             buffer.appendInt(metaData.getFormatVersion());
@@ -167,15 +190,15 @@ public final class Measurement {
             buffer.appendString(applicationVersion);
             buffer.appendDouble(length);
             buffer.appendLong(locationCount);
-            buffer.appendString(vehicle);
+            buffer.appendString(modality);
             buffer.appendString(username);
 
             if (locationCount > 0) {
-                final var startLocationLat = metaData.getStartLocation().getLat();
-                final var startLocationLon = metaData.getStartLocation().getLon();
+                final var startLocationLat = metaData.getStartLocation().getLatitude();
+                final var startLocationLon = metaData.getStartLocation().getLongitude();
                 final var startLocationTimestamp = metaData.getStartLocation().getTimestamp();
-                final var endLocationLat = metaData.getEndLocation().getLat();
-                final var endLocationLon = metaData.getEndLocation().getLon();
+                final var endLocationLat = metaData.getEndLocation().getLatitude();
+                final var endLocationLon = metaData.getEndLocation().getLongitude();
                 final var endLocationTimestamp = metaData.getEndLocation().getTimestamp();
                 buffer.appendDouble(startLocationLat);
                 buffer.appendDouble(startLocationLon);
@@ -200,7 +223,7 @@ public final class Measurement {
             final var deviceTypeLength = buffer.getInt(2 * Integer.BYTES);
             final var operatingSystemVersionLength = buffer.getInt(3 * Integer.BYTES);
             final var applicationVersionLength = buffer.getInt(4 * Integer.BYTES);
-            final var vehicleTypeLength = buffer.getInt(5 * Integer.BYTES);
+            final var modalityLength = buffer.getInt(5 * Integer.BYTES);
             final var usernameLength = buffer.getInt(6 * Integer.BYTES);
             final var formatVersion = buffer.getInt(7 * Integer.BYTES);
             Validate.isTrue(formatVersion == 2);
@@ -221,13 +244,13 @@ public final class Measurement {
             final var locationCountEnd = lengthEnd + Long.BYTES;
             final var locationCount = buffer.getLong(lengthEnd);
 
-            final var vehicleEnd = locationCountEnd + vehicleTypeLength;
-            final var vehicle = buffer.getString(locationCountEnd, vehicleEnd);
-            final var usernameEnd = vehicleEnd + usernameLength;
-            final var username = buffer.getString(vehicleEnd, usernameEnd);
+            final var modalityEnd = locationCountEnd + modalityLength;
+            final var modality = buffer.getString(locationCountEnd, modalityEnd);
+            final var usernameEnd = modalityEnd + usernameLength;
+            final var username = buffer.getString(modalityEnd, usernameEnd);
 
-            GeoLocation startLocation = null;
-            GeoLocation endLocation = null;
+            RequestMetaData.GeoLocation startLocation = null;
+            RequestMetaData.GeoLocation endLocation = null;
             var startOfFileUploads = usernameEnd;
             if (locationCount > 0) {
                 final var startLocationLatEnd = usernameEnd + Double.BYTES;
@@ -243,9 +266,9 @@ public final class Measurement {
                 final var endLocationLat = buffer.getDouble(startLocationTimestampEnd);
                 final var endLocationLon = buffer.getDouble(endLocationLatEnd);
                 final var endLocationTimestamp = buffer.getLong(endLocationLonEnd);
-                startLocation = new GeoLocation(startLocationLat, startLocationLon,
-                        startLocationTimestamp);
-                endLocation = new GeoLocation(endLocationLat, endLocationLon, endLocationTimestamp);
+                startLocation = new RequestMetaData.GeoLocation(startLocationTimestamp, startLocationLat,
+                        startLocationLon);
+                endLocation = new RequestMetaData.GeoLocation(endLocationTimestamp, endLocationLat, endLocationLon);
                 startOfFileUploads = endLocationTimestampEnd;
             }
 
@@ -255,7 +278,7 @@ public final class Measurement {
             final var fileName = buffer.getString(entryLengthEnd, fileNameEnd);
             final var uploadFile = new File(fileName);
             final var metaData = new RequestMetaData(deviceIdentifier, measurementIdentifier, operatingSystemVersion,
-                    deviceType, applicationVersion, length, locationCount, startLocation, endLocation, vehicle,
+                    deviceType, applicationVersion, length, locationCount, startLocation, endLocation, modality,
                     formatVersion);
 
             return new Measurement(metaData, username, uploadFile);

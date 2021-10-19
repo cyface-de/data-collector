@@ -141,13 +141,13 @@ public class MeasurementRetrieverTest {
 
         final var locations = new ArrayList<>();
         locations.add(new JsonObject(
-                "{\"timestamp\":1608650009000,\"latitude\":51.075295000000004,\"longitude\":13.772176666666667,\"elevation\":null,\"speed\":13.039999961853027,\"accuracy\":27.04,\"modality\":\""
+                "{\"geometry\":{\"type\":\"Point\",\"coordinates\":[13.772176666666667,51.075295000000004]},\"timestamp\":1608650009000,\"elevation\":null,\"speed\":13.039999961853027,\"accuracy\":27.04,\"modality\":\""
                         + modality + "\"}"));
         locations.add(new JsonObject(
-                "{\"timestamp\":1608650010000,\"latitude\":51.0753,\"longitude\":13.77215,\"elevation\":null,\"speed\":13.039999961853027,\"accuracy\":16.85,\"modality\":\""
+                "{\"geometry\":{\"type\":\"Point\",\"coordinates\":[13.77215,51.0753]},\"timestamp\":1608650010000,\"elevation\":null,\"speed\":13.039999961853027,\"accuracy\":16.85,\"modality\":\""
                         + modality + "\"}"));
         locations.add(new JsonObject(
-                "{\"timestamp\":1608650010000,\"latitude\":51.0753,\"longitude\":13.77215,\"elevation\":null,\"speed\":13.039999961853027,\"accuracy\":27.25,\"modality\":\""
+                "{\"geometry\":{\"type\":\"Point\",\"coordinates\":[13.77215,51.0753]},\"timestamp\":1608650010000,\"elevation\":null,\"speed\":13.039999961853027,\"accuracy\":27.25,\"modality\":\""
                         + modality + "\"}"));
 
         final var trackBuckets = new ArrayList<JsonObject>();
@@ -159,7 +159,7 @@ public class MeasurementRetrieverTest {
                     new JsonObject().put("deviceId", "testDiD").put("measurementId", measurementId)
                             .put("deviceType", "testType")
                             .put("osVersion", "Android 10").put("appVersion", "0.0.0").put("length", 28.34324)
-                            .put("username", "guest").put("version", "1.0.0"));
+                            .put("username", "guest").put("version", "2.0.0"));
             final var minute = 13 + i;
             final var locationsSlice = new JsonArray();
             if (isLastBucket) {
@@ -184,7 +184,7 @@ public class MeasurementRetrieverTest {
 
         final var measurementIdentifier = new MeasurementIdentifier("testDiD", measurementId);
         final var expectedMetaData = new MetaData(measurementIdentifier, "testType", "Android 10",
-                "0.0.0", 28.34324, "guest", "1.0.0");
+                "0.0.0", 28.34324, "guest", "2.0.0");
         final var expectedTracks = new ArrayList<Track>();
         for (int i = 0; i < numberOfTracks; i++) {
             final var modality = modalities.length == 1 ? modalities[0] : i == 0 ? modalities[0] : modalities[1];

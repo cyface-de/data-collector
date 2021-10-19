@@ -122,7 +122,7 @@ paths:
                   type: integer
                   format: int64
                   example: 1551436996091
-                vehicle:
+                modality:
                   type: string
                   example: BICYCLE
                 formatVersion:
@@ -144,7 +144,7 @@ paths:
                 - endLocLat
                 - endLocLon
                 - endLocTS
-                - vehicle
+                - modality
                 - formatVersion
               
       responses:
@@ -245,7 +245,7 @@ paths:
               type: integer
               format: int64
               example: 1551436996091
-            vehicle:
+            modality:
               type: string
               example: BICYCLE
             formatVersion:
@@ -267,7 +267,7 @@ paths:
             - endLocLat
             - endLocLon
             - endLocTS
-            - vehicle
+            - modality
             - formatVersion
 
       responses:

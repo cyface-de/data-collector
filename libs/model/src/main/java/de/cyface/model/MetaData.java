@@ -18,6 +18,7 @@
  */
 package de.cyface.model;
 
+import java.io.Serializable;
 import java.util.Objects;
 
 /**
@@ -27,15 +28,20 @@ import java.util.Objects;
  * @version 1.0.0
  * @since 1.2.0
  */
-public class MetaData {
+public class MetaData implements Serializable {
+
     /**
      * The version of the deserialized measurement model.
      * <p>
      * Required to read measurement documents from the database which were deserialized by different deserializers.
      */
-    public static final String CURRENT_VERSION = "1.0.0";
+    public static final String CURRENT_VERSION = "2.0.0";
     /**
-     * The world wide unique identifier of the measurement.
+     * Used to serialize objects of this class. Only change this value if this classes attribute set changes.
+     */
+    private static final long serialVersionUID = -8113278901259461591L;
+    /**
+     * The worldwide unique identifier of the measurement.
      */
     private MeasurementIdentifier identifier;
     /**
@@ -66,7 +72,7 @@ public class MetaData {
     /**
      * Creates new completely initialized <code>MetaData</code>.
      *
-     * @param identifier The world wide unique identifier of the measurement.
+     * @param identifier The worldwide unique identifier of the measurement.
      * @param deviceType The type of device uploading the data, such as "Pixel 3" or "iPhone 6 Plus".
      * @param osVersion The operating system version, such as "Android 9.0.0" or "iOS 11.2".
      * @param appVersion The version of the app that transmitted the measurement, such as "1.2.0" or "1.2.0-beta1".
@@ -88,6 +94,7 @@ public class MetaData {
     /**
      * No argument constructor as required by Apache Flink. Do not use this in your own code.
      */
+    @SuppressWarnings("unused")
     public MetaData() {
         // Nothing to do
     }

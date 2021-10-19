@@ -18,6 +18,7 @@
  */
 package de.cyface.model;
 
+import java.io.Serializable;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -42,11 +43,16 @@ import org.slf4j.LoggerFactory;
  * @author Armin Schnabel
  * @author Klemens Muthmann
  */
-public class Measurement {
+public class Measurement implements Serializable {
+
     /**
      * The logger used by objects of this class. Configure it using <tt>src/main/resources/logback.xml</tt>.
      */
     private static final Logger LOGGER = LoggerFactory.getLogger(Measurement.class);
+    /**
+     * Used to serialize objects of this class. Only change this value if this classes attribute set changes.
+     */
+    private static final long serialVersionUID = 4195718001652533383L;
     /**
      * The context of this {@code Measurement}.
      */

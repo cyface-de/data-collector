@@ -74,8 +74,9 @@ public final class GeoLocationTestFixture implements TestFixture {
      *            user which is used in authentication. Useful if the data of the currently logged in user should be
      *            accessed.
      */
+    @SuppressWarnings("unused") // API
     public GeoLocationTestFixture(final Long measurementIdentifier, final String deviceIdentifier,
-            final String dataOwnerUsername) {
+                                  final String dataOwnerUsername) {
         Validate.notNull(measurementIdentifier);
         Validate.notEmpty(deviceIdentifier);
 

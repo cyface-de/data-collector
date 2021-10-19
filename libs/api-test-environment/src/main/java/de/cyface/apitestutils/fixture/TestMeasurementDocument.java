@@ -83,21 +83,25 @@ final class TestMeasurementDocument implements MongoTestData {
                 .put("appVersion", "1.2.0")
                 .put("length", 1500.2)
                 .put("username", ownerUsername)
-                .put("version", "1.0.0");
+                .put("version", "2.0.0");
 
         final JsonArray geoLocations = new JsonArray();
+        final var geometry1 = new JsonObject()
+                .put("type", "Point")
+                .put("coordinates", new JsonArray().add(13.1).add(51.1));
         final JsonObject geoLocation = new JsonObject()
+                .put("geometry", geometry1)
                 .put("timestamp", 1L)
-                .put("latitude", 51.1)
-                .put("longitude", 13.1)
                 .putNull("elevation")
                 .put("speed", 5.0)
                 .put("accuracy", 0.13)
                 .put("modality", Modality.UNKNOWN.getDatabaseIdentifier());
+        final var geometry2 = new JsonObject()
+                .put("type", "Point")
+                .put("coordinates", new JsonArray().add(13.2).add(51.2));
         final JsonObject geoLocation2 = new JsonObject()
+                .put("geometry", geometry2)
                 .put("timestamp", 2L)
-                .put("latitude", 51.2)
-                .put("longitude", 13.2)
                 .putNull("elevation")
                 .put("speed", 5.0)
                 .put("accuracy", 0.13)

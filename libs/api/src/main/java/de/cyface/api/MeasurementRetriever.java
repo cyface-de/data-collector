@@ -38,7 +38,7 @@ import de.cyface.model.Measurement;
 import de.cyface.model.MeasurementIdentifier;
 import de.cyface.model.MetaData;
 import de.cyface.model.Modality;
-import de.cyface.model.Point3D;
+import de.cyface.model.Point3DImpl;
 import de.cyface.model.RawRecord;
 import de.cyface.model.Track;
 import io.vertx.core.Future;
@@ -69,6 +69,7 @@ public class MeasurementRetriever {
      * @param dataClient The client to access the data from
      * @return a {@code Future} containing the users' {@code Measurement}s if successful
      */
+    @SuppressWarnings("unused") // API
     public Future<List<Measurement>> loadMeasurements(final List<String> userNames, final MongoClient dataClient) {
         return loadMeasurements(userNames, dataClient, null, null);
     }
@@ -214,14 +215,14 @@ public class MeasurementRetriever {
     /**
      * Returns the {@code MetaData} as POJO.
      *
-     * @param document the {@code Document} containing the measurement, {@link MetaData#getVersion()} 1.0.0.
+     * @param document the {@code Document} containing the measurement, version {@link MetaData#CURRENT_VERSION}.
      * @return the metadata POJO
      */
     private MetaData metaData(final JsonObject document) {
         final JsonObject metaData = document.getJsonObject("metaData");
         final String version = metaData.getString("version");
         Validate.isTrue(version.equals(MetaData.CURRENT_VERSION),
-                "Encountered data in invalid format. Only Cyface Format Version 1.0.0 is supported!");
+                String.format("Encountered data in invalid format: %s. Supported format version: %s", version, MetaData.CURRENT_VERSION));
 
         final MeasurementIdentifier identifier = new MeasurementIdentifier(metaData.getString("deviceId"),
                 metaData.getLong("measurementId"));
@@ -272,8 +273,12 @@ public class MeasurementRetriever {
         for (int i = 0; i < documents.size(); i++) {
             final var doc = documents.getJsonObject(i);
             final var timestamp = doc.getLong("timestamp");
-            final var latitude = doc.getDouble("latitude");
-            final var longitude = doc.getDouble("longitude");
+            final var geometry = doc.getJsonObject("geometry");
+            final var type = geometry.getString("type");
+            Validate.isTrue(type.equals("Point"), String.format("Unsupported type: %s", type));
+            final var coordinates = geometry.getJsonArray("coordinates");
+            final var longitude = coordinates.getDouble(0); // GeoJSON [lon, lat]
+            final var latitude = coordinates.getDouble(1);
             final var elevation = doc.getDouble("elevation");
             final var speed = doc.getDouble("speed");
             final var accuracy = doc.getDouble("accuracy");
@@ -293,8 +298,8 @@ public class MeasurementRetriever {
      *            1.0.0.
      * @return the point list POJO
      */
-    private List<Point3D> point3D(final JsonArray documents) {
-        final List<Point3D> point3DS = new ArrayList<>();
+    private List<Point3DImpl> point3D(final JsonArray documents) {
+        final List<Point3DImpl> point3DS = new ArrayList<>();
         for (int i = 0; i < documents.size(); i++) {
             final JsonObject doc = documents.getJsonObject(i);
             final long timestamp = doc.getLong("timestamp");
@@ -302,7 +307,7 @@ public class MeasurementRetriever {
             final float x = doc.getDouble("x").floatValue();
             final float y = doc.getDouble("y").floatValue();
             final float z = doc.getDouble("z").floatValue();
-            final Point3D point3D = new Point3D(x, y, z, timestamp);
+            final var point3D = new Point3DImpl(x, y, z, timestamp);
             point3DS.add(point3D);
         }
         return point3DS;

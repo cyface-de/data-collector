@@ -3,13 +3,18 @@ package de.cyface.model;
 import org.apache.commons.lang3.Validate;
 
 public class RawRecord extends GeoLocationRecord {
+
+    /**
+     * Used to serialize objects of this class. Only change this value if this classes attribute set changes.
+     */
+    private static final long serialVersionUID = 518958180513770078L;
     /**
      * The measurement accuracy of this location in meters. This accuracy is usually the result of imperfect
      * measurement hardware.
      */
     private double accuracy;
     /**
-     * The traveled speed as reported by the geo location system (e.g. GPS, GLONASS, GALILEO) during this recording.
+     * The traveled speed in meters per second as reported by the geo location system (e.g. GPS, GLONASS, GALILEO) during this recording.
      */
     private double speed;
     /**

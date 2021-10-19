@@ -8,6 +8,8 @@ package de.cyface.model;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.Serializable;
+
 /**
  * A model POJO representing a geographical location measured in latitude and longitude. Typically on earth, but this
  * would work on other planets too, as soon as we require road maintenance there.
@@ -19,7 +21,12 @@ import org.slf4j.LoggerFactory;
  * @version 1.0.0
  * @since 1.0.0
  */
-public class GeoLocation {
+public class GeoLocation implements Serializable {
+
+    /**
+     * Used to serialize objects of this class. Only change this value if this classes attribute set changes.
+     */
+    private static final long serialVersionUID = 4613514835798881192L;
     /**
      * The logger used by instances of this class. Configure it using <tt>src/main/resources/logback.xml</tt>.
      */

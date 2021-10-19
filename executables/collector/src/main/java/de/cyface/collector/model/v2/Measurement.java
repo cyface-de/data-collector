@@ -18,14 +18,14 @@
  */
 package de.cyface.collector.model.v2;
 
-import de.cyface.collector.handler.FormAttributes;
-import de.cyface.collector.model.GeoLocation;
+import de.cyface.collector.handler.v2.FormAttributes;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.eventbus.MessageCodec;
 import io.vertx.core.json.JsonObject;
 import org.apache.commons.lang3.Validate;
 
 import java.io.File;
+import java.io.Serializable;
 import java.nio.charset.Charset;
 import java.util.Arrays;
 import java.util.Collection;
@@ -39,7 +39,12 @@ import java.util.HashSet;
  * @version 5.1.0
  * @since 2.0.0
  */
-public final class Measurement {
+public final class Measurement implements Serializable {
+
+    /**
+     * Used to serialize objects of this class. Only change this value if this classes attribute set changes.
+     */
+    private static final long serialVersionUID = -1158500013112270899L;
     /**
      * The length of a universal unique identifier.
      */

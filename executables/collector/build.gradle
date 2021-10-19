@@ -37,6 +37,7 @@ run {
 
 dependencies {
     implementation project(':libs:api')
+    implementation project(':libs:model')
 
     implementation "io.vertx:vertx-web:$vertxVersion"
     implementation "io.vertx:vertx-mongo-client:$vertxVersion"

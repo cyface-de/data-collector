@@ -40,7 +40,7 @@ import org.slf4j.LoggerFactory;
 import de.cyface.collector.TestUtils;
 import de.cyface.collector.commons.DataCollectorClient;
 import de.cyface.collector.commons.MongoTest;
-import de.cyface.collector.handler.FormAttributes;
+import de.cyface.collector.handler.v2.FormAttributes;
 import de.cyface.collector.verticle.CollectorApiVerticle;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Handler;

@@ -30,8 +30,13 @@ import org.apache.commons.lang3.Validate;
  * @since 2.0.0
  */
 public abstract class GeoLocationRecord extends GeoLocation implements DataPoint {
+
     /**
-     * The world wide unique identifier of the measurement, this {@link GeoLocationRecord} belongs to.
+     * Used to serialize objects of this class. Only change this value if this classes attribute set changes.
+     */
+    private static final long serialVersionUID = -8238960498171859970L;
+    /**
+     * The worldwide unique identifier of the measurement, this {@link GeoLocationRecord} belongs to.
      */
     private MeasurementIdentifier measurementIdentifier;
     /**
@@ -49,7 +54,7 @@ public abstract class GeoLocationRecord extends GeoLocation implements DataPoint
     /**
      * Creates a new completely initialized object of this class.
      *
-     * @param measurementIdentifier The world wide unique identifier of the measurement, this
+     * @param measurementIdentifier The worldwide unique identifier of the measurement, this
      *            {@link GeoLocationRecord}
      *            belongs to
      * @param timestamp The timestamp this location was captured on in milliseconds since 1st January 1970 (epoch)
@@ -57,15 +62,16 @@ public abstract class GeoLocationRecord extends GeoLocation implements DataPoint
      * @param longitude Geographical longitude in coordinates (decimal fraction) ranging from -180° (west) to 180°
      *            (east)
      */
+    @SuppressWarnings("unused") // Part of the API
     public GeoLocationRecord(final MeasurementIdentifier measurementIdentifier, final long timestamp,
-            final double latitude, final double longitude) {
+                             final double latitude, final double longitude) {
         this(measurementIdentifier, timestamp, latitude, longitude, null);
     }
 
     /**
      * Creates a new completely initialized object of this class.
      *
-     * @param measurementIdentifier The world wide unique identifier of the measurement, this {@link GeoLocationRecord}
+     * @param measurementIdentifier The worldwide unique identifier of the measurement, this {@link GeoLocationRecord}
      *            belongs to
      * @param timestamp The timestamp this location was captured on in milliseconds since 1st January 1970 (epoch)
      * @param latitude Geographical latitude in coordinates (decimal fraction) raging from -90° (south) to 90° (north)
@@ -81,14 +87,14 @@ public abstract class GeoLocationRecord extends GeoLocation implements DataPoint
     }
 
     /**
-     * @return The world wide unique identifier of the measurement, this {@link GeoLocationRecord} belongs to.
+     * @return The worldwide unique identifier of the measurement, this {@link GeoLocationRecord} belongs to.
      */
     public final MeasurementIdentifier getMeasurementIdentifier() {
         return measurementIdentifier;
     }
 
     /**
-     * @param measurementIdentifier The world wide unique identifier of the measurement, this
+     * @param measurementIdentifier The worldwide unique identifier of the measurement, this
      *            {@link GeoLocationRecord}
      *            belongs to.
      */

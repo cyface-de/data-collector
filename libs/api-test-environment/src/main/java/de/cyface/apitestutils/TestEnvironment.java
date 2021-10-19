@@ -68,15 +68,19 @@ public final class TestEnvironment {
      * @param testContext The Vertx-JUnit test context used to synchronize the JUnit lifecycle with Vertx
      * @param resultHandler Called after the environment has finished setting up
      * @param verticleClassName The name of the {@code ApiVerticle} to deploy
+     * @param httpEndpointParameterKey The parameter key required to be passed to the {@code Config} of the test
+     *            {@code ApiVerticle}.
+     * @param httpEndpoint The endpoint on which the test {@code ApiVerticle} listens to.
      * @throws IOException If the temporary Mongo database fails to start
      */
     public TestEnvironment(final Vertx vertx, final VertxTestContext testContext,
-            final Handler<AsyncResult<Void>> resultHandler, final String verticleClassName) throws IOException {
+            final Handler<AsyncResult<Void>> resultHandler, final String verticleClassName,
+            final String httpEndpointParameterKey, final String httpEndpoint) throws IOException {
         this.testMongoDatabase = new TestMongoDatabase();
         testMongoDatabase.start();
 
         // Deploy ApiVerticle and a VertX WebClient usable to access the api
-        apiServer = new ApiServer();
+        apiServer = new ApiServer(httpEndpointParameterKey, httpEndpoint);
         apiServer.start(vertx, testContext, testMongoDatabase, verticleClassName, testContext.succeeding(webClient -> {
             this.webClient = webClient;
 
@@ -95,6 +99,7 @@ public final class TestEnvironment {
      * @param fixture The fixture to add to this environment
      * @param resultHandler A handler called after completion
      */
+    @SuppressWarnings("unused") // API
     public void insertFixture(final TestFixture fixture, final Handler<AsyncResult<Void>> resultHandler) {
         fixture.insertTestData(mongoClient, resultHandler);
     }
@@ -103,6 +108,7 @@ public final class TestEnvironment {
      * Call this method after your test has finished cleaning up the environment. The most convenient place to call this
      * in an <code>AfterEach</code> method.
      */
+    @SuppressWarnings("unused") // API
     public void shutdown() {
         testMongoDatabase.stop();
     }
@@ -110,6 +116,7 @@ public final class TestEnvironment {
     /**
      * @return A handle to the Cyface exporter server running within this environment
      */
+    @SuppressWarnings("unused") // API
     public ApiServer getApiServer() {
         return apiServer;
     }
@@ -117,6 +124,7 @@ public final class TestEnvironment {
     /**
      * @return The <code>WebClient</code> to simulate client requests
      */
+    @SuppressWarnings("unused") // API
     public WebClient getWebClient() {
         return webClient;
     }

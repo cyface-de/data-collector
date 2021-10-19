@@ -20,7 +20,6 @@ package de.cyface.apitestutils;
 
 import java.io.IOException;
 import java.net.ServerSocket;
-import java.net.URL;
 
 import de.cyface.api.Parameter;
 import io.vertx.core.AsyncResult;
@@ -34,6 +33,7 @@ import io.vertx.ext.web.client.HttpRequest;
 import io.vertx.ext.web.client.HttpResponse;
 import io.vertx.ext.web.client.WebClient;
 import io.vertx.junit5.VertxTestContext;
+import org.apache.commons.lang3.Validate;
 
 /**
  * A class providing capabilities for tests to communicate with a Cyface Data server.
@@ -44,10 +44,7 @@ import io.vertx.junit5.VertxTestContext;
  * @since 1.0.0
  */
 public final class ApiServer {
-    /**
-     * The endpoint on which the test {@code ApiVerticle} listens to.
-     */
-    public static final String HTTP_ENDPOINT_V2 = "/api/v2/";
+
     /**
      * The host to run the test {@code ApiVerticle}
      */
@@ -56,6 +53,19 @@ public final class ApiServer {
      * The port the server is reachable at.
      */
     private int port;
+    /**
+     * The endpoint on which the test {@code ApiVerticle} listens to.
+     */
+    private final String httpEndpoint;
+    /**
+     * The parameter key required to be passed to the {@code Config} of the test {@code ApiVerticle}.
+     */
+    private final String httpEndpointParameterKey;
+
+    public ApiServer(final String httpEndpointParameterKey, final String httpEndpoint) {
+        this.httpEndpointParameterKey = httpEndpointParameterKey;
+        this.httpEndpoint = httpEndpoint;
+    }
 
     /**
      * Starts a test Cyface Data server and creates a Vert.x <code>WebClient</code> usable to access the API.
@@ -74,14 +84,15 @@ public final class ApiServer {
         port = socket.getLocalPort();
         socket.close();
 
-        final URL privateTestKey = this.getClass().getResource("/private_key.pem");
+        final var privateTestKey = this.getClass().getResource("/private_key.pem");
+        final var publicTestKey = this.getClass().getResource("/public.pem");
         final JsonObject config = new JsonObject().put(Parameter.MONGO_DATA_DB.key(), mongoDatabase.config())
                 .put(Parameter.MONGO_USER_DB.key(), mongoDatabase.config())
                 .put(Parameter.HTTP_PORT.key(), port)
-                .put(Parameter.JWT_PRIVATE_KEY_FILE_PATH.key(), privateTestKey.getFile())
-                .put(Parameter.JWT_PUBLIC_KEY_FILE_PATH.key(), this.getClass().getResource("/public.pem").getFile())
+                .put(Parameter.JWT_PRIVATE_KEY_FILE_PATH.key(), Validate.notNull(privateTestKey).getFile())
+                .put(Parameter.JWT_PUBLIC_KEY_FILE_PATH.key(), Validate.notNull(publicTestKey).getFile())
                 .put(Parameter.HTTP_HOST.key(), HTTP_HOST)
-                .put(Parameter.HTTP_ENDPOINT_V2.key(), HTTP_ENDPOINT_V2);
+                .put(httpEndpointParameterKey, httpEndpoint);
         final DeploymentOptions options = new DeploymentOptions().setConfig(config);
 
         vertx.deployVerticle(verticleClassName, options, testContext
@@ -99,7 +110,7 @@ public final class ApiServer {
         body.put("username", "admin");
         body.put("password", "secret");
 
-        client.post(port(), HTTP_HOST, HTTP_ENDPOINT_V2 + "login").sendJsonObject(body, handler);
+        client.post(port(), HTTP_HOST, httpEndpoint + "login").sendJsonObject(body, handler);
     }
 
     /**
@@ -113,13 +124,14 @@ public final class ApiServer {
      * @param resultHandler A handler provided with the result of the get request
      */
     public void get(final WebClient client, final String endpoint, final VertxTestContext testContext,
-            final String groupName, final String format, final Handler<AsyncResult<HttpResponse<Buffer>>> resultHandler) {
+            final String groupName, final String format,
+            final Handler<AsyncResult<HttpResponse<Buffer>>> resultHandler) {
         authenticate(client, testContext.succeeding(response -> {
 
             final String authToken = response.getHeader("Authorization");
 
             if (response.statusCode() == 200 && authToken != null) {
-                final HttpRequest<Buffer> builder = client.get(port(), HTTP_HOST, HTTP_ENDPOINT_V2 + endpoint);
+                final HttpRequest<Buffer> builder = client.get(port(), HTTP_HOST, httpEndpoint + endpoint);
                 builder.putHeader("Authorization", "Bearer " + authToken);
                 builder.putHeader("group", groupName);
                 builder.putHeader("format", format);

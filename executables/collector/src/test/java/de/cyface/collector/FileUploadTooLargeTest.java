@@ -231,7 +231,7 @@ public final class FileUploadTooLargeTest {
                     metaDataBody.put("endLocLon", TEST_MEASUREMENT_END_LOCATION_LON);
                     metaDataBody.put("deviceId", deviceIdentifier);
                     metaDataBody.put("endLocTS", "1503055141001");
-                    metaDataBody.put("vehicle", "BICYCLE");
+                    metaDataBody.put("modality", "BICYCLE");
                     metaDataBody.put("startLocTS", "1503055141000");
                     metaDataBody.put("endLocLat", TEST_MEASUREMENT_END_LOCATION_LAT);
                     metaDataBody.put("osVersion", "testOsVersion");
@@ -323,7 +323,7 @@ public final class FileUploadTooLargeTest {
                     builder.putHeader("endLocLon", "9.492934709138925");
                     builder.putHeader("deviceId", deviceId);
                     builder.putHeader("endLocTS", "1503055141001");
-                    builder.putHeader("vehicle", "BICYCLE");
+                    builder.putHeader("modality", "BICYCLE");
                     builder.putHeader("startLocTS", "1503055141000");
                     builder.putHeader("endLocLat", "50.59502970913889");
                     builder.putHeader("osVersion", "testOsVersion");

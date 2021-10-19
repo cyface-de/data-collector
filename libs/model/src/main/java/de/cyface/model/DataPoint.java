@@ -18,13 +18,15 @@
  */
 package de.cyface.model;
 
+import java.io.Serializable;
+
 /**
- * A single point of data such as a geo location or an acceleration measurement. <code>DataPoint</code> instances are
+ * A single point of data such as a geolocation or an acceleration measurement. <code>DataPoint</code> instances are
  * <code>Comparable</code> based on their timestamp from earliest to latest.
  *
  * @author Klemens Muthmann
  */
-public interface DataPoint extends Comparable<DataPoint> {
+public interface DataPoint extends Comparable<DataPoint>, Serializable {
     /**
      * @return The Unix timestamp at which this <code>DataPoint</code> was measured in milliseconds since the first of
      *         January 1970.

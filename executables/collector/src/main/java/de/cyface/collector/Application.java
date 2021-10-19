@@ -40,7 +40,7 @@ import io.vertx.micrometer.VertxPrometheusOptions;
  * <p>
  * You may also provide additional parameters in JSON format as described in the <code>README.md</code> file.
  * <p>
- * This class allows setting up things which need to be set up before the vehicle start, like logging.
+ * This class allows setting up things which need to be set up before the Verticle start, like logging.
  *
  * @author Klemens Muthmann
  * @author Armin Schnabel

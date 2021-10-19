@@ -16,10 +16,9 @@
  * You should have received a copy of the GNU General Public License
  * along with the Cyface Data Collector. If not, see <http://www.gnu.org/licenses/>.
  */
-package de.cyface.collector.model;
+package de.cyface.model;
 
-import static de.cyface.collector.handler.PreRequestHandler.CURRENT_TRANSFER_FILE_FORMAT_VERSION;
-
+import java.io.Serializable;
 import java.nio.charset.Charset;
 
 import org.apache.commons.lang3.Validate;
@@ -31,7 +30,12 @@ import org.apache.commons.lang3.Validate;
  * @version 1.0.0
  * @since 6.0.0
  */
-public class RequestMetaData {
+public class RequestMetaData implements Serializable {
+
+    /**
+     * Used to serialize objects of this class. Only change this value if this classes attribute set changes.
+     */
+    private static final long serialVersionUID = -1700430112854515404L;
     /**
      * The length of a universal unique identifier.
      */
@@ -44,7 +48,7 @@ public class RequestMetaData {
      * Maximum size of a metadata field, with plenty space for future development. This prevents attackers from putting
      * arbitrary long data into these fields.
      */
-    static final int MAX_GENERIC_METADATA_FIELD_LENGTH = 30;
+    public static final int MAX_GENERIC_METADATA_FIELD_LENGTH = 30;
     /**
      * The maximum length of the measurement identifier in characters (this is the amount of characters of
      * {@value Long#MAX_VALUE}).
@@ -58,6 +62,11 @@ public class RequestMetaData {
      * The minimum valid amount of locations stored inside a measurement.
      */
     private static final long MINIMUM_LOCATION_COUNT = 0L;
+    /**
+     * The current version of the transferred file. This is always specified by the first two bytes of the file
+     * transferred and helps compatible APIs to process data from different client versions.
+     */
+    public static final int CURRENT_TRANSFER_FILE_FORMAT_VERSION = 2;
     /**
      * The worldwide unique identifier of the device uploading the data.
      */
@@ -95,9 +104,9 @@ public class RequestMetaData {
      */
     final GeoLocation endLocation;
     /**
-     * The type of the vehicle that has captured the measurement.
+     * The modality type used to capture the measurement.
      */
-    final String vehicle;
+    final String modality;
     /**
      * The format version of the upload file.
      */
@@ -116,12 +125,14 @@ public class RequestMetaData {
      * @param startLocation The {@code GeoLocation} at the beginning of the track represented by the transmitted
      *            measurement.
      * @param endLocation The {@code GeoLocation} at the end of the track represented by the transmitted measurement.
-     * @param vehicle The type of the vehicle that has captured the measurement.
+     * @param modality The modality type used to capture the measurement.
      * @param formatVersion The format version of the upload file.
      */
-    public RequestMetaData(String deviceIdentifier, String measurementIdentifier, String operatingSystemVersion,
-            String deviceType, String applicationVersion, double length, long locationCount, GeoLocation startLocation,
-            GeoLocation endLocation, String vehicle, int formatVersion) {
+    public RequestMetaData(final String deviceIdentifier, final String measurementIdentifier,
+            final String operatingSystemVersion, final String deviceType, final String applicationVersion,
+            final double length, final long locationCount, final GeoLocation startLocation,
+            final GeoLocation endLocation, final String modality, final int formatVersion) {
+
         Validate.notNull(deviceIdentifier, "Field deviceId was null!");
         Validate.isTrue(deviceIdentifier.getBytes(Charset.forName(DEFAULT_CHARSET)).length == UUID_LENGTH,
                 "Field deviceId was not exactly 128 Bit, which is required for UUIDs!");
@@ -149,9 +160,9 @@ public class RequestMetaData {
                 "Start location should only be defined if there is at least one location in the uploaded track!");
         Validate.isTrue(locationCount == MINIMUM_LOCATION_COUNT || endLocation != null,
                 "End location should only be defined if there is at least one location in the uploaded track!");
-        Validate.notNull(vehicle, "Field vehicleType was null!");
-        Validate.isTrue(!vehicle.isEmpty() && vehicle.length() <= MAX_GENERIC_METADATA_FIELD_LENGTH,
-                "Field vehicleType had an invalid length of %d!", vehicle.length());
+        Validate.notNull(modality, "Field modality was null!");
+        Validate.isTrue(!modality.isEmpty() && modality.length() <= MAX_GENERIC_METADATA_FIELD_LENGTH,
+                "Field modality had an invalid length of %d!", modality.length());
         Validate.isTrue(formatVersion == CURRENT_TRANSFER_FILE_FORMAT_VERSION, "Unsupported formatVersion: %d",
                 formatVersion);
 
@@ -164,7 +175,7 @@ public class RequestMetaData {
         this.locationCount = locationCount;
         this.startLocation = startLocation;
         this.endLocation = endLocation;
-        this.vehicle = vehicle;
+        this.modality = modality;
         this.formatVersion = formatVersion;
     }
 
@@ -232,10 +243,10 @@ public class RequestMetaData {
     }
 
     /**
-     * @return The type of the vehicle that has captured the measurement.
+     * @return The modality type used to capture the measurement.
      */
-    public String getVehicle() {
-        return vehicle;
+    public String getModality() {
+        return modality;
     }
 
     /**
@@ -257,8 +268,57 @@ public class RequestMetaData {
                 ", locationCount=" + locationCount +
                 ", startLocation=" + startLocation +
                 ", endLocation=" + endLocation +
-                ", vehicle='" + vehicle + '\'' +
+                ", modality='" + modality + '\'' +
                 ", formatVersion=" + formatVersion +
                 '}';
+    }
+
+    /**
+     * This class represents a geolocation at the start or end of a track.
+     *
+     * @author Armin Schnabel
+     * @version 1.0.0
+     * @since 6.0.0
+     */
+    public static class GeoLocation {
+        /**
+         * The timestamp this location was captured on in milliseconds since 1st January 1970 (epoch).
+         */
+        private final long timestamp;
+        /**
+         * Geographical latitude in coordinates (decimal fraction) raging from -90° (south) to 90° (north).
+         */
+        private final double latitude;
+        /**
+         * Geographical longitude in coordinates (decimal fraction) ranging from -180° (west) to 180° (east).
+         */
+        private final double longitude;
+
+        public GeoLocation(long timestamp, double latitude, double longitude) {
+            this.timestamp = timestamp;
+            this.latitude = latitude;
+            this.longitude = longitude;
+        }
+
+        public long getTimestamp() {
+            return timestamp;
+        }
+
+        public double getLatitude() {
+            return latitude;
+        }
+
+        public double getLongitude() {
+            return longitude;
+        }
+
+        @Override
+        public String toString() {
+            return "GeoLocation{" +
+                    "timestamp=" + timestamp +
+                    ", latitude=" + latitude +
+                    ", longitude=" + longitude +
+                    '}';
+        }
     }
 }

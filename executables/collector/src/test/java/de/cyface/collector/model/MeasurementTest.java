@@ -25,6 +25,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import java.nio.file.Paths;
 import java.util.UUID;
 
+import de.cyface.model.RequestMetaData;
 import org.junit.jupiter.api.Test;
 
 import io.vertx.core.buffer.Buffer;
@@ -48,14 +49,14 @@ public class MeasurementTest {
         final var appVersion = "1.2.3-beta1";
         final var length = 0.0;
         final var locationCount = 2L;
-        final var startLocation = new GeoLocation(51.1, 13.1, 1000);
-        final var endLocation = new GeoLocation(51.2, 13.2, 2000);
-        final var vehicle = "CAR";
+        final var startLocation = new RequestMetaData.GeoLocation(1000, 51.1, 13.1);
+        final var endLocation = new RequestMetaData.GeoLocation(2000, 51.2, 13.2);
+        final var modality = "CAR";
         final var username = "guest";
         final var binary = Paths.get("testDir", "testFile").toAbsolutePath().toFile();
         final var formatVersion = 2;
         final var metaData = new RequestMetaData(did, mid, osVersion, deviceType, appVersion, length, locationCount,
-                startLocation, endLocation, vehicle, formatVersion);
+                startLocation, endLocation, modality, formatVersion);
         final var measurement = new Measurement(metaData, username, binary);
 
         // Act: encode
@@ -78,14 +79,14 @@ public class MeasurementTest {
 
         final var decodedStart = decodedMetaData.getStartLocation();
         final var decodedEnd = decodedMetaData.getEndLocation();
-        assertThat(decodedStart.getLat(), is(equalTo(startLocation.getLat())));
-        assertThat(decodedStart.getLon(), is(equalTo(startLocation.getLon())));
+        assertThat(decodedStart.getLatitude(), is(equalTo(startLocation.getLatitude())));
+        assertThat(decodedStart.getLongitude(), is(equalTo(startLocation.getLongitude())));
         assertThat(decodedStart.getTimestamp(), is(equalTo(startLocation.getTimestamp())));
-        assertThat(decodedEnd.getLat(), is(equalTo(endLocation.getLat())));
-        assertThat(decodedEnd.getLon(), is(equalTo(endLocation.getLon())));
+        assertThat(decodedEnd.getLatitude(), is(equalTo(endLocation.getLatitude())));
+        assertThat(decodedEnd.getLongitude(), is(equalTo(endLocation.getLongitude())));
         assertThat(decodedEnd.getTimestamp(), is(equalTo(endLocation.getTimestamp())));
 
-        assertThat(decodedMetaData.getVehicle(), is(equalTo(vehicle)));
+        assertThat(decodedMetaData.getModality(), is(equalTo(modality)));
         assertThat(decoded.getUsername(), is(equalTo(username)));
         assertThat(decoded.getBinary(), is(equalTo(binary)));
         assertThat(decodedMetaData.getFormatVersion(), is(equalTo(formatVersion)));

@@ -18,6 +18,7 @@
  */
 package de.cyface.model;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -35,7 +36,12 @@ import java.util.stream.Collectors;
  * @version 2.0.0
  * @since 1.0.0
  */
-public class Track {
+public class Track implements Serializable {
+
+    /**
+     * Used to serialize objects of this class. Only change this value if this classes attribute set changes.
+     */
+    private static final long serialVersionUID = 5614152745515907995L;
     /**
      * The list of {@code GeoLocationRecord}s collected for this {@code Track} ordered by timestamp.
      */
@@ -43,15 +49,15 @@ public class Track {
     /**
      * The list of accelerations for this {@code Track} ordered by timestamp. Unit: m/s².
      */
-    private List<Point3D> accelerations;
+    private List<Point3DImpl> accelerations;
     /**
      * The list of rotations for this {@code Track} ordered by timestamp. Unit: rad/s.
      */
-    private List<Point3D> rotations;
+    private List<Point3DImpl> rotations;
     /**
      * The list of directions for this {@code Track} ordered by timestamp. Unit. micro-Tesla (uT).
      */
-    private List<Point3D> directions;
+    private List<Point3DImpl> directions;
 
     /**
      * Creates a new completely initialized {@code Track}.
@@ -62,8 +68,8 @@ public class Track {
      * @param rotations The list of rotations for this {@code Track} ordered by timestamp. Unit: rad/s.
      * @param directions The list of directions for this {@code Track} ordered by timestamp. Unit. micro-Tesla (uT).
      */
-    public Track(final List<RawRecord> locationRecords, final List<Point3D> accelerations,
-            final List<Point3D> rotations, final List<Point3D> directions) {
+    public Track(final List<RawRecord> locationRecords, final List<Point3DImpl> accelerations,
+                 final List<Point3DImpl> rotations, final List<Point3DImpl> directions) {
         Objects.requireNonNull(locationRecords);
         Objects.requireNonNull(accelerations);
         Objects.requireNonNull(rotations);
@@ -92,21 +98,21 @@ public class Track {
     /**
      * @return The list of accelerations for this {@code Track} ordered by timestamp. Unit: m/s².
      */
-    public List<Point3D> getAccelerations() {
+    public List<Point3DImpl> getAccelerations() {
         return Collections.unmodifiableList(accelerations);
     }
 
     /**
      * @return The list of accelerations for this {@code Track} ordered by timestamp. Unit: m/s².
      */
-    public List<Point3D> getRotations() {
+    public List<Point3DImpl> getRotations() {
         return Collections.unmodifiableList(rotations);
     }
 
     /**
      * @return The list of directions for this {@code Track} ordered by timestamp. Unit. micro-Tesla (uT).
      */
-    public List<Point3D> getDirections() {
+    public List<Point3DImpl> getDirections() {
         return Collections.unmodifiableList(directions);
     }
 
@@ -127,7 +133,7 @@ public class Track {
      *
      * @param accelerations The list of accelerations for this {@code Track} ordered by timestamp. Unit: m/s².
      */
-    public void setAccelerations(final List<Point3D> accelerations) {
+    public void setAccelerations(final List<Point3DImpl> accelerations) {
         Objects.requireNonNull(locationRecords);
 
         this.accelerations = new ArrayList<>(accelerations);
@@ -138,7 +144,7 @@ public class Track {
      *
      * @param rotations The list of accelerations for this {@code Track} ordered by timestamp. Unit: m/s².
      */
-    public void setRotations(final List<Point3D> rotations) {
+    public void setRotations(final List<Point3DImpl> rotations) {
         Objects.requireNonNull(locationRecords);
 
         this.rotations = new ArrayList<>(rotations);
@@ -149,7 +155,7 @@ public class Track {
      *
      * @param directions The list of directions for this {@code Track} ordered by timestamp. Unit. micro-Tesla (uT).
      */
-    public void setDirections(final List<Point3D> directions) {
+    public void setDirections(final List<Point3DImpl> directions) {
         Objects.requireNonNull(locationRecords);
 
         this.directions = new ArrayList<>(directions);

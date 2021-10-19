@@ -18,7 +18,6 @@
  */
 package de.cyface.collector.model.v2;
 
-import de.cyface.collector.model.GeoLocation;
 import io.vertx.core.buffer.Buffer;
 import org.junit.jupiter.api.Test;
 

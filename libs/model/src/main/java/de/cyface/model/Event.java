@@ -20,6 +20,7 @@ package de.cyface.model;
 
 import org.apache.commons.lang3.Validate;
 
+import java.io.Serializable;
 import java.util.Arrays;
 
 /**
@@ -31,7 +32,12 @@ import java.util.Arrays;
  * @since 2.0.1
  * @version 1.1.0
  */
-public final class Event {
+public final class Event implements Serializable {
+
+    /**
+     * Used to serialize objects of this class. Only change this value if this classes attribute set changes.
+     */
+    private static final long serialVersionUID = 281344544385114701L;
     /**
      * The free form <code>String</code> value of this event. This might be <code>null</code>, if the event has no such
      * value.

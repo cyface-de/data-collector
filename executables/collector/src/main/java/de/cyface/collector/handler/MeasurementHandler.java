@@ -31,6 +31,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.UUID;
 
+import de.cyface.model.RequestMetaData;
 import org.apache.commons.lang3.Validate;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -41,9 +42,7 @@ import de.cyface.collector.handler.exception.PayloadTooLarge;
 import de.cyface.collector.handler.exception.SessionExpired;
 import de.cyface.collector.handler.exception.SkipUpload;
 import de.cyface.collector.handler.exception.Unparsable;
-import de.cyface.collector.model.GeoLocation;
 import de.cyface.collector.model.Measurement;
-import de.cyface.collector.model.RequestMetaData;
 import io.vertx.core.Handler;
 import io.vertx.core.file.OpenOptions;
 import io.vertx.core.http.HttpServerRequest;
@@ -244,6 +243,13 @@ public final class MeasurementHandler implements Handler<RoutingContext> {
     private RequestMetaData metaData(final HttpServerRequest request) throws InvalidMetaData, SkipUpload {
 
         try {
+            // Identifiers
+            final var deviceId = request.getHeader(FormAttributes.DEVICE_ID.getValue());
+            final var measurementId = request.getHeader(FormAttributes.MEASUREMENT_ID.getValue());
+            if (measurementId == null || deviceId == null) {
+                throw new InvalidMetaData("Measurement- and/or DeviceId missing in header");
+            }
+
             // Location info
             final var locationCount = Long.parseLong(request.getHeader(FormAttributes.LOCATION_COUNT.getValue()));
             if (locationCount < MINIMUM_LOCATION_COUNT) {
@@ -265,15 +271,8 @@ public final class MeasurementHandler implements Handler<RoutingContext> {
             final var endLocationLat = Double.parseDouble(endLocationLatString);
             final var endLocationLon = Double.parseDouble(endLocationLonString);
             final var endLocationTs = Long.parseLong(endLocationTsString);
-            final var startLocation = new GeoLocation(startLocationLat, startLocationLon, startLocationTs);
-            final var endLocation = new GeoLocation(endLocationLat, endLocationLon, endLocationTs);
-
-            // Identifiers
-            final var deviceId = request.getHeader(FormAttributes.DEVICE_ID.getValue());
-            final var measurementId = request.getHeader(FormAttributes.MEASUREMENT_ID.getValue());
-            if (measurementId == null || deviceId == null) {
-                throw new InvalidMetaData("Measurement- and/or DeviceId missing in header");
-            }
+            final var startLocation = new RequestMetaData.GeoLocation(startLocationTs, startLocationLat, startLocationLon);
+            final var endLocation = new RequestMetaData.GeoLocation(endLocationTs, endLocationLat, endLocationLon);
 
             // Format version
             final var formatVersionString = request.getHeader(FormAttributes.FORMAT_VERSION.getValue());
@@ -287,9 +286,9 @@ public final class MeasurementHandler implements Handler<RoutingContext> {
             final var osVersion = request.getHeader(FormAttributes.OS_VERSION.getValue());
             final var applicationVersion = request.getHeader(FormAttributes.APPLICATION_VERSION.getValue());
             final var length = Double.parseDouble(request.getHeader(FormAttributes.LENGTH.getValue()));
-            final var vehicleType = request.getHeader(FormAttributes.VEHICLE_TYPE.getValue());
+            final var modality = request.getHeader(FormAttributes.MODALITY.getValue());
             return new RequestMetaData(deviceId, measurementId, osVersion, deviceType, applicationVersion,
-                    length, locationCount, startLocation, endLocation, vehicleType, formatVersion);
+                    length, locationCount, startLocation, endLocation, modality, formatVersion);
         } catch (final IllegalArgumentException | NullPointerException e) {
             throw new InvalidMetaData("Data was not parsable!", e);
         }
@@ -479,8 +478,8 @@ public final class MeasurementHandler implements Handler<RoutingContext> {
             throws IllegalSession, SessionExpired {
 
         // Ensure this session was accepted by PreRequestHandler and bound to this measurement
-        final var sessionMeasurementId = session.get(MEASUREMENT_ID_FIELD);
-        final var sessionDeviceId = session.get(DEVICE_ID_FIELD);
+        final String sessionMeasurementId = session.get(MEASUREMENT_ID_FIELD);
+        final String sessionDeviceId = session.get(DEVICE_ID_FIELD);
         if (sessionMeasurementId == null || sessionDeviceId == null) {
             throw new SessionExpired("Mid/did missing, session maybe expired, request upload restart (404).");
         }
