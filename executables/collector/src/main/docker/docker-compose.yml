@@ -61,9 +61,10 @@ services:
       - "8080:8080"
       - "13371:13371"
     volumes:
-      - ./secrets:/app/secrets
-      - ./logs:/logs
+      - ./secrets:/app/secrets:ro # read only
+      - ./logs:/app/logs
       - ./file-uploads:/app/file-uploads
+      - ./logback.xml:/app/logback.xml
     depends_on:
       - mongo-data
       - mongo-user

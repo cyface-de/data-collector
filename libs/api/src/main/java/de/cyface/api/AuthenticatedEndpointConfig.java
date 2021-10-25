@@ -48,8 +48,10 @@ public interface AuthenticatedEndpointConfig extends EndpointConfig {
 
     /**
      * The default number of seconds the JWT authentication token is valid after login.
+     * <p>
+     * Using 10 minutes as preparing a 15-hour measurement for upload took 2.5 minutes on a sample phone [CY-5699].
      */
-    int DEFAULT_TOKEN_VALIDATION_TIME = 120;
+    int DEFAULT_TOKEN_VALIDATION_TIME = 600;
     /**
      * If no salt value was provided this default value is used.
      */

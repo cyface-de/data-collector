@@ -19,6 +19,12 @@
 FROM openjdk:11-jre-slim
 MAINTAINER Cyface GmbH <mail@cyface.de>
 
+# Create user. Unproblematic default id (wikipedia.org/wiki/User_identifier)
+ARG USER_ID=9999
+ARG GROUP_ID=9999
+RUN addgroup --gid $GROUP_ID user
+RUN adduser --disabled-password --gecos '' --uid $USER_ID --gid $GROUP_ID user
+
 # Set the working directory to /app
 WORKDIR /app
 
@@ -28,12 +34,19 @@ COPY entrypoint.sh /app
 COPY logback.xml /app
 RUN chmod +x /app/entrypoint.sh
 
+# Adjust permissions
+# Cannot create logs folder with the correct permissions here as the permissions will be overwritten [DAT-797]
+RUN chown user:user entrypoint.sh collector-all.jar logback.xml
+
 # Make port 8080 available to the world outside the container
 EXPOSE 8080
 
 # Install tooling required to check for running Mongo Database in entrypoint.sh
 RUN apt-get update && apt-get install -y \
         netcat-openbsd
+
+# Run app by non-privileged user.
+USER user
 
 # Run the collector when the container launches
 CMD ["./entrypoint.sh"]
