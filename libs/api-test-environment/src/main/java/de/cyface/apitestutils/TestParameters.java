@@ -18,8 +18,9 @@
  */
 package de.cyface.apitestutils;
 
-import de.cyface.apitestutils.fixture.TestFixture;
 import org.apache.commons.lang3.Validate;
+
+import de.cyface.apitestutils.fixture.TestFixture;
 
 /**
  * Parameters used for a single run of the API test
@@ -28,56 +29,61 @@ import org.apache.commons.lang3.Validate;
  * @version 1.0.0
  * @since 1.0.0
  */
+@SuppressWarnings("unused") // API
 public final class TestParameters {
-  /**
-   * The fixture with the data required to run the test.
-   */
-  private final TestFixture testFixture;
-  /**
-   * The expected result.
-   */
-  private final String expectedResult;
-  /**
-   * The API endpoint used to ask for a data access.
-   */
-  private final String endpoint;
+    /**
+     * The fixture with the data required to run the test.
+     */
+    private final TestFixture testFixture;
+    /**
+     * The expected result.
+     */
+    private final String expectedResult;
+    /**
+     * The API endpoint used to ask for a data access.
+     */
+    private final String endpoint;
 
-  /**
-   * Creates a new completely initialized instance of this class. All attributes are read only.
-   *
-   * @param testFixture The fixture with the data required to run the test
-   * @param expectedResult The expected export
-   * @param endpoint The API endpoint used to ask for a data export
-   */
-  public TestParameters(final TestFixture testFixture, final String expectedResult,
-                        final String endpoint) {
-    Validate.notNull(testFixture);
-    Validate.notEmpty(expectedResult);
-    Validate.notEmpty(endpoint);
+    /**
+     * Creates a new completely initialized instance of this class. All attributes are read only.
+     *
+     * @param testFixture The fixture with the data required to run the test
+     * @param expectedResult The expected export
+     * @param endpoint The API endpoint used to ask for a data export
+     */
+    @SuppressWarnings("unused") // API
+    public TestParameters(final TestFixture testFixture, final String expectedResult,
+            final String endpoint) {
+        Validate.notNull(testFixture);
+        Validate.notEmpty(expectedResult);
+        Validate.notEmpty(endpoint);
 
-    this.testFixture = testFixture;
-    this.expectedResult = expectedResult;
-    this.endpoint = endpoint;
-  }
+        this.testFixture = testFixture;
+        this.expectedResult = expectedResult;
+        this.endpoint = endpoint;
+    }
 
-  /**
-   * @return The fixture with the data required to run the test
-   */
-  public String getExpectedResult() {
-    return expectedResult;
-  }
+    /**
+     * @return The fixture with the data required to run the test
+     */
+    @SuppressWarnings("unused") // API
+    public String getExpectedResult() {
+        return expectedResult;
+    }
 
-  /**
-   * @return The expected result
-   */
-  public TestFixture getTestFixture() {
-    return testFixture;
-  }
+    /**
+     * @return The expected result
+     */
+    @SuppressWarnings("unused") // API
+    public TestFixture getTestFixture() {
+        return testFixture;
+    }
 
-  /**
-   * @return The API endpoint used to ask for a data access
-   */
-  public String getEndpoint() {
-    return endpoint;
-  }
+    /**
+     * @return The API endpoint used to ask for a data access
+     */
+    @SuppressWarnings("unused") // API
+    public String getEndpoint() {
+        return endpoint;
+    }
 }

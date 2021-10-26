@@ -59,7 +59,7 @@ public final class TestEnvironment {
     /**
      * Create a new object of this class and starting the simulated server.
      * To do anything meaningful with it you need to add some test data via
-     * {@link #insertFixture(TestFixture, Handler)}.
+     * {@link #insertFixture(TestFixture)}.
      * <b>ATTENTION:</b> Do not forget to call {@link #shutdown()} after you finished using this object, for example in
      * an <code>org.junit.jupiter.api.AfterEach</code> method.
      *
@@ -92,16 +92,18 @@ public final class TestEnvironment {
      * completion.
      *
      * @param fixture The fixture to add to this environment
-     * @param resultHandler A handler called after completion
+     * @return A {@code Future} which is resolved after completion
      */
-    public void insertFixture(final TestFixture fixture, final Handler<AsyncResult<Void>> resultHandler) {
-        fixture.insertTestData(mongoClient, resultHandler);
+    @SuppressWarnings("unused") // API
+    public Future<Void> insertFixture(final TestFixture fixture) {
+        return fixture.insertTestData(mongoClient);
     }
 
     /**
      * Call this method after your test has finished to clean up the environment. The most convenient place to call this
      * in an <code>AfterEach</code> method.
      */
+    @SuppressWarnings("unused") // API
     public void shutdown() {
         testMongoDatabase.stop();
     }
@@ -109,6 +111,7 @@ public final class TestEnvironment {
     /**
      * @return A handle to the Cyface exporter server running within this environment
      */
+    @SuppressWarnings("unused") // API
     public ApiServer getApiServer() {
         return apiServer;
     }
@@ -116,6 +119,7 @@ public final class TestEnvironment {
     /**
      * @return The <code>WebClient</code> to simulate client requests
      */
+    @SuppressWarnings("unused") // API
     public WebClient getWebClient() {
         return webClient;
     }

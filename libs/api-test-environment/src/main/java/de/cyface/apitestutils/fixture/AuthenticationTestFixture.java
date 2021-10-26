@@ -18,9 +18,8 @@
  */
 package de.cyface.apitestutils.fixture;
 
-import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
-import io.vertx.core.Handler;
+import io.vertx.core.Promise;
 import io.vertx.ext.mongo.MongoClient;
 
 /**
@@ -32,18 +31,22 @@ import io.vertx.ext.mongo.MongoClient;
  * @version 1.0.0
  * @since 1.0.0
  */
+@SuppressWarnings("unused") // API
 public final class AuthenticationTestFixture implements TestFixture {
 
     @Override
-    public void insertTestData(MongoClient mongoClient, Handler<AsyncResult<Void>> insertCompleteHandler) {
-        final TestUser testUser = new TestUser("admin", "secret",
+    public Future<Void> insertTestData(MongoClient mongoClient) {
+
+        final Promise<Void> promise = Promise.promise();
+        final var testUser = new TestUser("admin", "secret",
                 "testGroup" + DatabaseConstants.GROUP_MANAGER_ROLE_SUFFIX);
         testUser.insert(mongoClient, result -> {
             if (result.succeeded()) {
-                insertCompleteHandler.handle(Future.succeededFuture());
+                promise.complete();
             } else {
-                insertCompleteHandler.handle(Future.failedFuture(result.cause()));
+                promise.fail(result.cause());
             }
         });
+        return promise.future();
     }
 }

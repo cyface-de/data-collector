@@ -20,6 +20,8 @@ package de.cyface.apitestutils.fixture;
 
 import de.cyface.apitestutils.TestEnvironment;
 import io.vertx.core.AsyncResult;
+import io.vertx.core.CompositeFuture;
+import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.ext.mongo.MongoClient;
 
@@ -36,7 +38,7 @@ public interface TestFixture {
      * Insert some test data into a test Mongo database via the provided <code>mongoClient</code>.
      *
      * @param mongoClient The client to access the Mongo database hosting the test data
-     * @param insertCompleteHandler The handler called after inserting the data has completed
+     * @return A {@code Future} which is resolved after inserting the data has completed
      */
-    void insertTestData(final MongoClient mongoClient, final Handler<AsyncResult<Void>> insertCompleteHandler);
+    Future<Void> insertTestData(final MongoClient mongoClient);
 }
