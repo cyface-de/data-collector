@@ -45,6 +45,7 @@ import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
+import io.vertx.ext.mongo.FindOptions;
 import io.vertx.ext.mongo.MongoClient;
 
 /**
@@ -61,6 +62,32 @@ public class MeasurementRetriever {
      * TODO: should be a configurable from outside (parameter)
      */
     private static final String DESERIALIZED_COLLECTION_NAME = "deserialized";
+    /**
+     * {@code True} if the measurements should be retrieved including the sensor data when using `loadMeasurements()`.
+     * Attention: This loads a large amount of data into memory and easily leads to an OOM.
+     */
+    private final boolean withSensorData;
+
+    /**
+     * Constructs a fully initialized object of this object.
+     * <p>
+     * This Constructor exists to not break the API of Collector Version 5. It defaults to
+     * {@link #MeasurementRetriever(boolean)} with {@code withSensorData} {@code false}.
+     */
+    public MeasurementRetriever() {
+        this(false);
+    }
+
+    /**
+     * Constructs a fully initialized object of this object.
+     *
+     * @param withSensorData {@code True} if the measurements should be retrieved including the sensor data when using
+     *            `loadMeasurements()`. Attention: This loads a large amount of data into memory and easily leads to an
+     *            OOM.
+     */
+    public MeasurementRetriever(boolean withSensorData) {
+        this.withSensorData = withSensorData;
+    }
 
     /**
      * Loads all measurements of all users of the specified {@code userNames} from the database.
@@ -69,6 +96,7 @@ public class MeasurementRetriever {
      * @param dataClient The client to access the data from
      * @return a {@code Future} containing the users' {@code Measurement}s if successful
      */
+    @SuppressWarnings("unused") // Part of the API
     public Future<List<Measurement>> loadMeasurements(final List<String> userNames, final MongoClient dataClient) {
         return loadMeasurements(userNames, dataClient, null, null);
     }
@@ -101,7 +129,17 @@ public class MeasurementRetriever {
             query.put("track.bucket", timeRestriction);
         }
 
-        dataClient.find(DESERIALIZED_COLLECTION_NAME, query, mongoResult -> {
+        final var fields = new JsonObject();
+        if (!withSensorData) {
+            fields
+                    .put("track.accelerations", 0)
+                    .put("track.rotations", 0)
+                    .put("track.directions", 0);
+        }
+        final var options = new FindOptions();
+        options.setFields(fields);
+
+        dataClient.findWithOptions(DESERIALIZED_COLLECTION_NAME, query, options, mongoResult -> {
             if (mongoResult.succeeded()) {
                 final var measurements = pojo(mongoResult.result());
                 promise.complete(measurements);
@@ -243,18 +281,23 @@ public class MeasurementRetriever {
     private TrackBucket trackBucket(final JsonObject document)
             throws ParseException {
         final var metaData = metaData(document);
-        // Avoiding to have a Track constructor from Document to avoid mongodb dependency in model library
+        // Avoiding having a Track constructor from Document to avoid mongodb dependency in model library
         final var trackDocument = document.getJsonObject("track");
         final var trackId = trackDocument.getInteger("trackId");
         final var bucket = trackDocument.getJsonObject("bucket");
         final var geoLocationsDocuments = trackDocument.getJsonArray("geoLocations");
-        final var accelerationsDocuments = trackDocument.getJsonArray("accelerations");
-        final var rotationsDocuments = trackDocument.getJsonArray("rotations");
-        final var directionsDocuments = trackDocument.getJsonArray("directions");
         final var locationRecords = geoLocations(geoLocationsDocuments, metaData.getIdentifier());
-        final var accelerations = point3D(accelerationsDocuments);
-        final var rotations = point3D(rotationsDocuments);
-        final var directions = point3D(directionsDocuments);
+        final var accelerations = new ArrayList<Point3D>();
+        final var rotations = new ArrayList<Point3D>();
+        final var directions = new ArrayList<Point3D>();
+        if (withSensorData) {
+            final var accelerationsDocuments = trackDocument.getJsonArray("accelerations");
+            final var rotationsDocuments = trackDocument.getJsonArray("rotations");
+            final var directionsDocuments = trackDocument.getJsonArray("directions");
+            accelerations.addAll(point3D(accelerationsDocuments));
+            rotations.addAll(point3D(rotationsDocuments));
+            directions.addAll(point3D(directionsDocuments));
+        }
         final var track = new Track(locationRecords, accelerations, rotations, directions);
         return new TrackBucket(trackId, bucket, track, metaData);
     }
