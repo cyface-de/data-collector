@@ -89,6 +89,11 @@ subprojects {
       withJavadocJar()
     }
 
+    // Publish sources
+    task sourceJar(type: Jar) {
+      from sourceSets.main.allJava
+    }
+
     // This is the configuration of the maven-publish plugin. It defines a publication
     publishing {
       publications {
@@ -96,6 +101,11 @@ subprojects {
         myLibrary(MavenPublication) {
           //noinspection GroovyAssignabilityCheck
           from components.java
+
+          // Publish sources
+          artifact sourceJar {
+            classifier "sources"
+          }
         }
       }
     }
