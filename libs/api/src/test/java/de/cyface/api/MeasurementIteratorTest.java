@@ -48,11 +48,7 @@ import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.core.streams.ReadStream;
 
-<<<<<<< HEAD:libs/api/src/test/java/de/cyface/api/MeasurementIteratorTest.java
 public class MeasurementIteratorTest {
-=======
-public class MeasurementStreamTest {
->>>>>>> [CY-5726] MeasurementRetriever with lazy-load [CY-5727] optional sensor data:libs/api/src/test/java/de/cyface/api/MeasurementStreamTest.java
 
     final ReadStream<JsonObject> mockedSource = new ReadStream<>() {
         @SuppressWarnings({"FieldCanBeLocal", "unused"})
@@ -115,13 +111,8 @@ public class MeasurementStreamTest {
                 throw new IllegalStateException(e);
             }
         }).collect(Collectors.toList());
-<<<<<<< HEAD:libs/api/src/test/java/de/cyface/api/MeasurementIteratorTest.java
         final Promise<MeasurementIterator> promise = Promise.promise();
         new MeasurementIterator(mockedSource, strategy, promise::fail, oocut -> {
-=======
-        final Promise<MeasurementStream> promise = Promise.promise();
-        new MeasurementStream(mockedSource, strategy, promise::fail, oocut -> {
->>>>>>> [CY-5726] MeasurementRetriever with lazy-load [CY-5727] optional sensor data:libs/api/src/test/java/de/cyface/api/MeasurementStreamTest.java
 
             // Un-sort track buckets
             buckets.sort(Comparator.comparing(TrackBucket::getBucket).reversed());
@@ -152,13 +143,8 @@ public class MeasurementStreamTest {
                 throw new IllegalStateException(e);
             }
         }).collect(Collectors.toList());
-<<<<<<< HEAD:libs/api/src/test/java/de/cyface/api/MeasurementIteratorTest.java
         final Promise<MeasurementIterator> promise = Promise.promise();
         new MeasurementIterator(mockedSource, strategy, promise::fail, oocut -> {
-=======
-        final Promise<MeasurementStream> promise = Promise.promise();
-        new MeasurementStream(mockedSource, strategy, promise::fail, oocut -> {
->>>>>>> [CY-5726] MeasurementRetriever with lazy-load [CY-5727] optional sensor data:libs/api/src/test/java/de/cyface/api/MeasurementStreamTest.java
 
             // Act
             final var tracks = oocut.tracks(buckets);
@@ -185,13 +171,8 @@ public class MeasurementStreamTest {
                 throw new IllegalStateException(e);
             }
         }).collect(Collectors.toList());
-<<<<<<< HEAD:libs/api/src/test/java/de/cyface/api/MeasurementIteratorTest.java
         final Promise<MeasurementIterator> promise = Promise.promise();
         new MeasurementIterator(mockedSource, strategy, promise::fail, oocut -> {
-=======
-        final Promise<MeasurementStream> promise = Promise.promise();
-        new MeasurementStream(mockedSource, strategy, promise::fail, oocut -> {
->>>>>>> [CY-5726] MeasurementRetriever with lazy-load [CY-5727] optional sensor data:libs/api/src/test/java/de/cyface/api/MeasurementStreamTest.java
 
             // Act
             final var measurement = oocut.measurement(buckets);
