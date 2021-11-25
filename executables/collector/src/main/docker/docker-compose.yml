@@ -30,6 +30,14 @@ services:
       - type: volume
         source: mongo-data-db
         target: /data/db
+        # The following scripts are executed on the first run of this container
+        # (!) broken, you currently have to execute the following command manually:
+        # `docker exec collector_mongo-data bash -c 'mongo < /docker-entrypoint-initdb.d/init-replic-set.js'`
+      - type: bind
+        source: ./init-scripts/mongo-data/
+        target: /docker-entrypoint-initdb.d/
+        read_only: true
+    command: --replSet "data"
     networks:
       - database
 
@@ -45,6 +53,7 @@ services:
       - type: bind
         source: ./init-scripts/mongo-user/
         target: /docker-entrypoint-initdb.d/
+        read_only: true
     environment:
       MONGO_INITDB_DATABASE: cyface-user
     networks:
