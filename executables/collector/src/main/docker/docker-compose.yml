@@ -25,20 +25,19 @@ services:
     container_name: collector_mongo-data
     image: mongo:5.0.4
     ports:
-      - "27019:27017"
+      - "127.0.0.1:27019:27017"
     volumes:
       - type: volume
         source: mongo-data-db
         target: /data/db
     networks:
-      - default
       - database
 
   mongo-user:
     container_name: collector_mongo-user
     image: mongo:5.0.4
     ports:
-      - "27018:27017"
+      - "127.0.0.1:27018:27017"
     volumes:
       - type: volume
         source: mongo-user-db
@@ -49,7 +48,6 @@ services:
     environment:
       MONGO_INITDB_DATABASE: cyface-user
     networks:
-      - default
       - database
 
   # The Cyface Collector API Container
@@ -59,7 +57,7 @@ services:
     image: data-collector:0.0.0
     ports: # It is ok that this entry manipulates the host's ip-tables since this compose file should only be used in dev environments.
       - "8080:8080"
-      - "13371:13371"
+      - "127.0.0.1:13371:13371"
     volumes:
       - ./secrets:/app/secrets:ro # read only
       - ./logs:/app/logs
@@ -73,21 +71,13 @@ services:
       - ADMIN_PASSWORD=secret
       - SALT_FILE=/app/secrets/salt
     networks:
-      - default
+      - database
 
 volumes:
   mongo-data-db:
   mongo-user-db:
 
 networks:
-  default:
-    name: cyface-collector
-    ipam:
-      driver: default
-      config:
-        # Configure the IP Address range to not conflict with Deutsche Bahn WiFi
-        - subnet: 172.72.0.1/24
-        - subnet: 2001:3984:3989::/64
   # Shared docker network. Allows "exporter" docker container to access APIs without exposing them to the outside world
   database:
     name: cyface-collector_database
