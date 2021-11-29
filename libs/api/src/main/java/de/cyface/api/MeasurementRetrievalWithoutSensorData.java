@@ -40,7 +40,9 @@ public class MeasurementRetrievalWithoutSensorData extends MeasurementRetrievalI
                 .put("track.accelerations", 0)
                 .put("track.rotations", 0)
                 .put("track.directions", 0);
-        return new FindOptions().setFields(fields);
+        // Ensure the measurements are returned in order (or else we have flaky tests)
+        final var sort = new JsonObject().put("metaData.deviceId", 1).put("metaData.measurementId", 1);
+        return new FindOptions().setFields(fields).setSort(sort);
     }
 
     @Override

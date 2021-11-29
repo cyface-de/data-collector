@@ -43,7 +43,9 @@ public class MeasurementRetrievalWithSensorData extends MeasurementRetrievalImpl
 
     @Override
     public FindOptions findOptions() {
-        return new FindOptions();
+        // Ensure the measurements are returned in order (or else we have flaky tests)
+        final var sort = new JsonObject().put("metaData.deviceId", 1).put("metaData.measurementId", 1);
+        return new FindOptions().setSort(sort);
     }
 
     @Override
