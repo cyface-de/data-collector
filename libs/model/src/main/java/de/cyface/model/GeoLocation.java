@@ -85,17 +85,17 @@ public class GeoLocation implements Serializable {
    * Source: https://stackoverflow.com/a/27943/5815054
    *
    * @param location The location to calculate the distance to
-   * @return the estimated distance between both locations in kilometers
+   * @return the estimated distance between both locations in meters
    */
   public double distanceTo(final GeoLocation location) {
-    final int earthRadiusKm = 6371;
+    final int earthRadiusInMeters = 6_371_000;
     final double latitudeDifferenceRad = degreeToRad(location.getLatitude() - getLatitude());
     final double longitudeDifferenceRad = degreeToRad(location.getLongitude() - getLongitude());
     final double a = Math.sin(latitudeDifferenceRad / 2) * Math.sin(latitudeDifferenceRad / 2) +
       Math.cos(degreeToRad(getLatitude())) * Math.cos(degreeToRad(location.getLatitude())) *
         Math.sin(longitudeDifferenceRad / 2) * Math.sin(longitudeDifferenceRad / 2);
     final double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-    return earthRadiusKm * c;
+    return earthRadiusInMeters * c;
   }
 
   /**

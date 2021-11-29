@@ -456,7 +456,7 @@ public final class FileUploadTest {
      *
      * @param context The test context to use.
      * @param testFileResourceName The Java resource name of a file to upload.
-     * @param length the km-length of the track
+     * @param length the meter-length of the track
      * @param binarySize number of bytes in the binary to upload
      * @param handler The handler called if the client received a response.
      */

@@ -62,7 +62,7 @@ public class MeasurementTest {
     void testWriteCsvHeaderRow() {
         // Arrange
         final var expectedHeader = "username,deviceId,measurementId,trackId,timestamp [ms],latitude,longitude,"
-                + "speed [m/s],accuracy [m],modalityType,modalityTypeDistance [km],distance [km],modalityTypeTravelTime"
+                + "speed [m/s],accuracy [m],modalityType,modalityTypeDistance [m],distance [m],modalityTypeTravelTime"
                 + " [ms],travelTime [ms]";
 
         // Act
@@ -91,7 +91,7 @@ public class MeasurementTest {
                                 accuracy(3), speed(3), UNKNOWN)),
                         point3DS, point3DS, point3DS));
         final var measurement = new Measurement(metaData, tracks);
-        final var expectedOutput = "username,deviceId,measurementId,trackId,timestamp [ms],latitude,longitude,speed [m/s],accuracy [m],modalityType,modalityTypeDistance [km],distance [km],modalityTypeTravelTime [ms],travelTime [ms]\r\n"
+        final var expectedOutput = "username,deviceId,measurementId,trackId,timestamp [ms],latitude,longitude,speed [m/s],accuracy [m],modalityType,modalityTypeDistance [m],distance [m],modalityTypeTravelTime [ms],travelTime [ms]\r\n"
                 +
                 TEST_USER_USERNAME + "," + DEVICE_IDENTIFIER + "," + MEASUREMENT_IDENTIFIER + ",1,1000," + latitude(1)
                 + ","
@@ -140,7 +140,7 @@ public class MeasurementTest {
         final var measurement = new Measurement(metaData, tracks);
 
         final var csvOutput = new StringBuilder();
-        final var expectedOutput = "username,deviceId,measurementId,trackId,timestamp [ms],latitude,longitude,speed [m/s],accuracy [m],modalityType,modalityTypeDistance [km],distance [km],modalityTypeTravelTime [ms],travelTime [ms]\r\n"
+        final var expectedOutput = "username,deviceId,measurementId,trackId,timestamp [ms],latitude,longitude,speed [m/s],accuracy [m],modalityType,modalityTypeDistance [m],distance [m],modalityTypeTravelTime [ms],travelTime [ms]\r\n"
                 +
                 TEST_USER_USERNAME + "," + DEVICE_IDENTIFIER + "," + MEASUREMENT_IDENTIFIER + ",1,1000," + latitude(1)
                 + ","
