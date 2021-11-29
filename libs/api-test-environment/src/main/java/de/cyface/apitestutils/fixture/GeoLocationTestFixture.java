@@ -18,6 +18,8 @@
  */
 package de.cyface.apitestutils.fixture;
 
+import java.util.ArrayList;
+import java.util.List;
 import org.apache.commons.lang3.Validate;
 
 import io.vertx.core.AsyncResult;
@@ -35,6 +37,7 @@ import io.vertx.ext.mongo.MongoClient;
  * @version 3.0.0
  * @since 1.0.0
  */
+@SuppressWarnings("unused") // API
 public final class GeoLocationTestFixture implements TestFixture {
     /**
      * The name of the test group to export test data of.
@@ -49,64 +52,39 @@ public final class GeoLocationTestFixture implements TestFixture {
      */
     public static final String TEST_USER_NAME = "admin";
     /**
-     * The identifier of the measurement used during the test.
+     * The measurements used during the test
      */
-    private final Long measurementIdentifier;
-    /**
-     * The world wide unique identifier of the device used during the test.
-     */
-    private final String deviceIdentifier;
-    /**
-     * under which the data should be added. Choose {@link #TEST_GROUP_USER_USERNAME} if the data of all group's users
-     * is to be accessed. Choose {@link #TEST_USER_NAME} if the data should be added to the user which is used in
-     * authentication. Useful if the data of the currently logged in user should be accessed.
-     */
-    private final String dataOwnerUsername;
+    private final List<TestMeasurementDocument> testMeasurementDocuments;
 
     /**
      * Creates a new completely initialized fixture for the test.
      *
-     * @param measurementIdentifier The identifier of the measurement used during the test
-     * @param deviceIdentifier The world wide unique identifier of the device used during the test
-     * @param dataOwnerUsername under which the data should be added. Choose {@link #TEST_GROUP_USER_USERNAME} if the
-     *            data of all
-     *            group's users is to be accessed. Choose {@link #TEST_USER_NAME} if the data should be added to the
-     *            user which is used in authentication. Useful if the data of the currently logged in user should be
-     *            accessed.
+     * @param testMeasurementDocuments The measurements used during the test
      */
     @SuppressWarnings("unused") // API
-    public GeoLocationTestFixture(final Long measurementIdentifier, final String deviceIdentifier,
-                                  final String dataOwnerUsername) {
-        Validate.notNull(measurementIdentifier);
-        Validate.notEmpty(deviceIdentifier);
-
-        this.measurementIdentifier = measurementIdentifier;
-        this.deviceIdentifier = deviceIdentifier;
-        this.dataOwnerUsername = dataOwnerUsername;
+    public GeoLocationTestFixture(final List<TestMeasurementDocument> testMeasurementDocuments) {
+        this.testMeasurementDocuments = testMeasurementDocuments;
     }
 
     @Override
-    public void insertTestData(MongoClient mongoClient, Handler<AsyncResult<Void>> insertCompleteHandler) {
+    public Future<Void> insertTestData(MongoClient mongoClient) {
         final Promise<Void> createAuthUserPromise = Promise.promise();
         final Promise<Void> createTestUserPromise = Promise.promise();
-        final Promise<Void> createMeasurementTestDocumentPromise = Promise.promise();
-        final CompositeFuture synchronizer = CompositeFuture.all(createAuthUserPromise.future(),
-                createTestUserPromise.future(), createMeasurementTestDocumentPromise.future());
-        synchronizer.onComplete(result -> {
-            if (result.succeeded()) {
-                insertCompleteHandler.handle(Future.succeededFuture());
-            } else {
-                insertCompleteHandler.handle(Future.failedFuture(result.cause()));
-            }
+        final var futures = new ArrayList<Future>();
+        futures.add(createAuthUserPromise.future());
+        futures.add(createTestUserPromise.future());
+        testMeasurementDocuments.forEach(document -> {
+            final Promise<Void> promise = Promise.promise();
+            futures.add(promise.future());
+            document.insert(mongoClient, promise);
         });
-
         new TestUser(TEST_USER_NAME, "secret", TEST_GROUP + DatabaseConstants.GROUP_MANAGER_ROLE_SUFFIX).insert(
                 mongoClient, createAuthUserPromise);
         new TestUser(TEST_GROUP_USER_USERNAME, "secret", TEST_GROUP + DatabaseConstants.USER_GROUP_ROLE_SUFFIX)
                 .insert(mongoClient, createTestUserPromise);
-
-        new TestMeasurementDocument(dataOwnerUsername,
-                measurementIdentifier, deviceIdentifier).insert(mongoClient,
-                        createMeasurementTestDocumentPromise);
+        final var composition = CompositeFuture.all(futures);
+        final Promise<Void> promise = Promise.promise();
+        composition.onSuccess(succeeded -> promise.complete()).onFailure(promise::fail);
+        return promise.future();
     }
 }

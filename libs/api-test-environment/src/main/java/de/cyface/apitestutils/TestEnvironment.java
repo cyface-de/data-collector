@@ -60,7 +60,7 @@ public final class TestEnvironment {
     /**
      * Create a new object of this class and starting the simulated server.
      * To do anything meaningful with it, you need to add some test data via
-     * {@link #insertFixture(TestFixture, Handler)}.
+     * {@link #insertFixture(TestFixture)}.
      * <b>ATTENTION:</b> Do not forget to call {@link #shutdown()} after you finished using this object, for example in
      * an <code>org.junit.jupiter.api.AfterEach</code> method.
      *
@@ -97,11 +97,11 @@ public final class TestEnvironment {
      * completion.
      *
      * @param fixture The fixture to add to this environment
-     * @param resultHandler A handler called after completion
+     * @return A {@code Future} which is resolved after completion
      */
     @SuppressWarnings("unused") // API
-    public void insertFixture(final TestFixture fixture, final Handler<AsyncResult<Void>> resultHandler) {
-        fixture.insertTestData(mongoClient, resultHandler);
+    public Future<Void> insertFixture(final TestFixture fixture) {
+        return fixture.insertTestData(mongoClient);
     }
 
     /**

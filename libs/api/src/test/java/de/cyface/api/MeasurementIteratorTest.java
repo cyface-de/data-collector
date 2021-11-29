@@ -22,12 +22,11 @@ import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
 
+import java.text.ParseException;
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
 import java.util.Comparator;
-import java.util.HashSet;
 import java.util.List;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import org.apache.commons.lang3.Validate;
@@ -36,36 +35,96 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
+import de.cyface.api.model.TrackBucket;
 import de.cyface.model.Measurement;
 import de.cyface.model.MeasurementIdentifier;
 import de.cyface.model.MetaData;
 import de.cyface.model.Modality;
 import de.cyface.model.RawRecord;
 import de.cyface.model.Track;
+import io.vertx.core.Handler;
+import io.vertx.core.Promise;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
+import io.vertx.core.streams.ReadStream;
 
-public class MeasurementRetrieverTest {
+public class MeasurementIteratorTest {
+
+    final ReadStream<JsonObject> mockedSource = new ReadStream<>() {
+        @SuppressWarnings({"FieldCanBeLocal", "unused"})
+        private Handler<Throwable> exceptionHandler;
+        @SuppressWarnings({"FieldCanBeLocal", "unused"})
+        private Handler<JsonObject> handler;
+        @SuppressWarnings({"FieldCanBeLocal", "unused"})
+        private Handler<Void> endHandler;
+
+        @Override
+        public ReadStream<JsonObject> exceptionHandler(Handler<Throwable> handler) {
+            this.exceptionHandler = handler;
+            return this;
+        }
+
+        @Override
+        public ReadStream<JsonObject> handler(Handler<JsonObject> handler) {
+            this.handler = handler;
+            return this;
+        }
+
+        @Override
+        public ReadStream<JsonObject> endHandler(Handler<Void> endHandler) {
+            this.endHandler = endHandler;
+            return this;
+        }
+
+        @Override
+        public ReadStream<JsonObject> pause() {
+            // Not yet implemented as currently not needed in this test
+            return this;
+        }
+
+        @Override
+        public ReadStream<JsonObject> resume() {
+            // Not yet implemented as currently not needed in this test
+            return this;
+        }
+
+        @Override
+        public ReadStream<JsonObject> fetch(long amount) {
+            // Not yet implemented as currently not needed in this test
+            return this;
+        }
+    };
 
     /**
      * Ensures track buckets are sorted before they are composed to a Track.
      */
     @Test
     void testTracks_toSortBuckets() {
+
         // Arrange
-        final var oocut = new MeasurementRetriever();
+        final var strategy = new MeasurementRetrievalWithoutSensorData();
         final var trackBuckets = generateTrackBuckets(1, 0, 2, Modality.BICYCLE);
-        final var buckets = oocut.trackBuckets(trackBuckets);
-        // Un-sort track buckets
-        buckets.sort(Comparator.comparing(MeasurementRetriever.TrackBucket::getBucket).reversed());
+        final var buckets = trackBuckets.stream().map(b -> {
+            try {
+                return strategy.trackBucket(b);
+            } catch (ParseException e) {
+                throw new IllegalStateException(e);
+            }
+        }).collect(Collectors.toList());
+        final Promise<MeasurementIterator> promise = Promise.promise();
+        new MeasurementIterator(mockedSource, strategy, promise::fail, oocut -> {
 
-        // Act
-        final var tracks = oocut.tracks(buckets);
+            // Un-sort track buckets
+            buckets.sort(Comparator.comparing(TrackBucket::getBucket).reversed());
 
-        // Assert
-        final var expectedTrack = generateMeasurement(1, 1, new Modality[] {Modality.BICYCLE}).getTracks().get(0);
-        assertThat(tracks.size(), is(equalTo(1)));
-        assertThat(tracks.get(0), is(equalTo(expectedTrack)));
+            // Act
+            final var tracks = oocut.tracks(buckets);
+
+            // Assert
+            final var expectedTrack = generateMeasurement(1, 1, new Modality[] {Modality.BICYCLE}).getTracks().get(0);
+            assertThat(tracks.size(), is(equalTo(1)));
+            assertThat(tracks.get(0), is(equalTo(expectedTrack)));
+        });
     }
 
     /**
@@ -74,18 +133,27 @@ public class MeasurementRetrieverTest {
     @Test
     void testTracks_toSortTracks() {
         // Arrange
-        final var oocut = new MeasurementRetriever();
+        final var strategy = new MeasurementRetrievalWithoutSensorData();
         final var trackBuckets = generateTrackBuckets(1, 1, 1, Modality.BICYCLE);
         trackBuckets.addAll(generateTrackBuckets(1, 0, 1, Modality.WALKING));
-        final var buckets = oocut.trackBuckets(trackBuckets);
+        final var buckets = trackBuckets.stream().map(b -> {
+            try {
+                return strategy.trackBucket(b);
+            } catch (ParseException e) {
+                throw new IllegalStateException(e);
+            }
+        }).collect(Collectors.toList());
+        final Promise<MeasurementIterator> promise = Promise.promise();
+        new MeasurementIterator(mockedSource, strategy, promise::fail, oocut -> {
 
-        // Act
-        final var tracks = oocut.tracks(buckets);
+            // Act
+            final var tracks = oocut.tracks(buckets);
 
-        // Assert
-        final var expectedTracks = generateMeasurement(1, 2, new Modality[] {Modality.WALKING, Modality.BICYCLE})
-                .getTracks();
-        assertThat(tracks, is(equalTo(expectedTracks)));
+            // Assert
+            final var expectedTracks = generateMeasurement(1, 2, new Modality[] {Modality.WALKING, Modality.BICYCLE})
+                    .getTracks();
+            assertThat(tracks, is(equalTo(expectedTracks)));
+        });
     }
 
     /**
@@ -93,49 +161,49 @@ public class MeasurementRetrieverTest {
      */
     @ParameterizedTest
     @MethodSource("provideTrackBucketsForMeasurements")
-    void testPojo(final List<JsonObject> trackBuckets, final List<Measurement> expectedMeasurements) {
+    void testMeasurement(final List<JsonObject> trackBuckets, final Measurement expectedMeasurement) {
         // Arrange
-        final var oocut = new MeasurementRetriever();
+        final var strategy = new MeasurementRetrievalWithoutSensorData();
+        final var buckets = trackBuckets.stream().map(b -> {
+            try {
+                return strategy.trackBucket(b);
+            } catch (ParseException e) {
+                throw new IllegalStateException(e);
+            }
+        }).collect(Collectors.toList());
+        final Promise<MeasurementIterator> promise = Promise.promise();
+        new MeasurementIterator(mockedSource, strategy, promise::fail, oocut -> {
 
-        // Act
-        final var measurements = oocut.pojo(trackBuckets);
+            // Act
+            final var measurement = oocut.measurement(buckets);
 
-        // Assert
-        assertThat(measurements.size(), is(equalTo(expectedMeasurements.size())));
-        assertThat(new HashSet<>(measurements), is(equalTo(new HashSet<>(expectedMeasurements))));
+            // Assert
+            assertThat(measurement, is(equalTo(expectedMeasurement)));
+        });
     }
 
     private static Stream<Arguments> provideTrackBucketsForMeasurements() {
         // Small test case
         final var singleMeasurementBuckets = generateTrackBuckets(1, 0, 1, Modality.BICYCLE);
-        final var singleMeasurement = Collections
-                .singletonList(generateMeasurement(1, 1, new Modality[] {Modality.BICYCLE}));
-
-        // Multiple measurements
-        final var multipleMeasurementsBuckets = generateTrackBuckets(1, 0, 1, Modality.BICYCLE);
-        multipleMeasurementsBuckets.addAll(generateTrackBuckets(2, 0, 1, Modality.BICYCLE));
-        final var multipleMeasurements = Arrays.asList(generateMeasurement(1, 1, new Modality[] {Modality.BICYCLE}),
-                generateMeasurement(2, 1, new Modality[] {Modality.BICYCLE}));
+        final var singleMeasurement = generateMeasurement(1, 1, new Modality[] {Modality.BICYCLE});
 
         // Multiple tracks in one measurement
         final var multipleTracksBuckets = generateTrackBuckets(1, 0, 1, Modality.BICYCLE);
         multipleTracksBuckets.addAll(generateTrackBuckets(1, 1, 1, Modality.BICYCLE));
-        final var multipleTracksMeasurements = Collections
-                .singletonList(generateMeasurement(1, 2, new Modality[] {Modality.BICYCLE}));
+        final var multipleTracksMeasurement = generateMeasurement(1, 2, new Modality[] {Modality.BICYCLE});
 
         // Multiple buckets in one track
         final var multipleBucketsBuckets = generateTrackBuckets(1, 0, 2, Modality.BICYCLE);
-        final var multipleBucketsMeasurements = Collections
-                .singletonList(generateMeasurement(1, 1, new Modality[] {Modality.BICYCLE}));
+        final var multipleBucketsMeasurement = generateMeasurement(1, 1, new Modality[] {Modality.BICYCLE});
 
         return Stream.of(
                 Arguments.of(singleMeasurementBuckets, singleMeasurement),
-                Arguments.of(multipleMeasurementsBuckets, multipleMeasurements),
-                Arguments.of(multipleTracksBuckets, multipleTracksMeasurements),
-                Arguments.of(multipleBucketsBuckets, multipleBucketsMeasurements));
+                Arguments.of(multipleTracksBuckets, multipleTracksMeasurement),
+                Arguments.of(multipleBucketsBuckets, multipleBucketsMeasurement));
     }
 
-    private static List<JsonObject> generateTrackBuckets(final int measurementId, final int trackId,
+    private static List<JsonObject> generateTrackBuckets(
+            @SuppressWarnings("SameParameterValue") final int measurementId, final int trackId,
             final int numberOfTrackBuckets, final Modality modality) {
         Validate.isTrue(numberOfTrackBuckets <= 3, "Not implemented for larger data sets");
 
@@ -178,8 +246,8 @@ public class MeasurementRetrieverTest {
         return trackBuckets;
     }
 
-    private static Measurement generateMeasurement(final int measurementId, final int numberOfTracks,
-            final Modality[] modalities) {
+    private static Measurement generateMeasurement(@SuppressWarnings("SameParameterValue") final int measurementId,
+            final int numberOfTracks, final Modality[] modalities) {
         Validate.isTrue(modalities.length <= 2, "Not implemented");
 
         final var measurementIdentifier = new MeasurementIdentifier("testDiD", measurementId);

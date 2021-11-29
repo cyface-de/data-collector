@@ -35,7 +35,7 @@ import io.vertx.ext.mongo.MongoClient;
  * @version 1.0.0
  * @since 1.2.0
  */
-final class TestMeasurementDocument implements MongoTestData {
+public final class TestMeasurementDocument implements MongoTestData {
     /**
      * The username who uploaded the file.
      */
@@ -108,6 +108,7 @@ final class TestMeasurementDocument implements MongoTestData {
                 .put("modality", Modality.BICYCLE.getDatabaseIdentifier());
         geoLocations.add(geoLocation);
         geoLocations.add(geoLocation2);
+
         final JsonArray accelerations = new JsonArray();
         final JsonObject point3D = new JsonObject()
                 .put("timestamp", 1L)
@@ -125,6 +126,7 @@ final class TestMeasurementDocument implements MongoTestData {
         rotations.add(point3D);
         final JsonArray directions = new JsonArray();
         directions.add(point3D2);
+
         final JsonObject trackBucket = new JsonObject()
                 .put("trackId", 0)
                 .put("bucket", new JsonObject().put("$date", "2020-12-22T15:13:00.000+00:00"))
