@@ -30,7 +30,7 @@ subprojects {
   project.afterEvaluate {
 
     // This task creates an obfuscated Jar file from the one created by the jar task and puts it into the 'obf' folder of the build directory
-    task createObfuscated(type: ProGuardTask, dependsOn: 'build') {
+    /*task createObfuscated(type: ProGuardTask, dependsOn: 'build') {
       description 'Optimizes and obfuscates the created distribution jar.'
 
       // Merge static configuration settings
@@ -83,16 +83,17 @@ subprojects {
       delete '${buildDir}/obf'
     }
 
-    task proguard dependsOn deleteObfuscated
+    task proguard dependsOn deleteObfuscated*/
 
     java {
       withJavadocJar()
+      withSourcesJar()
     }
 
     // Publish sources
-    task sourceJar(type: Jar) {
+    /*task sourceJar(type: Jar) {
       from sourceSets.main.allJava
-    }
+    }*/
 
     // This is the configuration of the maven-publish plugin. It defines a publication
     publishing {
@@ -103,17 +104,17 @@ subprojects {
           from components.java
 
           // Publish sources
-          artifact sourceJar {
+          /*artifact sourceJar {
             classifier "sources"
-          }
+          }*/
         }
       }
     }
 
     // We only want to publish obfuscated Jars, so publish always runs proguard at first.
-    publish.dependsOn proguard
+    /*publish.dependsOn proguard
     tasks.withType(AbstractPublishToMaven) {
       it.dependsOn proguard
-    }
+    }*/
   }
 }
