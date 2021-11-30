@@ -63,7 +63,7 @@ public abstract class MeasurementRetrievalImpl implements MeasurementRetrievalSt
      * @return the record POJO
      */
     public RawRecord geoLocation(final JsonObject doc, final MeasurementIdentifier identifier) {
-        final var instant = doc.getInstant("timestamp");
+        final var instant = doc.getJsonObject("timestamp").getInstant("$date");
         final long timestamp = instant.toEpochMilli();
         final var value = doc.getJsonObject("value");
         final var geometry = value.getJsonObject("geometry");

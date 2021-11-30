@@ -32,13 +32,13 @@ public class MeasurementRetrievalWithoutSensorData extends MeasurementRetrievalI
 
     @Override
     public FindOptions findOptions() {
-        final var fields = new JsonObject()
+        /*final var fields = new JsonObject()
                 .put("track.accelerations", 0)
                 .put("track.rotations", 0)
-                .put("track.directions", 0);
+                .put("track.directions", 0);*/
         // Ensure the measurements are returned in order (or else we have flaky tests)
         final var sort = new JsonObject().put("metaData.deviceId", 1).put("metaData.measurementId", 1)
                 .put("metaData.trackId", 1).put("timestamp", 1);
-        return new FindOptions().setFields(fields).setSort(sort);
+        return new FindOptions()/*.setFields(fields)*/.setSort(sort);
     }
 }

@@ -81,7 +81,8 @@ public class MeasurementRetriever {
 
         final var query = new JsonObject();
         query.put("metaData.username", new JsonObject().put("$in", new JsonArray(userNames)));
-        if (startTime != null || endTime != null) {
+        query.put("metaData.sensorType", "location");
+        /*if (startTime != null || endTime != null) {
             final var timeRestriction = new JsonObject();
             if (startTime != null) {
                 timeRestriction.put("$gt", new JsonObject().put("$date", startTime.toString()));
@@ -90,7 +91,7 @@ public class MeasurementRetriever {
                 timeRestriction.put("$lt", new JsonObject().put("$date", endTime.toString()));
             }
             query.put("track.bucket", timeRestriction);
-        }
+        }*/
 
         final Promise<MeasurementIterator> promise = Promise.promise();
         final var initializedHandler = new Handler<MeasurementIterator>() {
