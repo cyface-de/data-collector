@@ -99,9 +99,10 @@ public class MeasurementRetriever {
                 promise.complete(output);
             }
         };
-        final var bucketStream = dataClient.findBatchWithOptions(DESERIALIZED_COLLECTION_NAME, query,
+        final var geolocationStream = dataClient.findBatchWithOptions(DESERIALIZED_COLLECTION_NAME, query,
                 strategy.findOptions());
-        new MeasurementIterator(bucketStream, strategy, promise::fail, initializedHandler);
+        // FIXME: add sensor data streams if `strategy` is `MeasurementRetrievalWithSensorData`
+        new MeasurementIterator(geolocationStream, strategy, promise::fail, initializedHandler);
         return promise.future();
     }
 }

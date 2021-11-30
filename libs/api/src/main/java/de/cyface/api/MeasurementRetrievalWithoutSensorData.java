@@ -18,10 +18,6 @@
  */
 package de.cyface.api;
 
-import java.text.ParseException;
-import java.util.ArrayList;
-
-import de.cyface.api.model.TrackBucket;
 import de.cyface.model.Track;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.mongo.FindOptions;
@@ -41,22 +37,8 @@ public class MeasurementRetrievalWithoutSensorData extends MeasurementRetrievalI
                 .put("track.rotations", 0)
                 .put("track.directions", 0);
         // Ensure the measurements are returned in order (or else we have flaky tests)
-        final var sort = new JsonObject().put("metaData.deviceId", 1).put("metaData.measurementId", 1);
+        final var sort = new JsonObject().put("metaData.deviceId", 1).put("metaData.measurementId", 1)
+                .put("metaData.trackId", 1).put("timestamp", 1);
         return new FindOptions().setFields(fields).setSort(sort);
-    }
-
-    @Override
-    public TrackBucket trackBucket(final JsonObject document) throws ParseException {
-
-        final var metaData = metaData(document);
-        // Avoiding having a Track constructor from Document to avoid mongodb dependency in model library
-        final var trackDocument = document.getJsonObject("track");
-        final var trackId = trackDocument.getInteger("trackId");
-        final var bucket = trackDocument.getJsonObject("bucket");
-        final var geoLocationsDocuments = trackDocument.getJsonArray("geoLocations");
-        final var locationRecords = geoLocations(geoLocationsDocuments, metaData.getIdentifier());
-
-        final var track = new Track(locationRecords, new ArrayList<>(), new ArrayList<>(), new ArrayList<>());
-        return new TrackBucket(trackId, bucket, track, metaData);
     }
 }

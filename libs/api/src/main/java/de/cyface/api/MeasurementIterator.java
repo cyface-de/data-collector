@@ -24,6 +24,7 @@ import static java.util.stream.Collectors.toList;
 import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -35,7 +36,8 @@ import org.apache.commons.lang3.Validate;
 
 import de.cyface.api.model.TrackBucket;
 import de.cyface.model.Measurement;
-import de.cyface.model.MeasurementIdentifier;
+import de.cyface.model.MetaData;
+import de.cyface.model.RawRecord;
 import de.cyface.model.Track;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
@@ -54,9 +56,9 @@ import io.vertx.core.streams.ReadStream;
 final public class MeasurementIterator implements Iterator<Future<Measurement>>, Handler<JsonObject> {
 
     /**
-     * The source where the measurement data is loaded from, usually a database.
+     * The source where the geolocation data is loaded from, usually a database.
      */
-    private final ReadStream<JsonObject> bucketStream;
+    private final ReadStream<JsonObject> geolocationStream;
     /**
      * The {@code Handler} called upon errors.
      */
@@ -76,17 +78,19 @@ final public class MeasurementIterator implements Iterator<Future<Measurement>>,
      */
     private boolean initialized;
     /**
-     * The {@link TrackBucket}s already loaded but not yet returned, usually, because not all buckets of the current
-     * measurement are loaded.
+     * A {@code Map} which contains the trackId as key and the {@link RawRecord}s of that track.
+     * <p>
+     * The cached {@code RawRecord}s which are already loaded but not yet returned, usually, because not all buckets of
+     * the current measurement are loaded.
      */
-    private final List<TrackBucket> cachedBuckets;
+    private final Map<Integer, List<RawRecord>> cachedLocations;
     /**
-     * The {@link MeasurementIdentifier} of the measurement which is currently loaded from database.
+     * The {@link MetaData} of the measurement which is currently loaded from database.
      */
-    private MeasurementIdentifier cachedMeasurementId;
+    private MetaData cachedMeasurement;
     /**
      * The {@code Promise} of the last {@link #next()} request which initialized the loading of the measurement data for
-     * {@link #cachedMeasurementId}.
+     * {@link #cachedMeasurement}.
      */
     private Promise<Measurement> nextMeasurement = null;
     /**
@@ -95,7 +99,8 @@ final public class MeasurementIterator implements Iterator<Future<Measurement>>,
      */
     private final Semaphore pendingNextCall;
     /**
-     * The handler to be called after the last bucket was loaded from the {@link #bucketStream} to construct and return
+     * The handler to be called after the last bucket was loaded from the {@link #geolocationStream} to construct and
+     * return
      * the last measurement to the caller.
      */
     private final LastMeasurementHandler lastMeasurementHandler;
@@ -105,60 +110,67 @@ final public class MeasurementIterator implements Iterator<Future<Measurement>>,
      * <p>
      * This instance is initialized when {@code #initializedHandler} is called.
      *
-     * @param bucketStream the stream to read measurement data from
+     * @param geolocationStream the stream to read geolocations from
      * @param strategy the strategy to be used when loading measurement data
      * @param failureHandler the {@code Handler} called upon errors
      * @param initializedHandler a {@code Handler} called when the instance of this class is fully initialized
      */
-    public MeasurementIterator(final ReadStream<JsonObject> bucketStream, final MeasurementRetrievalStrategy strategy,
-                               final Handler<Throwable> failureHandler, final Handler<MeasurementIterator> initializedHandler) {
+    public MeasurementIterator(final ReadStream<JsonObject> geolocationStream,
+            final MeasurementRetrievalStrategy strategy,
+            final Handler<Throwable> failureHandler, final Handler<MeasurementIterator> initializedHandler) {
 
         this.lastMeasurementHandler = new LastMeasurementHandler(this);
-        bucketStream
+        geolocationStream
                 .pause() // only load data when requested via `next()`
                 .handler(this)
                 .exceptionHandler(failureHandler)
                 .endHandler(lastMeasurementHandler);
+        // FIXME: init sensor data streams if requested
 
-        this.bucketStream = bucketStream;
+        this.geolocationStream = geolocationStream;
         this.strategy = strategy;
         this.failureHandler = failureHandler;
-        this.cachedBuckets = new ArrayList<>();
+        this.cachedLocations = new HashMap<>();
         this.initializedHandler = initializedHandler;
         this.pendingNextCall = new Semaphore(1);
 
         // Load the first bucket to be able to answer to `hasNext()` calls
-        bucketStream.fetch(1);
+        geolocationStream.fetch(1);
+        // FIXME: init sensor data streams if requested
     }
 
     @Override
     public void handle(final JsonObject document) {
-        try {
-            final var bucket = strategy.trackBucket(document);
-            final var measurementId = bucket.getMetaData().getIdentifier();
+        final var metaData = strategy.metaData(document);
+        final var trackId = strategy.trackId(document);
+        final var measurementId = metaData.getIdentifier();
+        final var location = strategy.geoLocation(document, measurementId);
+        // FIXME: sensor data streams if requested
 
-            // Handle first bucket
-            if (cachedMeasurementId == null) {
-                cachedMeasurementId = measurementId;
-                cachedBuckets.add(bucket);
-                initialized = true;
-                initializedHandler.handle(this);
-                return;
-            }
-
-            // Handle subsequent buckets
-            if (measurementId.equals(cachedMeasurementId)) {
-                cachedBuckets.add(bucket);
-                bucketStream.fetch(1);
-                return;
-            }
-
-            // Handle bucket of next measurement (i.e. all buckets of previous measurement loaded)
-            // System.out.println("MeasurementStream.handle(next measurements buckets) -> resolveNext");
-            resolveNext(cachedBuckets, measurementId, bucket);
-        } catch (ParseException e) {
-            failureHandler.handle(e);
+        // Handle first bucket
+        if (cachedMeasurement == null) {
+            cachedMeasurement = metaData;
+            final var locations = new ArrayList<RawRecord>();
+            locations.add(location);
+            cachedLocations.put(trackId, locations);
+            initialized = true;
+            initializedHandler.handle(this);
+            return;
         }
+
+        // Handle subsequent buckets
+        if (measurementId.equals(cachedMeasurement.getIdentifier())) {
+            if (!cachedLocations.containsKey(trackId)) {
+                cachedLocations.put(trackId, new ArrayList<>());
+            }
+            cachedLocations.get(trackId).add(location);
+            geolocationStream.fetch(1);
+            // FIXME: sensor data streams if requested
+            return;
+        }
+
+        // Handle bucket of next measurement (i.e. all buckets of previous measurement loaded)
+        resolveNext(cachedLocations, cachedMeasurement, metaData, location, trackId);
     }
 
     /**
@@ -191,7 +203,7 @@ final public class MeasurementIterator implements Iterator<Future<Measurement>>,
     @Override
     public boolean hasNext() {
         Validate.isTrue(initialized, "Calling hasNext() before initialized is not supported!");
-        return cachedMeasurementId != null;
+        return cachedMeasurement != null;
     }
 
     /**
@@ -206,7 +218,8 @@ final public class MeasurementIterator implements Iterator<Future<Measurement>>,
             nextMeasurement = Promise.promise();
 
             // Resume bucket loading. The promise is resolved when all measurement buckets have been loaded.
-            bucketStream.fetch(1);
+            geolocationStream.fetch(1);
+            // FIXME: sensor data streams if requested
             return nextMeasurement.future();
         } catch (InterruptedException e) {
             throw new IllegalStateException(e);
@@ -216,26 +229,30 @@ final public class MeasurementIterator implements Iterator<Future<Measurement>>,
     /**
      * Resolves the {@link #pendingNextCall} {@code Promise} when all data of the next measurement was loaded after a
      * {@link #next()} call.
-     *
-     * @param buckets the {@link TrackBucket}s of the measurement requested.
-     * @param nextMeasurementId the {@link MeasurementIdentifier} of the measurement requested.
-     * @param nextBucket the {@code TrackBucket} of the next measurement, to be cached.
+     * @param locations the {@link TrackBucket}s of the measurement requested.
+     * @param metaData the {@link MetaData} of the measurement requested.
+     * @param nextMeasurement the {@code MetaData} of the next measurement.
+     * @param nextLocation the {@code TrackBucket} of the next measurement, to be cached.
+     * @param trackId the {@code trackId} of the next measurement.
      */
-    private void resolveNext(final List<TrackBucket> buckets, final MeasurementIdentifier nextMeasurementId,
-            final TrackBucket nextBucket) {
-        final var measurement = measurement(buckets);
+    private void resolveNext(final Map<Integer, List<RawRecord>> locations, final MetaData metaData,
+                             final MetaData nextMeasurement, final RawRecord nextLocation, final Integer trackId) {
+        final var measurement = measurement(locations, metaData);
 
         // Prepare cache for the next measurement
-        cachedBuckets.clear();
-        cachedMeasurementId = nextMeasurementId;
-        if (nextBucket != null) {
-            cachedBuckets.add(nextBucket);
+        cachedLocations.clear();
+        this.cachedMeasurement = nextMeasurement;
+        if (nextLocation != null) {
+            final var list = new ArrayList<RawRecord>();
+            list.add(nextLocation);
+            cachedLocations.put(Validate.notNull(trackId), list);
         }
 
         // Prepare for next `next()` call
-        bucketStream.pause();
-        final var promise = nextMeasurement;
-        nextMeasurement = null;
+        geolocationStream.pause();
+        // FIXME: sensor data streams if requested
+        final var promise = this.nextMeasurement;
+        this.nextMeasurement = null;
         pendingNextCall.release();
 
         // Resolve `nextMeasurement` promise
@@ -245,46 +262,38 @@ final public class MeasurementIterator implements Iterator<Future<Measurement>>,
     /**
      * Constructs a new measurement from a document loaded from the database.
      *
-     * @param buckets The data to load the measurement from
+     * @param locations The location data to load the measurement from
+     * @param metaData The {@link MetaData} of the measurement to be created.
      * @return The newly created {@link Measurement}
      */
-    Measurement measurement(final List<TrackBucket> buckets) {
-        if (buckets.isEmpty()) {
-            throw new IllegalArgumentException("Cannot create a measurement from 0 buckets!");
+    Measurement measurement(final Map<Integer, List<RawRecord>> locations, final MetaData metaData) {
+        if (locations.isEmpty()) {
+            throw new IllegalArgumentException("Cannot create a measurement from 0 locations!");
         }
 
-        final var tracks = tracks(buckets);
-        return new Measurement(buckets.get(0).getMetaData(), tracks);
+        final var tracks = tracks(locations);
+        return new Measurement(metaData, tracks);
     }
 
     /**
-     * Merges {@link TrackBucket}s into {@link Track}s.
+     * Merges {@link RawRecord}s into {@link Track}s.
      *
-     * @param trackBuckets the data to merge
+     * @param geolocations the location data to merge
      * @return the tracks
      */
-    List<Track> tracks(final List<TrackBucket> trackBuckets) {
-
-        // Group by trackId
-        final var groupedBuckets = trackBuckets.stream()
-                .collect(groupingBy(TrackBucket::getTrackId));
-
-        // Sort bucket groups by trackId
-        final var sortedBucketGroups = groupedBuckets.entrySet().stream()
-                .sorted(Map.Entry.comparingByKey())
-                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue, (oldValue, newValue) -> oldValue,
-                        LinkedHashMap::new));
+    List<Track> tracks(final Map<Integer, List<RawRecord>> geolocations) {
 
         // Convert buckets to Track
         final var tracks = new ArrayList<Track>();
-        sortedBucketGroups.forEach((trackId, bucketGroup) -> {
+        geolocations.forEach((trackId, locations) -> {
             // Sort buckets
-            final var sortedBuckets = bucketGroup.stream()
+            // SHOULD ALREADY BE SORTED
+            /*final var sortedBuckets = rawRecords.stream()
                     .sorted(Comparator.comparing(TrackBucket::getBucket))
-                    .collect(toList());
+                    .collect(toList());*/
 
             // Merge buckets
-            final var locations = sortedBuckets.stream()
+            /*final var locations = sortedBuckets.stream()
                     .flatMap(bucket -> bucket.getTrack().getLocationRecords().stream())
                     .collect(Collectors.toList());
             final var accelerations = sortedBuckets.stream()
@@ -295,16 +304,17 @@ final public class MeasurementIterator implements Iterator<Future<Measurement>>,
                     .collect(Collectors.toList());
             final var directions = sortedBuckets.stream()
                     .flatMap(bucket -> bucket.getTrack().getDirections().stream())
-                    .collect(Collectors.toList());
+                    .collect(Collectors.toList());*/
 
-            final var track = new Track(locations, accelerations, rotations, directions);
+            final var track = new Track(locations, new ArrayList<>(), new ArrayList<>(), new ArrayList<>());
             tracks.add(track);
         });
         return tracks;
     }
 
     /**
-     * A handler to be called after the last bucket was loaded from the {@link #bucketStream} to construct and return
+     * A handler to be called after the last bucket was loaded from the {@link #geolocationStream} to construct and
+     * return
      * the last measurement to the caller.
      *
      * @author Armin Schnabel
@@ -330,15 +340,15 @@ final public class MeasurementIterator implements Iterator<Future<Measurement>>,
         public void handle(Void ended) {
             final var isNextPromisePending = caller.nextMeasurement != null;
             if (isNextPromisePending) {
-                Validate.notEmpty(caller.cachedBuckets,
+                Validate.notEmpty(caller.cachedLocations,
                         "Stream ended with a pending nextMeasurement promise and an empty cache");
                 // The stream ended, i.e. the remaining cached buckets are the last measurement
-                caller.resolveNext(caller.cachedBuckets, null, null);
+                caller.resolveNext(caller.cachedLocations, caller.cachedMeasurement, null, null, null);
             }
 
             // Clear cache, which also ensures that `hasNext()` returns `false
-            caller.cachedMeasurementId = null;
-            caller.cachedBuckets.clear();
+            caller.cachedMeasurement = null;
+            caller.cachedLocations.clear();
         }
     }
 }

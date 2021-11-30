@@ -18,10 +18,6 @@
  */
 package de.cyface.api;
 
-import java.text.ParseException;
-import java.util.ArrayList;
-
-import de.cyface.api.model.TrackBucket;
 import de.cyface.model.Track;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.mongo.FindOptions;
@@ -44,29 +40,8 @@ public class MeasurementRetrievalWithSensorData extends MeasurementRetrievalImpl
     @Override
     public FindOptions findOptions() {
         // Ensure the measurements are returned in order (or else we have flaky tests)
-        final var sort = new JsonObject().put("metaData.deviceId", 1).put("metaData.measurementId", 1);
+        final var sort = new JsonObject().put("metaData.deviceId", 1).put("metaData.measurementId", 1)
+                .put("metaData.trackId", 1).put("timestamp", 1);
         return new FindOptions().setSort(sort);
-    }
-
-    @Override
-    public TrackBucket trackBucket(final JsonObject document) throws ParseException {
-
-        final var metaData = metaData(document);
-        // Avoiding having a Track constructor from Document to avoid mongodb dependency in model library
-        final var trackDocument = document.getJsonObject("track");
-        final var trackId = trackDocument.getInteger("trackId");
-        final var bucket = trackDocument.getJsonObject("bucket");
-        final var geoLocationsDocuments = trackDocument.getJsonArray("geoLocations");
-        final var locationRecords = geoLocations(geoLocationsDocuments, metaData.getIdentifier());
-
-        final var accelerationsDocuments = trackDocument.getJsonArray("accelerations");
-        final var rotationsDocuments = trackDocument.getJsonArray("rotations");
-        final var directionsDocuments = trackDocument.getJsonArray("directions");
-        final var accelerations = new ArrayList<>(point3D(accelerationsDocuments));
-        final var rotations = new ArrayList<>(point3D(rotationsDocuments));
-        final var directions = new ArrayList<>(point3D(directionsDocuments));
-
-        final var track = new Track(locationRecords, accelerations, rotations, directions);
-        return new TrackBucket(trackId, bucket, track, metaData);
     }
 }

@@ -18,19 +18,13 @@
  */
 package de.cyface.api;
 
-import java.text.ParseException;
-import java.util.ArrayList;
-import java.util.List;
-
 import org.apache.commons.lang3.Validate;
 
-import de.cyface.api.model.TrackBucket;
 import de.cyface.model.MeasurementIdentifier;
 import de.cyface.model.MetaData;
 import de.cyface.model.Modality;
 import de.cyface.model.Point3DImpl;
 import de.cyface.model.RawRecord;
-import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.mongo.FindOptions;
 
@@ -51,13 +45,12 @@ public interface MeasurementRetrievalStrategy {
     FindOptions findOptions();
 
     /**
-     * Returns the {@code Track} list as POJO.
+     * Returns the {@code trackId}.
      *
-     * @param document the {@code Document} containing the measurement, {@link MetaData#getVersion()} 1.0.0.
-     * @return the track list POJO
-     * @throws ParseException if the track bucket date cannot be parsed
+     * @param document the {@code Document} to extract the trackId from.
+     * @return the trackId
      */
-    TrackBucket trackBucket(final JsonObject document) throws ParseException;
+    int trackId(final JsonObject document);
 
     /**
      * Returns the {@code MetaData} as POJO.
@@ -65,71 +58,22 @@ public interface MeasurementRetrievalStrategy {
      * @param document the {@code Document} containing the measurement, {@link MetaData#getVersion()} 1.0.0.
      * @return the metadata POJO
      */
-    default MetaData metaData(final JsonObject document) {
-        final var metaData = document.getJsonObject("metaData");
-        final var version = metaData.getString("version");
-        Validate.isTrue(version.equals(MetaData.CURRENT_VERSION),
-                "Encountered data in invalid format. Only Cyface Format Version 1.0.0 is supported!");
-
-        final var identifier = new MeasurementIdentifier(metaData.getString("deviceId"),
-                metaData.getLong("measurementId"));
-        final var deviceType = metaData.getString("deviceType");
-        final var osVersion = metaData.getString("osVersion");
-        final var appVersion = metaData.getString("appVersion");
-        final var length = metaData.getDouble("length");
-        final var username = metaData.getString("username");
-        return new MetaData(identifier, deviceType, osVersion, appVersion, length, username, version);
-    }
+    MetaData metaData(final JsonObject document);
 
     /**
-     * Returns the {@code GeoLocationRecord} list as POJO.
+     * Returns the {@code GeoLocationRecord} as POJO.
      *
-     * @param documents the {@code Document} list containing the {@code GeoLocation}s in {@link MetaData#getVersion()}
-     *            1.0.0.
-     * @param identifier the identifier of the measurement of this track
-     * @return the record list POJO
+     * @param doc the {@code Document} containing the {@code GeoLocation} in {@link MetaData#getVersion()} 1.0.0.
+     * @param identifier the identifier of the measurement of this location
+     * @return the record POJO
      */
-    default List<RawRecord> geoLocations(final JsonArray documents, final MeasurementIdentifier identifier) {
-        final var records = new ArrayList<RawRecord>();
-        for (int i = 0; i < documents.size(); i++) {
-            final var doc = documents.getJsonObject(i);
-            final var timestamp = doc.getLong("timestamp");
-            final var geometry = doc.getJsonObject("geometry");
-            Validate.isTrue(geometry.getString("type").equals("Point"));
-            final var coordinates = geometry.getJsonArray("coordinates");
-            final var latitude = coordinates.getDouble(1);
-            final var longitude = coordinates.getDouble(0);
-            final var elevation = doc.getDouble("elevation");
-            final var speed = doc.getDouble("speed");
-            final var accuracy = doc.getDouble("accuracy");
-            final var modality = Modality.valueOf(doc.getString("modality"));
-            Validate.notNull(modality, "Unable to identify modality type: " + doc.getString("modality"));
-            final var record = new RawRecord(identifier, timestamp, latitude, longitude, elevation, accuracy, speed,
-                    modality);
-            records.add(record);
-        }
-        return records;
-    }
+    RawRecord geoLocation(final JsonObject doc, final MeasurementIdentifier identifier);
 
     /**
-     * Returns the {@code Point3D} list as POJO.
+     * Returns the {@code Point3D} as POJO.
      *
-     * @param documents the {@code Document} list containing the {@code Point3D}s in {@link MetaData#getVersion()}
-     *            1.0.0.
-     * @return the point list POJO
+     * @param doc the {@code Document} containing the {@code Point3D} in {@link MetaData#getVersion()} 1.0.0.
+     * @return the point POJO
      */
-    default List<Point3DImpl> point3D(final JsonArray documents) {
-        final var point3DS = new ArrayList<Point3DImpl>();
-        for (int i = 0; i < documents.size(); i++) {
-            final var doc = documents.getJsonObject(i);
-            final var timestamp = doc.getLong("timestamp");
-            // MongoDB stores all numbers in the same data type
-            final var x = doc.getDouble("x").floatValue();
-            final var y = doc.getDouble("y").floatValue();
-            final var z = doc.getDouble("z").floatValue();
-            final var point3D = new Point3DImpl(x, y, z, timestamp);
-            point3DS.add(point3D);
-        }
-        return point3DS;
-    }
+    Point3DImpl point3D(final JsonObject doc);
 }
