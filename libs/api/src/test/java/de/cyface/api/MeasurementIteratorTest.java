@@ -175,10 +175,10 @@ public class MeasurementIteratorTest {
         });
 
         final Promise<MeasurementIterator> promise = Promise.promise();
-        new MeasurementIterator(mockedSource, strategy, promise::fail, oocut -> {
+        new MeasurementIterator(mockedSource, "location", strategy, f -> promise.fail((Throwable) f), oocut -> {
 
             // Act
-            final var measurement = oocut.measurement(locations, metaData);
+            final var measurement = ((MeasurementIterator) oocut).measurement(locations, metaData);
 
             // Assert
             assertThat(measurement, is(equalTo(expectedMeasurement)));

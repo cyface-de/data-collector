@@ -22,7 +22,6 @@ import java.time.ZonedDateTime;
 import java.util.List;
 
 import io.vertx.core.Future;
-import io.vertx.core.Handler;
 import io.vertx.core.Promise;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
@@ -63,8 +62,8 @@ public class MeasurementRetriever {
      * @return a {@code Future} containing the users' {@code Measurement}s if successful
      */
     @SuppressWarnings("unused") // Part of the API
-    public Future<MeasurementIterator> loadMeasurements(final List<String> userNames, final MongoClient dataClient) {
-        return loadMeasurements(userNames, dataClient, null, null);
+    public <T> Future<MeasurementIterator<T>> loadMeasurements(final List<String> userNames, final MongoClient dataClient, String sensorType) {
+        return loadMeasurements(userNames, dataClient, null, null, sensorType);
     }
 
     /**
@@ -74,14 +73,15 @@ public class MeasurementRetriever {
      * @param dataClient The client to access the data from
      * @param startTime The value is {@code null} or a point in time to only return newer results.
      * @param endTime The value is {@code null} or a point in time to only return older results.
+     * @param sensorType TODO
      * @return a {@code Future} containing the {@link MeasurementIterator} with the users' data if successful
      */
-    public Future<MeasurementIterator> loadMeasurements(final List<String> userNames, final MongoClient dataClient,
-                                                        final ZonedDateTime startTime, final ZonedDateTime endTime) {
+    public <T> Future<MeasurementIterator<T>> loadMeasurements(final List<String> userNames, final MongoClient dataClient,
+                                                        final ZonedDateTime startTime, final ZonedDateTime endTime, String sensorType) {
 
         final var query = new JsonObject();
         query.put("metaData.username", new JsonObject().put("$in", new JsonArray(userNames)));
-        query.put("metaData.sensorType", "location");
+        query.put("metaData.sensorType", sensorType);
         /*if (startTime != null || endTime != null) {
             final var timeRestriction = new JsonObject();
             if (startTime != null) {
@@ -93,17 +93,10 @@ public class MeasurementRetriever {
             query.put("track.bucket", timeRestriction);
         }*/
 
-        final Promise<MeasurementIterator> promise = Promise.promise();
-        final var initializedHandler = new Handler<MeasurementIterator>() {
-            @Override
-            public void handle(final MeasurementIterator output) {
-                promise.complete(output);
-            }
-        };
+        final Promise<MeasurementIterator<T>> promise = Promise.promise();
         final var geolocationStream = dataClient.findBatchWithOptions(DESERIALIZED_COLLECTION_NAME, query,
                 strategy.findOptions());
-        // FIXME: add sensor data streams if `strategy` is `MeasurementRetrievalWithSensorData`
-        new MeasurementIterator(geolocationStream, strategy, promise::fail, initializedHandler);
+        new MeasurementIterator<T>(geolocationStream, sensorType, strategy, promise::fail, promise::complete);
         return promise.future();
     }
 }

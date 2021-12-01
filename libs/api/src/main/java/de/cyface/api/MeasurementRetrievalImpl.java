@@ -80,7 +80,8 @@ public abstract class MeasurementRetrievalImpl implements MeasurementRetrievalSt
     }
 
     public Point3DImpl point3D(final JsonObject doc) {
-        final var timestamp = doc.getLong("timestamp");
+        final var instant = doc.getJsonObject("timestamp").getInstant("$date");
+        final long timestamp = instant.toEpochMilli();
         // MongoDB stores all numbers in the same data type
         final var value = doc.getJsonObject("value");
         final var x = value.getDouble("x").floatValue();

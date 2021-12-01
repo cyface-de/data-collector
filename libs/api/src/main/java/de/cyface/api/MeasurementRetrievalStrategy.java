@@ -18,11 +18,8 @@
  */
 package de.cyface.api;
 
-import org.apache.commons.lang3.Validate;
-
 import de.cyface.model.MeasurementIdentifier;
 import de.cyface.model.MetaData;
-import de.cyface.model.Modality;
 import de.cyface.model.Point3DImpl;
 import de.cyface.model.RawRecord;
 import io.vertx.core.json.JsonObject;

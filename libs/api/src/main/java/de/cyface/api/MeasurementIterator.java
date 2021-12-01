@@ -18,20 +18,14 @@
  */
 package de.cyface.api;
 
-import static java.util.stream.Collectors.groupingBy;
-import static java.util.stream.Collectors.toList;
-
-import java.text.ParseException;
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Iterator;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Semaphore;
-import java.util.stream.Collectors;
 
+import de.cyface.model.Point3DImpl;
 import org.apache.commons.lang3.Validate;
 
 import de.cyface.api.model.TrackBucket;
@@ -53,16 +47,12 @@ import io.vertx.core.streams.ReadStream;
  * @author Armin Schnabel
  * @since 6.0.0
  */
-final public class MeasurementIterator implements Iterator<Future<Measurement>>, Handler<JsonObject> {
+final public class MeasurementIterator<T> implements Iterator<Future<Measurement>>, Handler<JsonObject> {
 
     /**
-     * The source where the geolocation data is loaded from, usually a database.
+     * The source where the data is loaded from, usually a database.
      */
-    private final ReadStream<JsonObject> geolocationStream;
-    /**
-     * The {@code Handler} called upon errors.
-     */
-    private final Handler<Throwable> failureHandler;
+    private final ReadStream<JsonObject> inputStream;
     /**
      * The strategy to be used when loading measurement data.
      */
@@ -70,7 +60,7 @@ final public class MeasurementIterator implements Iterator<Future<Measurement>>,
     /**
      * A {@code Handler} called when the instance of this class is fully initialized.
      */
-    private final Handler<MeasurementIterator> initializedHandler;
+    private final Handler<MeasurementIterator<T>> initializedHandler;
     /**
      * Indicates weather this {@link MeasurementIterator} is initialized and returns meaningful responses.
      * <p>
@@ -83,7 +73,7 @@ final public class MeasurementIterator implements Iterator<Future<Measurement>>,
      * The cached {@code RawRecord}s which are already loaded but not yet returned, usually, because not all buckets of
      * the current measurement are loaded.
      */
-    private final Map<Integer, List<RawRecord>> cachedLocations;
+    private final Map<Integer, List<T>> cache;
     /**
      * The {@link MetaData} of the measurement which is currently loaded from database.
      */
@@ -99,44 +89,43 @@ final public class MeasurementIterator implements Iterator<Future<Measurement>>,
      */
     private final Semaphore pendingNextCall;
     /**
-     * The handler to be called after the last bucket was loaded from the {@link #geolocationStream} to construct and
+     * The handler to be called after the last bucket was loaded from the {@link #inputStream} to construct and
      * return
      * the last measurement to the caller.
      */
-    private final LastMeasurementHandler lastMeasurementHandler;
+    private final LastMeasurementHandler<T> lastMeasurementHandler;
+    private final String sensorType;
 
     /**
      * Constructs an instance of this class.
      * <p>
      * This instance is initialized when {@code #initializedHandler} is called.
      *
-     * @param geolocationStream the stream to read geolocations from
+     * @param inputStream the stream to read geolocations from
      * @param strategy the strategy to be used when loading measurement data
      * @param failureHandler the {@code Handler} called upon errors
      * @param initializedHandler a {@code Handler} called when the instance of this class is fully initialized
      */
-    public MeasurementIterator(final ReadStream<JsonObject> geolocationStream,
-            final MeasurementRetrievalStrategy strategy,
-            final Handler<Throwable> failureHandler, final Handler<MeasurementIterator> initializedHandler) {
+    public MeasurementIterator(final ReadStream<JsonObject> inputStream, String sensorType,
+                               final MeasurementRetrievalStrategy strategy,
+                               final Handler<Throwable> failureHandler, final Handler<MeasurementIterator<T>> initializedHandler) {
 
-        this.lastMeasurementHandler = new LastMeasurementHandler(this);
-        geolocationStream
+        this.sensorType = sensorType;
+        this.lastMeasurementHandler = new LastMeasurementHandler<>(this);
+        inputStream
                 .pause() // only load data when requested via `next()`
                 .handler(this)
                 .exceptionHandler(failureHandler)
                 .endHandler(lastMeasurementHandler);
-        // FIXME: init sensor data streams if requested
 
-        this.geolocationStream = geolocationStream;
+        this.inputStream = inputStream;
         this.strategy = strategy;
-        this.failureHandler = failureHandler;
-        this.cachedLocations = new HashMap<>();
+        this.cache = new HashMap<>();
         this.initializedHandler = initializedHandler;
         this.pendingNextCall = new Semaphore(1);
 
         // Load the first bucket to be able to answer to `hasNext()` calls
-        geolocationStream.fetch(1);
-        // FIXME: init sensor data streams if requested
+        inputStream.fetch(1);
     }
 
     @Override
@@ -144,15 +133,26 @@ final public class MeasurementIterator implements Iterator<Future<Measurement>>,
         final var metaData = strategy.metaData(document);
         final var trackId = strategy.trackId(document);
         final var measurementId = metaData.getIdentifier();
-        final var location = strategy.geoLocation(document, measurementId);
-        // FIXME: sensor data streams if requested
+        final T location;
+        switch (sensorType) {
+            case "location":
+                location = (T) strategy.geoLocation(document, measurementId);
+                break;
+            case "acceleration":
+            case "rotation":
+            case "direction":
+                location = (T) strategy.point3D(document);
+                break;
+            default:
+                throw new IllegalArgumentException(String.format("Unknown sensorType: %s", sensorType));
+        }
 
         // Handle first bucket
         if (cachedMeasurement == null) {
             cachedMeasurement = metaData;
-            final var locations = new ArrayList<RawRecord>();
+            final var locations = new ArrayList<T>();
             locations.add(location);
-            cachedLocations.put(trackId, locations);
+            cache.put(trackId, locations);
             initialized = true;
             initializedHandler.handle(this);
             return;
@@ -160,17 +160,16 @@ final public class MeasurementIterator implements Iterator<Future<Measurement>>,
 
         // Handle subsequent buckets
         if (measurementId.equals(cachedMeasurement.getIdentifier())) {
-            if (!cachedLocations.containsKey(trackId)) {
-                cachedLocations.put(trackId, new ArrayList<>());
+            if (!cache.containsKey(trackId)) {
+                cache.put(trackId, new ArrayList<>());
             }
-            cachedLocations.get(trackId).add(location);
-            geolocationStream.fetch(1);
-            // FIXME: sensor data streams if requested
+            cache.get(trackId).add(location);
+            inputStream.fetch(1);
             return;
         }
 
         // Handle bucket of next measurement (i.e. all buckets of previous measurement loaded)
-        resolveNext(cachedLocations, cachedMeasurement, metaData, location, trackId);
+        resolveNext(cache, cachedMeasurement, metaData, location, trackId);
     }
 
     /**
@@ -218,8 +217,7 @@ final public class MeasurementIterator implements Iterator<Future<Measurement>>,
             nextMeasurement = Promise.promise();
 
             // Resume bucket loading. The promise is resolved when all measurement buckets have been loaded.
-            geolocationStream.fetch(1);
-            // FIXME: sensor data streams if requested
+            inputStream.fetch(1);
             return nextMeasurement.future();
         } catch (InterruptedException e) {
             throw new IllegalStateException(e);
@@ -235,22 +233,21 @@ final public class MeasurementIterator implements Iterator<Future<Measurement>>,
      * @param nextLocation the {@code TrackBucket} of the next measurement, to be cached.
      * @param trackId the {@code trackId} of the next measurement.
      */
-    private void resolveNext(final Map<Integer, List<RawRecord>> locations, final MetaData metaData,
-                             final MetaData nextMeasurement, final RawRecord nextLocation, final Integer trackId) {
+    private void resolveNext(final Map<Integer, List<T>> locations, final MetaData metaData,
+                             final MetaData nextMeasurement, final T nextLocation, final Integer trackId) {
         final var measurement = measurement(locations, metaData);
 
         // Prepare cache for the next measurement
-        cachedLocations.clear();
+        cache.clear();
         this.cachedMeasurement = nextMeasurement;
         if (nextLocation != null) {
-            final var list = new ArrayList<RawRecord>();
+            final var list = new ArrayList<T>();
             list.add(nextLocation);
-            cachedLocations.put(Validate.notNull(trackId), list);
+            cache.put(Validate.notNull(trackId), list);
         }
 
         // Prepare for next `next()` call
-        geolocationStream.pause();
-        // FIXME: sensor data streams if requested
+        inputStream.pause();
         final var promise = this.nextMeasurement;
         this.nextMeasurement = null;
         pendingNextCall.release();
@@ -262,77 +259,74 @@ final public class MeasurementIterator implements Iterator<Future<Measurement>>,
     /**
      * Constructs a new measurement from a document loaded from the database.
      *
-     * @param locations The location data to load the measurement from
+     * @param data The data to load the measurement from
      * @param metaData The {@link MetaData} of the measurement to be created.
      * @return The newly created {@link Measurement}
      */
-    Measurement measurement(final Map<Integer, List<RawRecord>> locations, final MetaData metaData) {
-        if (locations.isEmpty()) {
+    Measurement measurement(final Map<Integer, List<T>> data, final MetaData metaData) {
+        if (data.isEmpty()) {
             throw new IllegalArgumentException("Cannot create a measurement from 0 locations!");
         }
 
-        final var tracks = tracks(locations);
+        final var tracks = tracks(data);
         return new Measurement(metaData, tracks);
     }
 
     /**
      * Merges {@link RawRecord}s into {@link Track}s.
      *
-     * @param geolocations the location data to merge
+     * @param data the data to merge
      * @return the tracks
      */
-    List<Track> tracks(final Map<Integer, List<RawRecord>> geolocations) {
+    List<Track> tracks(final Map<Integer, List<T>> data) {
 
         // Convert buckets to Track
         final var tracks = new ArrayList<Track>();
-        geolocations.forEach((trackId, locations) -> {
-            // Sort buckets
-            // SHOULD ALREADY BE SORTED
-            /*final var sortedBuckets = rawRecords.stream()
-                    .sorted(Comparator.comparing(TrackBucket::getBucket))
-                    .collect(toList());*/
+        data.forEach((trackId, locations) -> {
 
-            // Merge buckets
-            /*final var locations = sortedBuckets.stream()
-                    .flatMap(bucket -> bucket.getTrack().getLocationRecords().stream())
-                    .collect(Collectors.toList());
-            final var accelerations = sortedBuckets.stream()
-                    .flatMap(bucket -> bucket.getTrack().getAccelerations().stream())
-                    .collect(Collectors.toList());
-            final var rotations = sortedBuckets.stream()
-                    .flatMap(bucket -> bucket.getTrack().getRotations().stream())
-                    .collect(Collectors.toList());
-            final var directions = sortedBuckets.stream()
-                    .flatMap(bucket -> bucket.getTrack().getDirections().stream())
-                    .collect(Collectors.toList());*/
-
-            final var track = new Track(locations, new ArrayList<>(), new ArrayList<>(), new ArrayList<>());
+            final Track track;
+            switch (sensorType) {
+                case "location":
+                    track = new Track((List<RawRecord>) locations, new ArrayList<>(), new ArrayList<>(), new ArrayList<>());
+                    break;
+                case "acceleration":
+                    track = new Track(new ArrayList<>(), (List<Point3DImpl>) locations, new ArrayList<>(), new ArrayList<>());
+                    break;
+                case "rotation":
+                    track = new Track(new ArrayList<>(), new ArrayList<>(), (List<Point3DImpl>) locations, new ArrayList<>());
+                    break;
+                case "direction":
+                    track = new Track(new ArrayList<>(), new ArrayList<>(), new ArrayList<>(), (List<Point3DImpl>) locations);
+                    break;
+                default:
+                    throw new IllegalArgumentException(String.format("Unknown sensorType: %s", sensorType));
+            }
             tracks.add(track);
         });
         return tracks;
     }
 
     /**
-     * A handler to be called after the last bucket was loaded from the {@link #geolocationStream} to construct and
+     * A handler to be called after the last bucket was loaded from the {@link #inputStream} to construct and
      * return
      * the last measurement to the caller.
      *
      * @author Armin Schnabel
      * @since 6.0.0
      */
-    private static class LastMeasurementHandler implements Handler<Void> {
+    private static class LastMeasurementHandler<T> implements Handler<Void> {
 
         /**
          * The {@link MeasurementIterator} which is bound to this {@code Handler}.
          */
-        private final MeasurementIterator caller;
+        private final MeasurementIterator<T> caller;
 
         /**
          * Constructs a fully initialized instance of this class
          *
          * @param caller The {@link MeasurementIterator} which is bound to this {@code Handler}.
          */
-        private LastMeasurementHandler(final MeasurementIterator caller) {
+        private LastMeasurementHandler(final MeasurementIterator<T> caller) {
             this.caller = caller;
         }
 
@@ -340,15 +334,15 @@ final public class MeasurementIterator implements Iterator<Future<Measurement>>,
         public void handle(Void ended) {
             final var isNextPromisePending = caller.nextMeasurement != null;
             if (isNextPromisePending) {
-                Validate.notEmpty(caller.cachedLocations,
+                Validate.notEmpty(caller.cache,
                         "Stream ended with a pending nextMeasurement promise and an empty cache");
                 // The stream ended, i.e. the remaining cached buckets are the last measurement
-                caller.resolveNext(caller.cachedLocations, caller.cachedMeasurement, null, null, null);
+                caller.resolveNext(caller.cache, caller.cachedMeasurement, null, null, null);
             }
 
             // Clear cache, which also ensures that `hasNext()` returns `false
             caller.cachedMeasurement = null;
-            caller.cachedLocations.clear();
+            caller.cache.clear();
         }
     }
 }
