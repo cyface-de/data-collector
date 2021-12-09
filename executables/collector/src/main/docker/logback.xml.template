@@ -9,6 +9,9 @@ Proprietary and confidential
 Version 1.0.0 -->
 
 <configuration>
+  <!-- Reduce mongo logging to INFO or else the console is spammed with repeating lines -->
+  <logger name="org.mongodb.driver" level="INFO" />
+
   <appender name="FILE" class="ch.qos.logback.core.FileAppender">
     <!-- deny all events with a level below INFO, that is DEBUG, TRACE -->
     <filter class="ch.qos.logback.classic.filter.ThresholdFilter">

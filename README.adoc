@@ -1,7 +1,7 @@
 = Collector
 
-image:https://img.shields.io/badge/vert.x-4.0.3-purple.svg[link="https://vertx.io"]
-image:https://img.shields.io/badge/mongo-4.0.11-purple.svg[link="https://mongodb.com/"]
+image:https://img.shields.io/badge/vert.x-4.1.2-purple.svg[link="https://vertx.io"]
+image:https://img.shields.io/badge/mongo-4.4.4-purple.svg[link="https://mongodb.com/"]
 image:https://github.com/cyface-de/data-collector/workflows/Cyface%20Data%20Collector/badge.svg[link="https://github.com/cyface-de/data-collector/actions"]
 
 This application represents the https://cyface.de[Cyface] data collector software.
@@ -16,7 +16,7 @@ Changes between versions are found in the link:https://github.com/cyface-de/data
 
 The project uses link:https://gradle.org/[Gradle] as the build system.
 It is set up as a Gradle multi project build.
-There are two general categories of sub projects.
+There are two general categories of sub-projects.
 One are executable programs fulfilling a certain task of the Cyface backend.
 Others are libraries shared by several Cyface executables.
 The executables are grouped in the sub-project `executables` while the libraries are grouped in `libs`.
@@ -29,7 +29,6 @@ The following sections provide an overview about those projects.
 
 .link:#_libraries[Libraries]
 * link:#_api[API]
-* link:#_model[Model]
 
 .General information
 * link:#_release_a_new_version[Release a new Version]
@@ -179,11 +178,6 @@ To load files from the Mongo GridFS file storage use the https://docs.mongodb.co
 
 == Libraries
 
-[#_model]
-=== Model
-
-Model classes shared between multiple projects.
-
 [#_api]
 === API
 
@@ -235,16 +229,16 @@ To publish a new version of an artifact you need to:
 2. Call `./gradlew publish`
 
 This will upload a new artifact to GitHub packages with the new version.
-The artifact will be minified, optimized and obfuscated using link:https://www.guardsquare.com/en/products/proguard[Proguard].
-You need to always increase the version of the new artifact.
 GitHub Packages will not accept to overwrite an existing version or to upload a lower version.
 This project uses link:https://semver.org/[semantic versioning].
+
 
 [#_to-do]
 == To Do
 * Setup Cluster
 	* Vertx
 	* MongoDb
+
 
 [#_licensing]
 == Licensing

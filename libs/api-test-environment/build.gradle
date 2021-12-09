@@ -10,7 +10,7 @@
  */
 
 dependencies {
-  implementation project(':libs:model')
+  implementation "de.cyface:model:$cyfaceSerializationVersion"
   implementation project(':libs:api')
 
   implementation "io.vertx:vertx-mongo-client:$vertxVersion"
