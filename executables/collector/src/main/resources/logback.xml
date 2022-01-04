@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Copyright (C) 2021 Cyface GmbH - All Rights Reserved -->
+<!--  -->
+<!--
+This file is part of the Cyface Server Backend.
+Unauthorized copying of this file, via any medium is strictly prohibited
+Proprietary and confidential
+
+Version 1.0.0 -->
+
+<configuration>
+  <!-- Reduce mongo logging to INFO or else the console is spammed with repeating lines -->
+  <logger name="org.mongodb.driver" level="INFO" />
+
+  <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+    <filter class="ch.qos.logback.classic.filter.ThresholdFilter">
+      <level>DEBUG</level>
+    </filter>
+    <encoder>
+      <pattern>[%thread]  %date %level [%logger{10}:%line]  %msg%n</pattern>
+    </encoder>
+  </appender>
+
+  <root level="DEBUG">
+    <appender-ref ref="CONSOLE" />
+  </root>
+</configuration>

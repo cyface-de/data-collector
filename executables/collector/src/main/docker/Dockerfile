@@ -1,4 +1,4 @@
-# Copyright 2018 Cyface GmbH
+# Copyright 2018-2021 Cyface GmbH
 # 
 # This file is part of the Cyface Data Collector.
 # 
@@ -15,18 +15,28 @@
 # You should have received a copy of the GNU General Public License
 # along with the Cyface Data Collector. If not, see <http://www.gnu.org/licenses/>.
 
-# Use the official JDK Repo for version 8 as target (use slim version to remove all UI stuff, and since we do only need to run software, we just use the JRE).
+# Use the official JDK Repo for version 11 as target (use slim version to remove all UI stuff, and since we do only need to run software, we just use the JRE).
 FROM openjdk:11-jre-slim
 MAINTAINER Cyface GmbH <mail@cyface.de>
+
+# Create user. Unproblematic default id (wikipedia.org/wiki/User_identifier)
+ARG USER_ID=9999
+ARG GROUP_ID=9999
+RUN addgroup --gid $GROUP_ID user
+RUN adduser --disabled-password --gecos '' --uid $USER_ID --gid $GROUP_ID user
 
 # Set the working directory to /app
 WORKDIR /app
 
-# Dev environment: version is always `0.0.0` (see root/README.adoc section `Build and release workflows`)
-COPY build/libs/collector-0.0.0-all.jar /app
+# Used in dev environment, version-less
+COPY collector-all.jar /app
 COPY entrypoint.sh /app
 COPY logback.xml /app
 RUN chmod +x /app/entrypoint.sh
+
+# Adjust permissions
+# Cannot create logs folder with the correct permissions here as the permissions will be overwritten [DAT-797]
+RUN chown user:user entrypoint.sh collector-all.jar logback.xml
 
 # Make port 8080 available to the world outside the container
 EXPOSE 8080
@@ -34,6 +44,9 @@ EXPOSE 8080
 # Install tooling required to check for running Mongo Database in entrypoint.sh
 RUN apt-get update && apt-get install -y \
         netcat-openbsd
+
+# Run app by non-privileged user.
+USER user
 
 # Run the collector when the container launches
 CMD ["./entrypoint.sh"]

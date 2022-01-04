@@ -18,8 +18,14 @@
  */
 package de.cyface.collector.verticle;
 
-import java.io.IOException;
+import static org.hamcrest.CoreMatchers.equalTo;
+import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.MatcherAssert.assertThat;
 
+import java.io.IOException;
+import java.util.concurrent.TimeUnit;
+
+import org.apache.commons.lang3.Validate;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -38,7 +44,7 @@ import io.vertx.junit5.VertxTestContext;
  * Tests that starting the {@link MainVerticle} works as expected.
  *
  * @author Klemens Muthmann
- * @version 1.0.0
+ * @version 1.0.1
  * @since 5.2.1
  */
 @ExtendWith(VertxExtension.class)
@@ -82,13 +88,18 @@ public class MainVerticleTest {
      */
     private JsonObject config() throws IOException {
 
-        //noinspection SpellCheckingInspection
+        final var publicKey = this.getClass().getResource("/public.pem");
+        final var privateKey = this.getClass().getResource("/private_key.pem");
+        Validate.notNull(publicKey);
+        Validate.notNull(privateKey);
+        // noinspection SpellCheckingInspection
         return new JsonObject()
                 .put("mongo.userdb", mongoTest.clientConfiguration())
-                .put("jwt.public", this.getClass().getResource("/public.pem").getFile())
-                .put("jwt.private", this.getClass().getResource("/private_key.pem").getFile())
+                .put("jwt.public", publicKey.getFile())
+                .put("jwt.private", privateKey.getFile())
                 .put("http.host", "localhost")
-                .put("http.endpoint", "/api/v2/")
+                .put("http.endpoint.v3", "/api/v3/")
+                .put("http.endpoint.v2", "/api/v2/")
                 .put("http.port", Network.getFreeServerPort())
                 .put("salt", "abcdefg")
                 .put("mongo.datadb", mongoTest.clientConfiguration());
@@ -103,17 +114,14 @@ public class MainVerticleTest {
      */
     @Test
     @DisplayName("Fail startup if salt and salt.path are present!")
-    void test(final Vertx vertx, final VertxTestContext testContext) throws IOException {
+    void test(final Vertx vertx, final VertxTestContext testContext) throws Throwable {
         final var config = config();
-        config.put("salt.path", this.getClass().getResource("/salt.file").getFile());
+        final var saltResource = this.getClass().getResource("/salt.file");
+        Validate.notNull(saltResource);
+        config.put("salt", "cyface-salt");
+        config.put("salt.path", saltResource.getFile());
         final var deploymentOptions = new DeploymentOptions().setConfig(config);
-        vertx.deployVerticle(oocut, deploymentOptions, result -> {
-            if (result.succeeded()) {
-                testContext.failNow(result.cause());
-            } else {
-                testContext.completeNow();
-            }
-        });
+        vertx.deployVerticle(oocut, deploymentOptions, testContext.failingThenComplete());
     }
 
     /**
@@ -125,14 +133,14 @@ public class MainVerticleTest {
      */
     @Test
     @DisplayName("Successful startup happy path!")
-    void testHappyPath(final Vertx vertx, final VertxTestContext testContext) throws IOException {
+    void testHappyPath(final Vertx vertx, final VertxTestContext testContext) throws Throwable {
         final var deploymentOptions = new DeploymentOptions().setConfig(config());
-        vertx.deployVerticle(oocut, deploymentOptions, result -> {
-            if (result.succeeded()) {
-                testContext.completeNow();
-            } else {
-                testContext.failNow(result.cause());
-            }
-        });
+        vertx.deployVerticle(oocut, deploymentOptions, testContext.succeedingThenComplete());
+
+        // Throw cause (https://vertx.io/docs/vertx-junit5/java/#_a_test_context_for_asynchronous_executions)
+        assertThat(testContext.awaitCompletion(5, TimeUnit.SECONDS), is(equalTo(true)));
+        if (testContext.failed()) {
+            throw testContext.causeOfFailure();
+        }
     }
 }

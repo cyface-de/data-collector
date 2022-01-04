@@ -1,5 +1,5 @@
 /*
- * Copyright 2018-2019 Cyface GmbH
+ * Copyright 2018-2021 Cyface GmbH
  *
  * This file is part of the Cyface Data Collector.
  *
@@ -19,10 +19,12 @@
 package de.cyface.collector.commons;
 
 import java.io.IOException;
-import java.net.ServerSocket;
+
+import org.apache.commons.lang3.Validate;
 
 import de.cyface.api.Parameter;
 import de.cyface.collector.verticle.CollectorApiVerticle;
+import de.flapdoodle.embed.process.runtime.Network;
 import io.vertx.core.DeploymentOptions;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
@@ -34,7 +36,7 @@ import io.vertx.junit5.VertxTestContext;
  *
  * @author Klemens Muthmann
  * @author Armin Schnabel
- * @version 1.2.0
+ * @version 1.3.0
  * @since 2.0.0
  */
 public final class DataCollectorClient {
@@ -43,6 +45,25 @@ public final class DataCollectorClient {
      * The port the server is reachable at.
      */
     private transient int port;
+    /**
+     * The maximal number of {@code Byte}s which may be uploaded.
+     */
+    private Long measurementLimit;
+
+    /**
+     * Creates a fully initialized instance of this class.
+     *
+     * @param measurementLimit The maximal number of {@code Byte}s which may be uploaded.
+     */
+    public DataCollectorClient(long measurementLimit) {
+        this.measurementLimit = measurementLimit;
+    }
+
+    /**
+     * Creates a fully initialized instance of this class.
+     */
+    public DataCollectorClient() {
+    }
 
     /**
      * @return The port the server is reachable at.
@@ -63,26 +84,31 @@ public final class DataCollectorClient {
      */
     public WebClient createWebClient(final Vertx vertx, final VertxTestContext ctx, final int mongoPort)
             throws IOException {
-        try (var socket = new ServerSocket(0)) {
-            port = socket.getLocalPort();
+        port = Network.getFreeServerPort();
 
-            final var mongoDbConfig = new JsonObject()
-                    .put("connection_string", "mongodb://localhost:" + mongoPort)
-                    .put("db_name", "cyface");
+        final var mongoDbConfig = new JsonObject()
+                .put("connection_string", "mongodb://localhost:" + mongoPort)
+                .put("db_name", "cyface");
 
-            final var config = new JsonObject().put(Parameter.MONGO_DATA_DB.key(), mongoDbConfig)
-                    .put(Parameter.MONGO_USER_DB.key(), mongoDbConfig).put(Parameter.HTTP_PORT.key(), port)
-                    .put(Parameter.JWT_PRIVATE_KEY_FILE_PATH.key(),
-                            this.getClass().getResource("/private_key.pem").getFile())
-                    .put(Parameter.JWT_PUBLIC_KEY_FILE_PATH.key(), this.getClass().getResource("/public.pem").getFile())
-                    .put(Parameter.HTTP_HOST.key(), "localhost")
-                    .put(Parameter.HTTP_ENDPOINT.key(), "/api/v2/");
-            final var options = new DeploymentOptions().setConfig(config);
-
-            final var collectorVerticle = new CollectorApiVerticle("test-salt");
-            vertx.deployVerticle(collectorVerticle, options, ctx.succeedingThenComplete());
-
-            return WebClient.create(vertx);
+        final var privateKey = this.getClass().getResource("/private_key.pem");
+        final var publicKey = this.getClass().getResource("/public.pem");
+        Validate.notNull(privateKey);
+        Validate.notNull(publicKey);
+        final var config = new JsonObject().put(Parameter.MONGO_DATA_DB.key(), mongoDbConfig)
+                .put(Parameter.MONGO_USER_DB.key(), mongoDbConfig).put(Parameter.HTTP_PORT.key(), port)
+                .put(Parameter.JWT_PRIVATE_KEY_FILE_PATH.key(), privateKey.getFile())
+                .put(Parameter.JWT_PUBLIC_KEY_FILE_PATH.key(), publicKey.getFile())
+                .put(Parameter.HTTP_HOST.key(), "localhost")
+                .put(Parameter.HTTP_ENDPOINT_V3.key(), "/api/v3/")
+                .put(Parameter.HTTP_ENDPOINT_V2.key(), "/api/v2/");
+        if (measurementLimit != null) {
+            config.put(Parameter.MEASUREMENT_PAYLOAD_LIMIT.key(), measurementLimit);
         }
+        final var options = new DeploymentOptions().setConfig(config);
+
+        final var collectorVerticle = new CollectorApiVerticle("test-salt");
+        vertx.deployVerticle(collectorVerticle, options, ctx.succeedingThenComplete());
+
+        return WebClient.create(vertx);
     }
 }

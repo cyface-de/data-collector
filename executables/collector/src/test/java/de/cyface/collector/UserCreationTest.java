@@ -1,5 +1,5 @@
 /*
- * Copyright 2018 Cyface GmbH
+ * Copyright 2018-2021 Cyface GmbH
  *
  * This file is part of the Cyface Data Collector.
  *
@@ -22,7 +22,6 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 
 import java.io.IOException;
-import java.net.ServerSocket;
 
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
@@ -31,10 +30,11 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
+import de.cyface.api.EndpointConfig;
 import de.cyface.api.Parameter;
-import de.cyface.api.ServerConfig;
 import de.cyface.collector.commons.MongoTest;
 import de.cyface.collector.verticle.ManagementApiVerticle;
+import de.flapdoodle.embed.process.runtime.Network;
 import io.vertx.core.DeploymentOptions;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
@@ -48,7 +48,7 @@ import io.vertx.junit5.VertxTestContext;
  *
  * @author Klemens Muthmann
  * @author Armin Schnabel
- * @version 1.0.5
+ * @version 1.0.6
  * @since 2.0.0
  */
 @ExtendWith(VertxExtension.class)
@@ -80,11 +80,7 @@ public final class UserCreationTest {
     @BeforeAll
     public static void setUpMongoDatabase() throws IOException {
         mongoTest = new MongoTest();
-        try (ServerSocket socket = new ServerSocket(0)) {
-            final int mongoPort = socket.getLocalPort();
-            socket.close();
-            mongoTest.setUpMongoDatabase(mongoPort);
-        }
+        mongoTest.setUpMongoDatabase(Network.getFreeServerPort());
     }
 
     /**
@@ -106,22 +102,20 @@ public final class UserCreationTest {
     @BeforeEach
     public void setUp(final Vertx vertx, final VertxTestContext context) throws IOException {
 
-        try (var socket = new ServerSocket(0)) {
-            port = socket.getLocalPort();
+        port = Network.getFreeServerPort();
 
-            mongoDbConfiguration = new JsonObject()
-                    .put("connection_string", "mongodb://localhost:" + mongoTest.getMongoPort())
-                    .put("db_name", "cyface");
+        mongoDbConfiguration = new JsonObject()
+                .put("connection_string", "mongodb://localhost:" + mongoTest.getMongoPort())
+                .put("db_name", "cyface");
 
-            final var config = new JsonObject().put(Parameter.MANAGEMENT_HTTP_PORT.key(), port)
-                    .put(Parameter.MONGO_USER_DB.key(), mongoDbConfiguration);
-            final var options = new DeploymentOptions().setConfig(config);
+        final var config = new JsonObject().put(Parameter.MANAGEMENT_HTTP_PORT.key(), port)
+                .put(Parameter.MONGO_USER_DB.key(), mongoDbConfiguration);
+        final var options = new DeploymentOptions().setConfig(config);
 
-            final var managementApiVerticle = new ManagementApiVerticle("test-salt");
-            vertx.deployVerticle(managementApiVerticle, options, context.succeedingThenComplete());
+        final var managementApiVerticle = new ManagementApiVerticle("test-salt");
+        vertx.deployVerticle(managementApiVerticle, options, context.succeedingThenComplete());
 
-            client = WebClient.create(vertx);
-        }
+        client = WebClient.create(vertx);
     }
 
     /**
@@ -134,7 +128,7 @@ public final class UserCreationTest {
     public void tearDown(final Vertx vertx, final VertxTestContext context) {
 
         // Delete entries so that the next tests are independent
-        final MongoClient mongoClient = ServerConfig.createSharedMongoClient(vertx, mongoDbConfiguration);
+        final MongoClient mongoClient = EndpointConfig.createSharedMongoClient(vertx, mongoDbConfiguration);
         mongoClient.removeDocuments("user", new JsonObject(), context.succeedingThenComplete());
     }
 
@@ -150,7 +144,7 @@ public final class UserCreationTest {
         final var postUserCompleteCheckpoint = context.checkpoint();
         final var checkedIfUserIsInDataBase = context.checkpoint();
         final var checkedThatCorrectUserIsInDatabase = context.checkpoint();
-        final var mongoClient = ServerConfig.createSharedMongoClient(vertx, mongoDbConfiguration);
+        final var mongoClient = EndpointConfig.createSharedMongoClient(vertx, mongoDbConfiguration);
 
         // Act
         final var requestPostedFuture = client.post(port, "localhost", "/user").sendJsonObject(
@@ -159,9 +153,8 @@ public final class UserCreationTest {
         requestPostedFuture.onComplete(context.succeeding(result -> postUserCompleteCheckpoint.flag()));
 
         final var countResultsFuture = requestPostedFuture.compose(response -> {
-            context.verify(() -> {
-                assertThat("Invalid HTTP status code on user insertion request!", response.statusCode(), is(201));
-            });
+            context.verify(() -> assertThat("Invalid HTTP status code on user insertion request!",
+                    response.statusCode(), is(201)));
             return mongoClient.count("user", new JsonObject());
         });
         countResultsFuture.onComplete(context.succeeding(result -> context.verify(() -> {

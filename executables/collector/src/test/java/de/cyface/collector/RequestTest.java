@@ -23,19 +23,21 @@ import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.is;
 
 import java.io.IOException;
-import java.net.ServerSocket;
+import java.util.stream.Stream;
 
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import de.cyface.collector.commons.DataCollectorClient;
 import de.cyface.collector.commons.MongoTest;
 import de.cyface.collector.verticle.CollectorApiVerticle;
+import de.flapdoodle.embed.process.runtime.Network;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.client.WebClient;
@@ -46,7 +48,8 @@ import io.vertx.junit5.VertxTestContext;
  * This tests the REST-API provided by the collector and used to upload the data to the server.
  *
  * @author Klemens Muthmann
- * @version 2.3.2
+ * @author Armin Schnabel
+ * @version 3.0.0
  * @since 1.0.0
  */
 @ExtendWith(VertxExtension.class)
@@ -85,11 +88,7 @@ public final class RequestTest {
     @BeforeAll
     public static void setupMongoDatabase() throws IOException {
         mongoTest = new MongoTest();
-        try (ServerSocket socket = new ServerSocket(0)) {
-            final int mongoPort = socket.getLocalPort();
-            socket.close();
-            mongoTest.setUpMongoDatabase(mongoPort);
-        }
+        mongoTest.setUpMongoDatabase(Network.getFreeServerPort());
     }
 
     /**
@@ -104,6 +103,7 @@ public final class RequestTest {
         collectorClient = new DataCollectorClient();
         client = collectorClient.createWebClient(vertx, ctx, mongoTest.getMongoPort());
     }
+
     /**
      * Finishes the mongo database after this test has finished.
      */
@@ -117,27 +117,30 @@ public final class RequestTest {
      *
      * @param context The test context for running <code>Vertx</code> under test
      */
-    @Test
-    public void testGetRoot_returnsApiSpecification(final VertxTestContext context) {
-        client.get(collectorClient.getPort(), TEST_HOST, "/api/v2/")
+    @MethodSource("testParameters")
+    @ParameterizedTest
+    public void testGetRoot_returnsApiSpecification(final String apiEndpoint, final VertxTestContext context) {
+        client.get(collectorClient.getPort(), TEST_HOST, apiEndpoint)
                 .send(context.succeeding(response -> context.verify(() -> {
-                    assertThat("Invalid HTTP status code on request for API specification.", response.statusCode(), is(200));
+                    assertThat("Invalid HTTP status code on request for API specification.", response.statusCode(),
+                            is(200));
                     final var body = response.bodyAsString();
-                    final var expectedcContent = "<title>Cyface Data Collector</title>";
+                    final var expectedContent = "<title>Cyface Data Collector</title>";
                     final var assertBodyReason = "Request for API specification seems to be missing a valid body.";
-                    assertThat(assertBodyReason, body, containsString(expectedcContent));
+                    assertThat(assertBodyReason, body, containsString(expectedContent));
                     context.completeNow();
                 })));
     }
 
     /**
-     * Tests that the default error handler correctly returns 404 status as response for a non valid request.
+     * Tests that the default error handler correctly returns 404 status as response for a non-valid request.
      *
      * @param ctx The test context for running <code>Vertx</code> under test
      */
-    @Test
-    public void testGetUnknownResource_Returns404(final VertxTestContext ctx) {
-        client.post(collectorClient.getPort(), TEST_HOST, "/api/v2/garbage")
+    @MethodSource("testParameters")
+    @ParameterizedTest
+    public void testGetUnknownResource_Returns404(final String apiEndpoint, final VertxTestContext ctx) {
+        client.post(collectorClient.getPort(), TEST_HOST, apiEndpoint + "garbage")
                 .send(ctx.succeeding(response -> ctx.verify(() -> {
                     assertThat("Invalid HTTP status code on requesting invalid resource!", response.statusCode(),
                             is(404));
@@ -150,9 +153,10 @@ public final class RequestTest {
      *
      * @param context The test context for running <code>Vertx</code> under test
      */
-    @Test
-    public void testLoginWithWrongCredentials_Returns401(final VertxTestContext context) {
-        client.post(collectorClient.getPort(), TEST_HOST, "/api/v2/login")
+    @MethodSource("testParameters")
+    @ParameterizedTest
+    public void testLoginWithWrongCredentials_Returns401(final String apiEndpoint, final VertxTestContext context) {
+        client.post(collectorClient.getPort(), TEST_HOST, apiEndpoint + "login")
                 .sendJson(new JsonObject().put("username", "unknown").put("password", "unknown"),
                         context.succeeding(result -> context.verify(() -> {
                             assertThat("Invalid HTTP status code on invalid login request!", result.statusCode(),
@@ -166,9 +170,10 @@ public final class RequestTest {
      *
      * @param context The test context for running <code>Vertx</code> under test
      */
-    @Test
-    public void testLogin_HappyPath(final VertxTestContext context) {
-        client.post(collectorClient.getPort(), TEST_HOST, "/api/v2/login")
+    @MethodSource("testParameters")
+    @ParameterizedTest
+    public void testLogin_HappyPath(final String apiEndpoint, final VertxTestContext context) {
+        client.post(collectorClient.getPort(), TEST_HOST, apiEndpoint + "login")
                 .sendJson(new JsonObject().put("username", "admin").put("password", "secret"),
                         context.succeeding(result -> context.verify(() -> {
                             assertThat("Invalid HTTP status code on login request!", result.statusCode(), is(200));
@@ -176,5 +181,14 @@ public final class RequestTest {
                                     result.headers().contains("Authorization"), is(true));
                             context.completeNow();
                         })));
+    }
+
+    /**
+     * Parameters used in tests above - see @MethodSource("testParameters").
+     *
+     * @return Provide the parameters for each run of the parameterized test
+     */
+    static Stream<String> testParameters() {
+        return Stream.of("/api/v2/", "/api/v3/");
     }
 }

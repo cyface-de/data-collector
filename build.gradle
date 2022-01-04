@@ -29,9 +29,6 @@ buildscript {
   repositories {
     mavenCentral()
   }
-  dependencies {
-    classpath 'net.sf.proguard:proguard-gradle:6.2.2'
-  }
 }
 
 plugins {
@@ -60,14 +57,13 @@ subprojects {
   apply plugin: 'java'
 
   group = 'de.cyface'
-  version = '5.3.1'
+  version = '6.0.0'
 
   tasks.withType(JavaCompile) {
     options.encoding = 'UTF-8'
 
     sourceCompatibility = JavaVersion.VERSION_11
     targetCompatibility = JavaVersion.VERSION_11
-
 
     checkstyle {
       toolVersion = '8.31'
@@ -81,18 +77,17 @@ subprojects {
   }
 
   ext {
-    vertxVersion = '4.0.3'
-    micrometerVersion = '1.0.6'
+    vertxVersion = '4.1.2'
+    micrometerVersion = '1.7.2'
     slf4jVersion = '1.7.29'
-    commonsLangVersion = '3.8.1'
-    logbackVersion = '1.2.3'
-    cyfaceCollectorVersion = '5.3.0'
+    commonsLangVersion = '3.12.0'
+    logbackVersion = '1.2.5'
+    cyfaceSerializationVersion = '1.0.1'
     gradleWrapperVersion = '6.8.3'
 
     // Versions of testing dependencies
-    junitVersion = '5.7.0'
+    junitVersion = '5.7.2'
     mockitoVersion = '3.3.3'
-    //dockerJavaVersion = '3.0.14'
     hamcrestVersion = '2.2'
     flapdoodleVersion = '3.0.0'
 
@@ -104,11 +99,9 @@ subprojects {
     gradleVersion = "$gradleWrapperVersion"
   }
 
-  // Code Quality Checker
   dependencies {
     // Testing Dependencies
     testImplementation(platform("org.junit:junit-bom:$junitVersion"))
-    //testImplementation "org.junit.jupiter:junit-jupiter-api"
     testImplementation "org.junit.jupiter:junit-jupiter-params"  // Required for parameterized tests
     testImplementation "org.hamcrest:hamcrest:$hamcrestVersion"
     testImplementation "org.mockito:mockito-core:$mockitoVersion"
@@ -122,6 +115,13 @@ subprojects {
     useJUnitPlatform()
     testLogging {
       events "passed", "skipped", "failed"
+
+      // Also show assert message (e.g. on the CI) when tests fail to identify cause
+      showExceptions true
+      exceptionFormat "full"
+      showCauses false // not working with vertx fail() so we disable this
+      showStackTraces false
+      showStandardStreams = false
     }
   }
 
@@ -162,7 +162,6 @@ subprojects {
     ignoreFailures = true
   }
 
-
   // Definitions for the maven-publish Plugin
   publishing {
     // The following repositories are used to publish artifacts to.
@@ -178,6 +177,22 @@ subprojects {
       maven {
         name = 'local'
         url = "file://${rootProject.buildDir}/repo"
+      }
+    }
+  }
+
+  // The following repositories are used to load artifacts from.
+  repositories {
+    maven {
+      name = 'local'
+      url = "file://${rootProject.buildDir}/repo"
+    }
+    maven {
+      name = "github"
+      url = uri("https://maven.pkg.github.com/cyface-de/serializer")
+      credentials {
+        username = project.findProperty("gpr.user") ?: System.getenv("USERNAME")
+        password = project.findProperty("gpr.key") ?: System.getenv("PASSWORD")
       }
     }
   }

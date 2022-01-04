@@ -24,7 +24,7 @@ subprojects {
     apply plugin: 'maven-publish'
 
     /**
-     * This is only used in dev environment where the version is always 0.0.0.
+     * This is only used in dev environment.
      * <p>
      * This avoids copying a JAR into `src`.
      */
@@ -33,6 +33,7 @@ subprojects {
         into './build/docker/'
         from './src/main/docker/'
         from shadowJar.outputs
+        rename 'collector-(.*)-all.jar','collector-all.jar'
     }
 
     publishing {

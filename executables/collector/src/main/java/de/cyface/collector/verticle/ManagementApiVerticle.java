@@ -23,7 +23,7 @@ import java.nio.charset.StandardCharsets;
 import org.apache.commons.lang3.Validate;
 
 import de.cyface.api.Parameter;
-import de.cyface.api.ServerConfig;
+import de.cyface.api.EndpointConfig;
 import de.cyface.api.Hasher;
 import de.cyface.collector.handler.UserCreationHandler;
 import io.vertx.core.AbstractVerticle;
@@ -68,7 +68,7 @@ public final class ManagementApiVerticle extends AbstractVerticle {
         final var mongoUserDatabaseConfiguration = Parameter.MONGO_USER_DB.jsonValue(getVertx(),
                 new JsonObject());
 
-        final var client = ServerConfig.createSharedMongoClient(getVertx(), mongoUserDatabaseConfiguration);
+        final var client = EndpointConfig.createSharedMongoClient(getVertx(), mongoUserDatabaseConfiguration);
         final var hasher = new Hasher(HashingStrategy.load(), salt.getBytes(StandardCharsets.UTF_8));
         final var router = setupRouter(client, hasher);
 

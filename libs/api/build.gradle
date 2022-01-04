@@ -1,5 +1,5 @@
 dependencies {
-  implementation project(':libs:model')
+  implementation "de.cyface:model:$cyfaceSerializationVersion"
 
   implementation "io.vertx:vertx-web:$vertxVersion" // Api
   implementation "io.vertx:vertx-mongo-client:$vertxVersion" // DatabaseUtils

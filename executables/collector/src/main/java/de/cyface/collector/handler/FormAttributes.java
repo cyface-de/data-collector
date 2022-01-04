@@ -1,5 +1,5 @@
 /*
- * Copyright 2018, 2019 Cyface GmbH
+ * Copyright 2018-2021 Cyface GmbH
  *
  * This file is part of the Cyface Data Collector.
  *
@@ -19,16 +19,16 @@
 package de.cyface.collector.handler;
 
 /**
- * Attributes supported by the APIs multipart form upload POST endpoint.
+ * Attributes supported by the APIs upload endpoint.
  * 
  * @author Klemens Muthmann
  * @author Armin Schnabel
- * @version 3.1.1
+ * @version 3.2.0
  * @since 2.0.0
  */
 public enum FormAttributes {
     /**
-     * The world wide unique identifier of the device uploading the data.
+     * The worldwide unique identifier of the device uploading the data.
      */
     DEVICE_ID("deviceId"),
     /**
@@ -56,49 +56,53 @@ public enum FormAttributes {
      */
     LOCATION_COUNT("locationCount"),
     /**
-     * The latitude of the geo location at the beginning of the track represented by the transmitted measurement. This
+     * The latitude of the geolocation at the beginning of the track represented by the transmitted measurement. This
      * value is optional and may not be available for measurements without locations. For measurements with one location
      * this equals the {@link #END_LOCATION_LAT}.
      */
     START_LOCATION_LAT("startLocLat"),
     /**
-     * The longitude of the geo location at the beginning of the track represented by the transmitted measurement. This
+     * The longitude of the geolocation at the beginning of the track represented by the transmitted measurement. This
      * value is optional and may not be available for measurements without locations. For measurements with one location
      * this equals the {@link #END_LOCATION_LON}.
      */
     START_LOCATION_LON("startLocLon"),
     /**
-     * The timestamp in milliseconds of the geo location at the beginning of the track represented by the transmitted
+     * The timestamp in milliseconds of the geolocation at the beginning of the track represented by the transmitted
      * measurement. This value is optional and may not be available for measurements without locations. For measurements
      * with one location this equals the {@link #END_LOCATION_TS}.
      */
     START_LOCATION_TS("startLocTS"),
     /**
-     * The latitude of the geo location at the end of the track represented by the transmitted measurement. This value
+     * The latitude of the geolocation at the end of the track represented by the transmitted measurement. This value
      * is optional and may not be available for measurements without locations. For measurements
      * with one location this equals the {@link #START_LOCATION_LAT}.
      */
     END_LOCATION_LAT("endLocLat"),
     /**
-     * The longitude of the geo location at the end of the track represented by the transmitted measurement. This value
+     * The longitude of the geolocation at the end of the track represented by the transmitted measurement. This value
      * is optional and may not be available for measurements without locations. For measurements
      * with one location this equals the {@link #START_LOCATION_LON}.
      */
     END_LOCATION_LON("endLocLon"),
     /**
-     * The timestamp in milliseconds of the geo location at the end of the track represented by the transmitted
+     * The timestamp in milliseconds of the geolocation at the end of the track represented by the transmitted
      * measurement. This value is optional and may not be available for measurements without locations. For measurements
      * with one location this equals the {@link #START_LOCATION_TS}.
      */
     END_LOCATION_TS("endLocTS"),
     /**
-     * The type of the vehicle that has captured the measurement.
+     * The modality type used to capture the measurement.
      */
-    VEHICLE_TYPE("vehicle"),
+    MODALITY("modality"),
     /**
      * The name of the user uploading the measurement.
      */
-    USERNAME("username");
+    USERNAME("username"),
+    /**
+     * The format version of the transfer file.
+     */
+    FORMAT_VERSION("formatVersion");
 
     /**
      * The value identifying the attribute in the multipart form request.

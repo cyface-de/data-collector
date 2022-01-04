@@ -1,5 +1,5 @@
 /*
- * Copyright 2018 Cyface GmbH
+ * Copyright 2018-2021 Cyface GmbH
  * 
  * This file is part of the Cyface Data Collector.
  *
@@ -34,7 +34,7 @@ import io.vertx.core.json.JsonObject;
  * restart.
  * 
  * @author Klemens Muthmann
- * @version 2.0.2
+ * @version 2.0.3
  * @since 2.0.0
  */
 public final class MongoTest {
@@ -76,7 +76,7 @@ public final class MongoTest {
     public void setUpMongoDatabase(final int mongoPort) throws IOException {
         this.mongoPort = mongoPort;
         final var starter = MongodStarter.getDefaultInstance();
-        //noinspection SpellCheckingInspection
+        // noinspection SpellCheckingInspection
         final var mongodConfig = MongodConfig.builder().version(Version.Main.V3_6)
                 .net(new Net("localhost", mongoPort, Network.localhostIsIPv6())).build();
         mongodExecutable = starter.prepare(mongodConfig);
@@ -90,5 +90,7 @@ public final class MongoTest {
     public void stopMongoDb() {
         mongo.stop();
         mongodExecutable.stop();
+        mongo = null;
+        mongodExecutable = null;
     }
 }

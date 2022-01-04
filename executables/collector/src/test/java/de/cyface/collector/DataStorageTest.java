@@ -186,7 +186,7 @@ public final class DataStorageTest {
          * ret.put(FormAttributes.END_LOCATION_TS.getValue(), endLocation.getTimestamp());
          * }
          */
-        ret.put(FormAttributes.VEHICLE_TYPE.getValue(), "BICYCLE");
+        ret.put(FormAttributes.MODALITY.getValue(), "BICYCLE");
         ret.put(FormAttributes.USERNAME.getValue(), "test");
 
         return ret;

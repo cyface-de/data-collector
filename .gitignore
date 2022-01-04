@@ -53,6 +53,7 @@ gradle.properties
 
 # Ignore logging configurations
 **/logback.xml
+!executables/collector/src/main/resources/logback.xml
 
 # Vertx Config files
 **/config.json

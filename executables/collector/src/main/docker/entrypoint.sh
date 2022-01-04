@@ -51,11 +51,15 @@ if [ -z $CYFACE_API_HOST ]; then
 	CYFACE_API_HOST="localhost"
 fi
 
-if [ -z $CYFACE_API_ENDPOINT ]; then
-	CYFACE_API_ENDPOINT="/api/v2/"
+if [ -z $CYFACE_API_ENDPOINT_V3 ]; then
+	CYFACE_API_ENDPOINT_V3="/api/v3/"
 fi
 
-echo "Running Cyface Collector API at $CYFACE_API_HOST:$CYFACE_API_PORT$CYFACE_API_ENDPOINT"
+if [ -z $CYFACE_API_ENDPOINT_V2 ]; then
+	CYFACE_API_ENDPOINT_V2="/api/v2/"
+fi
+
+echo "Running Cyface Collector API at $CYFACE_API_HOST:$CYFACE_API_PORT$CYFACE_API_ENDPOINT_V3 and ~$CYFACE_API_ENDPOINT_V2"
 
 if [ -z $CYFACE_MANAGEMENT_PORT ]; then
 	CYFACE_MANAGEMENT_PORT="13371"
@@ -103,4 +107,4 @@ if [ $COUNTER -ge 10 ]; then
 fi
 
 echo "Starting API. To view the logs refer to the logs folder on your hard drive!"
-java -Dvertx.cacheDirBase=/tmp/vertx-cache -Dlogback.configurationFile=/app/logback.xml -jar data-collector-0.0.0-all.jar -conf "{\"jwt.private\":\"$JWT_PRIVATE_KEY_FILE_PATH\",\"jwt.public\":\"$JWT_PUBLIC_KEY_FILE_PATH\",\"jwt.expiration\":$JWT_EXPIRATION_TIME_SECONDS,\"metrics.enabled\":$METRICS_ENABLED,\"mongo.userdb\":{\"db_name\":\"cyface-user\",\"connection_string\":\"mongodb://mongo-user:27017\",\"data_source_name\":\"cyface-user\"},\"mongo.datadb\":{\"db_name\":\"cyface-data\",\"connection_string\":\"mongodb://mongo-data:27017\",\"data_source_name\":\"cyface-data\"},\"admin.user\":\"$ADMIN_USER\",\"admin.password\":\"$ADMIN_PASSWORD\",\"http.port\":$CYFACE_API_PORT,\"http.host\":\"$CYFACE_API_HOST\",\"http.endpoint\":\"$CYFACE_API_ENDPOINT\",\"http.port.management\":$CYFACE_MANAGEMENT_PORT$SALT_PARAMETER}" &> /logs/collector-out.log
+java -Dvertx.cacheDirBase=/tmp/vertx-cache -Dlogback.configurationFile=/app/logback.xml -jar collector-all.jar -conf "{\"jwt.private\":\"$JWT_PRIVATE_KEY_FILE_PATH\",\"jwt.public\":\"$JWT_PUBLIC_KEY_FILE_PATH\",\"jwt.expiration\":$JWT_EXPIRATION_TIME_SECONDS,\"metrics.enabled\":$METRICS_ENABLED,\"mongo.userdb\":{\"db_name\":\"cyface-user\",\"connection_string\":\"mongodb://mongo-user:27017\",\"data_source_name\":\"cyface-user\"},\"mongo.datadb\":{\"db_name\":\"cyface-data\",\"connection_string\":\"mongodb://mongo-data:27017\",\"data_source_name\":\"cyface-data\"},\"admin.user\":\"$ADMIN_USER\",\"admin.password\":\"$ADMIN_PASSWORD\",\"http.port\":$CYFACE_API_PORT,\"http.host\":\"$CYFACE_API_HOST\",\"http.endpoint.v3\":\"$CYFACE_API_ENDPOINT_V3\",\"http.endpoint.v2\":\"$CYFACE_API_ENDPOINT_V2\",\"http.port.management\":$CYFACE_MANAGEMENT_PORT$SALT_PARAMETER}" &> /app/logs/collector-out.log

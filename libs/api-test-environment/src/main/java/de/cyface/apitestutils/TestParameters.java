@@ -18,66 +18,108 @@
  */
 package de.cyface.apitestutils;
 
-import de.cyface.apitestutils.fixture.TestFixture;
+import java.util.HashMap;
+import java.util.Map;
+
 import org.apache.commons.lang3.Validate;
+
+import de.cyface.apitestutils.fixture.TestFixture;
 
 /**
  * Parameters used for a single run of the API test
  *
  * @author Klemens Muthmann
+ * @author Armin Schnabel
  * @version 1.0.0
  * @since 1.0.0
  */
+@SuppressWarnings("unused") // Part of the API
 public final class TestParameters {
-  /**
-   * The fixture with the data required to run the test.
-   */
-  private final TestFixture testFixture;
-  /**
-   * The expected result.
-   */
-  private final String expectedResult;
-  /**
-   * The API endpoint used to ask for a data access.
-   */
-  private final String endpoint;
 
-  /**
-   * Creates a new completely initialized instance of this class. All attributes are read only.
-   *
-   * @param testFixture The fixture with the data required to run the test
-   * @param expectedResult The expected export
-   * @param endpoint The API endpoint used to ask for a data export
-   */
-  public TestParameters(final TestFixture testFixture, final String expectedResult,
-                        final String endpoint) {
-    Validate.notNull(testFixture);
-    Validate.notEmpty(expectedResult);
-    Validate.notEmpty(endpoint);
+    /**
+     * The fixture with the data required to run the test.
+     */
+    private final TestFixture testFixture;
+    /**
+     * The expected result.
+     */
+    private final String expectedResult;
+    /**
+     * The API endpoint used to ask for a data access.
+     */
+    private final String endpoint;
+    /**
+     * The header fields to attach to the request.
+     */
+    private final Map<String, String> headers;
 
-    this.testFixture = testFixture;
-    this.expectedResult = expectedResult;
-    this.endpoint = endpoint;
-  }
+    /**
+     * Creates a new completely initialized instance of this class. All attributes are read only.
+     *
+     * @param testFixture The fixture with the data required to run the test
+     * @param expectedResult The expected export
+     * @param endpoint The API endpoint used to ask for a data export
+     */
+    @SuppressWarnings("unused") // Part of the API
+    public TestParameters(final TestFixture testFixture, final String expectedResult, final String endpoint) {
+        this(testFixture, expectedResult, endpoint, new HashMap<>());
+    }
 
-  /**
-   * @return The fixture with the data required to run the test
-   */
-  public String getExpectedResult() {
-    return expectedResult;
-  }
+    /**
+     * Creates a new completely initialized instance of this class. All attributes are read only.
+     *
+     * @param testFixture The fixture with the data required to run the test
+     * @param expectedResult The expected export
+     * @param endpoint The API endpoint used to ask for a data export
+     * @param headers The header fields to attach to the request.
+     */
+    public TestParameters(final TestFixture testFixture, final String expectedResult, final String endpoint,
+            final Map<String, String> headers) {
+        this.testFixture = Validate.notNull(testFixture);
+        this.expectedResult = Validate.notEmpty(expectedResult);
+        this.endpoint = Validate.notEmpty(endpoint);
+        this.headers = headers;
+    }
 
-  /**
-   * @return The expected result
-   */
-  public TestFixture getTestFixture() {
-    return testFixture;
-  }
+    /**
+     * @return The fixture with the data required to run the test
+     */
+    @SuppressWarnings("unused") // Part of the API
+    public String getExpectedResult() {
+        return expectedResult;
+    }
 
-  /**
-   * @return The API endpoint used to ask for a data access
-   */
-  public String getEndpoint() {
-    return endpoint;
-  }
+    /**
+     * @return The expected result
+     */
+    @SuppressWarnings("unused") // Part of the API
+    public TestFixture getTestFixture() {
+        return testFixture;
+    }
+
+    /**
+     * @return The API endpoint used to ask for a data access
+     */
+    @SuppressWarnings("unused") // Part of the API
+    public String getEndpoint() {
+        return endpoint;
+    }
+
+    /**
+     * @return The header fields to attach to the request.
+     */
+    @SuppressWarnings("unused") // Part of the API
+    public Map<String, String> getHeaders() {
+        return headers;
+    }
+
+    @Override
+    public String toString() {
+        return "TestParameters{" +
+                "testFixture=" + testFixture +
+                ", expectedResult='" + expectedResult + '\'' +
+                ", endpoint='" + endpoint + '\'' +
+                ", headers=" + headers +
+                '}';
+    }
 }

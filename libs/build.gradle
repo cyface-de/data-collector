@@ -16,7 +16,6 @@
  *  You should have received a copy of the GNU General Public License
  *  along with the Cyface Data Collector.  If not, see <http://www.gnu.org/licenses/>.
  */
-import proguard.gradle.ProGuardTask
 
 subprojects {
   apply plugin: 'java-library'
@@ -29,64 +28,14 @@ subprojects {
   // The following needs to be wrapped in afterEvaluate. I have no idea why, but the solution is described here: https://github.com/akhikhl/gretty/issues/306
   project.afterEvaluate {
 
-    // This task creates an obfuscated Jar file from the one created by the jar task and puts it into the 'obf' folder of the build directory
-    task createObfuscated(type: ProGuardTask, dependsOn: 'build') {
-      description 'Optimizes and obfuscates the created distribution jar.'
-
-      // Merge static configuration settings
-      configuration "${rootDir}/proguard.pro"
-
-      // Specify the input jars, output jars, and library jars.
-      // In this case, the input jar is the program library that we want to process.
-
-      injars "${buildDir}/libs/${project.name}-${version}.jar"
-      outjars "${buildDir}/obf/${project.name}-${version}.jar"
-
-      // Automatically handle the Java version of this build.
-      if (System.getProperty('java.version').startsWith('1.')) {
-        // Before Java 9, the runtime classes were packaged in a single jar file.
-        libraryjars "${System.getProperty('java.home')}/lib/rt.jar"
-      } else //noinspection SpellCheckingInspection
-      {
-        // As of Java 9, the runtime classes are packaged in modular jmod files.
-        libraryjars "${System.getProperty('java.home')}/jmods/java.base.jmod", jarfilter: '!**.jar', filter: '!module-info.class'
-        libraryjars "${System.getProperty('java.home')}/jmods/java.net.http.jmod", jarfilter: '!**.jar', filter: '!module-info.class'
-        libraryjars "${System.getProperty('java.home')}/jmods/java.sql.jmod", jarfilter: '!**.jar', filter: '!module-info.class'
-        libraryjars "${System.getProperty('java.home')}/jmods/java.xml.jmod", jarfilter: '!**.jar', filter: '!module-info.class'
-      }
-      libraryjars configurations.findByName('runtimeClasspath').getFiles()
-
-      // Save the obfuscation mapping to a file, so we can de-obfuscate any stack
-      // traces later on. Keep a fixed source file attribute and all line number
-      // tables to get line numbers in the stack traces.
-      // You can comment this out if you're not interested in stack traces.
-
-      printmapping "${buildDir}/proguard.map"
-      printseeds "${buildDir}/proguard-seeds"
-      printusage "${buildDir}/proguard-usage"
-      printconfiguration "${buildDir}/proguard-configuration"
-    }
-
-    // We copy the obfuscated jar file to the libs folder for publication as a maven artifact (i.e. Github Packages)
-    task copyObfuscated(type: Copy, dependsOn: createObfuscated) {
-      description 'Copies the obfuscated jar file to the libs folder overwriting the non obfuscated one.'
-
-      from "${buildDir}/obf"
-      into "${buildDir}/libs"
-      include '*.jar'
-    }
-
-    // We delete the old obfuscated jar after it has been copied to the libs folder
-    task deleteObfuscated(type: Delete, dependsOn: copyObfuscated) {
-      description 'Deletes the obfuscated jar from its origin.'
-
-      delete '${buildDir}/obf'
-    }
-
-    task proguard dependsOn deleteObfuscated
-
     java {
       withJavadocJar()
+      withSourcesJar()
+    }
+
+    // Publish sources
+    task sourceJar(type: Jar) {
+      from sourceSets.main.allJava
     }
 
     // This is the configuration of the maven-publish plugin. It defines a publication
@@ -98,12 +47,6 @@ subprojects {
           from components.java
         }
       }
-    }
-
-    // We only want to publish obfuscated Jars, so publish always runs proguard at first.
-    publish.dependsOn proguard
-    tasks.withType(AbstractPublishToMaven) {
-      it.dependsOn proguard
     }
   }
 }

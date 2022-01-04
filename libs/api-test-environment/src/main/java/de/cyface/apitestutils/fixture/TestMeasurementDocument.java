@@ -35,7 +35,7 @@ import io.vertx.ext.mongo.MongoClient;
  * @version 1.0.0
  * @since 1.2.0
  */
-final class TestMeasurementDocument implements MongoTestData {
+public final class TestMeasurementDocument implements MongoTestData {
     /**
      * The username who uploaded the file.
      */
@@ -83,27 +83,32 @@ final class TestMeasurementDocument implements MongoTestData {
                 .put("appVersion", "1.2.0")
                 .put("length", 1500.2)
                 .put("username", ownerUsername)
-                .put("version", "1.0.0");
+                .put("version", "2.0.0");
 
         final JsonArray geoLocations = new JsonArray();
+        final var geometry1 = new JsonObject()
+                .put("type", "Point")
+                .put("coordinates", new JsonArray().add(13.1).add(51.1));
         final JsonObject geoLocation = new JsonObject()
+                .put("geometry", geometry1)
                 .put("timestamp", 1L)
-                .put("latitude", 51.1)
-                .put("longitude", 13.1)
                 .putNull("elevation")
                 .put("speed", 5.0)
                 .put("accuracy", 0.13)
                 .put("modality", Modality.UNKNOWN.getDatabaseIdentifier());
+        final var geometry2 = new JsonObject()
+                .put("type", "Point")
+                .put("coordinates", new JsonArray().add(13.2).add(51.2));
         final JsonObject geoLocation2 = new JsonObject()
+                .put("geometry", geometry2)
                 .put("timestamp", 2L)
-                .put("latitude", 51.2)
-                .put("longitude", 13.2)
                 .putNull("elevation")
                 .put("speed", 5.0)
                 .put("accuracy", 0.13)
                 .put("modality", Modality.BICYCLE.getDatabaseIdentifier());
         geoLocations.add(geoLocation);
         geoLocations.add(geoLocation2);
+
         final JsonArray accelerations = new JsonArray();
         final JsonObject point3D = new JsonObject()
                 .put("timestamp", 1L)
@@ -121,6 +126,7 @@ final class TestMeasurementDocument implements MongoTestData {
         rotations.add(point3D);
         final JsonArray directions = new JsonArray();
         directions.add(point3D2);
+
         final JsonObject trackBucket = new JsonObject()
                 .put("trackId", 0)
                 .put("bucket", new JsonObject().put("$date", "2020-12-22T15:13:00.000+00:00"))
