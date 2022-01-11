@@ -172,8 +172,31 @@ public class ClassifiedSegment {
         handler.accept(coordinates);
         handler.accept("},");
 
-        final var forward = jsonKeyValue("forward", isForward());
-        final var properties = jsonObject(forward);
+        final var oid = jsonKeyValue("oid", get_id()); // for support
+        final var wayId = jsonKeyValue("@id", "way/232814001"); // FIXME: missing
+        final var highwayType = jsonKeyValue("highway", "residential"); // FIXME: missing
+        final var surfaceType = jsonKeyValue("surface", "asphalt"); // FIXME: missing
+        final var forward = jsonKeyValue("forward_moving", isForward());
+        final var modality = jsonKeyValue("vehicle_id", getModality().getDatabaseIdentifier());
+        final var maxLength = jsonKeyValue("max_length", getLength());
+        // FIXME: the start meter is sometime 0, 32, 82, ... and sometimes 0 50 100
+        // FIXME: the vnk/nnk is not the vnk/nnk of the WAY (is not consistent for subsequent segments)
+        // FIXME: the wayId is missing, maybe also add "highway" and "surface" from OSM
+        final var start = jsonKeyValue("start_meter", getStart());
+        final var vnk = jsonKeyValue("vnk_id", getVnk());
+        final var nnk = jsonKeyValue("nnk_id", getNnk());
+        final var latestDataPoint = jsonKeyValue("timestamp", getLatestDataPoint().toEpochSecond());
+        //final var expectedValue = jsonKeyValue("expectedValue", getExpectedValue());
+        //final var variance = jsonKeyValue("variance", getVariance());
+        //final var dataPointCount = jsonKeyValue("data_point_count", getDataPointCount());
+        final var quality = jsonKeyValue("quality", getQuality().databaseValue);
+        final var color = jsonKeyValue("color",
+                getQuality().databaseValue == 0 ? "red" :
+                getQuality().databaseValue == 1 ? "yellow" :
+                getQuality().databaseValue == 2 ? "green" :
+                getQuality().databaseValue == 3 ? "blue" :
+                "black");
+        final var properties = jsonObject(oid, wayId, highwayType, surfaceType, forward, modality, maxLength, start, vnk, nnk, latestDataPoint, quality, color);
         handler.accept(jsonKeyValue("properties", properties).getStringValue());
 
         handler.accept("}");
