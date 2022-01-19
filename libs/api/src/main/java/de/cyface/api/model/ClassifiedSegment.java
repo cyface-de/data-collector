@@ -44,7 +44,7 @@ public class ClassifiedSegment {
     /**
      * The database identifier of the segment.
      */
-    final private String _id;
+    final private String oid;
     /**
      * {@code True} of this segment is orientated in the same direction as the formal direction of the underlying OSM
      * way id or {@code false} if it's orientated in the opposite direction.
@@ -107,7 +107,7 @@ public class ClassifiedSegment {
     /**
      * Constructs a fully initialized instance of this class.
      *
-     * @param id              The database identifier of the segment.
+     * @param oid              The database identifier of the segment.
      * @param forward         {@code True} of this segment is orientated in the same direction as the formal direction of the
      *                        underlying OSM way id or {@code false} if it's orientated in the opposite direction.
      * @param geometry        The geometry of this segment in the GeoJSON format, i.e. containing a `type` attribute with
@@ -129,12 +129,12 @@ public class ClassifiedSegment {
      *                        {@code variance} without requiring previous points.
      */
     @SuppressWarnings("unused") // Part of the API
-    public ClassifiedSegment(final String id, final boolean forward, final Geometry geometry, final double length,
+    public ClassifiedSegment(final String oid, final boolean forward, final Geometry geometry, final double length,
                              final Modality modality, final long vnk,
                              final long nnk, final int start, final OffsetDateTime latestDataPoint, final String username,
                              final double expectedValue, final double variance,
                              final SurfaceQuality quality, final long dataPointCount) {
-        this._id = id;
+        this.oid = oid;
         this.forward = forward;
         this.geometry = geometry;
         this.length = length;
@@ -172,12 +172,12 @@ public class ClassifiedSegment {
         handler.accept(coordinates);
         handler.accept("},");
 
-        final var oid = jsonKeyValue("oid", get_id()); // for support
+        final var oid = jsonKeyValue("oid", getOid()); // for support
         final var wayId = jsonKeyValue("@id", "way/232814001"); // FIXME: missing
         final var highwayType = jsonKeyValue("highway", "residential"); // FIXME: missing
         final var surfaceType = jsonKeyValue("surface", "asphalt"); // FIXME: missing
         final var forward = jsonKeyValue("forward_moving", isForward());
-        final var modality = jsonKeyValue("vehicle_id", getModality().getDatabaseIdentifier());
+        final var modality = jsonKeyValue("modality", getModality().getDatabaseIdentifier());
         final var maxLength = jsonKeyValue("max_length", getLength());
         // FIXME: the start meter is sometime 0, 32, 82, ... and sometimes 0 50 100
         // FIXME: the vnk/nnk is not the vnk/nnk of the WAY (is not consistent for subsequent segments)
@@ -229,7 +229,7 @@ public class ClassifiedSegment {
     @Override
     public String toString() {
         return "ClassifiedSegment{" +
-                "_id=" + _id +
+                "oid=" + oid +
                 ", forward=" + forward +
                 ", geometry=" + geometry +
                 ", length=" + length +
@@ -250,8 +250,8 @@ public class ClassifiedSegment {
      * @return The database identifier of the segment.
      */
     @SuppressWarnings("unused") // Part of the API
-    public String get_id() {
-        return _id;
+    public String getOid() {
+        return oid;
     }
 
     /**
@@ -373,7 +373,7 @@ public class ClassifiedSegment {
         return forward == that.forward && Double.compare(that.length, length) == 0 && vnk == that.vnk && nnk == that.nnk
                 && start == that.start && Double.compare(that.expectedValue, expectedValue) == 0
                 && Double.compare(that.variance, variance) == 0 && dataPointCount == that.dataPointCount
-                && Objects.equals(_id, that._id) && Objects.equals(geometry, that.geometry) && modality == that.modality
+                && Objects.equals(oid, that.oid) && Objects.equals(geometry, that.geometry) && modality == that.modality
                 && Objects.equals(latestDataPoint, that.latestDataPoint) && Objects.equals(username, that.username)
                 && quality == that.quality;
     }

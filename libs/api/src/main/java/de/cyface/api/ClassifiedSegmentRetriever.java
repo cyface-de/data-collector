@@ -117,7 +117,7 @@ public class ClassifiedSegmentRetriever {
      * @param segment The entry from the database.
      */
     private ClassifiedSegment toSegment(final JsonObject segment) {
-        final var _id = segment.getJsonObject("_id").getString("$oid");
+        final var oid = segment.getJsonObject("_id").getString("$oid");
         final var forward = segment.getBoolean("forward");
         final var geometry = segment.getJsonObject("geometry");
         final var length = segment.getDouble("length");
@@ -134,7 +134,7 @@ public class ClassifiedSegmentRetriever {
         // Later on we might store this as a normalized value between zero and one.
         final var quality = ClassifiedSegment.SurfaceQuality.valueOf(segment.getInteger("quality"));
         final var dataPointCount = segment.getLong("data_point_count");
-        return new ClassifiedSegment(_id, forward, toGeometry(geometry), length, modality, vnk, nnk, start, latestDataPoint, username, expectedValue, variance, quality, dataPointCount);
+        return new ClassifiedSegment(oid, forward, toGeometry(geometry), length, modality, vnk, nnk, start, latestDataPoint, username, expectedValue, variance, quality, dataPointCount);
     }
 
     /**
