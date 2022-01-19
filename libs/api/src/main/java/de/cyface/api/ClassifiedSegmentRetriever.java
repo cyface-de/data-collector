@@ -117,7 +117,7 @@ public class ClassifiedSegmentRetriever {
      * @param segment The entry from the database.
      */
     private ClassifiedSegment toSegment(final JsonObject segment) {
-        final var _id = segment.getString("_id");
+        final var _id = segment.getJsonObject("_id").getString("$oid");
         final var forward = segment.getBoolean("forward");
         final var geometry = segment.getJsonObject("geometry");
         final var length = segment.getDouble("length");
