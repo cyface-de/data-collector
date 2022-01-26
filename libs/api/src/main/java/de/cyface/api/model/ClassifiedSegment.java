@@ -19,6 +19,7 @@
 package de.cyface.api.model;
 
 import de.cyface.model.Modality;
+import org.apache.commons.lang3.Validate;
 
 import java.time.OffsetDateTime;
 import java.util.Arrays;
@@ -41,6 +42,10 @@ import static de.cyface.api.model.Json.jsonObject;
 @SuppressWarnings("unused") // Part of the API
 public class ClassifiedSegment {
 
+    /**
+     * The current version of the format of this segment class.
+     */
+    public final String CURRENT_VERSION = "1.0.0";
     /**
      * The database identifier of the segment.
      */
@@ -103,6 +108,10 @@ public class ClassifiedSegment {
      * without requiring previous points.
      */
     final private long dataPointCount;
+    /**
+     * The version of the format of this segment entry.
+     */
+    private final String version;
 
     /**
      * Constructs a fully initialized instance of this class.
@@ -127,13 +136,14 @@ public class ClassifiedSegment {
      * @param quality         The surface quality class calculated for this segment.
      * @param dataPointCount  The number of sample points used to calculate {@code variance}. This is required to update
      *                        {@code variance} without requiring previous points.
+     * @param version         The version of the format of this segment entry.
      */
     @SuppressWarnings("unused") // Part of the API
     public ClassifiedSegment(final String oid, final boolean forward, final Geometry geometry, final double length,
                              final Modality modality, final long vnk,
                              final long nnk, final int start, final OffsetDateTime latestDataPoint, final String username,
                              final double expectedValue, final double variance,
-                             final SurfaceQuality quality, final long dataPointCount) {
+                             final SurfaceQuality quality, final long dataPointCount, final String version) {
         this.oid = oid;
         this.forward = forward;
         this.geometry = geometry;
@@ -148,6 +158,8 @@ public class ClassifiedSegment {
         this.variance = variance;
         this.quality = quality;
         this.dataPointCount = dataPointCount;
+        this.version = version;
+        Validate.isTrue(version.equals(CURRENT_VERSION));
     }
 
     /**
@@ -196,7 +208,8 @@ public class ClassifiedSegment {
                 getQuality().databaseValue == 2 ? "green" :
                 getQuality().databaseValue == 3 ? "blue" :
                 "black");
-        final var properties = jsonObject(oid, wayId, highwayType, surfaceType, forward, modality, maxLength, start, vnk, nnk, latestDataPoint, quality, color);
+        final var version = jsonKeyValue("version", getVersion());
+        final var properties = jsonObject(oid, wayId, highwayType, surfaceType, forward, modality, maxLength, start, vnk, nnk, latestDataPoint, quality, color, version);
         handler.accept(jsonKeyValue("properties", properties).getStringValue());
 
         handler.accept("}");
@@ -243,6 +256,7 @@ public class ClassifiedSegment {
                 ", variance=" + variance +
                 ", quality=" + quality +
                 ", dataPointCount=" + dataPointCount +
+                ", version=" + version +
                 '}';
     }
 
@@ -363,6 +377,13 @@ public class ClassifiedSegment {
         return dataPointCount;
     }
 
+    /**
+     * @return The version of the format of this segment entry.
+     */
+    public String getVersion() {
+        return version;
+    }
+
     @Override
     public boolean equals(Object o) {
         if (this == o)
@@ -375,7 +396,7 @@ public class ClassifiedSegment {
                 && Double.compare(that.variance, variance) == 0 && dataPointCount == that.dataPointCount
                 && Objects.equals(oid, that.oid) && Objects.equals(geometry, that.geometry) && modality == that.modality
                 && Objects.equals(latestDataPoint, that.latestDataPoint) && Objects.equals(username, that.username)
-                && quality == that.quality;
+                && quality == that.quality&& Objects.equals(version, that.version);
     }
 
     @Override

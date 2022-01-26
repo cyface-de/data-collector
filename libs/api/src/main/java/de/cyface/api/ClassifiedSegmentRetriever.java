@@ -134,7 +134,8 @@ public class ClassifiedSegmentRetriever {
         // Later on we might store this as a normalized value between zero and one.
         final var quality = ClassifiedSegment.SurfaceQuality.valueOf(segment.getInteger("quality"));
         final var dataPointCount = segment.getLong("data_point_count");
-        return new ClassifiedSegment(oid, forward, toGeometry(geometry), length, modality, vnk, nnk, start, latestDataPoint, username, expectedValue, variance, quality, dataPointCount);
+        final var version = segment.getString("version");
+        return new ClassifiedSegment(oid, forward, toGeometry(geometry), length, modality, vnk, nnk, start, latestDataPoint, username, expectedValue, variance, quality, dataPointCount, version);
     }
 
     /**
