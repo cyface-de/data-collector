@@ -22,7 +22,7 @@ package de.cyface.api.model;
  * This class represents a geometry similar to the GeoJson geometry field.
  *
  * @author Armin Schnabel
- * @since 1.1.0
+ * @since 6.1.0
  */
 public class Geometry {
 

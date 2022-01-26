@@ -18,6 +18,7 @@
  */
 package de.cyface.api.model;
 
+import de.cyface.model.Json;
 import de.cyface.model.Modality;
 import org.apache.commons.lang3.Validate;
 
@@ -28,9 +29,9 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.function.Consumer;
 
-import static de.cyface.api.model.Json.jsonArray;
-import static de.cyface.api.model.Json.jsonKeyValue;
-import static de.cyface.api.model.Json.jsonObject;
+import static de.cyface.model.Json.jsonArray;
+import static de.cyface.model.Json.jsonKeyValue;
+import static de.cyface.model.Json.jsonObject;
 
 /**
  * Class which represents result elements from the surface pipeline: classified road segments.
@@ -116,7 +117,7 @@ public class ClassifiedSegment {
     /**
      * Constructs a fully initialized instance of this class.
      *
-     * @param oid              The database identifier of the segment.
+     * @param oid             The database identifier of the segment.
      * @param forward         {@code True} of this segment is orientated in the same direction as the formal direction of the
      *                        underlying OSM way id or {@code false} if it's orientated in the opposite direction.
      * @param geometry        The geometry of this segment in the GeoJSON format, i.e. containing a `type` attribute with
@@ -191,23 +192,17 @@ public class ClassifiedSegment {
         final var forward = jsonKeyValue("forward_moving", isForward());
         final var modality = jsonKeyValue("modality", getModality().getDatabaseIdentifier());
         final var maxLength = jsonKeyValue("max_length", getLength());
-        // FIXME: the start meter is sometime 0, 32, 82, ... and sometimes 0 50 100
-        // FIXME: the vnk/nnk is not the vnk/nnk of the WAY (is not consistent for subsequent segments)
-        // FIXME: the wayId is missing, maybe also add "highway" and "surface" from OSM
         final var start = jsonKeyValue("start_meter", getStart());
         final var vnk = jsonKeyValue("vnk_id", getVnk());
         final var nnk = jsonKeyValue("nnk_id", getNnk());
         final var latestDataPoint = jsonKeyValue("timestamp", getLatestDataPoint().toEpochSecond());
-        //final var expectedValue = jsonKeyValue("expectedValue", getExpectedValue());
-        //final var variance = jsonKeyValue("variance", getVariance());
-        //final var dataPointCount = jsonKeyValue("data_point_count", getDataPointCount());
         final var quality = jsonKeyValue("quality", getQuality().databaseValue);
         final var color = jsonKeyValue("color",
                 getQuality().databaseValue == 0 ? "red" :
-                getQuality().databaseValue == 1 ? "yellow" :
-                getQuality().databaseValue == 2 ? "green" :
-                getQuality().databaseValue == 3 ? "blue" :
-                "black");
+                        getQuality().databaseValue == 1 ? "yellow" :
+                                getQuality().databaseValue == 2 ? "green" :
+                                        getQuality().databaseValue == 3 ? "blue" :
+                                                "black");
         final var version = jsonKeyValue("version", getVersion());
         final var properties = jsonObject(oid, wayId, highwayType, surfaceType, forward, modality, maxLength, start, vnk, nnk, latestDataPoint, quality, color, version);
         handler.accept(jsonKeyValue("properties", properties).getStringValue());
@@ -396,7 +391,7 @@ public class ClassifiedSegment {
                 && Double.compare(that.variance, variance) == 0 && dataPointCount == that.dataPointCount
                 && Objects.equals(oid, that.oid) && Objects.equals(geometry, that.geometry) && modality == that.modality
                 && Objects.equals(latestDataPoint, that.latestDataPoint) && Objects.equals(username, that.username)
-                && quality == that.quality&& Objects.equals(version, that.version);
+                && quality == that.quality && Objects.equals(version, that.version);
     }
 
     @Override
@@ -408,6 +403,7 @@ public class ClassifiedSegment {
      * The supported surface quality classes for {@link ClassifiedSegment}s.
      *
      * @author Armin Schnabel
+     * @since 6.1.0
      */
     public enum SurfaceQuality {
         WORST(0), BAD(1), GOOD(2), BEST(3);
@@ -420,12 +416,26 @@ public class ClassifiedSegment {
             }
         }
 
+        /**
+         * The value which is stored in the database and represents the associated enum value.
+         */
         public final int databaseValue;
 
+        /**
+         * Creates a fully initialized instance of this class
+         *
+         * @param databaseValue The value which is stored in the database and represents the associated enum value.
+         */
         SurfaceQuality(final int databaseValue) {
             this.databaseValue = databaseValue;
         }
 
+        /**
+         * Creates a fully initialized instance of this class
+         *
+         * @param databaseValue The value which is stored in the database and represents the associated enum value.
+         * @return The created instance
+         */
         @SuppressWarnings("unused") // Part of the API
         public static SurfaceQuality valueOf(final int databaseValue) {
             return BY_DATABASE_VALUE.get(databaseValue);

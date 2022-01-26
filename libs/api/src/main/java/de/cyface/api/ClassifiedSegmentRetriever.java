@@ -37,6 +37,7 @@ import io.vertx.ext.mongo.MongoClient;
  * Loads classified segments from the database for a vert.x context.
  *
  * @author Armin Schnabel
+ * @since 6.1.0
  */
 @SuppressWarnings("unused") // Part of the API
 public class ClassifiedSegmentRetriever {
