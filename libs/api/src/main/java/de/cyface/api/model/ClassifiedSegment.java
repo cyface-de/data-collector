@@ -20,6 +20,8 @@ package de.cyface.api.model;
 
 import de.cyface.model.Json;
 import de.cyface.model.Modality;
+import io.vertx.core.json.JsonArray;
+import io.vertx.core.json.JsonObject;
 import org.apache.commons.lang3.Validate;
 
 import java.time.OffsetDateTime;
@@ -232,6 +234,34 @@ public class ClassifiedSegment {
 
     private Json.JsonArray geoJsonCoordinates(final Geometry.Coordinate coordinate) {
         return jsonArray(String.valueOf(coordinate.getLongitude()), String.valueOf(coordinate.getLatitude()));
+    }
+
+    /**
+     * Converts this {@link ClassifiedSegment} into the JSON format for inserting this segment into the database.
+     *
+     * @return This segment in the JSON format.
+     */
+    public JsonObject toJson() {
+        final var ret = new JsonObject();
+        ret.put("_id", new JsonObject().put("$oid", getOid()));
+        ret.put("forward", isForward());
+        final var geometry = getGeometry();
+        final var coordinates = new JsonArray();
+        Arrays.stream(geometry.getCoordinates()).forEach(c -> coordinates.add(new JsonArray().add(0, c.getLongitude()).add(1, c.getLatitude())));
+        ret.put("geometry", new JsonObject().put("type", geometry.getType()).put("coordinates", coordinates));
+        ret.put("length", getLength());
+        ret.put("modality", getModality().getDatabaseIdentifier());
+        ret.put("vnk", getVnk());
+        ret.put("nnk", getNnk());
+        ret.put("start", getStart());
+        ret.put("latest_data_point", new JsonObject().put("$date", getLatestDataPoint().toString()));
+        ret.put("username", getUsername());
+        ret.put("expected_value", getExpectedValue());
+        ret.put("variance", getVariance());
+        ret.put("quality", getQuality().databaseValue);
+        ret.put("data_point_count", getDataPointCount());
+        ret.put("version", getVersion());
+        return ret;
     }
 
     @Override
