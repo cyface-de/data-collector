@@ -116,6 +116,7 @@ public class ClassifiedSegmentRetriever {
      * Constructs a fully initialized {@link ClassifiedSegment} from a database entry.
      *
      * @param segment The entry from the database.
+     * @return the created {@code ClassifiedSegment}
      */
     private ClassifiedSegment toSegment(final JsonObject segment) {
         final var oid = segment.getJsonObject("_id").getString("$oid");
@@ -143,6 +144,7 @@ public class ClassifiedSegmentRetriever {
      * Constructs a fully initialized {@link Geometry} from a database entry.
      *
      * @param geometry The entry from the database.
+     * @return The created {@code Geometry} object
      */
     private Geometry toGeometry(final JsonObject geometry) {
         final var type = geometry.getString("type");
