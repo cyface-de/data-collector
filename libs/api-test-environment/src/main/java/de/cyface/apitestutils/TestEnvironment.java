@@ -73,23 +73,51 @@ public final class TestEnvironment {
      * @param httpEndpoint The endpoint on which the test {@code ApiVerticle} listens to.
      * @throws IOException If the temporary Mongo database fails to start
      */
+    @SuppressWarnings("unused") // Part of the API
     public TestEnvironment(final Vertx vertx, final VertxTestContext testContext,
             final Handler<AsyncResult<Void>> resultHandler, final String verticleClassName,
-            final String httpEndpointParameterKey, final String httpEndpoint) throws IOException {
+            final String httpEndpointParameterKey, final String httpEndpoint)
+            throws IOException {
+        this(vertx, testContext, resultHandler, verticleClassName, httpEndpointParameterKey, httpEndpoint,
+                new JsonObject());
+    }
+
+    /**
+     * Create a new object of this class and starting the simulated server.
+     * To do anything meaningful with it, you need to add some test data via
+     * {@link #insertFixture(TestFixture)}.
+     * <b>ATTENTION:</b> Do not forget to call {@link #shutdown()} after you finished using this object, for example in
+     * an <code>org.junit.jupiter.api.AfterEach</code> method.
+     *
+     * @param vertx A <code>Vertx</code> instance to set up the test environment
+     * @param testContext The Vertx-JUnit test context used to synchronize the JUnit lifecycle with Vertx
+     * @param resultHandler Called after the environment has finished setting up
+     * @param verticleClassName The name of the {@code ApiVerticle} to deploy
+     * @param httpEndpointParameterKey The parameter key required to be passed to the {@code Config} of the test
+     *            {@code ApiVerticle}.
+     * @param httpEndpoint The endpoint on which the test {@code ApiVerticle} listens to.
+     * @param config A {@code JsonObject} which contains custom config parameters to be used when deploying the verticle
+     * @throws IOException If the temporary Mongo database fails to start
+     */
+    public TestEnvironment(final Vertx vertx, final VertxTestContext testContext,
+            final Handler<AsyncResult<Void>> resultHandler, final String verticleClassName,
+            final String httpEndpointParameterKey, final String httpEndpoint, final JsonObject config)
+            throws IOException {
         this.testMongoDatabase = new TestMongoDatabase();
         testMongoDatabase.start();
 
         // Deploy ApiVerticle and a VertX WebClient usable to access the api
         apiServer = new ApiServer(httpEndpointParameterKey, httpEndpoint);
-        apiServer.start(vertx, testContext, testMongoDatabase, verticleClassName, testContext.succeeding(webClient -> {
-            this.webClient = webClient;
+        apiServer.start(vertx, testContext, testMongoDatabase, verticleClassName, config,
+                testContext.succeeding(webClient -> {
+                    this.webClient = webClient;
 
-            // Set up a Mongo client to access the database
-            JsonObject mongoDbConfiguration = testMongoDatabase.config();
-            this.mongoClient = EndpointConfig.createSharedMongoClient(vertx, mongoDbConfiguration);
+                    // Set up a Mongo client to access the database
+                    JsonObject mongoDbConfiguration = testMongoDatabase.config();
+                    this.mongoClient = EndpointConfig.createSharedMongoClient(vertx, mongoDbConfiguration);
 
-            resultHandler.handle(Future.succeededFuture());
-        }));
+                    resultHandler.handle(Future.succeededFuture());
+                }));
     }
 
     /**

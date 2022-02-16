@@ -21,6 +21,8 @@ package de.cyface.apitestutils;
 import java.io.IOException;
 import java.net.ServerSocket;
 
+import org.apache.commons.lang3.Validate;
+
 import de.cyface.api.Parameter;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.DeploymentOptions;
@@ -33,7 +35,6 @@ import io.vertx.ext.web.client.HttpRequest;
 import io.vertx.ext.web.client.HttpResponse;
 import io.vertx.ext.web.client.WebClient;
 import io.vertx.junit5.VertxTestContext;
-import org.apache.commons.lang3.Validate;
 
 /**
  * A class providing capabilities for tests to communicate with a Cyface Data server.
@@ -79,6 +80,23 @@ public final class ApiServer {
      */
     public void start(final Vertx vertx, final VertxTestContext testContext, final TestMongoDatabase mongoDatabase,
             final String verticleClassName, final Handler<AsyncResult<WebClient>> resultHandler) throws IOException {
+        start(vertx, testContext, mongoDatabase, verticleClassName, new JsonObject(), resultHandler);
+    }
+
+    /**
+     * Starts a test Cyface Data server and creates a Vert.x <code>WebClient</code> usable to access the API.
+     *
+     * @param vertx The <code>Vertx</code> instance to start and access the server
+     * @param testContext The <code>TestContext</code> to create a new Server and <code>WebClient</code>
+     * @param mongoDatabase The Mongo database to store the test data to
+     * @param resultHandler The handler called after this server has finished starting
+     * @param verticleClassName The name of the {@code ApiVerticle} to deploy
+     * @param config A {@code JsonObject} which contains custom config parameters to be used when deploying the verticle
+     * @throws IOException If the server port could not be opened
+     */
+    public void start(final Vertx vertx, final VertxTestContext testContext, final TestMongoDatabase mongoDatabase,
+            final String verticleClassName, final JsonObject config,
+            final Handler<AsyncResult<WebClient>> resultHandler) throws IOException {
 
         final ServerSocket socket = new ServerSocket(0);
         port = socket.getLocalPort();
@@ -86,7 +104,7 @@ public final class ApiServer {
 
         final var privateTestKey = this.getClass().getResource("/private_key.pem");
         final var publicTestKey = this.getClass().getResource("/public.pem");
-        final JsonObject config = new JsonObject().put(Parameter.MONGO_DATA_DB.key(), mongoDatabase.config())
+        config.put(Parameter.MONGO_DATA_DB.key(), mongoDatabase.config())
                 .put(Parameter.MONGO_USER_DB.key(), mongoDatabase.config())
                 .put(Parameter.HTTP_PORT.key(), port)
                 .put(Parameter.JWT_PRIVATE_KEY_FILE_PATH.key(), Validate.notNull(privateTestKey).getFile())
