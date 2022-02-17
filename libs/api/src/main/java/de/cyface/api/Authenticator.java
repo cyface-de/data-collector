@@ -23,6 +23,10 @@ import static io.vertx.ext.auth.impl.jose.JWS.RS256;
 import java.util.Collections;
 import java.util.Objects;
 
+import io.vertx.core.impl.future.SucceededFuture;
+import io.vertx.core.json.JsonObject;
+import io.vertx.ext.auth.User;
+import io.vertx.ext.auth.impl.UserImpl;
 import org.apache.commons.lang3.Validate;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -38,7 +42,7 @@ import io.vertx.ext.web.handler.BodyHandler;
 import io.vertx.ext.web.handler.LoggerHandler;
 
 /**
- * Handles authentication request on the Cyface Collector API. This is implemented with JSON Web Token (JWT). To get a
+ * Handles authentication request on the Cyface Vert.X APIs. This is implemented with JSON Web Token (JWT). To get a
  * valid token, the user is required to authenticate using username and password against the provided endpoint, which
  * issues a new token. This token can then be used to transmit the actual request.
  * <p>
@@ -122,18 +126,25 @@ public final class Authenticator implements Handler<RoutingContext> {
             LOGGER.debug("Receiving authentication request for user {}", body.getString("username"));
             authProvider.authenticate(body, r -> {
                 if (r.succeeded()) {
-                    LOGGER.debug("Authentication successful for user {}", body.getString("username"));
+                    final var user = r.result();
+                    final var principal = user.principal();
+                    if (activated(principal)) {
+                        LOGGER.debug("Authentication successful for user {}", body.getString("username"));
 
-                    final var jwtOptions = new JWTOptions()
-                            .setAlgorithm(JWT_HASH_ALGORITHM)
-                            .setExpiresInSeconds(tokenValidationTime)
-                            .setIssuer(issuer)
-                            .setAudience(Collections.singletonList(audience));
-                    final var jwtBody = body.put("aud", audience).put("iss", issuer);
-                    final var generatedToken = jwtAuthProvider.generateToken(jwtBody, jwtOptions);
-                    LOGGER.trace("New JWT Token: {}", generatedToken);
+                        final var jwtOptions = new JWTOptions()
+                                .setAlgorithm(JWT_HASH_ALGORITHM)
+                                .setExpiresInSeconds(tokenValidationTime)
+                                .setIssuer(issuer)
+                                .setAudience(Collections.singletonList(audience));
+                        final var jwtBody = body.put("aud", audience).put("iss", issuer);
+                        final var generatedToken = jwtAuthProvider.generateToken(jwtBody, jwtOptions);
+                        LOGGER.trace("New JWT Token: {}", generatedToken);
 
-                    ctx.response().putHeader("Authorization", generatedToken).setStatusCode(200).end();
+                        ctx.response().putHeader("Authorization", generatedToken).setStatusCode(200).end();
+                    } else {
+                        LOGGER.error("Authentication failed, user not activated: {}", body.getString("username"));
+                        ctx.fail(428);
+                    }
                 } else {
                     LOGGER.error("Unsuccessful authentication request for user {}", body.getString("username"));
                     ctx.fail(401);
@@ -143,6 +154,18 @@ public final class Authenticator implements Handler<RoutingContext> {
             LOGGER.error("Unable to decode authentication request!");
             ctx.fail(401);
         }
+    }
+
+    /**
+     * Checks if the user account is activated.
+     * <p>
+     * Only self-registered accounts need to be activated and, thus, contain the "activated" field.
+     *
+     * @param principal the underlying principal of the user to check
+     * @return {@code True} if the user account is activated
+     */
+    static boolean activated(final JsonObject principal) {
+        return  !principal.containsKey("activated") || principal.getBoolean("activated");
     }
 
     /**
