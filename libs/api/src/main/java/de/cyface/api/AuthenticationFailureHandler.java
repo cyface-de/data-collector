@@ -18,10 +18,11 @@
  */
 package de.cyface.api;
 
-import io.vertx.core.Handler;
-import io.vertx.ext.web.RoutingContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import io.vertx.core.Handler;
+import io.vertx.ext.web.RoutingContext;
 
 /**
  * Handlers failures occurring during authentication and makes sure 401 is returned as HTTP status code on failed
@@ -43,12 +44,14 @@ public final class AuthenticationFailureHandler implements Handler<RoutingContex
         LOGGER.error("Received failure " + context.failed());
         LOGGER.error("Reason", context.failure());
 
-        final boolean closed = context.response().closed();
-        final boolean ended = context.response().ended();
+        final var response = context.response();
+        final boolean closed = response.closed();
+        final boolean ended = response.ended();
+        final var errorCode = context.statusCode();
         if (!closed && !ended) {
-            LOGGER.error("Failing authentication request with 401 since response was closed: {}, ended: {}", closed,
-                    ended);
-            context.response().setStatusCode(401).end();
+            LOGGER.error("Failing authentication request with {} since response was closed: {}, ended: {}", errorCode,
+                    closed, ended);
+            context.response().setStatusCode(errorCode).end();
         }
     }
 }
