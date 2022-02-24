@@ -353,6 +353,8 @@ public final class CollectorApiVerticle extends AbstractVerticle {
             final Handler<RoutingContext> handler,
             final ErrorHandler failureHandler) {
         final var jwtAuthHandler = JWTAuthHandler.create(jwtAuth);
+        // The path pattern ../(sid)/.. was chosen because of the documentation of Vert.X SessionHandler
+        // https://vertx.io/docs/vertx-web/java/#_handling_sessions
         router.putWithRegex(String.format("\\%s\\/\\([a-z0-9]{32}\\)\\/", endpoint))
                 .consumes("application/octet-stream")
                 // Not using BodyHandler as the `request.body()` can only be read once and the {@code #handler} does so.
