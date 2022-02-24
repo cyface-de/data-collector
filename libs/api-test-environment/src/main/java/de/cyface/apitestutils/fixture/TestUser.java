@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2021 Cyface GmbH
+ * Copyright 2020-2022 Cyface GmbH
  *
  * This file is part of the Cyface Data Collector.
  *
@@ -38,7 +38,7 @@ import io.vertx.ext.mongo.MongoClient;
  *
  * @author Klemens Muthmann
  * @author Armin Schnabel
- * @version 1.1.0
+ * @version 1.2.0
  * @since 1.0.0
  */
 public final class TestUser implements MongoTestData {
@@ -54,13 +54,40 @@ public final class TestUser implements MongoTestData {
      * The password used to authenticate the user.
      */
     private final String password;
+    /**
+     * {@code True} if the user account is activated, {@code False} if the user signed up but did not activate the
+     * account. {@code Null} if the user was created by the {@code ManagementApi} and does not need activation.
+     */
+    private final Boolean activated;
+    /**
+     * The token to activate the user account if the user signed up. {@code Null} if the user was created by the
+     * {@code ManagementApi} and does not need activation.
+     */
+    private final String activationToken;
 
     /**
+     * Creates a fully initialized instance of this class.
+     *
      * @param username The name of the user to be created
      * @param roles The roles this user has
      * @param password The password used to authenticate the user
      */
     public TestUser(final String username, final String password, final String... roles) {
+        this(username, password, null, null, roles);
+    }
+
+    /**
+     * Creates a fully initialized instance of this class.
+     *
+     * @param username The name of the user to be created
+     * @param roles The roles this user has
+     * @param password The password used to authenticate the user
+     * @param activated {@code True} if the user account is activated, {@code False} if the user signed up but did not
+     *            activate the account.
+     * @param activationToken The token to activate the user accounts.
+     */
+    public TestUser(String username, String password, Boolean activated, String activationToken,
+            final String... roles) {
         Validate.notEmpty(username);
         Validate.notEmpty(roles);
         Validate.notEmpty(password);
@@ -68,6 +95,8 @@ public final class TestUser implements MongoTestData {
         this.username = username;
         this.roles = Arrays.asList(roles);
         this.password = password;
+        this.activated = activated;
+        this.activationToken = activationToken;
     }
 
     @Override
@@ -76,26 +105,31 @@ public final class TestUser implements MongoTestData {
         Validate.notNull(resultHandler);
 
         final var salt = "cyface-salt";
-        mongoClient.findOne(DatabaseConstants.COLLECTION_USER,
+        final var findUser = mongoClient.findOne(DatabaseConstants.COLLECTION_USER,
                 new JsonObject().put(DatabaseConstants.USER_USERNAME_FIELD, username),
-                null, result -> {
-                    if (result.failed()) {
-                        resultHandler.handle(Future.failedFuture(result.cause()));
-                    }
-                    if (result.result() == null) {
-                        final var hasher = new Hasher(HashingStrategy.load(),
-                                salt.getBytes(StandardCharsets.UTF_8));
-                        final var hashedPassword = hasher.hash(password);
-                        final var newUserInsertCommand = new JsonObject().put("username", username)
-                                .put("roles", new JsonArray(roles)).put("password", hashedPassword);
-                        final var userInsertedFuture = mongoClient.insert(DatabaseConstants.COLLECTION_USER,
-                                newUserInsertCommand);
-                        userInsertedFuture.onSuccess(success -> resultHandler.handle(Future.succeededFuture()));
-                        userInsertedFuture.onFailure(failure -> resultHandler.handle(Future.failedFuture(failure)));
-                    } else {
-                        resultHandler.handle(Future.failedFuture(new IllegalStateException(
-                                "User already existent: " + result.result().encodePrettily())));
-                    }
-                });
+                null);
+        findUser.onFailure(failure -> resultHandler.handle(Future.failedFuture(failure)));
+        findUser.onSuccess(success -> {
+            if (success == null) {
+                final var hasher = new Hasher(HashingStrategy.load(), salt.getBytes(StandardCharsets.UTF_8));
+                final var hashedPassword = hasher.hash(password);
+                final var insertCommand = new JsonObject()
+                        .put("username", username)
+                        .put("roles", new JsonArray(roles))
+                        .put("password", hashedPassword);
+                if (activated != null) {
+                    insertCommand.put("activated", activated);
+                }
+                if (activationToken != null) {
+                    insertCommand.put("activationToken", activationToken);
+                }
+                final var insertUser = mongoClient.insert(DatabaseConstants.COLLECTION_USER, insertCommand);
+                insertUser.onSuccess(inserted -> resultHandler.handle(Future.succeededFuture()));
+                insertUser.onFailure(failure -> resultHandler.handle(Future.failedFuture(failure)));
+            } else {
+                resultHandler.handle(Future.failedFuture(new IllegalStateException(
+                        "User already existent: " + success.encodePrettily())));
+            }
+        });
     }
 }
