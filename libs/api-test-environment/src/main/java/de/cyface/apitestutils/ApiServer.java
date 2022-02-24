@@ -1,5 +1,5 @@
 /*
- * Copyright 2019-2021 Cyface GmbH
+ * Copyright 2019-2022 Cyface GmbH
  *
  * This file is part of the Cyface Data Collector.
  *
@@ -41,7 +41,7 @@ import io.vertx.junit5.VertxTestContext;
  *
  * @author Armin Schnabel
  * @author Klemens Muthmann
- * @version 2.0.0
+ * @version 2.1.0
  * @since 1.0.0
  */
 public final class ApiServer {
@@ -175,11 +175,26 @@ public final class ApiServer {
      */
     @SuppressWarnings("unused") // Part of the API
     public void postUnauthorized(final WebClient client, final String endpoint, final JsonObject body,
-            final VertxTestContext testContext,
-            final Handler<AsyncResult<HttpResponse<Buffer>>> resultHandler) {
+            final VertxTestContext testContext, final Handler<AsyncResult<HttpResponse<Buffer>>> resultHandler) {
 
         client.post(port(), HTTP_HOST, httpEndpoint + endpoint)
                 .sendJsonObject(body, resultHandler);
+    }
+
+    /**
+     * Send an unauthenticated {@code GET} request to a test server instance
+     *
+     * @param client The Vert.x <code>WebClient</code> to use
+     * @param endpoint The service endpoint to call to get some data
+     * @param testContext The <code>VertxTextContext</code> provided by the current test case
+     * @param resultHandler A handler provided with the result of the get request
+     */
+    @SuppressWarnings("unused") // Part of the API
+    public void getUnauthorized(final WebClient client, final String endpoint, final VertxTestContext testContext,
+            final Handler<AsyncResult<HttpResponse<Buffer>>> resultHandler) {
+
+        client.get(port(), HTTP_HOST, httpEndpoint + endpoint)
+                .send(resultHandler);
     }
 
     /**
