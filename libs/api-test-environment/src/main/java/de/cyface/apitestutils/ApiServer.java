@@ -165,6 +165,24 @@ public final class ApiServer {
     }
 
     /**
+     * Send an unauthenticated {@code POST} request to a test server instance
+     *
+     * @param client The Vert.x <code>WebClient</code> to use
+     * @param endpoint The service endpoint to call to get some data
+     * @param body The body to post
+     * @param testContext The <code>VertxTextContext</code> provided by the current test case
+     * @param resultHandler A handler provided with the result of the get request
+     */
+    @SuppressWarnings("unused") // Part of the API
+    public void postUnauthorized(final WebClient client, final String endpoint, final JsonObject body,
+            final VertxTestContext testContext,
+            final Handler<AsyncResult<HttpResponse<Buffer>>> resultHandler) {
+
+        client.post(port(), HTTP_HOST, httpEndpoint + endpoint)
+                .sendJsonObject(body, resultHandler);
+    }
+
+    /**
      * @return The port the server is reachable at.
      */
     private int port() {
