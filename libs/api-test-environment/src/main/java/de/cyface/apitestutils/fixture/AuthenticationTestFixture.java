@@ -18,6 +18,7 @@
  */
 package de.cyface.apitestutils.fixture;
 
+import de.cyface.apitestutils.fixture.user.DirectTestUser;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.ext.mongo.MongoClient;
@@ -38,7 +39,7 @@ public final class AuthenticationTestFixture implements TestFixture {
     public Future<Void> insertTestData(MongoClient mongoClient) {
 
         final Promise<Void> promise = Promise.promise();
-        final var testUser = new TestUser("admin", "secret",
+        final var testUser = new DirectTestUser("admin", "secret",
                 "testGroup" + DatabaseConstants.GROUP_MANAGER_ROLE_SUFFIX);
         testUser.insert(mongoClient, result -> {
             if (result.succeeded()) {

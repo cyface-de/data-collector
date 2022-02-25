@@ -20,17 +20,16 @@ package de.cyface.apitestutils.fixture;
 
 import java.util.ArrayList;
 import java.util.List;
-import org.apache.commons.lang3.Validate;
 
-import io.vertx.core.AsyncResult;
+import de.cyface.apitestutils.fixture.user.DirectTestUser;
+
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
-import io.vertx.core.Handler;
 import io.vertx.core.Promise;
 import io.vertx.ext.mongo.MongoClient;
 
 /**
- * A fixture providing data to use for testing the raw geo location export.
+ * A fixture providing data to use for testing the raw geo-location export.
  *
  * @author Klemens Muthmann
  * @author Armin Schnabel
@@ -78,9 +77,9 @@ public final class GeoLocationTestFixture implements TestFixture {
             futures.add(promise.future());
             document.insert(mongoClient, promise);
         });
-        new TestUser(TEST_USER_NAME, "secret", TEST_GROUP + DatabaseConstants.GROUP_MANAGER_ROLE_SUFFIX).insert(
+        new DirectTestUser(TEST_USER_NAME, "secret", TEST_GROUP + DatabaseConstants.GROUP_MANAGER_ROLE_SUFFIX).insert(
                 mongoClient, createAuthUserPromise);
-        new TestUser(TEST_GROUP_USER_USERNAME, "secret", TEST_GROUP + DatabaseConstants.USER_GROUP_ROLE_SUFFIX)
+        new DirectTestUser(TEST_GROUP_USER_USERNAME, "secret", TEST_GROUP + DatabaseConstants.USER_GROUP_ROLE_SUFFIX)
                 .insert(mongoClient, createTestUserPromise);
         final var composition = CompositeFuture.all(futures);
         final Promise<Void> promise = Promise.promise();

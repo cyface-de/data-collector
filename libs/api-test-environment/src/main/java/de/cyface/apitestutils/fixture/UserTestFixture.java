@@ -18,6 +18,7 @@
  */
 package de.cyface.apitestutils.fixture;
 
+import de.cyface.apitestutils.fixture.user.TestUser;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.ext.mongo.MongoClient;
