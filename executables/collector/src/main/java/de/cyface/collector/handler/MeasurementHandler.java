@@ -170,7 +170,7 @@ public final class MeasurementHandler implements Handler<RoutingContext> {
      * @param user the user which was authenticated to this request
      * @param contentRange the content range information from the header
      * @param metaData the metadata from the request header
-     * @param path {@code String} if the session contained a path to the chunk file or {@code Null} otherwise.
+     * @param path {@code String} if the session contained a path to the chunk file or {@code null} otherwise.
      */
     private void handleFirstChunkUpload(final RoutingContext ctx, final HttpServerRequest request,
             final Session session, final User user, final ContentRange contentRange, final RequestMetaData metaData,
@@ -204,7 +204,7 @@ public final class MeasurementHandler implements Handler<RoutingContext> {
      * @param user the user which was authenticated to this request
      * @param contentRange the content range information from the header
      * @param metaData the metadata from the request header
-     * @param path {@code String} if the session contained a path to the chunk file or {@code Null} otherwise.
+     * @param path {@code String} if the session contained a path to the chunk file or {@code null} otherwise.
      */
     private void handleSubsequentChunkUpload(final RoutingContext ctx, final HttpServerRequest request,
             final Session session, final User user, final ContentRange contentRange, final RequestMetaData metaData,
