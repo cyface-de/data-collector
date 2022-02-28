@@ -162,7 +162,7 @@ public final class Authenticator implements Handler<RoutingContext> {
      * Only self-registered accounts need to be activated and, thus, contain the "activated" field.
      *
      * @param principal the underlying principal of the user to check
-     * @return {@code True} if the user account is activated
+     * @return {@code true} if the user account is activated
      */
     static boolean activated(final JsonObject principal) {
         return  !principal.containsKey("activated") || principal.getBoolean("activated");
