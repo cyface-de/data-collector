@@ -18,11 +18,9 @@
  */
 package de.cyface.api.model;
 
-import de.cyface.model.Json;
-import de.cyface.model.Modality;
-import io.vertx.core.json.JsonArray;
-import io.vertx.core.json.JsonObject;
-import org.apache.commons.lang3.Validate;
+import static de.cyface.model.Json.jsonArray;
+import static de.cyface.model.Json.jsonKeyValue;
+import static de.cyface.model.Json.jsonObject;
 
 import java.time.OffsetDateTime;
 import java.util.Arrays;
@@ -31,9 +29,12 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.function.Consumer;
 
-import static de.cyface.model.Json.jsonArray;
-import static de.cyface.model.Json.jsonKeyValue;
-import static de.cyface.model.Json.jsonObject;
+import org.apache.commons.lang3.Validate;
+
+import de.cyface.model.Json;
+import de.cyface.model.Modality;
+import io.vertx.core.json.JsonArray;
+import io.vertx.core.json.JsonObject;
 
 /**
  * Class which represents result elements from the surface pipeline: classified road segments.
@@ -41,6 +42,8 @@ import static de.cyface.model.Json.jsonObject;
  * The data in this class is generated from {@code LocationInSegment} data.
  *
  * @author Armin Schnabel
+ * @since 6.1.0
+ * @version 1.1.0
  */
 @SuppressWarnings("unused") // Part of the API
 public class ClassifiedSegment {
@@ -52,65 +55,72 @@ public class ClassifiedSegment {
     /**
      * The database identifier of the segment.
      */
-    final private String oid;
+    private final String oid;
     /**
      * {@code true} of this segment is orientated in the same direction as the formal direction of the underlying OSM
      * way id or {@code false} if it's orientated in the opposite direction.
      */
-    final private boolean forward;
+    private final boolean forward;
     /**
      * The geometry of this segment in the GeoJSON format, i.e. containing a `type` attribute with `LineString` as value
      * and the `coordinates` attribute with an array containing the nodes of this segment, as loaded from the database.
      */
-    final private Geometry geometry;
+    private final Geometry geometry;
     /**
      * The length of this segment in meters.
      */
-    final private double length;
+    private final double length;
+    /**
+     * The offset in meters from the {@link #getVnk()}}, i.e. where the segment start within the way.
+     */
+    private final double wayOffset;
+    /**
+     * The OSM identifier of the OSM way which this segment belongs to.
+     */
+    private final long way;
+    /**
+     * The OSM identifier of the node where the underlying OSM way of this segment starts.
+     */
+    private final long vnk;
+    /**
+     * The OSM identifier of the node where the underlying OSM way of this segment ends.
+     */
+    private final long nnk;
+    /**
+     * A subset of the OSM way's tags which this segment belongs to.
+     * <p>
+     * The value can be a {@code String}, {@code Double} or an {@code Integer}.
+     */
+    private final Map<String, Object> tags;
     /**
      * The {@link Modality} this segment was recorded with.
      */
-    final private Modality modality;
-    /**
-     * The OSM id of the node where the underlying OSM way of this segment starts.
-     */
-    final private long vnk;
-    /**
-     * The OSM id of the node where the underlying OSM way of this segment ends.
-     */
-    final private long nnk;
-    /**
-     * The meter this segment start at compared the full way from `vnk` to `nnk`. I.e. the travel-distance to `vnk`.
-     * <p>
-     * FIXME: Should we not also store the max_length (100) or segmentation (100)?
-     * This helps the client to show "meter 100-200" and to store segments for 25, 100 segmentation at the same time.
-     */
-    final private int start;
+    private final Modality modality;
     /**
      * The time of the newest data point used to classify this segment.
      */
-    final private OffsetDateTime latestDataPoint;
+    private final OffsetDateTime latestDataPoint;
     /**
      * The name of the user who uploaded the data of this segment.
      */
-    final private String username;
+    private final String username;
     /**
      * A mean value from probability theory required to update {@code variance} without requiring previous points.
      */
-    final private double expectedValue;
+    private final double expectedValue;
     /**
      * The mathematical variance calculated from calibrated vertical accelerations.
      */
-    final private double variance;
+    private final double variance;
     /**
      * The surface quality class calculated for this segment.
      */
-    final private SurfaceQuality quality;
+    private final SurfaceQuality quality;
     /**
      * The number of sample points used to calculate {@code variance}. This is required to update {@code variance}
      * without requiring previous points.
      */
-    final private long dataPointCount;
+    private final long dataPointCount;
     /**
      * The version of the format of this segment entry.
      */
@@ -119,34 +129,37 @@ public class ClassifiedSegment {
     /**
      * Constructs a fully initialized instance of this class.
      *
-     * @param oid             The database identifier of the segment.
-     * @param forward         {@code true} of this segment is orientated in the same direction as the formal direction of the
-     *                        underlying OSM way id or {@code false} if it's orientated in the opposite direction.
-     * @param geometry        The geometry of this segment in the GeoJSON format, i.e. containing a `type` attribute with
-     *                        `LineString` as value and the `coordinates` attribute with an array containing the nodes of this
-     *                        segment, as loaded from the database.
-     * @param length          The length of this segment in meters.
-     * @param modality        The {@link Modality} this segment was recorded with.
-     * @param vnk             The OSM id of the node where the underlying OSM way of this segment starts.
-     * @param nnk             The OSM id of the node where the underlying OSM way of this segment ends.
-     * @param start           The meter this segment start at compared the full way from `vnk` to `nnk`. I.e. the travel-distance
-     *                        to `vnk`.
+     * @param oid The database identifier of the segment.
+     * @param forward {@code true} of this segment is orientated in the same direction as the formal direction of the
+     *            underlying OSM way id or {@code false} if it's orientated in the opposite direction.
+     * @param geometry The geometry of this segment in the GeoJSON format, i.e. containing a `type` attribute with
+     *            `LineString` as value and the `coordinates` attribute with an array containing the nodes of this
+     *            segment, as loaded from the database.
+     * @param length The length of this segment in meters.
+     * @param modality The {@link Modality} this segment was recorded with.
+     * @param vnk The OSM id of the node where the underlying OSM way of this segment starts.
+     * @param nnk The OSM id of the node where the underlying OSM way of this segment ends.
+     * @param way The OSM identifier of the OSM way which this segment belongs to.
+     * @param wayOffset The offset in meters from the {@link #getVnk()}}, i.e. where the segment start within
+     *            the way.
+     * @param tags A subset of the OSM way's tags which this segment belongs to. The value can be a
+     *            {@code String}, {@code Double} or an {@code Integer}.
      * @param latestDataPoint The time of the newest data point used to classify this segment.
-     * @param username        The name of the user who uploaded the data of this segment.
-     * @param expectedValue   A mean value from probability theory required to update {@code variance} without requiring
-     *                        previous points.
-     * @param variance        The mathematical variance calculated from calibrated vertical accelerations.
-     * @param quality         The surface quality class calculated for this segment.
-     * @param dataPointCount  The number of sample points used to calculate {@code variance}. This is required to update
-     *                        {@code variance} without requiring previous points.
-     * @param version         The version of the format of this segment entry.
+     * @param username The name of the user who uploaded the data of this segment.
+     * @param expectedValue A mean value from probability theory required to update {@code variance} without requiring
+     *            previous points.
+     * @param variance The mathematical variance calculated from calibrated vertical accelerations.
+     * @param quality The surface quality class calculated for this segment.
+     * @param dataPointCount The number of sample points used to calculate {@code variance}. This is required to update
+     *            {@code variance} without requiring previous points.
+     * @param version The version of the format of this segment entry.
      */
     @SuppressWarnings("unused") // Part of the API
     public ClassifiedSegment(final String oid, final boolean forward, final Geometry geometry, final double length,
-                             final Modality modality, final long vnk,
-                             final long nnk, final int start, final OffsetDateTime latestDataPoint, final String username,
-                             final double expectedValue, final double variance,
-                             final SurfaceQuality quality, final long dataPointCount, final String version) {
+            final Modality modality, final long vnk, final long nnk, final double wayOffset, final long way,
+            final Map<String, Object> tags, final OffsetDateTime latestDataPoint, final String username,
+            final double expectedValue, final double variance, final SurfaceQuality quality, final long dataPointCount,
+            final String version) {
         this.oid = oid;
         this.forward = forward;
         this.geometry = geometry;
@@ -154,7 +167,9 @@ public class ClassifiedSegment {
         this.modality = modality;
         this.vnk = vnk;
         this.nnk = nnk;
-        this.start = start;
+        this.wayOffset = wayOffset;
+        this.tags = tags;
+        this.way = way;
         this.latestDataPoint = latestDataPoint;
         this.username = username;
         this.expectedValue = expectedValue;
@@ -187,29 +202,49 @@ public class ClassifiedSegment {
         handler.accept(coordinates);
         handler.accept("},");
 
+        final var builder = new Json.JsonObject.Builder();
+        addTag(getTags(), "name", builder);
+        addTag(getTags(), "highway", builder);
+        addTag(getTags(), "surface", builder);
+        final var tagsObject = builder.build();
+
         final var oid = jsonKeyValue("oid", getOid()); // for support
-        final var wayId = jsonKeyValue("@id", "way/232814001"); // FIXME: missing
-        final var highwayType = jsonKeyValue("highway", "residential"); // FIXME: missing
-        final var surfaceType = jsonKeyValue("surface", "asphalt"); // FIXME: missing
+        final var way = jsonKeyValue("way", getWay());
         final var forward = jsonKeyValue("forward_moving", isForward());
         final var modality = jsonKeyValue("modality", getModality().getDatabaseIdentifier());
-        final var maxLength = jsonKeyValue("max_length", getLength());
-        final var start = jsonKeyValue("start_meter", getStart());
-        final var vnk = jsonKeyValue("vnk_id", getVnk());
-        final var nnk = jsonKeyValue("nnk_id", getNnk());
+        final var length = jsonKeyValue("length", getLength());
+        final var wayOffset = jsonKeyValue("way_offset", getWayOffset());
+        final var vnk = jsonKeyValue("vnk", getVnk());
+        final var nnk = jsonKeyValue("nnk", getNnk());
+        final var tags = jsonKeyValue("tags", tagsObject);
         final var latestDataPoint = jsonKeyValue("timestamp", getLatestDataPoint().toEpochSecond());
         final var quality = jsonKeyValue("quality", getQuality().databaseValue);
         final var color = jsonKeyValue("color",
-                getQuality().databaseValue == 0 ? "red" :
-                        getQuality().databaseValue == 1 ? "yellow" :
-                                getQuality().databaseValue == 2 ? "green" :
-                                        getQuality().databaseValue == 3 ? "blue" :
-                                                "black");
+                getQuality().databaseValue == 0 ? "red"
+                        : getQuality().databaseValue == 1 ? "yellow"
+                                : getQuality().databaseValue == 2 ? "green"
+                                        : getQuality().databaseValue == 3 ? "blue" : "black");
         final var version = jsonKeyValue("version", getVersion());
-        final var properties = jsonObject(oid, wayId, highwayType, surfaceType, forward, modality, maxLength, start, vnk, nnk, latestDataPoint, quality, color, version);
+        final var properties = jsonObject(oid, way, forward, modality, length, wayOffset, vnk, nnk, tags,
+                latestDataPoint, quality, color, version);
         handler.accept(jsonKeyValue("properties", properties).getStringValue());
 
         handler.accept("}");
+    }
+
+    /**
+     * Searches the provided {@code tags} for a tag with the key {@code name} and adds this to the provided
+     * {@code builder} if found.
+     *
+     * @param tags the tags to be searched
+     * @param key the key of the tag to add
+     * @param builder the builder to add the tag to
+     */
+    private void addTag(final Map<String, Object> tags, final String key, final Json.JsonObject.Builder builder) {
+        if (tags.containsKey(key)) {
+            final var value = (String)tags.get(key);
+            builder.add(jsonKeyValue(key, value));
+        }
     }
 
     /**
@@ -247,13 +282,18 @@ public class ClassifiedSegment {
         ret.put("forward", isForward());
         final var geometry = getGeometry();
         final var coordinates = new JsonArray();
-        Arrays.stream(geometry.getCoordinates()).forEach(c -> coordinates.add(new JsonArray().add(0, c.getLongitude()).add(1, c.getLatitude())));
+        Arrays.stream(geometry.getCoordinates())
+                .forEach(c -> coordinates.add(new JsonArray().add(0, c.getLongitude()).add(1, c.getLatitude())));
         ret.put("geometry", new JsonObject().put("type", geometry.getType()).put("coordinates", coordinates));
         ret.put("length", getLength());
         ret.put("modality", getModality().getDatabaseIdentifier());
+        ret.put("way", getWay());
         ret.put("vnk", getVnk());
         ret.put("nnk", getNnk());
-        ret.put("start", getStart());
+        ret.put("way_offset", getWayOffset());
+        final var tags = new JsonObject();
+        getTags().forEach(tags::put);
+        ret.put("tags", tags);
         ret.put("latest_data_point", new JsonObject().put("$date", getLatestDataPoint().toString()));
         ret.put("username", getUsername());
         ret.put("expected_value", getExpectedValue());
@@ -267,22 +307,50 @@ public class ClassifiedSegment {
     @Override
     public String toString() {
         return "ClassifiedSegment{" +
-                "oid=" + oid +
+                "CURRENT_VERSION='" + CURRENT_VERSION + '\'' +
+                ", oid='" + oid + '\'' +
                 ", forward=" + forward +
                 ", geometry=" + geometry +
                 ", length=" + length +
-                ", modality=" + modality +
+                ", wayOffset=" + wayOffset +
+                ", way=" + way +
                 ", vnk=" + vnk +
-                ", nnk=" + nnk +
-                ", start=" + start +
+                ", nnk=" + vnk +
+                ", tags=" + tags +
+                ", modality=" + modality +
                 ", latestDataPoint=" + latestDataPoint +
                 ", username='" + username + '\'' +
                 ", expectedValue=" + expectedValue +
                 ", variance=" + variance +
                 ", quality=" + quality +
                 ", dataPointCount=" + dataPointCount +
-                ", version=" + version +
+                ", version='" + version + '\'' +
                 '}';
+    }
+
+    /**
+     * @return The offset in meters from the {@link #getVnk()}}, i.e. where the segment start within the way.
+     */
+    @SuppressWarnings("unused") // Part of the API
+    public double getWayOffset() {
+        return wayOffset;
+    }
+
+    /**
+     * @return The OSM identifier of the OSM way which this segment belongs to.
+     */
+    @SuppressWarnings("unused") // Part of the API
+    public long getWay() {
+        return way;
+    }
+
+    /**
+     * @return A subset of the OSM way's tags which this segment belongs to. The value can be a {@code String},
+     *         {@code Double} or an {@code Integer}.
+     */
+    @SuppressWarnings("unused") // Part of the API
+    public Map<String, Object> getTags() {
+        return tags;
     }
 
     /**
@@ -295,7 +363,7 @@ public class ClassifiedSegment {
 
     /**
      * @return {@code True} of this segment is orientated in the same direction as the formal direction of the
-     * underlying OSM way id or {@code false} if it's orientated in the opposite direction.
+     *         underlying OSM way id or {@code false} if it's orientated in the opposite direction.
      */
     @SuppressWarnings("unused") // Part of the API
     public boolean isForward() {
@@ -304,8 +372,8 @@ public class ClassifiedSegment {
 
     /**
      * @return The geometry of this segment in the GeoJSON format, i.e. containing a `type` attribute with `LineString`
-     * as value and the `coordinates` attribute with an array containing the nodes of this segment, as loaded
-     * from the database.
+     *         as value and the `coordinates` attribute with an array containing the nodes of this segment, as loaded
+     *         from the database.
      */
     @SuppressWarnings("unused") // Part of the API
     public Geometry getGeometry() {
@@ -323,6 +391,7 @@ public class ClassifiedSegment {
     /**
      * @return The {@link Modality} this segment was recorded with.
      */
+    @SuppressWarnings("unused") // Part of the API
     public Modality getModality() {
         return modality;
     }
@@ -344,15 +413,6 @@ public class ClassifiedSegment {
     }
 
     /**
-     * @return The meter this segment start at compared the full way from `vnk` to `nnk`. I.e. the travel-distance to
-     * `vnk`.
-     */
-    @SuppressWarnings("unused") // Part of the API
-    public int getStart() {
-        return start;
-    }
-
-    /**
      * @return The time of the newest data point used to classify this segment.
      */
     @SuppressWarnings("unused") // Part of the API
@@ -370,7 +430,7 @@ public class ClassifiedSegment {
 
     /**
      * @return A mean value from probability theory required to update {@code variance} without requiring previous
-     * points.
+     *         points.
      */
     @SuppressWarnings("unused") // Part of the API
     public double getExpectedValue() {
@@ -395,7 +455,7 @@ public class ClassifiedSegment {
 
     /**
      * @return The number of sample points used to calculate {@code variance}. This is required to update
-     * {@code variance} without requiring previous points.
+     *         {@code variance} without requiring previous points.
      */
     @SuppressWarnings("unused") // Part of the API
     public long getDataPointCount() {
@@ -405,6 +465,7 @@ public class ClassifiedSegment {
     /**
      * @return The version of the format of this segment entry.
      */
+    @SuppressWarnings("unused") // Part of the API
     public String getVersion() {
         return version;
     }
@@ -415,18 +476,20 @@ public class ClassifiedSegment {
             return true;
         if (o == null || getClass() != o.getClass())
             return false;
-        ClassifiedSegment that = (ClassifiedSegment) o;
-        return forward == that.forward && Double.compare(that.length, length) == 0 && vnk == that.vnk && nnk == that.nnk
-                && start == that.start && Double.compare(that.expectedValue, expectedValue) == 0
+        ClassifiedSegment that = (ClassifiedSegment)o;
+        return forward == that.forward && Double.compare(that.length, length) == 0
+                && Double.compare(that.wayOffset, wayOffset) == 0 && way == that.way
+                && vnk == that.vnk && nnk == that.nnk
+                && Double.compare(that.expectedValue, expectedValue) == 0
                 && Double.compare(that.variance, variance) == 0 && dataPointCount == that.dataPointCount
-                && Objects.equals(oid, that.oid) && Objects.equals(geometry, that.geometry) && modality == that.modality
-                && Objects.equals(latestDataPoint, that.latestDataPoint) && Objects.equals(username, that.username)
-                && quality == that.quality && Objects.equals(version, that.version);
+                && oid.equals(that.oid) && geometry.equals(that.geometry) && tags.equals(that.tags)
+                && modality == that.modality && latestDataPoint.equals(that.latestDataPoint)
+                && username.equals(that.username) && quality == that.quality && version.equals(that.version);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(forward, vnk, nnk, start);
+        return Objects.hash(forward, wayOffset, way, modality, username, version);
     }
 
     /**
@@ -434,6 +497,7 @@ public class ClassifiedSegment {
      *
      * @author Armin Schnabel
      * @since 6.1.0
+     * @version 1.0.0
      */
     public enum SurfaceQuality {
         WORST(0), BAD(1), GOOD(2), BEST(3);
