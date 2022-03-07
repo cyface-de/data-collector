@@ -54,7 +54,7 @@ public class ClassifiedSegment {
      */
     final private String oid;
     /**
-     * {@code True} of this segment is orientated in the same direction as the formal direction of the underlying OSM
+     * {@code true} of this segment is orientated in the same direction as the formal direction of the underlying OSM
      * way id or {@code false} if it's orientated in the opposite direction.
      */
     final private boolean forward;
@@ -120,7 +120,7 @@ public class ClassifiedSegment {
      * Constructs a fully initialized instance of this class.
      *
      * @param oid             The database identifier of the segment.
-     * @param forward         {@code True} of this segment is orientated in the same direction as the formal direction of the
+     * @param forward         {@code true} of this segment is orientated in the same direction as the formal direction of the
      *                        underlying OSM way id or {@code false} if it's orientated in the opposite direction.
      * @param geometry        The geometry of this segment in the GeoJSON format, i.e. containing a `type` attribute with
      *                        `LineString` as value and the `coordinates` attribute with an array containing the nodes of this

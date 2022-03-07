@@ -22,9 +22,9 @@ import java.nio.charset.StandardCharsets;
 
 import org.apache.commons.lang3.Validate;
 
-import de.cyface.api.Parameter;
 import de.cyface.api.EndpointConfig;
 import de.cyface.api.Hasher;
+import de.cyface.api.Parameter;
 import de.cyface.collector.handler.UserCreationHandler;
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.Promise;
@@ -88,12 +88,12 @@ public final class ManagementApiVerticle extends AbstractVerticle {
     private Router setupRouter(final MongoClient mongoClient, final Hasher hasher) {
         Validate.notNull(mongoClient);
 
+        final var userCreationHandler = new UserCreationHandler(mongoClient, "user", hasher);
         final var router = Router.router(getVertx());
-
-        router.post("/user").handler(BodyHandler.create())
-                .blockingHandler(new UserCreationHandler(mongoClient, "user", hasher));
+        router.post("/user")
+                .handler(BodyHandler.create())
+                .handler(userCreationHandler);
         router.get("/*").handler(StaticHandler.create("webroot/management"));
-
         return router;
     }
 }

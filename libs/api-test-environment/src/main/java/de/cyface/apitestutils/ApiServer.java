@@ -1,5 +1,5 @@
 /*
- * Copyright 2019-2021 Cyface GmbH
+ * Copyright 2019-2022 Cyface GmbH
  *
  * This file is part of the Cyface Data Collector.
  *
@@ -41,7 +41,7 @@ import io.vertx.junit5.VertxTestContext;
  *
  * @author Armin Schnabel
  * @author Klemens Muthmann
- * @version 2.0.0
+ * @version 2.1.0
  * @since 1.0.0
  */
 public final class ApiServer {
@@ -78,6 +78,7 @@ public final class ApiServer {
      * @param verticleClassName The name of the {@code ApiVerticle} to deploy
      * @throws IOException If the server port could not be opened
      */
+    @SuppressWarnings("unused") // Part of the API
     public void start(final Vertx vertx, final VertxTestContext testContext, final TestMongoDatabase mongoDatabase,
             final String verticleClassName, final Handler<AsyncResult<WebClient>> resultHandler) throws IOException {
         start(vertx, testContext, mongoDatabase, verticleClassName, new JsonObject(), resultHandler);
@@ -132,7 +133,7 @@ public final class ApiServer {
     }
 
     /**
-     * Send a test get request to a test server instance
+     * Send an authenticated {@code GET} request to a test server instance
      *
      * @param client The Vert.x <code>WebClient</code> to use
      * @param endpoint The service endpoint to call to get some data
@@ -141,6 +142,7 @@ public final class ApiServer {
      * @param format A field to identify the requested format, such as 'csv' or 'json'.
      * @param resultHandler A handler provided with the result of the get request
      */
+    @SuppressWarnings("unused") // Part of the API
     public void get(final WebClient client, final String endpoint, final VertxTestContext testContext,
             final String groupName, final String format,
             final Handler<AsyncResult<HttpResponse<Buffer>>> resultHandler) {
@@ -160,6 +162,39 @@ public final class ApiServer {
                         response.statusCode(), authToken)));
             }
         }));
+    }
+
+    /**
+     * Send an unauthenticated {@code POST} request to a test server instance
+     *
+     * @param client The Vert.x <code>WebClient</code> to use
+     * @param endpoint The service endpoint to call to get some data
+     * @param body The body to post
+     * @param testContext The <code>VertxTextContext</code> provided by the current test case
+     * @param resultHandler A handler provided with the result of the get request
+     */
+    @SuppressWarnings("unused") // Part of the API
+    public void postUnauthorized(final WebClient client, final String endpoint, final JsonObject body,
+            final VertxTestContext testContext, final Handler<AsyncResult<HttpResponse<Buffer>>> resultHandler) {
+
+        client.post(port(), HTTP_HOST, httpEndpoint + endpoint)
+                .sendJsonObject(body, resultHandler);
+    }
+
+    /**
+     * Send an unauthenticated {@code GET} request to a test server instance
+     *
+     * @param client The Vert.x <code>WebClient</code> to use
+     * @param endpoint The service endpoint to call to get some data
+     * @param testContext The <code>VertxTextContext</code> provided by the current test case
+     * @param resultHandler A handler provided with the result of the get request
+     */
+    @SuppressWarnings("unused") // Part of the API
+    public void getUnauthorized(final WebClient client, final String endpoint, final VertxTestContext testContext,
+            final Handler<AsyncResult<HttpResponse<Buffer>>> resultHandler) {
+
+        client.get(port(), HTTP_HOST, httpEndpoint + endpoint)
+                .send(resultHandler);
     }
 
     /**

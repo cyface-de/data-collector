@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2021 Cyface GmbH
+ * Copyright 2022 Cyface GmbH
  *
  * This file is part of the Cyface Data Collector.
  *
@@ -18,29 +18,38 @@
  */
 package de.cyface.apitestutils.fixture;
 
-import de.cyface.apitestutils.fixture.user.DirectTestUser;
+import de.cyface.apitestutils.fixture.user.TestUser;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.ext.mongo.MongoClient;
 
 /**
- * The test data used to test authentication requests to a Cyface exporter server.
- * It provides users to authenticate with. Currently this is a user "admin" with a password "secret" and the manager
- * role.
+ * A fixture providing data to use for testing the user activation endpoint.
  *
- * @author Klemens Muthmann
+ * @author Armin Schnabel
  * @version 1.0.0
- * @since 1.0.0
+ * @since 6.3.0
  */
 @SuppressWarnings("unused") // API
-public final class AuthenticationTestFixture implements TestFixture {
+public final class UserTestFixture implements TestFixture {
+    /**
+     * The measurements used during the test
+     */
+    private final TestUser testUser;
+
+    /**
+     * Creates a new completely initialized fixture for the test.
+     *
+     * @param user The user to add
+     */
+    @SuppressWarnings("unused") // API
+    public UserTestFixture(final TestUser user) {
+        this.testUser = user;
+    }
 
     @Override
     public Future<Void> insertTestData(MongoClient mongoClient) {
-
         final Promise<Void> promise = Promise.promise();
-        final var testUser = new DirectTestUser("admin", "secret",
-                "testGroup" + DatabaseConstants.GROUP_MANAGER_ROLE_SUFFIX);
         testUser.insert(mongoClient, result -> {
             if (result.succeeded()) {
                 promise.complete();

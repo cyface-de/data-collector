@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2021 Cyface GmbH
+ * Copyright 2020-2022 Cyface GmbH
  *
  * This file is part of the Cyface Data Collector.
  *
@@ -16,12 +16,14 @@
  * You should have received a copy of the GNU General Public License
  * along with the Cyface Data Collector. If not, see <http://www.gnu.org/licenses/>.
  */
-package de.cyface.apitestutils.fixture;
+package de.cyface.apitestutils.fixture.user;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.List;
 
+import de.cyface.apitestutils.fixture.DatabaseConstants;
+import de.cyface.apitestutils.fixture.MongoTestData;
 import org.apache.commons.lang3.Validate;
 
 import de.cyface.api.Hasher;
@@ -34,14 +36,14 @@ import io.vertx.ext.auth.HashingStrategy;
 import io.vertx.ext.mongo.MongoClient;
 
 /**
- * A user to test data exports for.
+ * Base class for users to test data exports for.
  *
  * @author Klemens Muthmann
  * @author Armin Schnabel
- * @version 1.1.0
+ * @version 1.2.0
  * @since 1.0.0
  */
-public final class TestUser implements MongoTestData {
+public abstract class TestUser implements MongoTestData {
     /**
      * The name of the user to be created.
      */
@@ -56,6 +58,8 @@ public final class TestUser implements MongoTestData {
     private final String password;
 
     /**
+     * Creates a fully initialized instance of this class.
+     *
      * @param username The name of the user to be created
      * @param roles The roles this user has
      * @param password The password used to authenticate the user
@@ -75,27 +79,48 @@ public final class TestUser implements MongoTestData {
         Validate.notNull(mongoClient);
         Validate.notNull(resultHandler);
 
-        final var salt = "cyface-salt";
-        mongoClient.findOne(DatabaseConstants.COLLECTION_USER,
+        final var findUser = mongoClient.findOne(DatabaseConstants.COLLECTION_USER,
                 new JsonObject().put(DatabaseConstants.USER_USERNAME_FIELD, username),
-                null, result -> {
-                    if (result.failed()) {
-                        resultHandler.handle(Future.failedFuture(result.cause()));
-                    }
-                    if (result.result() == null) {
-                        final var hasher = new Hasher(HashingStrategy.load(),
-                                salt.getBytes(StandardCharsets.UTF_8));
-                        final var hashedPassword = hasher.hash(password);
-                        final var newUserInsertCommand = new JsonObject().put("username", username)
-                                .put("roles", new JsonArray(roles)).put("password", hashedPassword);
-                        final var userInsertedFuture = mongoClient.insert(DatabaseConstants.COLLECTION_USER,
-                                newUserInsertCommand);
-                        userInsertedFuture.onSuccess(success -> resultHandler.handle(Future.succeededFuture()));
-                        userInsertedFuture.onFailure(failure -> resultHandler.handle(Future.failedFuture(failure)));
-                    } else {
-                        resultHandler.handle(Future.failedFuture(new IllegalStateException(
-                                "User already existent: " + result.result().encodePrettily())));
-                    }
-                });
+                null);
+        findUser.onFailure(failure -> resultHandler.handle(Future.failedFuture(failure)));
+        findUser.onSuccess(success -> {
+            if (success == null) {
+                final var insertCommand = insertCommand();
+                final var insertUser = mongoClient.insert(DatabaseConstants.COLLECTION_USER, insertCommand);
+                insertUser.onSuccess(inserted -> resultHandler.handle(Future.succeededFuture()));
+                insertUser.onFailure(failure -> resultHandler.handle(Future.failedFuture(failure)));
+            } else {
+                resultHandler.handle(Future.failedFuture(new IllegalStateException(
+                        "User already existent: " + success.encodePrettily())));
+            }
+        });
     }
+
+    /**
+     * @return The name of the user to be created.
+     */
+    protected String getUsername() {
+        return username;
+    }
+
+    /**
+     * @return The roles this user has.
+     */
+    protected List<String> getRoles() {
+        return roles;
+    }
+
+    /**
+     * @return The hased and salted password of that user, as it would be present in the database.
+     */
+    protected String getHashedPassword() {
+        final var salt = "cyface-salt";
+        final var hasher = new Hasher(HashingStrategy.load(), salt.getBytes(StandardCharsets.UTF_8));
+        return hasher.hash(password);
+    }
+
+    /**
+     * @return A MongoDB command to insert the user into the test database.
+     */
+    protected abstract JsonObject insertCommand();
 }

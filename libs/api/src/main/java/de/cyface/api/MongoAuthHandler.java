@@ -52,7 +52,7 @@ public final class MongoAuthHandler implements Handler<RoutingContext> {
      */
     private final MongoAuthentication authProvider;
     /**
-     * {@code True} if the {@code #request} needs to be paused when waiting for an async result.
+     * {@code true} if the {@code #request} needs to be paused when waiting for an async result.
      * <p>
      * This is necessary when the request body is parsed after this handler or else `403: request body already read` if
      * thrown [DAT-749].
@@ -64,7 +64,7 @@ public final class MongoAuthHandler implements Handler<RoutingContext> {
      * authentication information to authorize a request and fetch the correct data.
      *
      * @param authProvider An auth provider used by this server to authenticate against the Mongo user database.
-     * @param pauseAndResume {@code True} if the {@code #request} needs to be paused when waiting for an async result.
+     * @param pauseAndResume {@code true} if the {@code #request} needs to be paused when waiting for an async result.
      *            This is necessary when the request body is parsed after this handler or else `403: request body
      *            already read` if thrown [DAT-749].
      */
