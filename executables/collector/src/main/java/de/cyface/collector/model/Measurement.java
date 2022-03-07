@@ -131,7 +131,7 @@ public final class Measurement implements Serializable {
      * @return the converted location record as JSON
      */
     private JsonObject geoJson(final RequestMetaData.GeoLocation record) {
-        final var lat = record.getLongitude();
+        final var lat = record.getLatitude();
         final var lon = record.getLongitude();
         final var ts = record.getTimestamp();
         final var geometry = new JsonObject()
