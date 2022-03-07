@@ -66,7 +66,7 @@ public class ClassifiedSegmentRetriever {
      * @return a {@code Future} containing the users' data if successful.
      */
     public Future<List<ClassifiedSegment>> loadSegments(final List<String> userNames, final MongoClient dataClient,
-                                                        final ZonedDateTime startTime, final ZonedDateTime endTime) {
+            final ZonedDateTime startTime, final ZonedDateTime endTime) {
 
         final Promise<List<ClassifiedSegment>> promise = Promise.promise();
         final Future<List<ClassifiedSegment>> future = promise.future();
@@ -124,9 +124,11 @@ public class ClassifiedSegmentRetriever {
         final var geometry = segment.getJsonObject("geometry");
         final var length = segment.getDouble("length");
         final var modality = Modality.valueOf(segment.getString("modality"));
+        final var way = segment.getLong("way");
         final var vnk = segment.getLong("vnk");
         final var nnk = segment.getLong("nnk");
-        final var start = segment.getInteger("start");
+        final var wayOffset = segment.getDouble("way_offset");
+        final var tags = segment.getJsonObject("tags").getMap();
         final var latestDataPoint = OffsetDateTime.parse(segment.getJsonObject("latest_data_point").getString("$date"));
         final var username = segment.getString("username");
         final var expectedValue = segment.getDouble("expected_value");
@@ -137,7 +139,8 @@ public class ClassifiedSegmentRetriever {
         final var quality = ClassifiedSegment.SurfaceQuality.valueOf(segment.getInteger("quality"));
         final var dataPointCount = segment.getLong("data_point_count");
         final var version = segment.getString("version");
-        return new ClassifiedSegment(oid, forward, toGeometry(geometry), length, modality, vnk, nnk, start, latestDataPoint, username, expectedValue, variance, quality, dataPointCount, version);
+        return new ClassifiedSegment(oid, forward, toGeometry(geometry), length, modality, vnk, nnk, wayOffset, way,
+                tags, latestDataPoint, username, expectedValue, variance, quality, dataPointCount, version);
     }
 
     /**
