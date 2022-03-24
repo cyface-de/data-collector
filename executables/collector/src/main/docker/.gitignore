@@ -7,3 +7,4 @@ secrets
 
 file-uploads
 logs
+/logback.xml

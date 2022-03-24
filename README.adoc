@@ -92,6 +92,9 @@ The app is executed by a non-privileged user inside the Docker container. To all
 write data to `logs` and `file-uploads` you need to create two folders and then set the permissions for both folders to `chmod o+w`, see [DAT-797]:
 `mkdir executables/collector/src/main/docker/logs executables/collector/src/main/docker/file-uploads && sudo chmod  o+w executables/collector/src/main/docker/file-uploads executables/collector/src/main/docker/logs`
 
+Finally, make the secrets accessible by the non-privileged user:
+- `sudo chown -R 9999:root executables/collector/src/main/docker/secrets/jwt`
+
 Now build the system as described in the "Building" section above:
 `./gradlew :executables:collector:clean :executables:collector:build :executables:collector:copyToDockerBuildFolder`
 

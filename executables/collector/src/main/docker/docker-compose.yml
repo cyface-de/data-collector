@@ -25,20 +25,21 @@ services:
     container_name: collector_mongo-data
     image: mongo:4.4.4
     ports:
-      - "27019:27017"
+      - "127.0.0.1:27019:27017"
     volumes:
       - type: volume
         source: collector_mongo-data-db
         target: /data/db
     networks:
-      - default
       - database
+    environment:
+      - MONGO_INITDB_DATABASE=cyface-data
 
   mongo-user:
     container_name: collector_mongo-user
     image: mongo:4.4.4
     ports:
-      - "27018:27017"
+      - "127.0.0.1:27018:27017"
     volumes:
       - type: volume
         source: collector_mongo-user-db
@@ -46,25 +47,27 @@ services:
       - type: bind
         source: ./init-scripts/mongo-user/
         target: /docker-entrypoint-initdb.d/
+    networks:
+      - database
     environment:
       MONGO_INITDB_DATABASE: cyface-user
-    networks:
-      - default
-      - database
 
   # The Cyface Collector API Container
   api:
     container_name: collector_api
     build: .
     image: data-collector:0.0.0
-    ports: # It is ok that this entry manipulates the host's ip-tables since this compose file should only be used in dev environments.
-      - "8080:8080"
-      - "13371:13371"
+    ports:
+      - "127.0.0.1:8080:8080"
+      - "127.0.0.1:13371:13371"
+    networks:
+      - database
+      - default
     volumes:
       - ./secrets:/app/secrets:ro # read only
       - ./logs:/app/logs
-      - ./file-uploads:/app/file-uploads
-      - ./logback.xml:/app/logback.xml
+      - ./logback.xml:/app/logback.xml:ro # read only
+      - ./file-uploads:/app/file-uploads # for debugging
     depends_on:
       - mongo-data
       - mongo-user
@@ -72,8 +75,6 @@ services:
       - ADMIN_USER=admin
       - ADMIN_PASSWORD=secret
       - SALT_FILE=/app/secrets/salt
-    networks:
-      - default
 
 volumes:
   collector_mongo-data-db:
