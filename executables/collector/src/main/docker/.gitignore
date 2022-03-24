@@ -4,3 +4,6 @@
 
 # Folder created by docker container
 secrets
+
+file-uploads
+logs
