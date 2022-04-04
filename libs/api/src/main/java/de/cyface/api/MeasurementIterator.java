@@ -165,6 +165,7 @@ final public class MeasurementIterator implements Iterator<Future<Measurement>>,
      * Loads the next measurement until there is no measurement on this {@link MeasurementIterator}.
      *
      * @param writeHandler The handler which is called when a measurement is loaded.
+     * @param separationHandler The handler which is called between measurements, e.g. to add separators in the output
      * @param endHandler The handler which is called after the last measurement was loaded.
      * @param failureHandler The handler which is called upon errors.
      */

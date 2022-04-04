@@ -23,16 +23,13 @@ import static io.vertx.ext.auth.impl.jose.JWS.RS256;
 import java.util.Collections;
 import java.util.Objects;
 
-import io.vertx.core.impl.future.SucceededFuture;
-import io.vertx.core.json.JsonObject;
-import io.vertx.ext.auth.User;
-import io.vertx.ext.auth.impl.UserImpl;
 import org.apache.commons.lang3.Validate;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import io.vertx.core.Handler;
 import io.vertx.core.json.DecodeException;
+import io.vertx.core.json.JsonObject;
 import io.vertx.ext.auth.JWTOptions;
 import io.vertx.ext.auth.jwt.JWTAuth;
 import io.vertx.ext.auth.mongo.MongoAuthentication;
@@ -165,7 +162,7 @@ public final class Authenticator implements Handler<RoutingContext> {
      * @return {@code true} if the user account is activated
      */
     static boolean activated(final JsonObject principal) {
-        return  !principal.containsKey("activated") || principal.getBoolean("activated");
+        return !principal.containsKey("activated") || principal.getBoolean("activated");
     }
 
     /**

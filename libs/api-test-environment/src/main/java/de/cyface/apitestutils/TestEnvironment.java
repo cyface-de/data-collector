@@ -113,7 +113,7 @@ public final class TestEnvironment {
                     this.webClient = webClient;
 
                     // Set up a Mongo client to access the database
-                    JsonObject mongoDbConfiguration = testMongoDatabase.config();
+                    final var mongoDbConfiguration = testMongoDatabase.config();
                     this.mongoClient = EndpointConfig.createSharedMongoClient(vertx, mongoDbConfiguration);
 
                     resultHandler.handle(Future.succeededFuture());
