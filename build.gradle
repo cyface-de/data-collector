@@ -119,8 +119,8 @@ subprojects {
       // Also show assert message (e.g. on the CI) when tests fail to identify cause
       showExceptions true
       exceptionFormat "full"
-      showCauses false // not working with vertx fail() so we disable this
-      showStackTraces false
+      showCauses true // not working with vertx fail() so we disable this
+      showStackTraces true
       showStandardStreams = false
     }
   }
