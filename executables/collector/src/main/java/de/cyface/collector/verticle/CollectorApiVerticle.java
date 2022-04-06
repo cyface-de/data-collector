@@ -108,10 +108,16 @@ public final class CollectorApiVerticle extends AbstractVerticle {
         // Setup Measurement event bus
         prepareEventBus();
 
-        // Start http server
-        final Promise<Void> serverStartPromise = Promise.promise();
+        // Load configuration
         final var configV2 = new de.cyface.collector.verticle.v2.Config(vertx);
         final var configV3 = new Config(vertx);
+
+        // Create indices
+        final var measurementIndex = new JsonObject().put("metadata.deviceId", 1).put("metadata.measurementId", 1);
+        final var indexCreation = configV3.getDataDatabase().createIndex("fs.files", measurementIndex);
+
+        // Start http server
+        final Promise<Void> serverStartPromise = Promise.promise();
         setupRoutes(configV2, configV3, result -> {
             if (result.succeeded()) {
                 final var router = result.result();
@@ -151,7 +157,7 @@ public final class CollectorApiVerticle extends AbstractVerticle {
         });
 
         // Block until all futures completed
-        final var startUpFinishedFuture = CompositeFuture.all(serverStartPromise.future(), defaultUserCreated.future());
+        final var startUpFinishedFuture = CompositeFuture.all(indexCreation, serverStartPromise.future(), defaultUserCreated.future());
         startUpFinishedFuture.onComplete(r -> {
             if (r.succeeded()) {
                 startFuture.complete();
