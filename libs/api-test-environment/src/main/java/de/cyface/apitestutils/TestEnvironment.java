@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2021 Cyface GmbH
+ * Copyright 2020-2022 Cyface GmbH
  *
  * This file is part of the Cyface Data Collector.
  *
@@ -37,7 +37,7 @@ import io.vertx.junit5.VertxTestContext;
  * @author Klemens Muthmann
  * @author Armin Schnabel
  * @version 2.1.0
- * @since 1.0.0
+ * @since 1.0.1
  */
 public final class TestEnvironment {
     /**

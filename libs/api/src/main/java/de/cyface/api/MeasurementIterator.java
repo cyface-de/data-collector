@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 Cyface GmbH
+ * Copyright 2021-2022 Cyface GmbH
  *
  * This file is part of the Cyface Data Collector.
  *
@@ -50,6 +50,7 @@ import io.vertx.core.streams.ReadStream;
  *
  * @author Armin Schnabel
  * @since 6.0.0
+ * @version 1.0.0
  */
 final public class MeasurementIterator implements Iterator<Future<Measurement>>, Handler<JsonObject> {
 

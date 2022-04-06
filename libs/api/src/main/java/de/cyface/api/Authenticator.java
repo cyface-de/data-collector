@@ -1,5 +1,5 @@
 /*
- * Copyright 2018-2021 Cyface GmbH
+ * Copyright 2018-2022 Cyface GmbH
  *
  * This file is part of the Cyface Data Collector.
  *
@@ -48,7 +48,7 @@ import io.vertx.ext.web.handler.LoggerHandler;
  *
  * @author Klemens Muthmann
  * @author Armin Schnabel
- * @version 4.0.0
+ * @version 4.0.1
  * @since 2.0.0
  */
 public final class Authenticator implements Handler<RoutingContext> {
