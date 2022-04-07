@@ -111,7 +111,7 @@ public abstract class TestUser implements MongoTestData {
     }
 
     /**
-     * @return The hased and salted password of that user, as it would be present in the database.
+     * @return The hashed and salted password of that user, as it would be present in the database.
      */
     protected String getHashedPassword() {
         final var salt = "cyface-salt";
