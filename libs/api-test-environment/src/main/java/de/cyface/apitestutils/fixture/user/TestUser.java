@@ -99,7 +99,7 @@ public abstract class TestUser implements MongoTestData {
     /**
      * @return The name of the user to be created.
      */
-    protected String getUsername() {
+    public String getUsername() {
         return username;
     }
 

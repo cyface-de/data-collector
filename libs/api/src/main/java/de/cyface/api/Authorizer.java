@@ -21,6 +21,7 @@ package de.cyface.api;
 import static io.vertx.ext.auth.mongo.MongoAuthorization.DEFAULT_ROLE_FIELD;
 import static io.vertx.ext.auth.mongo.MongoAuthorization.DEFAULT_USERNAME_FIELD;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -138,7 +139,7 @@ public abstract class Authorizer implements Handler<RoutingContext> {
      * @param principal The principal object of the authenticated {@code User} which requests user data
      * @return The usernames of the users which the {@code user} can access
      */
-    protected Future<List<String>> loadAccessibleUsers(final JsonObject principal) {
+    public Future<List<String>> loadAccessibleUsers(final JsonObject principal) {
 
         final var roles = principal.getJsonArray(DEFAULT_ROLE_FIELD).stream().map(r -> new Role((String)r)).collect(Collectors.toList());
         final var managerRoles = roles.stream().filter(r -> r.getType().equals(Role.Type.GROUP_MANAGER))
@@ -152,8 +153,16 @@ public abstract class Authorizer implements Handler<RoutingContext> {
             return Future.failedFuture(new IllegalArgumentException(
                     String.format("User %s is manager of more than one group.", username)));
         } else {
+            final Promise<List<String>> promise = Promise.promise();
             final var groupManager = managerRoles.get(0);
-            return loadAccessibleUsers(groupManager);
+            final var loadUsers = loadAccessibleUsers(groupManager);
+            loadUsers.onSuccess(groupUsers -> {
+                final var users = new ArrayList<>(groupUsers);
+                users.add(username);
+                promise.complete(users);
+            });
+            loadUsers.onFailure(promise::fail);
+            return promise.future();
         }
     }
 
