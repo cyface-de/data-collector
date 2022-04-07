@@ -83,20 +83,29 @@ The last two sections provide explanations on how to run the software directly f
 For these execution variants you need the parameters explained in the preceding section.
 
 ===== Running from Docker
-After you did build the system (see Building above):
+
+Make sure you read the "Certificates" section above. For development environment you can use the test certificates: `mkdir -p executables/collector/src/main/docker/secrets/jwt && cp executables/collector/src/test/resources/public.pem executables/collector/src/main/docker/secrets/ && cp executables/collector/src/test/resources/private_key.pem executables/collector/src/main/docker/secrets/`
+
+Configure logback or use the sample configuration: `cp executables/collector/src/main/docker/logback.xml.template executables/collector/src/main/docker/logback.xml`
 
 The app is executed by a non-privileged user inside the Docker container. To allow this user to
-write data to `logs` and `file-uploads` you need to create two folders:
-- `executables/collector/build/docker/logs`
-- `executables/collector/build/docker/file-uploads`
-And then set the permissions for both folders to `chmod o+w`, see [DAT-797].
+write data to `logs` and `file-uploads` you need to create two folders and then set the permissions for both folders to `chmod o+w`, see [DAT-797]:
+`mkdir executables/collector/src/main/docker/logs executables/collector/src/main/docker/file-uploads && sudo chmod  o+w executables/collector/src/main/docker/file-uploads executables/collector/src/main/docker/logs`
 
-Then simply run `docker-compose up` inside `executables/collector/build/docker`. This calls docker to bring up two Mongo-database containers and a container running the Cyface data collector API.
+Finally, make the secrets accessible by the non-privileged user:
+- `sudo chown -R 9999:root executables/collector/src/main/docker/secrets/jwt`
 
-The Collector API is by default available via port 8080. This means if you boot up everything using the default settings, the Collector API is accessible via `http://localhost:8080/api/v2`.
+Now build the system as described in the "Building" section above:
+`./gradlew :executables:collector:clean :executables:collector:build :executables:collector:copyToDockerBuildFolder`
+
+Then simply run `docker-compose up` inside `executables/collector/build/docker`:
+`cd executables/collector/build/docker/ && docker-compose up -d`
+
+This calls docker to bring up two Mongo-database containers and a container running the Cyface data collector API. The Collector API is by default available via port 8080. This means if you boot up everything using the default settings, the Collector API is accessible via `http://localhost:8080/api/v3/`.
 
 **ATTENTION: The docker setup should only be used for development purposes.**
 It exposes the Cyface data collector as well as the ports of both Mongo database instances freely on the local network.
+
 Use `docker-compose ps` to see which ports are mapped to which by Docker.
 For using such a setup in production, you may create your own Docker setup, based on our development one.
 
