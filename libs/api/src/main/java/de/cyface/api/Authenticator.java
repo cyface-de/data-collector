@@ -121,9 +121,9 @@ public final class Authenticator implements Handler<RoutingContext> {
         try {
             final var body = ctx.getBodyAsJson();
             LOGGER.debug("Receiving authentication request for user {}", body.getString("username"));
-            authProvider.authenticate(body, r -> {
-                if (r.succeeded()) {
-                    final var user = r.result();
+            final var authentication = authProvider.authenticate(body);
+            authentication.onSuccess(user -> {
+                try {
                     final var principal = user.principal();
                     if (activated(principal)) {
                         LOGGER.debug("Authentication successful for user {}", body.getString("username"));
@@ -142,14 +142,17 @@ public final class Authenticator implements Handler<RoutingContext> {
                         LOGGER.error("Authentication failed, user not activated: {}", body.getString("username"));
                         ctx.fail(428);
                     }
-                } else {
-                    LOGGER.error("Unsuccessful authentication request for user {}", body.getString("username"));
-                    ctx.fail(401);
+                } catch (Exception e) {
+                    ctx.fail(e);
                 }
+            });
+            authentication.onFailure(e -> {
+                LOGGER.error("Unsuccessful authentication request for user {}", body.getString("username"));
+                ctx.fail(401, e);
             });
         } catch (DecodeException e) {
             LOGGER.error("Unable to decode authentication request!");
-            ctx.fail(401);
+            ctx.fail(401, e);
         }
     }
 
