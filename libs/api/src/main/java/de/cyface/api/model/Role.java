@@ -146,11 +146,11 @@ public class Role {
         /**
          * A group user who collects data for a group manager.
          */
-        GROUP_USER("([a-z0-9\\-]{1,32})" + DatabaseConstants.USER_GROUP_ROLE_SUFFIX),
+        GROUP_USER("([a-zA-Z0-9\\-]{1,32})" + DatabaseConstants.USER_GROUP_ROLE_SUFFIX),
         /**
          * A group manager who can access all data of all users of its group.
          */
-        GROUP_MANAGER("([a-z0-9\\-]{1,32})" + DatabaseConstants.GROUP_MANAGER_ROLE_SUFFIX);
+        GROUP_MANAGER("([a-zA-Z0-9\\-]{1,32})" + DatabaseConstants.GROUP_MANAGER_ROLE_SUFFIX);
 
         /**
          * The regex which represents this role type.

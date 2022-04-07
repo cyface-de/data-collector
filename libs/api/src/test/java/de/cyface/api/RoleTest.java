@@ -69,7 +69,8 @@ public class RoleTest {
                 new TestParameters("guest", new Role(Role.Type.GUEST, null)),
                 new TestParameters("project_user", new Role(Role.Type.GROUP_USER, "project")),
                 new TestParameters("project_manager", new Role(Role.Type.GROUP_MANAGER, "project")),
-                new TestParameters("pro-ject_manager", new Role(Role.Type.GROUP_MANAGER, "pro-ject")));
+                new TestParameters("pro-ject_manager", new Role(Role.Type.GROUP_MANAGER, "pro-ject")),
+                new TestParameters("testGroup_manager", new Role(Role.Type.GROUP_MANAGER, "testGroup")));
     }
 
     private static class TestParameters {
