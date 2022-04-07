@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 Cyface GmbH
+ * Copyright 2021-2022 Cyface GmbH
  *
  * This file is part of the Cyface Data Collector.
  *
@@ -44,7 +44,7 @@ import io.vertx.junit5.VertxTestContext;
  * Tests if running the {@link CollectorApiVerticle} works as expected.
  *
  * @author Klemens Muthmann
- * @version 1.0.3
+ * @version 1.0.5
  * @since 5.2.0
  */
 @ExtendWith(VertxExtension.class)
@@ -53,6 +53,7 @@ public class CollectorApiVerticleTest {
      * Process providing a connection to the test Mongo database.
      */
     private transient MongoTest mongoTest;
+    private int mongoPort;
 
     /**
      * Starts a test in memory Mongo database.
@@ -62,7 +63,8 @@ public class CollectorApiVerticleTest {
     @BeforeEach
     void setUp() throws IOException {
         mongoTest = new MongoTest();
-        mongoTest.setUpMongoDatabase(Network.getFreeServerPort());
+        mongoPort = Network.getFreeServerPort();
+        mongoTest.setUpMongoDatabase(mongoPort);
     }
 
     /**
@@ -89,7 +91,6 @@ public class CollectorApiVerticleTest {
         final var publicKey = this.getClass().getResource("/public.pem");
         Validate.notNull(privateKey);
         Validate.notNull(publicKey);
-        // noinspection SpellCheckingInspection
         final var configuration = new JsonObject()
                 .put("jwt.private", privateKey.getFile())
                 .put("jwt.public", publicKey.getFile())
@@ -99,7 +100,7 @@ public class CollectorApiVerticleTest {
                 .put("http.port", Network.getFreeServerPort())
                 .put("mongo.datadb", new JsonObject()
                         .put("db_name", "cyface-data")
-                        .put("connection_string", "mongodb://localhost:27019")
+                        .put("connection_string", "mongodb://localhost:" + mongoPort)
                         .put("data_source_name", "cyface-data"))
                 .put("mongo.userdb", mongoTest.clientConfiguration())
                 .put("jwt.expiration", 3600);

@@ -1,18 +1,24 @@
 /*
- * Copyright 2018-2021 Cyface GmbH
+ * Copyright 2018-2022 Cyface GmbH
+ *
  * This file is part of the Cyface Data Collector.
+ *
  * The Cyface Data Collector is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
+ *
  * The Cyface Data Collector is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
  * GNU General Public License for more details.
+ *
  * You should have received a copy of the GNU General Public License
  * along with the Cyface Data Collector. If not, see <http://www.gnu.org/licenses/>.
  */
 package de.cyface.collector.verticle;
+
+import static de.cyface.collector.handler.MeasurementHandler.FILE_UPLOADS_FOLDER;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -32,7 +38,6 @@ import de.cyface.collector.handler.UserCreationHandler;
 import de.cyface.collector.handler.v2.MeasurementHandler;
 import de.cyface.collector.model.Measurement;
 import io.vertx.core.AbstractVerticle;
-import io.vertx.core.AsyncResult;
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
@@ -51,15 +56,13 @@ import io.vertx.ext.web.handler.SessionHandler;
 import io.vertx.ext.web.handler.StaticHandler;
 import io.vertx.ext.web.sstore.LocalSessionStore;
 
-import static de.cyface.collector.handler.MeasurementHandler.FILE_UPLOADS_FOLDER;
-
 /**
  * This Verticle is the Cyface collectors main entry point. It orchestrates all other Verticles and configures the
  * endpoints used to provide the REST-API.
  *
  * @author Klemens Muthmann
  * @author Armin Schnabel
- * @version 2.0.0
+ * @version 2.1.0
  * @since 2.0.0
  */
 public final class CollectorApiVerticle extends AbstractVerticle {
@@ -108,25 +111,24 @@ public final class CollectorApiVerticle extends AbstractVerticle {
         // Setup Measurement event bus
         prepareEventBus();
 
-        // Start http server
-        final Promise<Void> serverStartPromise = Promise.promise();
+        // Load configurations
         final var configV2 = new de.cyface.collector.verticle.v2.Config(vertx);
         final var configV3 = new Config(vertx);
-        setupRoutes(configV2, configV3, result -> {
-            if (result.succeeded()) {
-                final var router = result.result();
-                final var httpServer = new de.cyface.api.HttpServer(configV3.getHttpPort());
-                httpServer.start(vertx, router, serverStartPromise);
-            } else {
-                serverStartPromise.fail(result.cause());
-            }
-        });
+
+        // Create indices
+        final var measurementIndex = new JsonObject().put("metadata.deviceId", 1).put("metadata.measurementId", 1);
+        final var indexCreation = configV3.getDataDatabase().createIndex("fs.files", measurementIndex);
+
+        // Start http server
+        final var router = setupRoutes(configV2, configV3);
+        final Promise<Void> serverStartPromise = Promise.promise();
+        final var httpServer = new de.cyface.api.HttpServer(configV3.getHttpPort());
+        httpServer.start(vertx, router, serverStartPromise);
 
         // Insert default admin user
         final var adminUsername = Parameter.ADMIN_USER_NAME.stringValue(vertx, "admin");
         final var adminPassword = Parameter.ADMIN_PASSWORD.stringValue(vertx, "secret");
-        final var defaultUserCreated = Promise.promise();
-        createDefaultUser(defaultUserCreated, configV3.getUserDatabase(), adminUsername, adminPassword);
+        final var userCreation = createDefaultUser(configV3.getUserDatabase(), adminUsername, adminPassword);
 
         // Schedule upload file cleaner task
         vertx.setPeriodic(configV3.getUploadExpirationTime(), timerId -> {
@@ -151,7 +153,7 @@ public final class CollectorApiVerticle extends AbstractVerticle {
         });
 
         // Block until all futures completed
-        final var startUpFinishedFuture = CompositeFuture.all(serverStartPromise.future(), defaultUserCreated.future());
+        final var startUpFinishedFuture = CompositeFuture.all(indexCreation, serverStartPromise.future(), userCreation);
         startUpFinishedFuture.onComplete(r -> {
             if (r.succeeded()) {
                 startFuture.complete();
@@ -161,9 +163,10 @@ public final class CollectorApiVerticle extends AbstractVerticle {
         });
     }
 
-    private void createDefaultUser(Promise<Object> promise, MongoClient userClient, String adminUsername,
-            String adminPassword) {
+    private Future<Void> createDefaultUser(final MongoClient userClient, final String adminUsername,
+            final String adminPassword) {
 
+        final Promise<Void> promise = Promise.promise();
         userClient.findOne("user", new JsonObject().put("username", adminUsername), null, result -> {
             if (result.failed()) {
                 promise.fail(result.cause());
@@ -184,6 +187,7 @@ public final class CollectorApiVerticle extends AbstractVerticle {
                 promise.complete();
             }
         });
+        return promise.future();
     }
 
     /**
@@ -200,11 +204,9 @@ public final class CollectorApiVerticle extends AbstractVerticle {
      *
      * @param configV2 HTTP server configuration parameters required to set up the routes for API V2
      * @param configV3 HTTP server configuration parameters required to set up the routes for API V3
-     * @param next The handler to call when the router has been created.
+     * @return the created main {@code Router}
      */
-    private void setupRoutes(final de.cyface.collector.verticle.v2.Config configV2, final Config configV3,
-            final Handler<AsyncResult<Router>> next) {
-        Validate.notNull(next);
+    private Router setupRoutes(final de.cyface.collector.verticle.v2.Config configV2, final Config configV3) {
 
         // Setup V2 and V3 router
         final var mainRouter = Router.router(vertx);
@@ -219,8 +221,7 @@ public final class CollectorApiVerticle extends AbstractVerticle {
         // Setup unknown-resource handler
         mainRouter.route("/*").last().handler(new FailureHandler());
 
-        // Only requires a `future` because we add the OpenApi generated route. Else this would be synchronous.
-        next.handle(Future.succeededFuture(mainRouter));
+        return mainRouter;
     }
 
     /**
