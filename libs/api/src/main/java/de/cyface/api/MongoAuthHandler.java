@@ -109,7 +109,7 @@ public final class MongoAuthHandler implements Handler<RoutingContext> {
 
                     LOGGER.trace("Request authorized for user {}", username);
                     ctx.next();
-                } catch (Exception e) {
+                } catch (RuntimeException e) {
                     ctx.fail(e);
                 }
             });

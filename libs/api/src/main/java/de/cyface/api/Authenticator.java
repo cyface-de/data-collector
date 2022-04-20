@@ -142,7 +142,7 @@ public final class Authenticator implements Handler<RoutingContext> {
                         LOGGER.error("Authentication failed, user not activated: {}", body.getString("username"));
                         ctx.fail(428);
                     }
-                } catch (Exception e) {
+                } catch (RuntimeException e) {
                     ctx.fail(e);
                 }
             });

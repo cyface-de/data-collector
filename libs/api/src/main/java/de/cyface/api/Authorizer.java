@@ -103,7 +103,7 @@ public abstract class Authorizer implements Handler<RoutingContext> {
                         LOGGER.error("Loading accessible users failed for user {}", username, e);
                         context.fail(500);
                     });
-                } catch (final Exception e) {
+                } catch (final RuntimeException e) {
                     context.fail(500, e);
                 }
             });
