@@ -20,7 +20,9 @@ package de.cyface.api;
 
 import java.time.ZonedDateTime;
 import java.util.List;
+import java.util.Set;
 
+import de.cyface.model.MeasurementIdentifier;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Promise;
@@ -37,50 +39,71 @@ import io.vertx.ext.mongo.MongoClient;
 public class MeasurementRetriever {
 
     /**
-     * The name of the collection in the Mongo database which stores the deserialized measurement data.
-     * TODO: should be a configurable from outside (parameter)
+     * The name of the collection in the Mongo database used to store deserialized measurements.
      */
-    private static final String DESERIALIZED_COLLECTION_NAME = "deserialized";
+    private final String collectionName;
+    /**
+     * The query which defines which data to load.
+     */
+    private final JsonObject query;
     /**
      * The {@link MeasurementRetrievalStrategy} to be used to load data from the database.
      */
     private final MeasurementRetrievalStrategy strategy;
+    /**
+     * The default name of the collection in the Mongo database which stores the deserialized measurement data.
+     */
+    public static final String DEFAULT_COLLECTION_NAME = "deserialized";
 
     /**
      * Constructs a fully initialized object of this object.
      *
+     * @param collectionName The name of the collection in the Mongo database used to store deserialized measurements.
      * @param strategy the {@link MeasurementRetrievalStrategy} to be used when loading the measurements.
+     * @param measurementIdentifiers The identifiers of the measurements to loaded
      */
-    public MeasurementRetriever(final MeasurementRetrievalStrategy strategy) {
+    public MeasurementRetriever(final String collectionName, final MeasurementRetrievalStrategy strategy,
+            final Set<MeasurementIdentifier> measurementIdentifiers) {
+
+        this.collectionName = collectionName;
         this.strategy = strategy;
+        final var ids = new JsonArray();
+        measurementIdentifiers.forEach(id -> {
+            final var subQuery = new JsonObject().put("metaData.deviceId", id.getDeviceIdentifier()).put(
+                    "metaData.measurementId", id.getMeasurementIdentifier());
+            ids.add(subQuery);
+        });
+        this.query = new JsonObject().put("$or", ids);
     }
 
     /**
-     * Loads all measurements of all users of the specified {@code userNames} from the database.
+     * Constructs a fully initialized object of this object.
      *
+     * @param collectionName The name of the collection in the Mongo database used to store deserialized measurements.
+     * @param strategy the {@link MeasurementRetrievalStrategy} to be used when loading the measurements.
      * @param userNames The names of the users of whom all measurements are to be loaded
-     * @param dataClient The client to access the data from
-     * @return a {@code Future} containing the users' {@code Measurement}s if successful
      */
-    @SuppressWarnings("unused") // Part of the API
-    public Future<MeasurementIterator> loadMeasurements(final List<String> userNames, final MongoClient dataClient) {
-        return loadMeasurements(userNames, dataClient, null, null);
+    public MeasurementRetriever(final String collectionName, final MeasurementRetrievalStrategy strategy,
+            final List<String> userNames) {
+
+        this(collectionName, strategy, userNames, null, null);
     }
 
     /**
-     * Loads all measurements of all users of the specified {@code userNames} from the database.
+     * Constructs a fully initialized object of this object.
      *
+     * @param collectionName The name of the collection in the Mongo database used to store deserialized measurements.
+     * @param strategy the {@link MeasurementRetrievalStrategy} to be used when loading the measurements.
      * @param userNames The names of the users of whom all measurements are to be loaded
-     * @param dataClient The client to access the data from
      * @param startTime The value is {@code null} or a point in time to only return newer results.
      * @param endTime The value is {@code null} or a point in time to only return older results.
-     * @return a {@code Future} containing the {@link MeasurementIterator} with the users' data if successful
      */
-    public Future<MeasurementIterator> loadMeasurements(final List<String> userNames, final MongoClient dataClient,
-                                                        final ZonedDateTime startTime, final ZonedDateTime endTime) {
+    public MeasurementRetriever(final String collectionName, final MeasurementRetrievalStrategy strategy,
+            final List<String> userNames, final ZonedDateTime startTime, final ZonedDateTime endTime) {
 
-        final var query = new JsonObject();
-        query.put("metaData.username", new JsonObject().put("$in", new JsonArray(userNames)));
+        this.collectionName = collectionName;
+        this.strategy = strategy;
+        this.query = new JsonObject().put("metaData.username", new JsonObject().put("$in", new JsonArray(userNames)));
         if (startTime != null || endTime != null) {
             final var timeRestriction = new JsonObject();
             if (startTime != null) {
@@ -91,17 +114,33 @@ public class MeasurementRetriever {
             }
             query.put("track.bucket", timeRestriction);
         }
+    }
+
+    /**
+     * Loads all measurements of all users of the specified {@code userNames} from the database.
+     *
+     * @param dataClient The client to access the data from
+     * @return a {@code Future} containing the {@link MeasurementIterator} with the users' data if successful
+     */
+    @SuppressWarnings("unused") // Part of the API
+    public Future<MeasurementIterator> loadMeasurements(final MongoClient dataClient) {
 
         final Promise<MeasurementIterator> promise = Promise.promise();
-        final var initializedHandler = new Handler<MeasurementIterator>() {
-            @Override
-            public void handle(final MeasurementIterator output) {
-                promise.complete(output);
-            }
-        };
-        final var bucketStream = dataClient.findBatchWithOptions(DESERIALIZED_COLLECTION_NAME, query,
-                strategy.findOptions());
-        new MeasurementIterator(bucketStream, strategy, promise::fail, initializedHandler);
+
+        // Fix CY-5944: Or must contain elements
+        if (query.containsKey("$or") && query.getJsonArray("$or").size() == 0) {
+            promise.fail("At least one measurement need to be loaded but 0 where requested");
+        } else {
+            final var initializedHandler = new Handler<MeasurementIterator>() {
+                @Override
+                public void handle(final MeasurementIterator output) {
+                    promise.complete(output);
+                }
+            };
+            final var bucketStream = dataClient.findBatchWithOptions(collectionName, query, strategy.findOptions());
+            new MeasurementIterator(bucketStream, strategy, promise::fail, initializedHandler);
+        }
+
         return promise.future();
     }
 }
