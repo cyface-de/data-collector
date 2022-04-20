@@ -171,11 +171,11 @@ public class PreRequestHandler implements Handler<RoutingContext> {
                                     .putHeader("Location", locationUri)
                                     .putHeader("Content-Length", "0")
                                     .setStatusCode(200).end();
-                        } catch (Exception e) {
+                        } catch (RuntimeException e) {
                             ctx.fail(e);
                         }
                     });
-                } catch (Exception e) {
+                } catch (RuntimeException e) {
                     ctx.fail(e);
                 }
             });

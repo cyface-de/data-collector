@@ -145,7 +145,7 @@ public final class MeasurementHandler implements Handler<RoutingContext> {
                     }
 
                     handleSubsequentChunkUpload(ctx, request, session, user, contentRange, metaData, path);
-                } catch (final Exception e) {
+                } catch (final RuntimeException e) {
                     ctx.fail(500, e);
                 }
             }).onFailure(failure -> {
