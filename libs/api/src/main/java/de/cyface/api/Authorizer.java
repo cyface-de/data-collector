@@ -135,6 +135,8 @@ public abstract class Authorizer implements Handler<RoutingContext> {
      * <p>
      * If the user holds a {@link DatabaseConstants#GROUP_MANAGER_ROLE_SUFFIX} role, identifying it as the manager of
      * that group, all users of that group are loaded from the user collection.
+     * <p>
+     * This method is only public because of the `backend/AuthorizationTest`, see last comment on CY-5720.
      *
      * @param principal The principal object of the authenticated {@code User} which requests user data
      * @return The usernames of the users which the {@code user} can access
@@ -168,6 +170,8 @@ public abstract class Authorizer implements Handler<RoutingContext> {
 
     /**
      * Loads all users a specific group manager can access.
+     * <p>
+     * This method is only public because of the `backend/AuthorizationTest`, see last comment on CY-5720.
      *
      * @param groupManager The {@code Role} group manager to load the users for
      * @return The usernames of the users which the {@code groupManager} can access
