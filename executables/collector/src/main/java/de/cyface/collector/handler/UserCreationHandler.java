@@ -23,7 +23,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import de.cyface.api.Hasher;
+import io.vertx.core.Future;
 import io.vertx.core.Handler;
+import io.vertx.core.Promise;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.mongo.MongoClient;
@@ -84,11 +86,13 @@ public final class UserCreationHandler implements Handler<RoutingContext> {
         final var providedRole = body.getString("role");
         final var role = providedRole == null || providedRole.isEmpty() ? DEFAULT_USER_ROLE : providedRole;
 
-        createUser(username, password, role, success -> {
-            LOGGER.info("Added new user with id: {}", username);
+        final var userCreation = createUser(username, password, role);
+        userCreation.onSuccess(id -> {
+            LOGGER.info("Added new user with name: {}", username);
             event.response().setStatusCode(201).end();
-        }, failure -> {
-            LOGGER.error(String.format("Unable to create user with id: %s", username), failure);
+        });
+        userCreation.onFailure(e -> {
+            LOGGER.error(String.format("Unable to create user with id: %s", username), e);
             event.fail(400);
         });
     }
@@ -99,16 +103,17 @@ public final class UserCreationHandler implements Handler<RoutingContext> {
      * @param username The name of the new user to add
      * @param password The clear text password of the new user
      * @param role The initial role of the new user
-     * @param onSuccess Some code carried out on a successful insert operation
-     * @param onFailure Some code carried out on a failed insert operation
+     * @return A {@code Future} which resolves to the id of the entry if the user was successfully created
      */
-    public void createUser(final String username, final String password, final String role,
-            final Handler<String> onSuccess, final Handler<Throwable> onFailure) {
+    public Future<String> createUser(final String username, final String password, final String role) {
+
+        final Promise<String> promise = Promise.promise();
         final var hashedPassword = passwordHashingStrategy.hash(password);
         final var newUserInsertCommand = new JsonObject().put("username", username)
                 .put("roles", new JsonArray().add(role)).put("password", hashedPassword);
-        final var userInsertedFuture = mongoClient.insert(userCollectionName, newUserInsertCommand);
-        userInsertedFuture.onSuccess(onSuccess);
-        userInsertedFuture.onFailure(onFailure);
+        final var userInserted = mongoClient.insert(userCollectionName, newUserInsertCommand);
+        userInserted.onSuccess(promise::complete);
+        userInserted.onFailure(promise::fail);
+        return promise.future();
     }
 }

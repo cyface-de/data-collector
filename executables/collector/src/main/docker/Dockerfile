@@ -31,12 +31,11 @@ WORKDIR /app
 # Used in dev environment, version-less
 COPY collector-all.jar /app
 COPY entrypoint.sh /app
-COPY logback.xml /app
 RUN chmod +x /app/entrypoint.sh
 
 # Adjust permissions
 # Cannot create logs folder with the correct permissions here as the permissions will be overwritten [DAT-797]
-RUN chown user:user entrypoint.sh collector-all.jar logback.xml
+RUN chown user:user entrypoint.sh collector-all.jar
 
 # Make port 8080 available to the world outside the container
 EXPOSE 8080

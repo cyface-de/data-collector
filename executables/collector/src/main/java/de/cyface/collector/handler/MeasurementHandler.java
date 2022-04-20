@@ -135,29 +135,33 @@ public final class MeasurementHandler implements Handler<RoutingContext> {
             final var path = (String)session.get(UPLOAD_PATH_FIELD);
             request.pause();
             fs.exists(path).onSuccess(fileExists -> {
-                request.resume();
+                try {
+                    request.resume();
 
-                if (!fileExists) {
-                    session.remove(UPLOAD_PATH_FIELD); // was linked to non-existing file
-                    handleFirstChunkUpload(ctx, request, session, user, contentRange, metaData, path);
-                    return;
+                    if (!fileExists) {
+                        session.remove(UPLOAD_PATH_FIELD); // was linked to non-existing file
+                        handleFirstChunkUpload(ctx, request, session, user, contentRange, metaData, path);
+                        return;
+                    }
+
+                    handleSubsequentChunkUpload(ctx, request, session, user, contentRange, metaData, path);
+                } catch (final Exception e) {
+                    ctx.fail(500, e);
                 }
-
-                handleSubsequentChunkUpload(ctx, request, session, user, contentRange, metaData, path);
             }).onFailure(failure -> {
                 LOGGER.error("Response: 500, failed to check if temp file exists");
                 ctx.fail(500, failure);
             });
         } catch (InvalidMetaData | Unparsable | IllegalSession | PayloadTooLarge e) {
             LOGGER.error(String.format("Response: 422, %s", e.getMessage()), e);
-            ctx.fail(ENTITY_UNPARSABLE);
+            ctx.fail(ENTITY_UNPARSABLE, e);
         } catch (SessionExpired e) {
             LOGGER.warn(String.format("Response: 404, %s", e.getMessage()), e);
             ctx.response().setStatusCode(NOT_FOUND).end(); // client sends a new pre-request for this upload
         } catch (SkipUpload e) {
             LOGGER.debug(e.getMessage(), e);
             remove(session); // client won't resume
-            ctx.fail(PRECONDITION_FAILED);
+            ctx.fail(PRECONDITION_FAILED, e);
         }
     }
 

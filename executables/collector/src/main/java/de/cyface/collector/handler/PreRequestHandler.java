@@ -132,23 +132,24 @@ public class PreRequestHandler implements Handler<RoutingContext> {
             }
             final var access = dataClient.createDefaultGridFsBucketService();
             access.onSuccess(gridFs -> {
-                final var query = new JsonObject();
-                query.put("metadata.deviceId", deviceId);
-                query.put("metadata.measurementId", measurementId);
-                gridFs.findIds(query)
-                        .onFailure(failure -> {
-                            LOGGER.error(failure.getMessage(), failure);
-                            ctx.fail(500, failure);
-                        })
-                        .onSuccess(success -> {
-
-                            if (success.size() > 1) {
+                try {
+                    final var query = new JsonObject();
+                    query.put("metadata.deviceId", deviceId);
+                    query.put("metadata.measurementId", measurementId);
+                    final var findIds = gridFs.findIds(query);
+                    findIds.onFailure(failure -> {
+                        LOGGER.error(failure.getMessage(), failure);
+                        ctx.fail(500, failure);
+                    });
+                    findIds.onSuccess(ids -> {
+                        try {
+                            if (ids.size() > 1) {
                                 LOGGER.error(String.format("More than one measurement found for did %s mid %s",
                                         deviceId, measurementId));
                                 ctx.fail(500);
                                 return;
                             }
-                            if (success.size() == 1) {
+                            if (ids.size() == 1) {
                                 LOGGER.debug("Response: 409, measurement already exists, no upload needed");
                                 ctx.response().setStatusCode(HTTP_CONFLICT).end();
                                 return;
@@ -170,7 +171,13 @@ public class PreRequestHandler implements Handler<RoutingContext> {
                                     .putHeader("Location", locationUri)
                                     .putHeader("Content-Length", "0")
                                     .setStatusCode(200).end();
-                        });
+                        } catch (Exception e) {
+                            ctx.fail(e);
+                        }
+                    });
+                } catch (Exception e) {
+                    ctx.fail(e);
+                }
             });
         } catch (final InvalidMetaData | Unparsable | IllegalSession | PayloadTooLarge e) {
             LOGGER.error(e.getMessage(), e);

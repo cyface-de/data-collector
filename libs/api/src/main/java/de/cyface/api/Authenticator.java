@@ -1,5 +1,5 @@
 /*
- * Copyright 2018-2021 Cyface GmbH
+ * Copyright 2018-2022 Cyface GmbH
  *
  * This file is part of the Cyface Data Collector.
  *
@@ -23,16 +23,13 @@ import static io.vertx.ext.auth.impl.jose.JWS.RS256;
 import java.util.Collections;
 import java.util.Objects;
 
-import io.vertx.core.impl.future.SucceededFuture;
-import io.vertx.core.json.JsonObject;
-import io.vertx.ext.auth.User;
-import io.vertx.ext.auth.impl.UserImpl;
 import org.apache.commons.lang3.Validate;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import io.vertx.core.Handler;
 import io.vertx.core.json.DecodeException;
+import io.vertx.core.json.JsonObject;
 import io.vertx.ext.auth.JWTOptions;
 import io.vertx.ext.auth.jwt.JWTAuth;
 import io.vertx.ext.auth.mongo.MongoAuthentication;
@@ -51,7 +48,7 @@ import io.vertx.ext.web.handler.LoggerHandler;
  *
  * @author Klemens Muthmann
  * @author Armin Schnabel
- * @version 4.0.0
+ * @version 4.0.1
  * @since 2.0.0
  */
 public final class Authenticator implements Handler<RoutingContext> {
@@ -124,9 +121,9 @@ public final class Authenticator implements Handler<RoutingContext> {
         try {
             final var body = ctx.getBodyAsJson();
             LOGGER.debug("Receiving authentication request for user {}", body.getString("username"));
-            authProvider.authenticate(body, r -> {
-                if (r.succeeded()) {
-                    final var user = r.result();
+            final var authentication = authProvider.authenticate(body);
+            authentication.onSuccess(user -> {
+                try {
                     final var principal = user.principal();
                     if (activated(principal)) {
                         LOGGER.debug("Authentication successful for user {}", body.getString("username"));
@@ -145,14 +142,17 @@ public final class Authenticator implements Handler<RoutingContext> {
                         LOGGER.error("Authentication failed, user not activated: {}", body.getString("username"));
                         ctx.fail(428);
                     }
-                } else {
-                    LOGGER.error("Unsuccessful authentication request for user {}", body.getString("username"));
-                    ctx.fail(401);
+                } catch (Exception e) {
+                    ctx.fail(e);
                 }
+            });
+            authentication.onFailure(e -> {
+                LOGGER.error("Unsuccessful authentication request for user {}", body.getString("username"));
+                ctx.fail(401, e);
             });
         } catch (DecodeException e) {
             LOGGER.error("Unable to decode authentication request!");
-            ctx.fail(401);
+            ctx.fail(401, e);
         }
     }
 
@@ -165,7 +165,7 @@ public final class Authenticator implements Handler<RoutingContext> {
      * @return {@code true} if the user account is activated
      */
     static boolean activated(final JsonObject principal) {
-        return  !principal.containsKey("activated") || principal.getBoolean("activated");
+        return !principal.containsKey("activated") || principal.getBoolean("activated");
     }
 
     /**

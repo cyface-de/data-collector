@@ -88,22 +88,19 @@ public class StatusHandler implements Handler<RoutingContext> {
             }
             final var access = dataClient.createDefaultGridFsBucketService();
             access.onSuccess(gridFs -> {
-                final var query = new JsonObject();
-                query.put("metadata.deviceId", deviceId);
-                query.put("metadata.measurementId", measurementId);
-                gridFs.findIds(query)
-                        .onFailure(failure -> {
-                            LOGGER.error(failure.getMessage(), failure);
-                            ctx.fail(500, failure);
-                        })
-                        .onSuccess(success -> {
-
-                            if (success.size() > 1) {
+                try {
+                    final var query = new JsonObject();
+                    query.put("metadata.deviceId", deviceId);
+                    query.put("metadata.measurementId", measurementId);
+                    final var findIds = gridFs.findIds(query);
+                    findIds.onSuccess(ids -> {
+                        try {
+                            if (ids.size() > 1) {
                                 LOGGER.error(String.format("More than one measurement found for did %s mid %s",
                                         deviceId, measurementId));
                                 ctx.fail(500);
                             }
-                            if (success.size() == 1) {
+                            if (ids.size() == 1) {
                                 LOGGER.debug("Response: 200, measurement already exists, no upload needed");
                                 ctx.response().setStatusCode(200).end();
                             }
@@ -119,10 +116,9 @@ public class StatusHandler implements Handler<RoutingContext> {
 
                             // Check chunk size to reply where to continue the upload
                             final var fileSystem = ctx.vertx().fileSystem();
-                            fileSystem.exists(path.toString(), exists -> {
-                                if (exists.succeeded()) {
-
-                                    final var fileExists = exists.result();
+                            final var fileCheck = fileSystem.exists(path.toString());
+                            fileCheck.onSuccess(fileExists -> {
+                                try {
                                     if (!fileExists) {
                                         // As this links to a non-existing file, remove this
                                         session.remove(UPLOAD_PATH_FIELD);
@@ -135,9 +131,9 @@ public class StatusHandler implements Handler<RoutingContext> {
                                         return;
                                     }
 
-                                    fileSystem.props(path.toString(), props -> {
-                                        if (props.succeeded()) {
-                                            final var fileProps = props.result();
+                                    final var loadProps = fileSystem.props(path.toString());
+                                    loadProps.onSuccess(fileProps -> {
+                                        try {
                                             final var byteSize = fileProps.size();
 
                                             // Indicate that, e.g. for 100 received bytes, bytes 0-99 have been received
@@ -146,15 +142,24 @@ public class StatusHandler implements Handler<RoutingContext> {
                                             ctx.response().putHeader("Range", range);
                                             ctx.response().putHeader("Content-Length", "0");
                                             ctx.response().setStatusCode(RESUME_INCOMPLETE).end();
-                                        } else {
-                                            ctx.fail(500, props.cause());
+                                        } catch (Exception e) {
+                                            ctx.fail(e);
                                         }
                                     });
-                                } else {
-                                    ctx.fail(500, exists.cause());
+                                    loadProps.onFailure(e -> ctx.fail(500, e));
+                                } catch (Exception e) {
+                                    ctx.fail(e);
                                 }
                             });
-                        });
+                            fileCheck.onFailure(e -> ctx.fail(500, e));
+                        } catch (Exception e) {
+                            ctx.fail(e);
+                        }
+                    });
+                    findIds.onFailure(e -> ctx.fail(500, e));
+                } catch (Exception e) {
+                    ctx.fail(e);
+                }
             });
         } catch (InvalidMetaData e) {
             LOGGER.error(e.getMessage(), e);
