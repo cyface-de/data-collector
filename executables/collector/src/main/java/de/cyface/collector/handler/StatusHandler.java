@@ -142,22 +142,22 @@ public class StatusHandler implements Handler<RoutingContext> {
                                             ctx.response().putHeader("Range", range);
                                             ctx.response().putHeader("Content-Length", "0");
                                             ctx.response().setStatusCode(RESUME_INCOMPLETE).end();
-                                        } catch (Exception e) {
+                                        } catch (RuntimeException e) {
                                             ctx.fail(e);
                                         }
                                     });
                                     loadProps.onFailure(e -> ctx.fail(500, e));
-                                } catch (Exception e) {
+                                } catch (RuntimeException e) {
                                     ctx.fail(e);
                                 }
                             });
                             fileCheck.onFailure(e -> ctx.fail(500, e));
-                        } catch (Exception e) {
+                        } catch (RuntimeException e) {
                             ctx.fail(e);
                         }
                     });
                     findIds.onFailure(e -> ctx.fail(500, e));
-                } catch (Exception e) {
+                } catch (RuntimeException e) {
                     ctx.fail(e);
                 }
             });
