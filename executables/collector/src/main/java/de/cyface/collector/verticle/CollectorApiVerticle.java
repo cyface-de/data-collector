@@ -176,12 +176,14 @@ public final class CollectorApiVerticle extends AbstractVerticle {
                 final var hasher = new Hasher(HashingStrategy.load(),
                         salt.getBytes(StandardCharsets.UTF_8));
                 final var userCreationHandler = new UserCreationHandler(userClient, "user", hasher);
-                userCreationHandler.createUser(adminUsername, adminPassword, ADMIN_ROLE, success -> {
-                    LOGGER.info("Identifier of new user id: {}", success);
+                final var userCreation = userCreationHandler.createUser(adminUsername, adminPassword, ADMIN_ROLE);
+                userCreation.onSuccess(id -> {
+                    LOGGER.info("Identifier of new user id: {}", id);
                     promise.complete();
-                }, failure -> {
+                });
+                userCreation.onFailure(e -> {
                     LOGGER.error("Unable to create default user!");
-                    promise.fail(failure);
+                    promise.fail(e);
                 });
             } else {
                 promise.complete();

@@ -94,20 +94,24 @@ public final class MongoAuthHandler implements Handler<RoutingContext> {
                 }
             }
             authProvider.authenticate(user.principal(), r -> {
-                // As in `SessionHandlerImpl.handle(RoutingContext)`
-                final var upgraded = request.headers().contains(HttpHeaders.UPGRADE, HttpHeaders.WEBSOCKET, true);
-                if (pauseAndResume && !parseEnded && !upgraded) {
-                    request.resume();
-                }
+                try {
+                    // As in `SessionHandlerImpl.handle(RoutingContext)`
+                    final var upgraded = request.headers().contains(HttpHeaders.UPGRADE, HttpHeaders.WEBSOCKET, true);
+                    if (pauseAndResume && !parseEnded && !upgraded) {
+                        request.resume();
+                    }
 
-                if (!(r.succeeded())) {
-                    LOGGER.error("Authorization failed for user {}!", username);
-                    ctx.fail(UNAUTHORIZED);
-                    return;
-                }
+                    if (!(r.succeeded())) {
+                        LOGGER.error("Authorization failed for user {}!", username);
+                        ctx.fail(UNAUTHORIZED);
+                        return;
+                    }
 
-                LOGGER.trace("Request authorized for user {}", username);
-                ctx.next();
+                    LOGGER.trace("Request authorized for user {}", username);
+                    ctx.next();
+                } catch (Exception e) {
+                    ctx.fail(e);
+                }
             });
         } catch (final NumberFormatException e) {
             LOGGER.error("Data was not parsable!");

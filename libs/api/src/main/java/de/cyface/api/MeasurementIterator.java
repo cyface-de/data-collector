@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 Cyface GmbH
+ * Copyright 2021-2022 Cyface GmbH
  *
  * This file is part of the Cyface Data Collector.
  *
@@ -50,6 +50,7 @@ import io.vertx.core.streams.ReadStream;
  *
  * @author Armin Schnabel
  * @since 6.0.0
+ * @version 1.0.0
  */
 final public class MeasurementIterator implements Iterator<Future<Measurement>>, Handler<JsonObject> {
 
@@ -165,6 +166,7 @@ final public class MeasurementIterator implements Iterator<Future<Measurement>>,
      * Loads the next measurement until there is no measurement on this {@link MeasurementIterator}.
      *
      * @param writeHandler The handler which is called when a measurement is loaded.
+     * @param separationHandler The handler which is called between measurements, e.g. to add separators in the output
      * @param endHandler The handler which is called after the last measurement was loaded.
      * @param failureHandler The handler which is called upon errors.
      */

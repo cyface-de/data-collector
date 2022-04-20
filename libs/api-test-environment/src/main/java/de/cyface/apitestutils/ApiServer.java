@@ -138,14 +138,12 @@ public final class ApiServer {
      * @param client The Vert.x <code>WebClient</code> to use
      * @param endpoint The service endpoint to call to get some data
      * @param testContext The <code>VertxTextContext</code> provided by the current test case
-     * @param groupName The user group to export data for
      * @param format A field to identify the requested format, such as 'csv' or 'json'.
      * @param resultHandler A handler provided with the result of the get request
      */
     @SuppressWarnings("unused") // Part of the API
     public void get(final WebClient client, final String endpoint, final VertxTestContext testContext,
-            final String groupName, final String format,
-            final Handler<AsyncResult<HttpResponse<Buffer>>> resultHandler) {
+            final String format, final Handler<AsyncResult<HttpResponse<Buffer>>> resultHandler) {
         authenticate(client, testContext.succeeding(response -> {
 
             final String authToken = response.getHeader("Authorization");
@@ -153,7 +151,6 @@ public final class ApiServer {
             if (response.statusCode() == 200 && authToken != null) {
                 final HttpRequest<Buffer> builder = client.get(port(), HTTP_HOST, httpEndpoint + endpoint);
                 builder.putHeader("Authorization", "Bearer " + authToken);
-                builder.putHeader("group", groupName);
                 builder.putHeader("format", format);
                 builder.send(resultHandler);
             } else {
