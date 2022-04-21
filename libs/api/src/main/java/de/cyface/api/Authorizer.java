@@ -96,8 +96,12 @@ public abstract class Authorizer implements Handler<RoutingContext> {
                 try {
                     final var loadUsers = loadAccessibleUsers(user.principal());
                     loadUsers.onSuccess(accessibleUsers -> {
-                        LOGGER.trace("Export request for {} authorized to access users {}", username, accessibleUsers);
-                        handleAuthorizedRequest(context, accessibleUsers, headers);
+                        try {
+                            LOGGER.trace("Export request for {} authorized to access users {}", username, accessibleUsers);
+                            handleAuthorizedRequest(context, accessibleUsers, headers);
+                        } catch (RuntimeException e) {
+                            context.fail(e);
+                        }
                     });
                     loadUsers.onFailure(e -> {
                         LOGGER.error("Loading accessible users failed for user {}", username, e);
