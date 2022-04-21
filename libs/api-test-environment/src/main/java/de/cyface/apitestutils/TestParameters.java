@@ -1,5 +1,5 @@
 /*
- * Copyright 2019-2021 Cyface GmbH
+ * Copyright 2019-2022 Cyface GmbH
  *
  * This file is part of the Cyface Data Collector.
  *
@@ -18,19 +18,17 @@
  */
 package de.cyface.apitestutils;
 
-import java.util.HashMap;
-import java.util.Map;
-
 import org.apache.commons.lang3.Validate;
 
 import de.cyface.apitestutils.fixture.TestFixture;
+import io.vertx.core.MultiMap;
 
 /**
  * Parameters used for a single run of the API test
  *
  * @author Klemens Muthmann
  * @author Armin Schnabel
- * @version 1.0.0
+ * @version 2.0.0
  * @since 1.0.0
  */
 @SuppressWarnings("unused") // Part of the API
@@ -51,7 +49,7 @@ public final class TestParameters {
     /**
      * The header fields to attach to the request.
      */
-    private final Map<String, String> headers;
+    private final MultiMap headers;
 
     /**
      * Creates a new completely initialized instance of this class. All attributes are read only.
@@ -62,7 +60,7 @@ public final class TestParameters {
      */
     @SuppressWarnings("unused") // Part of the API
     public TestParameters(final TestFixture testFixture, final String expectedResult, final String endpoint) {
-        this(testFixture, expectedResult, endpoint, new HashMap<>());
+        this(testFixture, expectedResult, endpoint, MultiMap.caseInsensitiveMultiMap());
     }
 
     /**
@@ -74,7 +72,7 @@ public final class TestParameters {
      * @param headers The header fields to attach to the request.
      */
     public TestParameters(final TestFixture testFixture, final String expectedResult, final String endpoint,
-            final Map<String, String> headers) {
+            final MultiMap headers) {
         this.testFixture = Validate.notNull(testFixture);
         this.expectedResult = Validate.notEmpty(expectedResult);
         this.endpoint = Validate.notEmpty(endpoint);
@@ -109,7 +107,7 @@ public final class TestParameters {
      * @return The header fields to attach to the request.
      */
     @SuppressWarnings("unused") // Part of the API
-    public Map<String, String> getHeaders() {
+    public MultiMap getHeaders() {
         return headers;
     }
 
