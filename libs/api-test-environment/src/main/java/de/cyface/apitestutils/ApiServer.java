@@ -28,9 +28,11 @@ import io.vertx.core.AsyncResult;
 import io.vertx.core.DeploymentOptions;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
+import io.vertx.core.MultiMap;
 import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.JsonObject;
+import io.vertx.ext.auth.authentication.TokenCredentials;
 import io.vertx.ext.web.client.HttpRequest;
 import io.vertx.ext.web.client.HttpResponse;
 import io.vertx.ext.web.client.WebClient;
@@ -41,7 +43,7 @@ import io.vertx.junit5.VertxTestContext;
  *
  * @author Armin Schnabel
  * @author Klemens Muthmann
- * @version 2.1.0
+ * @version 3.0.0
  * @since 1.0.0
  */
 public final class ApiServer {
@@ -138,20 +140,23 @@ public final class ApiServer {
      * @param client The Vert.x <code>WebClient</code> to use
      * @param endpoint The service endpoint to call to get some data
      * @param testContext The <code>VertxTextContext</code> provided by the current test case
-     * @param format A field to identify the requested format, such as 'csv' or 'json'.
+     * @param headers Additional headers to add to the request.
      * @param resultHandler A handler provided with the result of the get request
      */
     @SuppressWarnings("unused") // Part of the API
     public void get(final WebClient client, final String endpoint, final VertxTestContext testContext,
-            final String format, final Handler<AsyncResult<HttpResponse<Buffer>>> resultHandler) {
-        authenticate(client, testContext.succeeding(response -> {
+            final MultiMap headers, final Handler<AsyncResult<HttpResponse<Buffer>>> resultHandler) {
 
+        authenticate(client, testContext.succeeding(response -> {
             final String authToken = response.getHeader("Authorization");
 
             if (response.statusCode() == 200 && authToken != null) {
-                final HttpRequest<Buffer> builder = client.get(port(), HTTP_HOST, httpEndpoint + endpoint);
-                builder.putHeader("Authorization", "Bearer " + authToken);
-                builder.putHeader("format", format);
+                final HttpRequest<Buffer> builder = client
+                        .get(port(), HTTP_HOST, httpEndpoint + endpoint)
+                        .authentication(new TokenCredentials(authToken));
+                if (headers.size() > 0) {
+                    builder.putHeaders(headers);
+                }
                 builder.send(resultHandler);
             } else {
                 testContext.failNow(new IllegalStateException(String.format(
