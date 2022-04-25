@@ -52,7 +52,7 @@ public enum FormAttributes {
      */
     LENGTH("length"),
     /**
-     * The count of geo locations in the transmitted measurement.
+     * The count of geolocations in the transmitted measurement.
      */
     LOCATION_COUNT("locationCount"),
     /**

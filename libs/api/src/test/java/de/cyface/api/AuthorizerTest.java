@@ -40,6 +40,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import de.cyface.api.model.Role;
+import de.cyface.api.model.User;
 import io.vertx.core.Handler;
 import io.vertx.core.MultiMap;
 import io.vertx.core.json.JsonArray;
@@ -156,11 +157,11 @@ public class AuthorizerTest {
          * @param mongoUserDatabase The Mongo user database containing all information about users
          */
         public TestAuthorizer(MongoAuthentication authProvider, MongoClient mongoUserDatabase) {
-            super(authProvider, mongoUserDatabase);
+            super(authProvider, mongoUserDatabase, false);
         }
 
         @Override
-        protected void handleAuthorizedRequest(RoutingContext ctx, List<String> usernames, MultiMap header) {
+        protected void handleAuthorizedRequest(RoutingContext ctx, List<User> users, MultiMap header) {
             // Nothing to do
         }
     }

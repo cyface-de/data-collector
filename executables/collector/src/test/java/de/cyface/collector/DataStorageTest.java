@@ -18,6 +18,7 @@
  */
 package de.cyface.collector;
 
+import static de.cyface.collector.model.Measurement.USER_ID_FIELD;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.greaterThan;
@@ -187,7 +188,7 @@ public final class DataStorageTest {
          * }
          */
         ret.put(FormAttributes.MODALITY.getValue(), "BICYCLE");
-        ret.put(FormAttributes.USERNAME.getValue(), "test");
+        ret.put(USER_ID_FIELD, new ObjectId());
 
         return ret;
     }

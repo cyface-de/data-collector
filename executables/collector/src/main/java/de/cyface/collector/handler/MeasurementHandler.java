@@ -18,7 +18,6 @@
  */
 package de.cyface.collector.handler;
 
-import static de.cyface.api.MongoAuthHandler.ENTITY_UNPARSABLE;
 import static de.cyface.collector.handler.PreRequestHandler.DEVICE_ID_FIELD;
 import static de.cyface.collector.handler.PreRequestHandler.MEASUREMENT_ID_FIELD;
 import static de.cyface.collector.handler.PreRequestHandler.MINIMUM_LOCATION_COUNT;
@@ -29,13 +28,16 @@ import static de.cyface.collector.handler.StatusHandler.RESUME_INCOMPLETE;
 import java.io.File;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
-import de.cyface.model.RequestMetaData;
 import org.apache.commons.lang3.Validate;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import de.cyface.api.Authorizer;
+import de.cyface.api.model.User;
 import de.cyface.collector.handler.exception.IllegalSession;
 import de.cyface.collector.handler.exception.InvalidMetaData;
 import de.cyface.collector.handler.exception.PayloadTooLarge;
@@ -43,11 +45,13 @@ import de.cyface.collector.handler.exception.SessionExpired;
 import de.cyface.collector.handler.exception.SkipUpload;
 import de.cyface.collector.handler.exception.Unparsable;
 import de.cyface.collector.model.Measurement;
-import io.vertx.core.Handler;
+import de.cyface.collector.verticle.Config;
+import de.cyface.model.RequestMetaData;
+import io.vertx.core.MultiMap;
 import io.vertx.core.file.OpenOptions;
 import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.json.JsonObject;
-import io.vertx.ext.auth.User;
+import io.vertx.ext.auth.mongo.MongoAuthentication;
 import io.vertx.ext.mongo.GridFsUploadOptions;
 import io.vertx.ext.mongo.MongoClient;
 import io.vertx.ext.web.RoutingContext;
@@ -64,7 +68,7 @@ import io.vertx.ext.web.Session;
  * @since 6.0.0
  */
 @SuppressWarnings("PMD.AvoidCatchingNPE")
-public final class MeasurementHandler implements Handler<RoutingContext> {
+public final class MeasurementHandler extends Authorizer {
 
     /**
      * The logger for objects of this class. You can change its configuration by
@@ -95,10 +99,26 @@ public final class MeasurementHandler implements Handler<RoutingContext> {
     private final long payloadLimit;
 
     /**
+     * Creates a fully initialized instance of this class.
+     *
+     * @param config the configuration setting required to start the HTTP server
+     */
+    public MeasurementHandler(final Config config) {
+        this(config.getDataDatabase(), config.getAuthProvider(), config.getUserDatabase(),
+                config.getMeasurementLimit());
+    }
+
+    /**
+     * Creates a fully initialized instance of this class.
+     *
      * @param dataClient The client to use to access the Mongo database.
+     * @param authProvider An auth provider used by this server to authenticate against the Mongo user database
+     * @param userDatabase The Mongo user database containing all information about users
      * @param payloadLimit The maximum number of {@code Byte}s which may be uploaded.
      */
-    public MeasurementHandler(final MongoClient dataClient, final long payloadLimit) {
+    public MeasurementHandler(final MongoClient dataClient, final MongoAuthentication authProvider,
+            final MongoClient userDatabase, final long payloadLimit) {
+        super(authProvider, userDatabase, true);
         Validate.notNull(dataClient);
         Validate.isTrue(payloadLimit > 0);
         this.dataClient = dataClient;
@@ -106,13 +126,18 @@ public final class MeasurementHandler implements Handler<RoutingContext> {
     }
 
     @Override
-    public void handle(final RoutingContext ctx) {
+    protected void handleAuthorizedRequest(final RoutingContext ctx, final List<de.cyface.api.model.User> users,
+            final MultiMap header) {
         LOGGER.info("Received new measurement request.");
         final var request = ctx.request();
         final var session = ctx.session();
-        final var user = ctx.user();
 
         try {
+            final var username = ctx.user().principal().getString("username");
+            final var matched = users.stream().filter(u -> u.getName().equals(username)).collect(Collectors.toList());
+            Validate.isTrue(matched.size() == 1);
+            final var user = users.get(0);
+
             final var bodySize = bodySize(request.headers(), payloadLimit, "content-length");
             final var metaData = metaData(request);
             checkSessionValidity(session, metaData);
@@ -162,6 +187,8 @@ public final class MeasurementHandler implements Handler<RoutingContext> {
             LOGGER.debug(e.getMessage(), e);
             remove(session); // client won't resume
             ctx.fail(PRECONDITION_FAILED, e);
+        } catch (RuntimeException e) {
+            ctx.fail(e);
         }
     }
 
@@ -275,7 +302,8 @@ public final class MeasurementHandler implements Handler<RoutingContext> {
             final var endLocationLat = Double.parseDouble(endLocationLatString);
             final var endLocationLon = Double.parseDouble(endLocationLonString);
             final var endLocationTs = Long.parseLong(endLocationTsString);
-            final var startLocation = new RequestMetaData.GeoLocation(startLocationTs, startLocationLat, startLocationLon);
+            final var startLocation = new RequestMetaData.GeoLocation(startLocationTs, startLocationLat,
+                    startLocationLon);
             final var endLocation = new RequestMetaData.GeoLocation(endLocationTs, endLocationLat, endLocationLon);
 
             // Format version
@@ -406,8 +434,7 @@ public final class MeasurementHandler implements Handler<RoutingContext> {
                     }
 
                     // Persist data
-                    final var username = user.principal().getString("username");
-                    final var measurement = new Measurement(metaData, username, tempFile);
+                    final var measurement = new Measurement(metaData, user.getId(), tempFile);
                     storeToMongoDB(measurement, ctx);
                 }).onFailure(failure -> {
                     LOGGER.error("Response: 500, failed to read props from temp file");

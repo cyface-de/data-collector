@@ -24,6 +24,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import org.bson.types.ObjectId;
+
 import de.cyface.api.model.ClassifiedSegment;
 import de.cyface.api.model.Geometry;
 import de.cyface.model.Modality;
@@ -43,6 +45,10 @@ import io.vertx.ext.mongo.MongoClient;
 public class ClassifiedSegmentRetriever {
 
     /**
+     * The field name of the database field which contains the user id.
+     */
+    public static final String USER_ID_FIELD = "userId";
+    /**
      * The name of the collection in the Mongo database used to store classified segments data.
      */
     private final String collectionName;
@@ -57,22 +63,20 @@ public class ClassifiedSegmentRetriever {
     }
 
     /**
-     * Loads all classified segments of all users of the specified {@code userNames} from the database.
+     * Loads all classified segments of all users of specified users from the database.
      *
-     * @param userNames The names of the users to load data for.
+     * @param userIds The ifs of the users to load data for.
      * @param dataClient The client to access the data from.
      * @param startTime The value is {@code null} or a point in time to only return newer results.
      * @param endTime The value is {@code null} or a point in time to only return older results.
      * @return a {@code Future} containing the users' data if successful.
      */
-    public Future<List<ClassifiedSegment>> loadSegments(final List<String> userNames, final MongoClient dataClient,
+    public Future<List<ClassifiedSegment>> loadSegments(final List<ObjectId> userIds, final MongoClient dataClient,
             final ZonedDateTime startTime, final ZonedDateTime endTime) {
-
         final Promise<List<ClassifiedSegment>> promise = Promise.promise();
-        final Future<List<ClassifiedSegment>> future = promise.future();
 
         final var query = new JsonObject();
-        query.put("username", new JsonObject().put("$in", new JsonArray(userNames)));
+        query.put(USER_ID_FIELD, new JsonObject().put("$in", new JsonArray(userIds)));
         if (startTime != null || endTime != null) {
             final var timeRestriction = new JsonObject();
             if (startTime != null) {
@@ -84,16 +88,17 @@ public class ClassifiedSegmentRetriever {
             query.put("latest_data_point", timeRestriction);
         }
 
-        dataClient.find(collectionName, query, mongoResult -> {
-            if (mongoResult.succeeded()) {
-                final var segments = pojo(mongoResult.result());
-                promise.complete(segments);
-            } else {
-                promise.fail(mongoResult.cause());
+        final var find = dataClient.find(collectionName, query);
+        find.onSuccess(result -> {
+            try {
+                promise.complete(pojo(result));
+            } catch (RuntimeException e) {
+                promise.fail(e);
             }
         });
+        find.onFailure(promise::fail);
 
-        return future;
+        return promise.future();
     }
 
     /**

@@ -48,7 +48,7 @@ public class Role {
      * @param type The {@link Type} of this role. Only {@link Type#GUEST} roles are allowed without group. Use
      *            {@link Role(Type, String)} for other roles.
      */
-    public Role(Type type) {
+    public Role(final Type type) {
         Validate.isTrue(type.equals(Type.GUEST), String.format("Guest role expected, but is: %s", type));
         this.type = type;
         this.group = null;
@@ -60,7 +60,7 @@ public class Role {
      * @param type The {@link Type} of this role.
      * @param group The group the user with that role is part of. {@code Null} if the users is a {@link Type#GUEST}.
      */
-    public Role(Type type, String group) {
+    public Role(final Type type, final String group) {
         if (type != Type.GUEST) {
             Validate.notEmpty(group,
                     String.format("Only guest users are not part of a user group but type is: %s", type));
@@ -120,9 +120,11 @@ public class Role {
 
     @Override
     public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
-        Role role = (Role) o;
+        if (this == o)
+            return true;
+        if (o == null || getClass() != o.getClass())
+            return false;
+        Role role = (Role)o;
         return type == role.type && Objects.equals(group, role.group);
     }
 

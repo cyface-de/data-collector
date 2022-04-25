@@ -25,9 +25,10 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import java.nio.file.Paths;
 import java.util.UUID;
 
-import de.cyface.model.RequestMetaData;
+import org.bson.types.ObjectId;
 import org.junit.jupiter.api.Test;
 
+import de.cyface.model.RequestMetaData;
 import io.vertx.core.buffer.Buffer;
 
 /**
@@ -52,12 +53,12 @@ public class MeasurementTest {
         final var startLocation = new RequestMetaData.GeoLocation(1000, 51.1, 13.1);
         final var endLocation = new RequestMetaData.GeoLocation(2000, 51.2, 13.2);
         final var modality = "CAR";
-        final var username = "guest";
+        final var userId = new ObjectId();
         final var binary = Paths.get("testDir", "testFile").toAbsolutePath().toFile();
         final var formatVersion = 2;
         final var metaData = new RequestMetaData(did, mid, osVersion, deviceType, appVersion, length, locationCount,
                 startLocation, endLocation, modality, formatVersion);
-        final var measurement = new Measurement(metaData, username, binary);
+        final var measurement = new Measurement(metaData, userId, binary);
 
         // Act: encode
         final var codec = new Measurement.EventBusCodec();
@@ -87,7 +88,7 @@ public class MeasurementTest {
         assertThat(decodedEnd.getTimestamp(), is(equalTo(endLocation.getTimestamp())));
 
         assertThat(decodedMetaData.getModality(), is(equalTo(modality)));
-        assertThat(decoded.getUsername(), is(equalTo(username)));
+        assertThat(decoded.getUserId(), is(equalTo(userId)));
         assertThat(decoded.getBinary(), is(equalTo(binary)));
         assertThat(decodedMetaData.getFormatVersion(), is(equalTo(formatVersion)));
     }

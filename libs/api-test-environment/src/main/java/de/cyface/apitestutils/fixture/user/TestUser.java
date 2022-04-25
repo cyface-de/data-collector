@@ -44,6 +44,7 @@ import io.vertx.ext.mongo.MongoClient;
  * @since 1.0.0
  */
 public abstract class TestUser implements MongoTestData {
+
     /**
      * The name of the user to be created.
      */

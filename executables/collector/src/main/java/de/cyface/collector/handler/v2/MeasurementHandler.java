@@ -20,8 +20,14 @@ package de.cyface.collector.handler.v2;
 
 import java.io.File;
 import java.util.HashSet;
+import java.util.List;
 import java.util.stream.Collectors;
 
+import de.cyface.api.Authorizer;
+import de.cyface.api.model.User;
+import de.cyface.collector.verticle.v2.Config;
+import io.vertx.core.MultiMap;
+import io.vertx.ext.auth.mongo.MongoAuthentication;
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.lang3.Validate;
 import org.slf4j.Logger;
@@ -31,7 +37,6 @@ import de.cyface.collector.model.v2.GeoLocation;
 import de.cyface.collector.model.v2.Measurement;
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
-import io.vertx.core.Handler;
 import io.vertx.core.file.OpenOptions;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.mongo.GridFsUploadOptions;
@@ -50,7 +55,7 @@ import io.vertx.ext.web.RoutingContext;
  * @since 2.0.0
  */
 @SuppressWarnings("PMD.AvoidCatchingNPE")
-public final class MeasurementHandler implements Handler<RoutingContext> {
+public final class MeasurementHandler extends Authorizer {
 
     /**
      * The logger for objects of this class. You can change its configuration by
@@ -64,15 +69,30 @@ public final class MeasurementHandler implements Handler<RoutingContext> {
     private final MongoClient dataClient;
 
     /**
-     * @param dataClient The client to use to access the Mongo database.
+     * Creates a fully initialized instance of this class.
+     *
+     * @param config the configuration setting required to start the HTTP server
      */
-    public MeasurementHandler(final MongoClient dataClient) {
+    public MeasurementHandler(final Config config) {
+        this(config.getDataDatabase(), config.getAuthProvider(), config.getUserDatabase());
+    }
+
+    /**
+     * Creates a fully initialized instance of this class.
+     *
+     * @param dataClient The client to use to access the Mongo database.
+     * @param authProvider An auth provider used by this server to authenticate against the Mongo user database
+     * @param userDatabase The Mongo user database containing all information about users
+     */
+    public MeasurementHandler(final MongoClient dataClient, final MongoAuthentication authProvider, final MongoClient userDatabase) {
+        super(authProvider, userDatabase, false);
         Validate.notNull(dataClient);
         this.dataClient = dataClient;
     }
 
     @Override
-    public void handle(RoutingContext ctx) {
+    protected void handleAuthorizedRequest(final RoutingContext ctx, final List<User> users, final MultiMap header) {
+
         LOGGER.info("Received new measurement request.");
         final var request = ctx.request();
         LOGGER.debug("FormAttributes: {}", request.formAttributes());
