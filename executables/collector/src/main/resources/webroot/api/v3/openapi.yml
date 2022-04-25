@@ -1,4 +1,4 @@
-openapi: 3.0.2
+openapi: 3.0.3
 info:
   title: Cyface Data Collector
   description: This is a Cyface data collection endpoint, that receives traffic data from Cyface measurement devices, and stores them for further processing.
@@ -36,9 +36,15 @@ paths:
               required:
                 - username
                 - password
-              example:
-                username: admin
-                password: secret
+            examples:
+              registered:
+                value:
+                  username: guest@example.com
+                  password: secret
+              generated:
+                value:
+                  username: guest
+                  password: secret
       responses:
         '200':
           description: Your credentials were correct. The Authorization header contains a JWT key that is valid for 60 seconds to upload data.
