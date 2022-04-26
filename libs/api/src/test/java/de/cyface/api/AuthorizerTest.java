@@ -31,6 +31,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.stream.Stream;
 
+import org.bson.types.ObjectId;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -41,11 +42,12 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import de.cyface.api.model.Role;
 import de.cyface.api.model.User;
-import io.vertx.core.Handler;
+import io.vertx.core.Future;
 import io.vertx.core.MultiMap;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.auth.mongo.MongoAuthentication;
+import io.vertx.ext.mongo.FindOptions;
 import io.vertx.ext.mongo.MongoClient;
 import io.vertx.ext.web.RoutingContext;
 
@@ -55,7 +57,7 @@ import io.vertx.ext.web.RoutingContext;
  * An integration test exists in `backend/exporter/AuthorizationTest` to avoid circular dependency.
  *
  * @author Armin Schnabel
- * @version 1.0.0
+ * @version 1.0.1
  * @since 6.4.0
  */
 @ExtendWith(MockitoExtension.class)
@@ -67,6 +69,8 @@ public class AuthorizerTest {
     MongoClient mockUserDatabase;
 
     private final static String DEFAULT_USERNAME = "testUser";
+    private final static ObjectId TEST_USER_ID = new ObjectId();
+    private final static User TEST_USER = new User(TEST_USER_ID, DEFAULT_USERNAME);
 
     @ParameterizedTest
     @MethodSource("testParameters")
@@ -76,6 +80,11 @@ public class AuthorizerTest {
         final var principal = new JsonObject();
         principal.put("username", DEFAULT_USERNAME);
         principal.put("roles", parameters.roles);
+        final var user = new JsonObject().put("_id", TEST_USER_ID).put("username", DEFAULT_USERNAME).put("roles",
+                parameters.roles);
+        when(mockUserDatabase.findWithOptions(ArgumentMatchers.any(String.class),
+                ArgumentMatchers.any(JsonObject.class), ArgumentMatchers.any(FindOptions.class)))
+                        .thenReturn(Future.succeededFuture(Collections.singletonList(user)));
 
         // Act
         final var result = oocut.loadAccessibleUsers(principal).result();
@@ -92,17 +101,18 @@ public class AuthorizerTest {
         final var principal = new JsonObject();
         principal.put("username", DEFAULT_USERNAME);
         principal.put("roles", roles);
-        // noinspection unchecked
-        when(mockUserDatabase.find(ArgumentMatchers.any(String.class), ArgumentMatchers.any(JsonObject.class),
-                ArgumentMatchers.any(Handler.class))).thenReturn(mockUserDatabase);
+        final var user = new JsonObject().put("_id", TEST_USER_ID).put("username", DEFAULT_USERNAME).put("roles",
+                roles);
+        when(mockUserDatabase.findWithOptions(ArgumentMatchers.any(String.class),
+                ArgumentMatchers.any(JsonObject.class), ArgumentMatchers.any(FindOptions.class)))
+                        .thenReturn(Future.succeededFuture(Collections.singletonList(user)));
 
         // Act
         oocut.loadAccessibleUsers(principal);
 
         // Assert that the database is search for users of that project
-        // noinspection unchecked
         verify(mockUserDatabase, times(1)).find(eq(DatabaseConstants.COLLECTION_USER),
-                eq(new JsonObject().put(DEFAULT_ROLE_FIELD, "project_user")), ArgumentMatchers.any(Handler.class));
+                eq(new JsonObject().put(DEFAULT_ROLE_FIELD, "project_user")));
     }
 
     @Test
@@ -110,17 +120,18 @@ public class AuthorizerTest {
         // Arrange
         final var oocut = new TestAuthorizer(mockProvider, mockUserDatabase);
         final var groupManager = new Role(Role.Type.GROUP_MANAGER, "project");
-        // noinspection unchecked
-        when(mockUserDatabase.find(ArgumentMatchers.any(String.class), ArgumentMatchers.any(JsonObject.class),
-                ArgumentMatchers.any(Handler.class))).thenReturn(mockUserDatabase);
+        final var roles = new JsonArray().add("project_manager");
+        final var user = new JsonObject().put("_id", TEST_USER_ID).put("username", DEFAULT_USERNAME).put("roles",
+                roles);
+        when(mockUserDatabase.find(ArgumentMatchers.any(String.class), ArgumentMatchers.any(JsonObject.class)))
+                .thenReturn(Future.succeededFuture(Collections.singletonList(user)));
 
         // Act
         oocut.loadAccessibleUsers(groupManager);
 
         // Assert
-        // noinspection unchecked
         verify(mockUserDatabase, times(1)).find(eq(DatabaseConstants.COLLECTION_USER),
-                eq(new JsonObject().put(DEFAULT_ROLE_FIELD, "project_user")), ArgumentMatchers.any(Handler.class));
+                eq(new JsonObject().put(DEFAULT_ROLE_FIELD, "project_user")));
     }
 
     @SuppressWarnings("unused")
@@ -133,15 +144,15 @@ public class AuthorizerTest {
     @SuppressWarnings("unused")
     static Stream<TestParameters> testParameters() {
         return Stream.of(
-                new TestParameters(new JsonArray().add("guest"), Collections.singletonList(DEFAULT_USERNAME)),
-                new TestParameters(new JsonArray().add("project_user"), Collections.singletonList(DEFAULT_USERNAME)));
+                new TestParameters(new JsonArray().add("guest"), Collections.singletonList(TEST_USER)),
+                new TestParameters(new JsonArray().add("project_user"), Collections.singletonList(TEST_USER)));
     }
 
     private static class TestParameters {
         JsonArray roles;
-        List<String> expectedResult;
+        List<User> expectedResult;
 
-        public TestParameters(JsonArray roles, List<String> expectedResult) {
+        public TestParameters(JsonArray roles, List<User> expectedResult) {
             this.roles = roles;
             this.expectedResult = expectedResult;
         }

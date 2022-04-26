@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 Cyface GmbH
+ * Copyright 2021-2022 Cyface GmbH
  *
  * This file is part of the Cyface Data Collector.
  *
@@ -22,6 +22,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.commons.lang3.Validate;
+import org.bson.types.ObjectId;
 
 import de.cyface.model.MeasurementIdentifier;
 import de.cyface.model.MetaData;
@@ -57,8 +58,8 @@ public abstract class MeasurementRetrievalImpl implements MeasurementRetrievalSt
         final var osVersion = metaData.getString("osVersion");
         final var appVersion = metaData.getString("appVersion");
         final var length = metaData.getDouble("length");
-        final var username = metaData.getString("username");
-        return new MetaData(identifier, deviceType, osVersion, appVersion, length, username, version);
+        final var userId = new ObjectId(metaData.getString("userId"));
+        return new MetaData(identifier, deviceType, osVersion, appVersion, length, userId.toString(), version);
     }
 
     /**

@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2021 Cyface GmbH
+ * Copyright 2020-2022 Cyface GmbH
  *
  * This file is part of the Cyface Data Collector.
  *
@@ -18,7 +18,19 @@
  */
 package de.cyface.apitestutils.fixture;
 
+import static de.cyface.apitestutils.fixture.DatabaseConstants.DESERIALIZED_TRACK_FIELD;
+import static de.cyface.apitestutils.fixture.DatabaseConstants.METADATA_APP_VERSION_FIELD;
+import static de.cyface.apitestutils.fixture.DatabaseConstants.METADATA_DEVICE_ID_FIELD;
+import static de.cyface.apitestutils.fixture.DatabaseConstants.METADATA_DEVICE_TYPE_FIELD;
+import static de.cyface.apitestutils.fixture.DatabaseConstants.METADATA_FIELD;
+import static de.cyface.apitestutils.fixture.DatabaseConstants.METADATA_LENGTH_FIELD;
+import static de.cyface.apitestutils.fixture.DatabaseConstants.METADATA_MEASUREMENT_ID_FIELD;
+import static de.cyface.apitestutils.fixture.DatabaseConstants.METADATA_OS_VERSION_FIELD;
+import static de.cyface.apitestutils.fixture.DatabaseConstants.METADATA_VERSION_FIELD;
+import static de.cyface.apitestutils.fixture.DatabaseConstants.USER_ID_FIELD;
+
 import org.apache.commons.lang3.Validate;
+import org.bson.types.ObjectId;
 
 import de.cyface.model.Modality;
 import io.vertx.core.AsyncResult;
@@ -32,20 +44,21 @@ import io.vertx.ext.mongo.MongoClient;
  * A test document inside the Mongo database which contains an unpacked (deserialized) measurement.
  *
  * @author Armin Schnabel
- * @version 1.0.0
+ * @version 2.0.0
  * @since 1.2.0
  */
 public final class TestMeasurementDocument implements MongoTestData {
+
     /**
-     * The username who uploaded the file.
+     * The id of the user who uploaded the file.
      */
-    private final String ownerUsername;
+    private final ObjectId ownerUserId;
     /**
      * The identifier of the measurement encoded in the file.
      */
     private final long measurementIdentifier;
     /**
-     * The world wide unique identifier of the device the document comes from.
+     * The worldwide unique identifier of the device the document comes from.
      */
     private final String deviceIdentifier;
     /**
@@ -57,17 +70,17 @@ public final class TestMeasurementDocument implements MongoTestData {
      * Creates a new completely initialized document. You may insert it into a Mongo database by calling
      * {@link #insert(MongoClient, Handler)}.
      *
-     * @param ownerUsername The username who uploaded the file
+     * @param ownerUserId The id of the user who uploaded the file.
      * @param measurementIdentifier The identifier of the measurement encoded in the file
-     * @param deviceIdentifier The world wide unique identifier of the device the document comes from
+     * @param deviceIdentifier The worldwide unique identifier of the device the document comes from
      */
-    public TestMeasurementDocument(final String ownerUsername, final Long measurementIdentifier,
+    public TestMeasurementDocument(final ObjectId ownerUserId, final Long measurementIdentifier,
             final String deviceIdentifier) {
-        Validate.notEmpty(ownerUsername);
+        Validate.notNull(ownerUserId);
         Validate.notNull(measurementIdentifier);
         Validate.notEmpty(deviceIdentifier);
 
-        this.ownerUsername = ownerUsername;
+        this.ownerUserId = ownerUserId;
         this.measurementIdentifier = measurementIdentifier;
         this.deviceIdentifier = deviceIdentifier;
     }
@@ -75,15 +88,15 @@ public final class TestMeasurementDocument implements MongoTestData {
     @Override
     public void insert(final MongoClient mongoClient, final Handler<AsyncResult<Void>> resultHandler) {
 
-        final JsonObject metaData = new JsonObject()
-                .put("deviceId", deviceIdentifier)
-                .put("measurementId", measurementIdentifier)
-                .put("deviceType", "Pixel 3")
-                .put("osVersion", "Android 9.0.0")
-                .put("appVersion", "1.2.0")
-                .put("length", 1500.2)
-                .put("username", ownerUsername)
-                .put("version", "2.0.0");
+        final var metaData = new JsonObject()
+                .put(METADATA_DEVICE_ID_FIELD, deviceIdentifier)
+                .put(METADATA_MEASUREMENT_ID_FIELD, measurementIdentifier)
+                .put(METADATA_DEVICE_TYPE_FIELD, "Pixel 3")
+                .put(METADATA_OS_VERSION_FIELD, "Android 9.0.0")
+                .put(METADATA_APP_VERSION_FIELD, "1.2.0")
+                .put(METADATA_LENGTH_FIELD, 1500.2)
+                .put(USER_ID_FIELD, ownerUserId)
+                .put(METADATA_VERSION_FIELD, "2.0.0");
 
         final JsonArray geoLocations = new JsonArray();
         final var geometry1 = new JsonObject()
@@ -135,9 +148,9 @@ public final class TestMeasurementDocument implements MongoTestData {
                 .put("rotations", rotations)
                 .put("directions", directions);
 
-        final JsonObject measurementDocument = new JsonObject()
-                .put("metaData", metaData)
-                .put("track", trackBucket);
+        final var measurementDocument = new JsonObject()
+                .put(METADATA_FIELD, metaData)
+                .put(DESERIALIZED_TRACK_FIELD, trackBucket);
 
         mongoClient.insert(COLLECTION_DESERIALIZED, measurementDocument, result -> {
             if (result.succeeded()) {

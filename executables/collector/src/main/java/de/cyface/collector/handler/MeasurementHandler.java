@@ -133,6 +133,7 @@ public final class MeasurementHandler extends Authorizer {
         final var session = ctx.session();
 
         try {
+            // Load authenticated user
             final var username = ctx.user().principal().getString("username");
             final var matched = users.stream().filter(u -> u.getName().equals(username)).collect(Collectors.toList());
             Validate.isTrue(matched.size() == 1);

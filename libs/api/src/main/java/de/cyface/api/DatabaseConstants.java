@@ -22,7 +22,7 @@ package de.cyface.api;
  * Constants used in the database containing the compressed serialized data received from clients.
  *
  * @author Armin Schnabel
- * @version 1.3.0
+ * @version 1.4.0
  * @since 6.4.0
  */
 public final class DatabaseConstants {
@@ -31,6 +31,10 @@ public final class DatabaseConstants {
      * The database `roles` entry for users who signed up themselves and are not part of a user group.
      */
     public static final String GUEST_ROLE = "guest";
+    /**
+     * The database `roles` entry for an admin used which is automatically generated but not used at the moment.
+     */
+    public static final String ADMIN_ROLE = "admin";
     /**
      * The prefix for user roles which defines a user with "manager" permissions.
      * <p>

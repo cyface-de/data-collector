@@ -135,7 +135,7 @@ public class ClassifiedSegmentRetriever {
         final var wayOffset = segment.getDouble("way_offset");
         final var tags = segment.getJsonObject("tags").getMap();
         final var latestDataPoint = OffsetDateTime.parse(segment.getJsonObject("latest_data_point").getString("$date"));
-        final var username = segment.getString("username");
+        final var userId = new ObjectId(segment.getString("userId"));
         final var expectedValue = segment.getDouble("expected_value");
         final var variance = segment.getDouble("variance");
         // We're expecting a large number of segments stored, we store the quality class as Integer instead of String.
@@ -145,7 +145,7 @@ public class ClassifiedSegmentRetriever {
         final var dataPointCount = segment.getLong("data_point_count");
         final var version = segment.getString("version");
         return new ClassifiedSegment(oid, forward, toGeometry(geometry), length, modality, vnk, nnk, wayOffset, way,
-                tags, latestDataPoint, username, expectedValue, variance, quality, dataPointCount, version);
+                tags, latestDataPoint, userId, expectedValue, variance, quality, dataPointCount, version);
     }
 
     /**

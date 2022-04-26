@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 Cyface GmbH
+ * Copyright 2021-2022 Cyface GmbH
  *
  * This file is part of the Cyface Data Collector.
  *
@@ -33,6 +33,7 @@ import de.cyface.model.RawRecord;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.mongo.FindOptions;
+import org.bson.types.ObjectId;
 
 /**
  * This class defines the interface to allow multiple {@link MeasurementRetrievalStrategy}s such as
@@ -77,8 +78,8 @@ public interface MeasurementRetrievalStrategy {
         final var osVersion = metaData.getString("osVersion");
         final var appVersion = metaData.getString("appVersion");
         final var length = metaData.getDouble("length");
-        final var username = metaData.getString("username");
-        return new MetaData(identifier, deviceType, osVersion, appVersion, length, username, version);
+        final var userId = new ObjectId(metaData.getString("userId"));
+        return new MetaData(identifier, deviceType, osVersion, appVersion, length, userId.toString(), version);
     }
 
     /**

@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 Cyface GmbH
+ * Copyright 2021-2022 Cyface GmbH
  *
  * This file is part of the Cyface Data Collector.
  *
@@ -49,6 +49,11 @@ import io.vertx.core.json.JsonObject;
 import io.vertx.core.streams.ReadStream;
 
 public class MeasurementIteratorTest {
+
+    /**
+     * The id of the user to add test data for.
+     */
+    private static final String TEST_USER_ID = "624d8c51c0879068499676c6";
 
     final ReadStream<JsonObject> mockedSource = new ReadStream<>() {
         @SuppressWarnings({"FieldCanBeLocal", "unused"})
@@ -227,7 +232,7 @@ public class MeasurementIteratorTest {
                     new JsonObject().put("deviceId", "testDiD").put("measurementId", measurementId)
                             .put("deviceType", "testType")
                             .put("osVersion", "Android 10").put("appVersion", "0.0.0").put("length", 28.34324)
-                            .put("username", "guest").put("version", "2.0.0"));
+                            .put("userId", TEST_USER_ID).put("version", "2.0.0"));
             final var minute = 13 + i;
             final var locationsSlice = new JsonArray();
             if (isLastBucket) {
@@ -252,7 +257,7 @@ public class MeasurementIteratorTest {
 
         final var measurementIdentifier = new MeasurementIdentifier("testDiD", measurementId);
         final var expectedMetaData = new MetaData(measurementIdentifier, "testType", "Android 10",
-                "0.0.0", 28.34324, "guest", "2.0.0");
+                "0.0.0", 28.34324, TEST_USER_ID, "2.0.0");
         final var expectedTracks = new ArrayList<Track>();
         for (int i = 0; i < numberOfTracks; i++) {
             final var modality = modalities.length == 1 ? modalities[0] : i == 0 ? modalities[0] : modalities[1];

@@ -1,5 +1,5 @@
 /*
- * Copyright 2018-2021 Cyface GmbH
+ * Copyright 2018-2022 Cyface GmbH
  *
  * This file is part of the Cyface Data Collector.
  *
@@ -23,7 +23,7 @@ package de.cyface.collector.handler;
  * 
  * @author Klemens Muthmann
  * @author Armin Schnabel
- * @version 3.2.0
+ * @version 3.3.0
  * @since 2.0.0
  */
 public enum FormAttributes {
@@ -95,10 +95,6 @@ public enum FormAttributes {
      * The modality type used to capture the measurement.
      */
     MODALITY("modality"),
-    /**
-     * The name of the user uploading the measurement.
-     */
-    USERNAME("username"),
     /**
      * The format version of the transfer file.
      */

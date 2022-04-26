@@ -29,7 +29,7 @@ import de.cyface.api.DatabaseConstants;
  *
  * @author Armin Schnabel
  * @since 6.4.0
- * @version 1.0.0
+ * @version 1.1.0
  */
 public class Role {
 
@@ -75,11 +75,15 @@ public class Role {
      * @param databaseValue A role entry from the database.
      */
     public Role(final String databaseValue) {
+        final var isAdmin = databaseValue.matches(Type.ADMIN.getRegex());
         final var isGuest = databaseValue.matches(Type.GUEST.getRegex());
         final var isGroupUser = databaseValue.matches(Type.GROUP_USER.getRegex());
         final var isGroupManager = databaseValue.matches(Type.GROUP_MANAGER.getRegex());
         if (isGuest) {
             this.type = Type.GUEST;
+            this.group = null;
+        } else if (isAdmin) {
+            this.type = Type.ADMIN;
             this.group = null;
         } else if (isGroupUser) {
             this.type = Type.GROUP_USER;
@@ -138,13 +142,17 @@ public class Role {
      *
      * @author Armin Schnabel
      * @since 6.4.0
-     * @version 1.0.0
+     * @version 1.1.0
      */
     public enum Type {
         /**
          * A guest user who signed up himself and is not part of a user group.
          */
         GUEST(DatabaseConstants.GUEST_ROLE),
+        /**
+         * An admin user who is automatically generated but is not used at the moment.
+         */
+        ADMIN(DatabaseConstants.ADMIN_ROLE),
         /**
          * A group user who collects data for a group manager.
          */
