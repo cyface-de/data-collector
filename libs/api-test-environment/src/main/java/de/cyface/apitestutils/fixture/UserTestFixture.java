@@ -27,11 +27,12 @@ import io.vertx.ext.mongo.MongoClient;
  * A fixture providing data to use for testing the user activation endpoint.
  *
  * @author Armin Schnabel
- * @version 1.0.0
+ * @version 2.0.0
  * @since 6.3.0
  */
 @SuppressWarnings("unused") // API
 public final class UserTestFixture implements TestFixture {
+
     /**
      * The measurements used during the test
      */
@@ -48,15 +49,11 @@ public final class UserTestFixture implements TestFixture {
     }
 
     @Override
-    public Future<Void> insertTestData(MongoClient mongoClient) {
-        final Promise<Void> promise = Promise.promise();
-        testUser.insert(mongoClient, result -> {
-            if (result.succeeded()) {
-                promise.complete();
-            } else {
-                promise.fail(result.cause());
-            }
-        });
+    public Future<String> insertTestData(final MongoClient mongoClient) {
+        final Promise<String> promise = Promise.promise();
+        final var insert = testUser.insert(mongoClient);
+        insert.onSuccess(promise::complete);
+        insert.onFailure(promise::fail);
         return promise.future();
     }
 }

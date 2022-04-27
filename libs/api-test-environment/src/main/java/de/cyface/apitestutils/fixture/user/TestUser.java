@@ -22,15 +22,13 @@ import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.List;
 
-import de.cyface.apitestutils.fixture.DatabaseConstants;
-import de.cyface.apitestutils.fixture.MongoTestData;
 import org.apache.commons.lang3.Validate;
 
 import de.cyface.api.Hasher;
-import io.vertx.core.AsyncResult;
+import de.cyface.apitestutils.fixture.DatabaseConstants;
+import de.cyface.apitestutils.fixture.MongoTestData;
 import io.vertx.core.Future;
-import io.vertx.core.Handler;
-import io.vertx.core.json.JsonArray;
+import io.vertx.core.Promise;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.auth.HashingStrategy;
 import io.vertx.ext.mongo.MongoClient;
@@ -40,7 +38,7 @@ import io.vertx.ext.mongo.MongoClient;
  *
  * @author Klemens Muthmann
  * @author Armin Schnabel
- * @version 1.2.0
+ * @version 2.0.0
  * @since 1.0.0
  */
 public abstract class TestUser implements MongoTestData {
@@ -76,25 +74,26 @@ public abstract class TestUser implements MongoTestData {
     }
 
     @Override
-    public void insert(final MongoClient mongoClient, final Handler<AsyncResult<Void>> resultHandler) {
+    public Future<String> insert(final MongoClient mongoClient) {
         Validate.notNull(mongoClient);
-        Validate.notNull(resultHandler);
+        final Promise<String> promise = Promise.promise();
 
+        // Check if the user already exists
         final var findUser = mongoClient.findOne(DatabaseConstants.COLLECTION_USER,
-                new JsonObject().put(DatabaseConstants.USER_USERNAME_FIELD, username),
-                null);
-        findUser.onFailure(failure -> resultHandler.handle(Future.failedFuture(failure)));
-        findUser.onSuccess(success -> {
-            if (success == null) {
+                new JsonObject().put(DatabaseConstants.USER_USERNAME_FIELD, username), null);
+        findUser.onFailure(promise::fail);
+        findUser.onSuccess(id -> {
+            if (id == null) {
                 final var insertCommand = insertCommand();
                 final var insertUser = mongoClient.insert(DatabaseConstants.COLLECTION_USER, insertCommand);
-                insertUser.onSuccess(inserted -> resultHandler.handle(Future.succeededFuture()));
-                insertUser.onFailure(failure -> resultHandler.handle(Future.failedFuture(failure)));
+                insertUser.onSuccess(promise::complete);
+                insertUser.onFailure(promise::fail);
             } else {
-                resultHandler.handle(Future.failedFuture(new IllegalStateException(
-                        "User already existent: " + success.encodePrettily())));
+                promise.fail(
+                        new IllegalStateException(String.format("User already existent: %s", id.encodePrettily())));
             }
         });
+        return promise.future();
     }
 
     /**

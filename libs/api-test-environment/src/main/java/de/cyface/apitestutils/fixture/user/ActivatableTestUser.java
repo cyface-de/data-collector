@@ -18,11 +18,10 @@
  */
 package de.cyface.apitestutils.fixture.user;
 
-import io.vertx.core.json.JsonArray;
-import io.vertx.core.json.JsonObject;
 import org.apache.commons.lang3.Validate;
 
-import java.util.Arrays;
+import io.vertx.core.json.JsonArray;
+import io.vertx.core.json.JsonObject;
 
 /**
  * A user for testing representing a user that was created via the user registration process and thus requires e-mail
@@ -31,15 +30,16 @@ import java.util.Arrays;
  * @author Klemens Muthmann
  */
 public final class ActivatableTestUser extends TestUser {
+
     /**
      * {@code True} if the user account is activated, {@code False} if the user signed up but did not activate the
      * account.
      */
-    private boolean activated;
+    private final boolean activated;
     /**
      * The token to activate the user account if the user signed up.
      */
-    private String activationToken;
+    private final String activationToken;
 
     /**
      * Creates a fully initialized instance of this class.

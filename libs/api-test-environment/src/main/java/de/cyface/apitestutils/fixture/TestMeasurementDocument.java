@@ -33,9 +33,8 @@ import org.apache.commons.lang3.Validate;
 import org.bson.types.ObjectId;
 
 import de.cyface.model.Modality;
-import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
-import io.vertx.core.Handler;
+import io.vertx.core.Promise;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.mongo.MongoClient;
@@ -44,7 +43,7 @@ import io.vertx.ext.mongo.MongoClient;
  * A test document inside the Mongo database which contains an unpacked (deserialized) measurement.
  *
  * @author Armin Schnabel
- * @version 2.0.0
+ * @version 3.0.0
  * @since 1.2.0
  */
 public final class TestMeasurementDocument implements MongoTestData {
@@ -68,7 +67,7 @@ public final class TestMeasurementDocument implements MongoTestData {
 
     /**
      * Creates a new completely initialized document. You may insert it into a Mongo database by calling
-     * {@link #insert(MongoClient, Handler)}.
+     * {@link #insert(MongoClient)}.
      *
      * @param ownerUserId The id of the user who uploaded the file.
      * @param measurementIdentifier The identifier of the measurement encoded in the file
@@ -86,7 +85,7 @@ public final class TestMeasurementDocument implements MongoTestData {
     }
 
     @Override
-    public void insert(final MongoClient mongoClient, final Handler<AsyncResult<Void>> resultHandler) {
+    public Future<String> insert(final MongoClient mongoClient) {
 
         final var metaData = new JsonObject()
                 .put(METADATA_DEVICE_ID_FIELD, deviceIdentifier)
@@ -152,13 +151,10 @@ public final class TestMeasurementDocument implements MongoTestData {
                 .put(METADATA_FIELD, metaData)
                 .put(DESERIALIZED_TRACK_FIELD, trackBucket);
 
-        mongoClient.insert(COLLECTION_DESERIALIZED, measurementDocument, result -> {
-            if (result.succeeded()) {
-                resultHandler.handle(Future.succeededFuture());
-            } else {
-                // Make the test fail
-                resultHandler.handle(Future.failedFuture(result.cause()));
-            }
-        });
+        final Promise<String> promise = Promise.promise();
+        final var insert = mongoClient.insert(COLLECTION_DESERIALIZED, measurementDocument);
+        insert.onSuccess(promise::complete);
+        insert.onFailure(promise::fail);
+        return promise.future();
     }
 }

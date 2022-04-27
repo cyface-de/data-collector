@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2021 Cyface GmbH
+ * Copyright 2020-2022 Cyface GmbH
  *
  * This file is part of the Cyface Data Collector.
  *
@@ -18,11 +18,10 @@
  */
 package de.cyface.apitestutils.fixture;
 
-import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import de.cyface.apitestutils.fixture.user.DirectTestUser;
-
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
@@ -66,24 +65,25 @@ public final class GeoLocationTestFixture implements TestFixture {
     }
 
     @Override
-    public Future<Void> insertTestData(MongoClient mongoClient) {
-        final Promise<Void> createAuthUserPromise = Promise.promise();
-        final Promise<Void> createTestUserPromise = Promise.promise();
-        final var futures = new ArrayList<Future>();
-        futures.add(createAuthUserPromise.future());
-        futures.add(createTestUserPromise.future());
-        testMeasurementDocuments.forEach(document -> {
-            final Promise<Void> promise = Promise.promise();
-            futures.add(promise.future());
-            document.insert(mongoClient, promise);
-        });
-        new DirectTestUser(TEST_USER_NAME, "secret", TEST_GROUP + DatabaseConstants.GROUP_MANAGER_ROLE_SUFFIX).insert(
-                mongoClient, createAuthUserPromise);
-        new DirectTestUser(TEST_GROUP_USER_USERNAME, "secret", TEST_GROUP + DatabaseConstants.USER_GROUP_ROLE_SUFFIX)
-                .insert(mongoClient, createTestUserPromise);
-        final var composition = CompositeFuture.all(futures);
-        final Promise<Void> promise = Promise.promise();
+    public Future<String> insertTestData(MongoClient mongoClient) {
+
+        final var manager = new DirectTestUser(TEST_USER_NAME, "secret",
+                TEST_GROUP + DatabaseConstants.GROUP_MANAGER_ROLE_SUFFIX);
+        final var groupUser = new DirectTestUser(TEST_GROUP_USER_USERNAME, "secret",
+                TEST_GROUP + DatabaseConstants.USER_GROUP_ROLE_SUFFIX);
+        final var managerInsert = manager.insert(mongoClient);
+        final var userInsert = groupUser.insert(mongoClient);
+
+        // noinspection rawtypes
+        final var futures = testMeasurementDocuments.stream().map(d -> (Future)d.insert(mongoClient))
+                .collect(Collectors.toList());
+        futures.add(managerInsert);
+        futures.add(userInsert);
+
+        final CompositeFuture composition = CompositeFuture.all(futures);
+        final Promise<String> promise = Promise.promise();
         composition.onSuccess(succeeded -> promise.complete()).onFailure(promise::fail);
+
         return promise.future();
     }
 }
