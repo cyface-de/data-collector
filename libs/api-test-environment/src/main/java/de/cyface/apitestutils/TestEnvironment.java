@@ -20,7 +20,6 @@ package de.cyface.apitestutils;
 
 import java.io.IOException;
 
-import de.cyface.api.EndpointConfig;
 import de.cyface.apitestutils.fixture.TestFixture;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
@@ -40,6 +39,11 @@ import io.vertx.junit5.VertxTestContext;
  * @since 1.0.1
  */
 public final class TestEnvironment {
+
+    /**
+     * The default data source name to use for user and data database if none is provided via configuration.
+     */
+    private final String DEFAULT_MONGO_DATA_SOURCE_NAME = "cyface";
     /**
      * A temporary Mongo database used only for one test.
      */
@@ -114,7 +118,8 @@ public final class TestEnvironment {
 
                     // Set up a Mongo client to access the database
                     final var mongoDbConfiguration = testMongoDatabase.config();
-                    this.mongoClient = EndpointConfig.createSharedMongoClient(vertx, mongoDbConfiguration);
+                    final var dataSourceName = config.getString("data_source_name", DEFAULT_MONGO_DATA_SOURCE_NAME);
+                    this.mongoClient = MongoClient.createShared(vertx, config, dataSourceName);
 
                     resultHandler.handle(Future.succeededFuture());
                 }));

@@ -20,11 +20,11 @@ package de.cyface.apitestutils.fixture.user;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
+import java.util.Base64;
 import java.util.List;
 
 import org.apache.commons.lang3.Validate;
 
-import de.cyface.api.Hasher;
 import de.cyface.apitestutils.fixture.DatabaseConstants;
 import de.cyface.apitestutils.fixture.MongoTestData;
 import io.vertx.core.Future;
@@ -38,7 +38,7 @@ import io.vertx.ext.mongo.MongoClient;
  *
  * @author Klemens Muthmann
  * @author Armin Schnabel
- * @version 2.0.0
+ * @version 2.0.1
  * @since 1.0.0
  */
 public abstract class TestUser implements MongoTestData {
@@ -115,8 +115,11 @@ public abstract class TestUser implements MongoTestData {
      */
     protected String getHashedPassword() {
         final var salt = "cyface-salt";
-        final var hasher = new Hasher(HashingStrategy.load(), salt.getBytes(StandardCharsets.UTF_8));
-        return hasher.hash(password);
+        //noinspection SpellCheckingInspection
+        return HashingStrategy.load().hash("pbkdf2",
+                null,
+                Base64.getMimeEncoder().encodeToString(salt.getBytes(StandardCharsets.UTF_8)),
+                password);
     }
 
     /**

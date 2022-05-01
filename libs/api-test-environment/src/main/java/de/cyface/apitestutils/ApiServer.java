@@ -23,7 +23,6 @@ import java.net.ServerSocket;
 
 import org.apache.commons.lang3.Validate;
 
-import de.cyface.api.Parameter;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.DeploymentOptions;
 import io.vertx.core.Future;
@@ -107,12 +106,12 @@ public final class ApiServer {
 
         final var privateTestKey = this.getClass().getResource("/private_key.pem");
         final var publicTestKey = this.getClass().getResource("/public.pem");
-        config.put(Parameter.MONGO_DATA_DB.key(), mongoDatabase.config())
-                .put(Parameter.MONGO_USER_DB.key(), mongoDatabase.config())
-                .put(Parameter.HTTP_PORT.key(), port)
-                .put(Parameter.JWT_PRIVATE_KEY_FILE_PATH.key(), Validate.notNull(privateTestKey).getFile())
-                .put(Parameter.JWT_PUBLIC_KEY_FILE_PATH.key(), Validate.notNull(publicTestKey).getFile())
-                .put(Parameter.HTTP_HOST.key(), HTTP_HOST)
+        config.put("mongo.datadb", mongoDatabase.config())
+                .put("mongo.userdb", mongoDatabase.config())
+                .put("http.port.management", port)
+                .put("jwt.private", Validate.notNull(privateTestKey).getFile())
+                .put("jwt.public", Validate.notNull(publicTestKey).getFile())
+                .put("http.host", HTTP_HOST)
                 .put(httpEndpointParameterKey, httpEndpoint);
         final DeploymentOptions options = new DeploymentOptions().setConfig(config);
 
