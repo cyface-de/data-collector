@@ -66,7 +66,7 @@ public class DatabaseConstants {
     /**
      * The database field name.
      */
-    public static final String METADATA_FIELD = "metadata";
+    public static final String METADATA_FIELD = "metaData";
     /**
      * The database field name.
      */
