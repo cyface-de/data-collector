@@ -20,8 +20,11 @@ package de.cyface.api;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import java.util.UUID;
 
+import de.cyface.model.MeasurementIdentifier;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -45,10 +48,6 @@ import io.vertx.junit5.VertxTestContext;
 @ExtendWith(VertxExtension.class)
 public class MeasurementRetrieverTest {
 
-    /**
-     * The id of the user to add test data for.
-     */
-    private static final String TEST_USER_ID = "624d8c51c0879068499676c6";
     /**
      * A temporary Mongo database used only for one test.
      */
@@ -76,10 +75,6 @@ public class MeasurementRetrieverTest {
         // Set up a Mongo client to access the database
         final var mongoDbConfiguration = testMongoDatabase.config();
         this.dataClient = MongoClient.createShared(vertx, mongoDbConfiguration, "cyface");
-
-        final var users = new ArrayList<String>();
-        users.add(TEST_USER_ID);
-        this.oocut = new MeasurementRetriever("deserialized", new MeasurementRetrievalWithoutSensorData(), users);
     }
 
     /**
@@ -96,14 +91,13 @@ public class MeasurementRetrieverTest {
     void test(final VertxTestContext testContext) {
         // Arrange
         final var deviceIdentifier = UUID.randomUUID().toString();
-        final var measurementIdentifier1 = 1L;
-        final var measurementIdentifier2 = 2L;
-        final var testDocuments = new ArrayList<TestMeasurementDocument>();
-        testDocuments.add(new TestMeasurementDocument(TEST_USER_ID, measurementIdentifier1, deviceIdentifier));
-        testDocuments.add(new TestMeasurementDocument(TEST_USER_ID, measurementIdentifier2, deviceIdentifier));
-        final var fixture = new GeoLocationTestFixture(testDocuments);
+        final var measurementIdentifiers = new ArrayList<MeasurementIdentifier>();
+        measurementIdentifiers.add(new MeasurementIdentifier(deviceIdentifier, 1L));
+        measurementIdentifiers.add(new MeasurementIdentifier(deviceIdentifier, 2L));
+        final var fixture = new GeoLocationTestFixture(measurementIdentifiers);
         final var future = fixture.insertTestData(dataClient);
-        future.onSuccess(succeeded -> {
+        future.onSuccess(ownerUserId -> {
+            this.oocut = new MeasurementRetriever("deserialized", new MeasurementRetrievalWithoutSensorData(), List.of(new String[]{ownerUserId}));
 
             // Act
             final var result = oocut.loadMeasurements(dataClient);

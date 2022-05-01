@@ -20,18 +20,20 @@ package de.cyface.api;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
+import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import de.cyface.apitestutils.TestMongoDatabase;
 import de.cyface.apitestutils.fixture.GeoLocationTestFixture;
-import de.cyface.apitestutils.fixture.TestMeasurementDocument;
+import de.cyface.apitestutils.fixture.TestFixture;
 import de.cyface.model.MeasurementIdentifier;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
@@ -49,10 +51,6 @@ import io.vertx.junit5.VertxTestContext;
 @ExtendWith(VertxExtension.class)
 public class MeasurementIteratorIntegrationTest {
 
-    /**
-     * The id of the user to add test data for.
-     */
-    private static final String TEST_USER_ID = "624d8c51c0879068499676c6";
     /**
      * A temporary Mongo database used only for one test.
      */
@@ -86,31 +84,22 @@ public class MeasurementIteratorIntegrationTest {
         testMongoDatabase.stop();
     }
 
-    @Test
-    void test(final VertxTestContext testContext) {
+    @ParameterizedTest
+    @MethodSource("testParameters")
+    void test(final TestParameters parameters, final VertxTestContext testContext) {
         // Arrange
-        final var deviceIdentifier = UUID.randomUUID().toString();
-        final var measurementId1 = 1L;
-        final var measurementId2 = 2L;
-        final var id1 = new MeasurementIdentifier(deviceIdentifier, measurementId1);
-        final var id2 = new MeasurementIdentifier(deviceIdentifier, measurementId2);
-        final var measurementIdentifiers = new MeasurementIdentifier[] {id1, id2};
-        final var testDocuments = new ArrayList<TestMeasurementDocument>();
-        testDocuments.add(new TestMeasurementDocument(TEST_USER_ID, measurementId1, deviceIdentifier));
-        testDocuments.add(new TestMeasurementDocument(TEST_USER_ID, measurementId2, deviceIdentifier));
-        final var fixture = new GeoLocationTestFixture(testDocuments);
 
         // Insert test data
-        final var insertTestData = fixture.insertTestData(dataClient);
-        insertTestData.onSuccess(succeeded -> {
+        final var insert = parameters.fixture.insertTestData(dataClient);
+        insert.onSuccess(succeeded -> {
             // Ensure the test data is there
-            final var ids = Arrays.stream(measurementIdentifiers).map(id -> new JsonObject()
+            final var ids = parameters.measurementIdentifiers.stream().map(id -> new JsonObject()
                     .put("metaData.deviceId", id.getDeviceIdentifier())
                     .put("metaData.measurementId", id.getMeasurementIdentifier())).collect(Collectors.toList());
-            final var query = new JsonObject().put("$or", ids);
+            final var query = ids.size() > 0 ? new JsonObject().put("$or", ids) : new JsonObject();
             final var testFind = dataClient.find("deserialized", query);
             testFind.onSuccess(result -> {
-                if (result.size() != 2) {
+                if (result.size() != parameters.expectedResults) {
                     testContext.failNow("Unexpected number of test documents");
                     return;
                 }
@@ -125,16 +114,50 @@ public class MeasurementIteratorIntegrationTest {
 
                     // Assert: correct amount of measurements returned by the iterator
                     iterator.load(
-                            measurement -> returnedMeasurements.flag(),
+                            measurement -> {
+                                if (parameters.expectedResults > 0) {
+                                    returnedMeasurements.flag();
+                                } else {
+                                    testContext.failNow("No measurement bucket expected!");
+                                }
+                            },
                             separation -> {
                             },
                             ended -> {
+                                if (parameters.expectedResults == 0) {
+                                    testContext.completeNow();
+                                }
                             },
                             testContext::failNow);
                 });
             });
             testFind.onFailure(testContext::failNow);
         });
-        insertTestData.onFailure(testContext::failNow);
+        insert.onFailure(testContext::failNow);
+    }
+
+    static Stream<TestParameters> testParameters() {
+
+        final var deviceId = UUID.randomUUID().toString();
+        final var measurementIdentifiers = new ArrayList<MeasurementIdentifier>();
+        measurementIdentifiers.add(new MeasurementIdentifier(deviceId, 1L));
+        measurementIdentifiers.add(new MeasurementIdentifier(deviceId, 2L));
+
+        return Stream.of(
+                new TestParameters(new GeoLocationTestFixture(measurementIdentifiers), measurementIdentifiers, 2),
+                new TestParameters(new GeoLocationTestFixture(new ArrayList<>()), new ArrayList<>(), 0));
+    }
+
+    private static class TestParameters {
+        TestFixture fixture;
+        List<MeasurementIdentifier> measurementIdentifiers;
+        int expectedResults;
+
+        public TestParameters(TestFixture fixture, ArrayList<MeasurementIdentifier> measurementIdentifiers,
+                int expectedResults) {
+            this.fixture = fixture;
+            this.measurementIdentifiers = measurementIdentifiers;
+            this.expectedResults = expectedResults;
+        }
     }
 }
