@@ -22,6 +22,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 import de.cyface.apitestutils.fixture.user.DirectTestUser;
+import de.cyface.model.MeasurementIdentifier;
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
@@ -29,10 +30,16 @@ import io.vertx.ext.mongo.MongoClient;
 
 /**
  * A fixture providing data to use for testing the raw geo-location export.
+ * <p>
+ * Inserts a test {@link DatabaseConstants#GROUP_MANAGER_ROLE_SUFFIX} user and a test
+ * {@link DatabaseConstants#USER_GROUP_ROLE_SUFFIX} user and references the group user as data owner in the created
+ * data fixtures.
+ * <p>
+ * {@link #insertTestData(MongoClient)} returns the user identifier of that data owner.
  *
  * @author Klemens Muthmann
  * @author Armin Schnabel
- * @version 3.0.0
+ * @version 4.0.0
  * @since 1.0.0
  */
 @SuppressWarnings("unused") // API
@@ -50,18 +57,18 @@ public final class GeoLocationTestFixture implements TestFixture {
      */
     public static final String TEST_USER_NAME = "admin";
     /**
-     * The measurements used during the test
+     * The identifiers of the measurements to be used during the test.
      */
-    private final List<TestMeasurementDocument> testMeasurementDocuments;
+    private final List<MeasurementIdentifier> testMeasurementIdentifiers;
 
     /**
      * Creates a new completely initialized fixture for the test.
      *
-     * @param testMeasurementDocuments The measurements used during the test
+     * @param testMeasurementIdentifiers The identifiers of the measurements to be used during the test.
      */
     @SuppressWarnings("unused") // API
-    public GeoLocationTestFixture(final List<TestMeasurementDocument> testMeasurementDocuments) {
-        this.testMeasurementDocuments = testMeasurementDocuments;
+    public GeoLocationTestFixture(final List<MeasurementIdentifier> testMeasurementIdentifiers) {
+        this.testMeasurementIdentifiers = testMeasurementIdentifiers;
     }
 
     @Override
@@ -74,15 +81,22 @@ public final class GeoLocationTestFixture implements TestFixture {
         final var managerInsert = manager.insert(mongoClient);
         final var userInsert = groupUser.insert(mongoClient);
 
-        // noinspection rawtypes
-        final var futures = testMeasurementDocuments.stream().map(d -> (Future)d.insert(mongoClient))
-                .collect(Collectors.toList());
-        futures.add(managerInsert);
-        futures.add(userInsert);
-
-        final CompositeFuture composition = CompositeFuture.all(futures);
         final Promise<String> promise = Promise.promise();
-        composition.onSuccess(succeeded -> promise.complete()).onFailure(promise::fail);
+        userInsert.onSuccess(userId -> {
+            final var testDocuments = testMeasurementIdentifiers.stream().map(
+                    id -> new TestMeasurementDocument(userId, id.getMeasurementIdentifier(), id.getDeviceIdentifier()))
+                    .collect(Collectors.toList());
+
+            // noinspection rawtypes
+            final var futures = testDocuments.stream().map(d -> (Future)d.insert(mongoClient))
+                    .collect(Collectors.toList());
+            futures.add(managerInsert);
+
+            final CompositeFuture composition = CompositeFuture.all(futures);
+            composition.onSuccess(succeeded -> promise.complete(userId));
+            composition.onFailure(promise::fail);
+        });
+        userInsert.onFailure(promise::fail);
 
         return promise.future();
     }

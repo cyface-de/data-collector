@@ -108,7 +108,7 @@ public final class ApiServer {
         final var publicTestKey = this.getClass().getResource("/public.pem");
         config.put("mongo.datadb", mongoDatabase.config())
                 .put("mongo.userdb", mongoDatabase.config())
-                .put("http.port.management", port)
+                .put("http.port", port)
                 .put("jwt.private", Validate.notNull(privateTestKey).getFile())
                 .put("jwt.public", Validate.notNull(publicTestKey).getFile())
                 .put("http.host", HTTP_HOST)

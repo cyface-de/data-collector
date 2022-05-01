@@ -35,7 +35,7 @@ import io.vertx.junit5.VertxTestContext;
  *
  * @author Klemens Muthmann
  * @author Armin Schnabel
- * @version 3.0.0
+ * @version 3.1.0
  * @since 1.0.1
  */
 public final class TestEnvironment {
@@ -160,5 +160,12 @@ public final class TestEnvironment {
     @SuppressWarnings("unused") // API
     public WebClient getWebClient() {
         return webClient;
+    }
+
+    /**
+     * @return The client to be used to access the test Mongo database.
+     */
+    public MongoClient getMongoClient() {
+        return mongoClient;
     }
 }
