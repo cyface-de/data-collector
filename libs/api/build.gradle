@@ -35,6 +35,7 @@ dependencies {
   implementation "io.vertx:vertx-auth-jwt:$vertxVersion" // Api
 
   // Test Dependencies
+  testImplementation project(':libs:api-test-environment')
   testImplementation "io.vertx:vertx-junit5:$vertxVersion"
   testImplementation "org.junit.jupiter:junit-jupiter:$junitVersion"
   implementation "org.hamcrest:hamcrest:$hamcrestVersion"

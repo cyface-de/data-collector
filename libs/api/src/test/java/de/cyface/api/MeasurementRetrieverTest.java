@@ -22,28 +22,28 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.UUID;
 
-import io.vertx.core.Promise;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 import de.cyface.apitestutils.TestMongoDatabase;
 import de.cyface.apitestutils.fixture.GeoLocationTestFixture;
 import de.cyface.apitestutils.fixture.TestMeasurementDocument;
-import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
-import io.vertx.core.json.JsonObject;
 import io.vertx.ext.mongo.MongoClient;
+import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
 
 /**
- * Tests the integration of {@link MeasurementIterator} with MongoDB.
+ * Tests the integration of {@link MeasurementRetriever} with MongoDB.
  *
  * @author Armin Schnabel
  * @version 6.6.0
  * @since 1.0.0
  */
-public class MeasurementIteratorIntegrationTest {
+@ExtendWith(VertxExtension.class)
+public class MeasurementRetrieverTest {
 
     /**
      * The default data source name to use for user and data database if none is provided via configuration.
@@ -61,6 +61,10 @@ public class MeasurementIteratorIntegrationTest {
      * The client to be used to access the test Mongo database.
      */
     private MongoClient dataClient;
+    /**
+     * The instance under test.
+     */
+    private MeasurementRetriever oocut;
 
     /**
      * Sets up a fresh test environment with a test mongo database before each test.
@@ -74,10 +78,13 @@ public class MeasurementIteratorIntegrationTest {
         testMongoDatabase.start();
 
         // Set up a Mongo client to access the database
-        final var config = new JsonObject();
         final var mongoDbConfiguration = testMongoDatabase.config();
-        final var dataSourceName = config.getString("data_source_name", DEFAULT_MONGO_DATA_SOURCE_NAME);
-        this.dataClient = MongoClient.createShared(vertx, config, dataSourceName);
+        // final var dataSourceName = config.getString("data_source_name", DEFAULT_MONGO_DATA_SOURCE_NAME);
+        this.dataClient = MongoClient.createShared(vertx, mongoDbConfiguration/* , dataSourceName */);
+
+        final var users = new ArrayList<String>();
+        users.add(TEST_USER_ID);
+        this.oocut = new MeasurementRetriever("deserialized", new MeasurementRetrievalWithoutSensorData(), users);
     }
 
     /**
@@ -85,7 +92,9 @@ public class MeasurementIteratorIntegrationTest {
      */
     @AfterEach
     public void tearDown() {
-        testMongoDatabase.stop();
+        if (testMongoDatabase != null) {
+            testMongoDatabase.stop();
+        }
     }
 
     @Test
@@ -100,21 +109,23 @@ public class MeasurementIteratorIntegrationTest {
         final var fixture = new GeoLocationTestFixture(testDocuments);
         final var future = fixture.insertTestData(dataClient);
         future.onSuccess(succeeded -> {
-            // FIXME: This basically tests `MeasurementRetriever.loadMeasurement()` !
-            final Promise<MeasurementIterator> promise = Promise.promise();
-            final var initializedHandler = new Handler<MeasurementIterator>() {
-                @Override
-                public void handle(final MeasurementIterator output) {
-                    promise.complete(output);
-                }
-            };
-            final var bucketStream = dataClient.findBatchWithOptions("deserialized", query, strategy.findOptions());
-            new MeasurementIterator(bucketStream, strategy, promise::fail, initializedHandler);
 
             // Act
+            final var result = oocut.loadMeasurements(dataClient);
 
             // Assert
-            FIXME: succeed test if promise completes and / or check resolved data / use flags to iterate through all M
+            final var returnedMeasurements = testContext.checkpoint(2);
+            result.onSuccess(iterator -> {
+                // Assert: correct amount of measurements returned by the iterator
+                iterator.load(
+                        measurement -> returnedMeasurements.flag(),
+                        separation -> {
+                        },
+                        ended -> {
+                        },
+                        testContext::failNow);
+            });
+            result.onFailure(testContext::failNow);
         }).onFailure(testContext::failNow);
     }
 }
