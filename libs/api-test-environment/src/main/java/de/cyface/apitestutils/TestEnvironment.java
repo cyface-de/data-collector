@@ -119,7 +119,7 @@ public final class TestEnvironment {
                     // Set up a Mongo client to access the database
                     final var mongoDbConfiguration = testMongoDatabase.config();
                     final var dataSourceName = config.getString("data_source_name", DEFAULT_MONGO_DATA_SOURCE_NAME);
-                    this.mongoClient = MongoClient.createShared(vertx, config, dataSourceName);
+                    this.mongoClient = MongoClient.createShared(vertx, mongoDbConfiguration, dataSourceName);
 
                     resultHandler.handle(Future.succeededFuture());
                 }));
