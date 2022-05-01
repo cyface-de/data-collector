@@ -46,10 +46,6 @@ import io.vertx.junit5.VertxTestContext;
 public class MeasurementRetrieverTest {
 
     /**
-     * The default data source name to use for user and data database if none is provided via configuration.
-     */
-    private final String DEFAULT_MONGO_DATA_SOURCE_NAME = "cyface";
-    /**
      * The id of the user to add test data for.
      */
     private static final String TEST_USER_ID = "624d8c51c0879068499676c6";
@@ -79,8 +75,7 @@ public class MeasurementRetrieverTest {
 
         // Set up a Mongo client to access the database
         final var mongoDbConfiguration = testMongoDatabase.config();
-        // final var dataSourceName = config.getString("data_source_name", DEFAULT_MONGO_DATA_SOURCE_NAME);
-        this.dataClient = MongoClient.createShared(vertx, mongoDbConfiguration/* , dataSourceName */);
+        this.dataClient = MongoClient.createShared(vertx, mongoDbConfiguration, "cyface");
 
         final var users = new ArrayList<String>();
         users.add(TEST_USER_ID);
