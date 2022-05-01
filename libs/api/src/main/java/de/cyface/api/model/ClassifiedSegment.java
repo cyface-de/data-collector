@@ -35,7 +35,6 @@ import de.cyface.model.Json;
 import de.cyface.model.Modality;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
-import org.bson.types.ObjectId;
 
 /**
  * Class which represents result elements from the surface pipeline: classified road segments.
@@ -104,7 +103,7 @@ public class ClassifiedSegment {
     /**
      * The id of the user who uploaded the data of this segment.
      */
-    private final ObjectId userId;
+    private final String userId;
     /**
      * A mean value from probability theory required to update {@code variance} without requiring previous points.
      */
@@ -157,7 +156,7 @@ public class ClassifiedSegment {
     @SuppressWarnings("unused") // Part of the API
     public ClassifiedSegment(final String oid, final boolean forward, final Geometry geometry, final double length,
             final Modality modality, final long vnk, final long nnk, final double wayOffset, final long way,
-            final Map<String, Object> tags, final OffsetDateTime latestDataPoint, final ObjectId userId,
+            final Map<String, Object> tags, final OffsetDateTime latestDataPoint, final String userId,
             final double expectedValue, final double variance, final SurfaceQuality quality, final long dataPointCount,
             final String version) {
         this.oid = oid;
@@ -295,7 +294,7 @@ public class ClassifiedSegment {
         getTags().forEach(tags::put);
         ret.put("tags", tags);
         ret.put("latest_data_point", new JsonObject().put("$date", getLatestDataPoint().toString()));
-        ret.put("userId", getUserId().toString());
+        ret.put("userId", getUserId());
         ret.put("expected_value", getExpectedValue());
         ret.put("variance", getVariance());
         ret.put("quality", getQuality().databaseValue);
@@ -424,7 +423,7 @@ public class ClassifiedSegment {
      * @return The id of the user who uploaded the data of this segment.
      */
     @SuppressWarnings("unused") // Part of the API
-    public ObjectId getUserId() {
+    public String getUserId() {
         return userId;
     }
 

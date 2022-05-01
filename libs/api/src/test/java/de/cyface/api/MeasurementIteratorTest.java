@@ -48,6 +48,13 @@ import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.core.streams.ReadStream;
 
+/**
+ * Tests the inner workings of {@link MeasurementIterator}.
+ *
+ * @author Armin Schnabel
+ * @version 6.0.0
+ * @since 1.0.0
+ */
 public class MeasurementIteratorTest {
 
     /**

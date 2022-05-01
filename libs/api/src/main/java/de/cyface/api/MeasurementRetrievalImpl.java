@@ -22,7 +22,6 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.commons.lang3.Validate;
-import org.bson.types.ObjectId;
 
 import de.cyface.model.MeasurementIdentifier;
 import de.cyface.model.MetaData;
@@ -58,8 +57,8 @@ public abstract class MeasurementRetrievalImpl implements MeasurementRetrievalSt
         final var osVersion = metaData.getString("osVersion");
         final var appVersion = metaData.getString("appVersion");
         final var length = metaData.getDouble("length");
-        final var userId = new ObjectId(metaData.getString("userId"));
-        return new MetaData(identifier, deviceType, osVersion, appVersion, length, userId.toString(), version);
+        final var userId = metaData.getString("userId");
+        return new MetaData(identifier, deviceType, osVersion, appVersion, length, userId, version);
     }
 
     /**

@@ -24,8 +24,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
-import org.bson.types.ObjectId;
-
 import de.cyface.api.model.ClassifiedSegment;
 import de.cyface.api.model.Geometry;
 import de.cyface.model.Modality;
@@ -71,7 +69,7 @@ public class ClassifiedSegmentRetriever {
      * @param endTime The value is {@code null} or a point in time to only return older results.
      * @return a {@code Future} containing the users' data if successful.
      */
-    public Future<List<ClassifiedSegment>> loadSegments(final List<ObjectId> userIds, final MongoClient dataClient,
+    public Future<List<ClassifiedSegment>> loadSegments(final List<String> userIds, final MongoClient dataClient,
             final ZonedDateTime startTime, final ZonedDateTime endTime) {
         final Promise<List<ClassifiedSegment>> promise = Promise.promise();
 
@@ -135,7 +133,7 @@ public class ClassifiedSegmentRetriever {
         final var wayOffset = segment.getDouble("way_offset");
         final var tags = segment.getJsonObject("tags").getMap();
         final var latestDataPoint = OffsetDateTime.parse(segment.getJsonObject("latest_data_point").getString("$date"));
-        final var userId = new ObjectId(segment.getString("userId"));
+        final var userId = segment.getString("userId");
         final var expectedValue = segment.getDouble("expected_value");
         final var variance = segment.getDouble("variance");
         // We're expecting a large number of segments stored, we store the quality class as Integer instead of String.

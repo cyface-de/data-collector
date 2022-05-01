@@ -33,7 +33,6 @@ import de.cyface.model.RawRecord;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.mongo.FindOptions;
-import org.bson.types.ObjectId;
 
 /**
  * This class defines the interface to allow multiple {@link MeasurementRetrievalStrategy}s such as
@@ -78,8 +77,8 @@ public interface MeasurementRetrievalStrategy {
         final var osVersion = metaData.getString("osVersion");
         final var appVersion = metaData.getString("appVersion");
         final var length = metaData.getDouble("length");
-        final var userId = new ObjectId(metaData.getString("userId"));
-        return new MetaData(identifier, deviceType, osVersion, appVersion, length, userId.toString(), version);
+        final var userId = metaData.getString("userId");
+        return new MetaData(identifier, deviceType, osVersion, appVersion, length, userId, version);
     }
 
     /**

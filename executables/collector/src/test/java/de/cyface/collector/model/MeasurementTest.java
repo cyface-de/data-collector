@@ -25,7 +25,6 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import java.nio.file.Paths;
 import java.util.UUID;
 
-import org.bson.types.ObjectId;
 import org.junit.jupiter.api.Test;
 
 import de.cyface.model.RequestMetaData;
@@ -53,7 +52,7 @@ public class MeasurementTest {
         final var startLocation = new RequestMetaData.GeoLocation(1000, 51.1, 13.1);
         final var endLocation = new RequestMetaData.GeoLocation(2000, 51.2, 13.2);
         final var modality = "CAR";
-        final var userId = new ObjectId();
+        final var userId = "624d8c51c0879068499676c6";
         final var binary = Paths.get("testDir", "testFile").toAbsolutePath().toFile();
         final var formatVersion = 2;
         final var metaData = new RequestMetaData(did, mid, osVersion, deviceType, appVersion, length, locationCount,

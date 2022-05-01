@@ -22,7 +22,6 @@ import java.io.File;
 import java.io.Serializable;
 
 import org.apache.commons.lang3.Validate;
-import org.bson.types.ObjectId;
 
 import de.cyface.collector.handler.FormAttributes;
 import de.cyface.model.RequestMetaData;
@@ -57,7 +56,7 @@ public final class Measurement implements Serializable {
     /**
      * The id of the user uploading the measurement.
      */
-    private final ObjectId userId;
+    private final String userId;
     /**
      * The binary uploaded with the measurement. This contains the actual data.
      */
@@ -70,7 +69,7 @@ public final class Measurement implements Serializable {
      * @param userId The id of the user uploading the measurement.
      * @param binary The binary uploaded together with the measurement. This contains the actual data.
      */
-    public Measurement(final RequestMetaData metaData, final ObjectId userId, final File binary) {
+    public Measurement(final RequestMetaData metaData, final String userId, final File binary) {
 
         Validate.notNull(userId, "Field userId was null!");
 
@@ -89,7 +88,7 @@ public final class Measurement implements Serializable {
     /**
      * @return The id of the user uploading the measurement.
      */
-    public ObjectId getUserId() {
+    public String getUserId() {
         return userId;
     }
 
@@ -173,7 +172,7 @@ public final class Measurement implements Serializable {
             final var length = metaData.getLength();
             final var locationCount = metaData.getLocationCount();
             final var modality = metaData.getModality();
-            final ObjectId userId = serializable.getUserId();
+            final String userId = serializable.getUserId();
 
             buffer.appendInt(deviceIdentifier.length());
             buffer.appendInt(measurementIdentifier.length());
@@ -248,7 +247,7 @@ public final class Measurement implements Serializable {
             final var modalityEnd = locationCountEnd + modalityLength;
             final var modality = buffer.getString(locationCountEnd, modalityEnd);
             final var usernameEnd = modalityEnd + usernameLength;
-            final var userId = new ObjectId(buffer.getString(modalityEnd, usernameEnd));
+            final var userId = buffer.getString(modalityEnd, usernameEnd);
 
             RequestMetaData.GeoLocation startLocation = null;
             RequestMetaData.GeoLocation endLocation = null;

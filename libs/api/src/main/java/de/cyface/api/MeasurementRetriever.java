@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2021 Cyface GmbH
+ * Copyright 2020-2022 Cyface GmbH
  *
  * This file is part of the Cyface Data Collector.
  *
@@ -22,8 +22,6 @@ import java.time.ZonedDateTime;
 import java.util.List;
 import java.util.Set;
 
-import org.bson.types.ObjectId;
-
 import de.cyface.model.MeasurementIdentifier;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
@@ -37,6 +35,7 @@ import io.vertx.ext.mongo.MongoClient;
  *
  * @author Armin Schnabel
  * @since 6.0.0
+ * @version 1.0.0
  */
 public class MeasurementRetriever {
 
@@ -86,7 +85,7 @@ public class MeasurementRetriever {
      * @param userIds The ids of the users to load measurements for
      */
     public MeasurementRetriever(final String collectionName, final MeasurementRetrievalStrategy strategy,
-            final List<ObjectId> userIds) {
+            final List<String> userIds) {
 
         this(collectionName, strategy, userIds, null, null);
     }
@@ -101,11 +100,11 @@ public class MeasurementRetriever {
      * @param endTime The value is {@code null} or a point in time to only return older results.
      */
     public MeasurementRetriever(final String collectionName, final MeasurementRetrievalStrategy strategy,
-            final List<ObjectId> userIds, final ZonedDateTime startTime, final ZonedDateTime endTime) {
+            final List<String> userIds, final ZonedDateTime startTime, final ZonedDateTime endTime) {
 
         this.collectionName = collectionName;
         this.strategy = strategy;
-        this.query = new JsonObject().put("metaData.userId", new JsonObject().put("$in", new JsonArray(userIds)));
+        this.query = new JsonObject().put("metaData.userId", new JsonObject().put("$in", userIds));
         if (startTime != null || endTime != null) {
             final var timeRestriction = new JsonObject();
             if (startTime != null) {

@@ -30,7 +30,6 @@ import static de.cyface.apitestutils.fixture.DatabaseConstants.METADATA_VERSION_
 import static de.cyface.apitestutils.fixture.DatabaseConstants.USER_ID_FIELD;
 
 import org.apache.commons.lang3.Validate;
-import org.bson.types.ObjectId;
 
 import de.cyface.model.Modality;
 import io.vertx.core.Future;
@@ -51,7 +50,7 @@ public final class TestMeasurementDocument implements MongoTestData {
     /**
      * The id of the user who uploaded the file.
      */
-    private final ObjectId ownerUserId;
+    private final String ownerUserId;
     /**
      * The identifier of the measurement encoded in the file.
      */
@@ -73,9 +72,9 @@ public final class TestMeasurementDocument implements MongoTestData {
      * @param measurementIdentifier The identifier of the measurement encoded in the file
      * @param deviceIdentifier The worldwide unique identifier of the device the document comes from
      */
-    public TestMeasurementDocument(final ObjectId ownerUserId, final Long measurementIdentifier,
+    public TestMeasurementDocument(final String ownerUserId, final Long measurementIdentifier,
             final String deviceIdentifier) {
-        Validate.notNull(ownerUserId);
+        Validate.notEmpty(ownerUserId);
         Validate.notNull(measurementIdentifier);
         Validate.notEmpty(deviceIdentifier);
 

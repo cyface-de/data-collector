@@ -18,12 +18,13 @@
  */
 package de.cyface.api.model;
 
-import io.vertx.core.json.JsonObject;
-import org.bson.types.ObjectId;
+import static io.vertx.ext.auth.mongo.MongoAuthorization.DEFAULT_USERNAME_FIELD;
 
 import java.util.Objects;
 
-import static io.vertx.ext.auth.mongo.MongoAuthorization.DEFAULT_USERNAME_FIELD;
+import org.bson.types.ObjectId;
+
+import io.vertx.core.json.JsonObject;
 
 /**
  * This class represents a user.
@@ -69,6 +70,13 @@ public class User {
      */
     public ObjectId getId() {
         return id;
+    }
+
+    /**
+     * @return The identifier of the {@link User} as {@code String}.
+     */
+    public String getIdString() {
+        return id.toString();
     }
 
     /**

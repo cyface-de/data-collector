@@ -435,7 +435,7 @@ public final class MeasurementHandler extends Authorizer {
                     }
 
                     // Persist data
-                    final var measurement = new Measurement(metaData, user.getId(), tempFile);
+                    final var measurement = new Measurement(metaData, user.getIdString(), tempFile);
                     storeToMongoDB(measurement, ctx);
                 }).onFailure(failure -> {
                     LOGGER.error("Response: 500, failed to read props from temp file");
