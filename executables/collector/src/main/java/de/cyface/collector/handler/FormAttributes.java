@@ -74,13 +74,13 @@ public enum FormAttributes {
      */
     START_LOCATION_TS("startLocTS"),
     /**
-     * The latitude of the geolocation at the end of the track represented by the transmitted measurement. This value
+     * The latitude of the geographical location at the end of the track represented by the transmitted measurement. This value
      * is optional and may not be available for measurements without locations. For measurements
      * with one location this equals the {@link #START_LOCATION_LAT}.
      */
     END_LOCATION_LAT("endLocLat"),
     /**
-     * The longitude of the geolocation at the end of the track represented by the transmitted measurement. This value
+     * The longitude of the geographical location at the end of the track represented by the transmitted measurement. This value
      * is optional and may not be available for measurements without locations. For measurements
      * with one location this equals the {@link #START_LOCATION_LON}.
      */
