@@ -32,6 +32,7 @@ import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+import de.cyface.api.PauseAndResumeBeforeBodyParsing;
 import org.apache.commons.lang3.Validate;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -118,7 +119,7 @@ public final class MeasurementHandler extends Authorizer {
      */
     public MeasurementHandler(final MongoClient dataClient, final MongoAuthentication authProvider,
             final MongoClient userDatabase, final long payloadLimit) {
-        super(authProvider, userDatabase, true);
+        super(authProvider, userDatabase, new PauseAndResumeBeforeBodyParsing());
         Validate.notNull(dataClient);
         Validate.isTrue(payloadLimit > 0);
         this.dataClient = dataClient;

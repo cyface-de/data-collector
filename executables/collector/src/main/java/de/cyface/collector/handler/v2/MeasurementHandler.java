@@ -24,6 +24,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 import de.cyface.api.Authorizer;
+import de.cyface.api.PauseAndResumeAfterBodyParsing;
 import de.cyface.api.model.User;
 import de.cyface.collector.verticle.v2.Config;
 import io.vertx.core.MultiMap;
@@ -85,7 +86,7 @@ public final class MeasurementHandler extends Authorizer {
      * @param userDatabase The Mongo user database containing all information about users
      */
     public MeasurementHandler(final MongoClient dataClient, final MongoAuthentication authProvider, final MongoClient userDatabase) {
-        super(authProvider, userDatabase, false);
+        super(authProvider, userDatabase, new PauseAndResumeAfterBodyParsing());
         Validate.notNull(dataClient);
         this.dataClient = dataClient;
     }

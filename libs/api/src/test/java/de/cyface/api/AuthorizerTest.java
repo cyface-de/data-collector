@@ -168,7 +168,7 @@ public class AuthorizerTest {
          * @param mongoUserDatabase The Mongo user database containing all information about users
          */
         public TestAuthorizer(MongoAuthentication authProvider, MongoClient mongoUserDatabase) {
-            super(authProvider, mongoUserDatabase, false);
+            super(authProvider, mongoUserDatabase, new PauseAndResumeAfterBodyParsing());
         }
 
         @Override

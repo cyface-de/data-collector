@@ -36,7 +36,6 @@ import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.MultiMap;
 import io.vertx.core.Promise;
-import io.vertx.core.http.HttpHeaders;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.auth.mongo.MongoAuthentication;
 import io.vertx.ext.mongo.MongoClient;
@@ -75,12 +74,9 @@ public abstract class Authorizer implements Handler<RoutingContext> {
      */
     private final MongoClient mongoUserDatabase;
     /**
-     * {@code true} if the {@code #request} needs to be paused when waiting for an async result.
-     * <p>
-     * This is necessary when the request body is parsed after this handler or else `403: request body already read` is
-     * thrown [DAT-749].
+     * The pause and resume strategy to be used which wraps async calls in {@link #handle(RoutingContext)}.
      */
-    private final boolean pauseAndResume;
+    private final PauseAndResumeStrategy strategy;
 
     /**
      * Creates a new completely initialized instance of this class with access to all required authentication
@@ -88,18 +84,17 @@ public abstract class Authorizer implements Handler<RoutingContext> {
      *
      * @param authProvider An auth provider used by this server to authenticate against the Mongo user database
      * @param mongoUserDatabase The Mongo user database containing all information about users
-     * @param pauseAndResume {@code true} if the {@code #request} needs to be paused when waiting for an async result.
-     *            This is necessary when the request body is parsed after this handler or else `403: request body
-     *            already read` if thrown [DAT-749].
+     * @param strategy The pause and resume strategy to be used which wraps async calls in
+     *            {@link #handle(RoutingContext)}.
      */
     public Authorizer(final MongoAuthentication authProvider, final MongoClient mongoUserDatabase,
-            final boolean pauseAndResume) {
+            final PauseAndResumeStrategy strategy) {
         Validate.notNull(authProvider);
         Validate.notNull(mongoUserDatabase);
 
         this.authProvider = authProvider;
         this.mongoUserDatabase = mongoUserDatabase;
-        this.pauseAndResume = pauseAndResume;
+        this.strategy = strategy;
     }
 
     @Override
@@ -115,21 +110,11 @@ public abstract class Authorizer implements Handler<RoutingContext> {
             final var username = principal.getString(DEFAULT_USERNAME_FIELD);
 
             // Before async operations, pause request body parsing to not lose the body or protocol upgrades.
-            // `pauseAndResume` is set to `true` when the `BodyHandler` is not executed before this handler [DAT-749]
-            final var parseEnded = request.isEnded();
-            if (pauseAndResume) {
-                if (!parseEnded) {
-                    request.pause();
-                }
-            }
+            strategy.pause(request);
             final var authentication = authProvider.authenticate(principal);
             authentication.onComplete(r -> {
                 try {
-                    // As in `SessionHandlerImpl.handle(RoutingContext)`
-                    final var upgraded = request.headers().contains(HttpHeaders.UPGRADE, HttpHeaders.WEBSOCKET, true);
-                    if (pauseAndResume && !parseEnded && !upgraded) {
-                        request.resume();
-                    }
+                    strategy.resume(request);
 
                     if (!(r.succeeded())) {
                         LOGGER.error("Authorization failed for user {}!", username);
@@ -138,18 +123,12 @@ public abstract class Authorizer implements Handler<RoutingContext> {
                     }
 
                     // Before async operations, pause request body parsing to not lose the body or protocol upgrades.
-                    if (pauseAndResume) {
-                        if (!parseEnded) {
-                            request.pause();
-                        }
-                    }
+                    strategy.pause(request);
                     // Load principal from authentication result, so it also contains the roles
                     final var loadUsers = loadAccessibleUsers(r.result().principal());
                     loadUsers.onSuccess(accessibleUsers -> {
                         try {
-                            if (pauseAndResume && !parseEnded && !upgraded) {
-                                request.resume();
-                            }
+                            strategy.resume(request);
                             LOGGER.trace("Request for {} authorized to access users {}", username, accessibleUsers);
                             handleAuthorizedRequest(context, accessibleUsers, headers);
                         } catch (RuntimeException e) {

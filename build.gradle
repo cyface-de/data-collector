@@ -82,7 +82,7 @@ subprojects {
     slf4jVersion = '1.7.29'
     commonsLangVersion = '3.12.0'
     logbackVersion = '1.2.5'
-    cyfaceSerializationVersion = '1.4.1'
+    cyfaceSerializationVersion = '1.4.2-alpha1'
     gradleWrapperVersion = '6.8.3'
 
     // Versions of testing dependencies

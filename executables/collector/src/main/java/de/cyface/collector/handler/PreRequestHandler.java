@@ -24,6 +24,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import de.cyface.api.Authorizer;
+import de.cyface.api.PauseAndResumeAfterBodyParsing;
 import de.cyface.api.model.User;
 import de.cyface.collector.handler.exception.IllegalSession;
 import de.cyface.collector.handler.exception.InvalidMetaData;
@@ -123,7 +124,7 @@ public class PreRequestHandler extends Authorizer {
      */
     public PreRequestHandler(final MongoClient dataDatabase, final MongoAuthentication authProvider,
             final MongoClient userDatabase, final long measurementLimit) {
-        super(authProvider, userDatabase, false);
+        super(authProvider, userDatabase, new PauseAndResumeAfterBodyParsing());
         this.dataClient = dataDatabase;
         this.measurementLimit = measurementLimit;
     }
