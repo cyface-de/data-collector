@@ -26,8 +26,12 @@ import io.vertx.core.json.JsonObject;
  * E-Mail.
  * 
  * @author Klemens Muthmann
+ * @author Armin Schnabel
+ * @version 1.0.0
+ * @since 6.3.0
  */
 public class DirectTestUser extends TestUser {
+
     /**
      * Creates a fully initialized instance of this class.
      *

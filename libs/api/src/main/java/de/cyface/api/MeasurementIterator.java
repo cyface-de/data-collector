@@ -173,8 +173,10 @@ final public class MeasurementIterator implements Iterator<Future<Measurement>>,
     public void load(final Handler<Measurement> writeHandler, final Handler<Void> separationHandler,
             final Handler<Void> endHandler, final Handler<Throwable> failureHandler) {
 
-        final var hasNext = hasNext();
-        if (hasNext) {
+        if (!initialized) {
+            // Seems like no entries where found for the requested data
+            endHandler.handle(null);
+        } else if (hasNext()) {
             final var future = next();
             future.onFailure(failureHandler)
                     .onSuccess(measurement -> {
@@ -341,6 +343,11 @@ final public class MeasurementIterator implements Iterator<Future<Measurement>>,
             // Clear cache, which also ensures that `hasNext()` returns `false
             caller.cachedMeasurementId = null;
             caller.cachedBuckets.clear();
+
+            // No entries found for the requested data
+            if (!caller.initialized) {
+                caller.initializedHandler.handle(caller);
+            }
         }
     }
 }

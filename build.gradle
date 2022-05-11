@@ -57,7 +57,7 @@ subprojects {
   apply plugin: 'java'
 
   group = 'de.cyface'
-  version = '6.5.2'
+  version = '6.6.0'
 
   tasks.withType(JavaCompile) {
     options.encoding = 'UTF-8'
@@ -82,7 +82,7 @@ subprojects {
     slf4jVersion = '1.7.29'
     commonsLangVersion = '3.12.0'
     logbackVersion = '1.2.5'
-    cyfaceSerializationVersion = '1.2.0'
+    cyfaceSerializationVersion = '1.4.2'
     gradleWrapperVersion = '6.8.3'
 
     // Versions of testing dependencies

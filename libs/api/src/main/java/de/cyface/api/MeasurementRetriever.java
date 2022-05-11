@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2021 Cyface GmbH
+ * Copyright 2020-2022 Cyface GmbH
  *
  * This file is part of the Cyface Data Collector.
  *
@@ -35,6 +35,7 @@ import io.vertx.ext.mongo.MongoClient;
  *
  * @author Armin Schnabel
  * @since 6.0.0
+ * @version 1.0.0
  */
 public class MeasurementRetriever {
 
@@ -81,12 +82,12 @@ public class MeasurementRetriever {
      *
      * @param collectionName The name of the collection in the Mongo database used to store deserialized measurements.
      * @param strategy the {@link MeasurementRetrievalStrategy} to be used when loading the measurements.
-     * @param userNames The names of the users of whom all measurements are to be loaded
+     * @param userIds The ids of the users to load measurements for
      */
     public MeasurementRetriever(final String collectionName, final MeasurementRetrievalStrategy strategy,
-            final List<String> userNames) {
+            final List<String> userIds) {
 
-        this(collectionName, strategy, userNames, null, null);
+        this(collectionName, strategy, userIds, null, null);
     }
 
     /**
@@ -94,16 +95,16 @@ public class MeasurementRetriever {
      *
      * @param collectionName The name of the collection in the Mongo database used to store deserialized measurements.
      * @param strategy the {@link MeasurementRetrievalStrategy} to be used when loading the measurements.
-     * @param userNames The names of the users of whom all measurements are to be loaded
+     * @param userIds The ids of the users to load measurements for
      * @param startTime The value is {@code null} or a point in time to only return newer results.
      * @param endTime The value is {@code null} or a point in time to only return older results.
      */
     public MeasurementRetriever(final String collectionName, final MeasurementRetrievalStrategy strategy,
-            final List<String> userNames, final ZonedDateTime startTime, final ZonedDateTime endTime) {
+            final List<String> userIds, final ZonedDateTime startTime, final ZonedDateTime endTime) {
 
         this.collectionName = collectionName;
         this.strategy = strategy;
-        this.query = new JsonObject().put("metaData.username", new JsonObject().put("$in", new JsonArray(userNames)));
+        this.query = new JsonObject().put("metaData.userId", new JsonObject().put("$in", userIds));
         if (startTime != null || endTime != null) {
             final var timeRestriction = new JsonObject();
             if (startTime != null) {

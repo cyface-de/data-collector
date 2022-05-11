@@ -29,7 +29,7 @@ import de.cyface.api.DatabaseConstants;
  *
  * @author Armin Schnabel
  * @since 6.4.0
- * @version 1.0.0
+ * @version 1.1.0
  */
 public class Role {
 
@@ -48,7 +48,7 @@ public class Role {
      * @param type The {@link Type} of this role. Only {@link Type#GUEST} roles are allowed without group. Use
      *            {@link Role(Type, String)} for other roles.
      */
-    public Role(Type type) {
+    public Role(final Type type) {
         Validate.isTrue(type.equals(Type.GUEST), String.format("Guest role expected, but is: %s", type));
         this.type = type;
         this.group = null;
@@ -60,7 +60,7 @@ public class Role {
      * @param type The {@link Type} of this role.
      * @param group The group the user with that role is part of. {@code Null} if the users is a {@link Type#GUEST}.
      */
-    public Role(Type type, String group) {
+    public Role(final Type type, final String group) {
         if (type != Type.GUEST) {
             Validate.notEmpty(group,
                     String.format("Only guest users are not part of a user group but type is: %s", type));
@@ -75,11 +75,15 @@ public class Role {
      * @param databaseValue A role entry from the database.
      */
     public Role(final String databaseValue) {
+        final var isAdmin = databaseValue.matches(Type.ADMIN.getRegex());
         final var isGuest = databaseValue.matches(Type.GUEST.getRegex());
         final var isGroupUser = databaseValue.matches(Type.GROUP_USER.getRegex());
         final var isGroupManager = databaseValue.matches(Type.GROUP_MANAGER.getRegex());
         if (isGuest) {
             this.type = Type.GUEST;
+            this.group = null;
+        } else if (isAdmin) {
+            this.type = Type.ADMIN;
             this.group = null;
         } else if (isGroupUser) {
             this.type = Type.GROUP_USER;
@@ -120,9 +124,11 @@ public class Role {
 
     @Override
     public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
-        Role role = (Role) o;
+        if (this == o)
+            return true;
+        if (o == null || getClass() != o.getClass())
+            return false;
+        Role role = (Role)o;
         return type == role.type && Objects.equals(group, role.group);
     }
 
@@ -136,13 +142,17 @@ public class Role {
      *
      * @author Armin Schnabel
      * @since 6.4.0
-     * @version 1.0.0
+     * @version 1.1.0
      */
     public enum Type {
         /**
          * A guest user who signed up himself and is not part of a user group.
          */
         GUEST(DatabaseConstants.GUEST_ROLE),
+        /**
+         * An admin user who is automatically generated but is not used at the moment.
+         */
+        ADMIN(DatabaseConstants.ADMIN_ROLE),
         /**
          * A group user who collects data for a group manager.
          */

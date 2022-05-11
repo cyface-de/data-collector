@@ -101,9 +101,9 @@ public class ClassifiedSegment {
      */
     private final OffsetDateTime latestDataPoint;
     /**
-     * The name of the user who uploaded the data of this segment.
+     * The id of the user who uploaded the data of this segment.
      */
-    private final String username;
+    private final String userId;
     /**
      * A mean value from probability theory required to update {@code variance} without requiring previous points.
      */
@@ -128,36 +128,35 @@ public class ClassifiedSegment {
 
     /**
      * Constructs a fully initialized instance of this class.
-     *
-     * @param oid The database identifier of the segment.
+     *  @param oid The database identifier of the segment.
      * @param forward {@code true} of this segment is orientated in the same direction as the formal direction of the
      *            underlying OSM way id or {@code false} if it's orientated in the opposite direction.
      * @param geometry The geometry of this segment in the GeoJSON format, i.e. containing a `type` attribute with
-     *            `LineString` as value and the `coordinates` attribute with an array containing the nodes of this
-     *            segment, as loaded from the database.
+ *            `LineString` as value and the `coordinates` attribute with an array containing the nodes of this
+ *            segment, as loaded from the database.
      * @param length The length of this segment in meters.
      * @param modality The {@link Modality} this segment was recorded with.
      * @param vnk The OSM id of the node where the underlying OSM way of this segment starts.
      * @param nnk The OSM id of the node where the underlying OSM way of this segment ends.
-     * @param way The OSM identifier of the OSM way which this segment belongs to.
      * @param wayOffset The offset in meters from the {@link #getVnk()}}, i.e. where the segment start within
-     *            the way.
+*            the way.
+     * @param way The OSM identifier of the OSM way which this segment belongs to.
      * @param tags A subset of the OSM way's tags which this segment belongs to. The value can be a
-     *            {@code String}, {@code Double} or an {@code Integer}.
+*            {@code String}, {@code Double} or an {@code Integer}.
      * @param latestDataPoint The time of the newest data point used to classify this segment.
-     * @param username The name of the user who uploaded the data of this segment.
+     * @param userId The id of the user who uploaded the data of this segment.
      * @param expectedValue A mean value from probability theory required to update {@code variance} without requiring
-     *            previous points.
+*            previous points.
      * @param variance The mathematical variance calculated from calibrated vertical accelerations.
      * @param quality The surface quality class calculated for this segment.
      * @param dataPointCount The number of sample points used to calculate {@code variance}. This is required to update
-     *            {@code variance} without requiring previous points.
+*            {@code variance} without requiring previous points.
      * @param version The version of the format of this segment entry.
      */
     @SuppressWarnings("unused") // Part of the API
     public ClassifiedSegment(final String oid, final boolean forward, final Geometry geometry, final double length,
             final Modality modality, final long vnk, final long nnk, final double wayOffset, final long way,
-            final Map<String, Object> tags, final OffsetDateTime latestDataPoint, final String username,
+            final Map<String, Object> tags, final OffsetDateTime latestDataPoint, final String userId,
             final double expectedValue, final double variance, final SurfaceQuality quality, final long dataPointCount,
             final String version) {
         this.oid = oid;
@@ -171,7 +170,7 @@ public class ClassifiedSegment {
         this.tags = tags;
         this.way = way;
         this.latestDataPoint = latestDataPoint;
-        this.username = username;
+        this.userId = userId;
         this.expectedValue = expectedValue;
         this.variance = variance;
         this.quality = quality;
@@ -295,7 +294,7 @@ public class ClassifiedSegment {
         getTags().forEach(tags::put);
         ret.put("tags", tags);
         ret.put("latest_data_point", new JsonObject().put("$date", getLatestDataPoint().toString()));
-        ret.put("username", getUsername());
+        ret.put("userId", getUserId());
         ret.put("expected_value", getExpectedValue());
         ret.put("variance", getVariance());
         ret.put("quality", getQuality().databaseValue);
@@ -319,7 +318,7 @@ public class ClassifiedSegment {
                 ", tags=" + tags +
                 ", modality=" + modality +
                 ", latestDataPoint=" + latestDataPoint +
-                ", username='" + username + '\'' +
+                ", username='" + userId + '\'' +
                 ", expectedValue=" + expectedValue +
                 ", variance=" + variance +
                 ", quality=" + quality +
@@ -421,11 +420,11 @@ public class ClassifiedSegment {
     }
 
     /**
-     * @return The name of the user who uploaded the data of this segment.
+     * @return The id of the user who uploaded the data of this segment.
      */
     @SuppressWarnings("unused") // Part of the API
-    public String getUsername() {
-        return username;
+    public String getUserId() {
+        return userId;
     }
 
     /**
@@ -484,12 +483,12 @@ public class ClassifiedSegment {
                 && Double.compare(that.variance, variance) == 0 && dataPointCount == that.dataPointCount
                 && oid.equals(that.oid) && geometry.equals(that.geometry) && tags.equals(that.tags)
                 && modality == that.modality && latestDataPoint.equals(that.latestDataPoint)
-                && username.equals(that.username) && quality == that.quality && version.equals(that.version);
+                && userId.equals(that.userId) && quality == that.quality && version.equals(that.version);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(forward, wayOffset, way, modality, username, version);
+        return Objects.hash(forward, wayOffset, way, modality, userId, version);
     }
 
     /**
