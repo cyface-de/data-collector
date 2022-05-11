@@ -18,7 +18,6 @@
  */
 package de.cyface.collector.handler;
 
-import static de.cyface.api.MongoAuthHandler.ENTITY_UNPARSABLE;
 import static de.cyface.collector.handler.MeasurementHandler.UPLOAD_PATH_FIELD;
 
 import org.slf4j.Logger;
@@ -50,6 +49,10 @@ public class StatusHandler implements Handler<RoutingContext> {
      * HTTP status code to return when the client asks to resume an upload and the server replies where to continue.
      */
     static final int RESUME_INCOMPLETE = 308;
+    /**
+     * Http code which indicates that the upload request syntax was incorrect.
+     */
+    private static final int ENTITY_UNPARSABLE = 422;
     /**
      * Vertx <code>MongoClient</code> used to access the database to write the received data to.
      */

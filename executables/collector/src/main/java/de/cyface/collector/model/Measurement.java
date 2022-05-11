@@ -1,5 +1,5 @@
 /*
- * Copyright 2018-2021 Cyface GmbH
+ * Copyright 2018-2022 Cyface GmbH
  *
  * This file is part of the Cyface Data Collector.
  *
@@ -17,8 +17,6 @@
  * along with the Cyface Data Collector. If not, see <http://www.gnu.org/licenses/>.
  */
 package de.cyface.collector.model;
-
-import static de.cyface.model.RequestMetaData.MAX_GENERIC_METADATA_FIELD_LENGTH;
 
 import java.io.File;
 import java.io.Serializable;
@@ -38,7 +36,7 @@ import io.vertx.core.json.JsonObject;
  *
  * @author Klemens Muthmann
  * @author Armin Schnabel
- * @version 6.0.0
+ * @version 7.0.0
  * @since 2.0.0
  */
 public final class Measurement implements Serializable {
@@ -48,13 +46,17 @@ public final class Measurement implements Serializable {
      */
     private static final long serialVersionUID = -8304842300727933736L;
     /**
+     * The database field name which contains the user id of the measurement owner.
+     */
+    public static String USER_ID_FIELD = "userId";
+    /**
      * the metadata from the request header.
      */
     private final RequestMetaData metaData;
     /**
-     * The name of the user uploading the measurement.
+     * The id of the user uploading the measurement.
      */
-    private final String username;
+    private final String userId;
     /**
      * The binary uploaded with the measurement. This contains the actual data.
      */
@@ -64,17 +66,15 @@ public final class Measurement implements Serializable {
      * Creates a new completely initialized object of this class.
      *
      * @param metaData the metadata from the request header.
-     * @param username The name of the user uploading the measurement.
+     * @param userId The id of the user uploading the measurement.
      * @param binary The binary uploaded together with the measurement. This contains the actual data.
      */
-    public Measurement(final RequestMetaData metaData, final String username, final File binary) {
+    public Measurement(final RequestMetaData metaData, final String userId, final File binary) {
 
-        Validate.notNull(username, "Field username was null!");
-        Validate.isTrue(!username.isEmpty() && username.length() <= MAX_GENERIC_METADATA_FIELD_LENGTH,
-                "Field username had an invalid length of %d!", username.length());
+        Validate.notNull(userId, "Field userId was null!");
 
         this.metaData = metaData;
-        this.username = username;
+        this.userId = userId;
         this.binary = binary;
     }
 
@@ -86,10 +86,10 @@ public final class Measurement implements Serializable {
     }
 
     /**
-     * @return The name of the user uploading the measurement.
+     * @return The id of the user uploading the measurement.
      */
-    public String getUsername() {
-        return username;
+    public String getUserId() {
+        return userId;
     }
 
     /**
@@ -117,7 +117,7 @@ public final class Measurement implements Serializable {
             ret.put("end", geoJson(metaData.getEndLocation()));
         }
         ret.put(FormAttributes.MODALITY.getValue(), metaData.getModality());
-        ret.put(FormAttributes.USERNAME.getValue(), username);
+        ret.put(USER_ID_FIELD, userId.toString());
         ret.put(FormAttributes.FORMAT_VERSION.getValue(), metaData.getFormatVersion());
 
         return ret;
@@ -172,7 +172,7 @@ public final class Measurement implements Serializable {
             final var length = metaData.getLength();
             final var locationCount = metaData.getLocationCount();
             final var modality = metaData.getModality();
-            final var username = serializable.getUsername();
+            final String userId = serializable.getUserId();
 
             buffer.appendInt(deviceIdentifier.length());
             buffer.appendInt(measurementIdentifier.length());
@@ -180,7 +180,7 @@ public final class Measurement implements Serializable {
             buffer.appendInt(operatingSystemVersion.length());
             buffer.appendInt(applicationVersion.length());
             buffer.appendInt(modality.length());
-            buffer.appendInt(username.length());
+            buffer.appendInt(userId.toString().length());
 
             buffer.appendInt(metaData.getFormatVersion());
             buffer.appendString(deviceIdentifier);
@@ -191,7 +191,7 @@ public final class Measurement implements Serializable {
             buffer.appendDouble(length);
             buffer.appendLong(locationCount);
             buffer.appendString(modality);
-            buffer.appendString(username);
+            buffer.appendString(userId.toString());
 
             if (locationCount > 0) {
                 final var startLocationLat = metaData.getStartLocation().getLatitude();
@@ -247,7 +247,7 @@ public final class Measurement implements Serializable {
             final var modalityEnd = locationCountEnd + modalityLength;
             final var modality = buffer.getString(locationCountEnd, modalityEnd);
             final var usernameEnd = modalityEnd + usernameLength;
-            final var username = buffer.getString(modalityEnd, usernameEnd);
+            final var userId = buffer.getString(modalityEnd, usernameEnd);
 
             RequestMetaData.GeoLocation startLocation = null;
             RequestMetaData.GeoLocation endLocation = null;
@@ -281,7 +281,7 @@ public final class Measurement implements Serializable {
                     deviceType, applicationVersion, length, locationCount, startLocation, endLocation, modality,
                     formatVersion);
 
-            return new Measurement(metaData, username, uploadFile);
+            return new Measurement(metaData, userId, uploadFile);
         }
 
         @Override

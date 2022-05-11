@@ -31,7 +31,6 @@ import org.slf4j.LoggerFactory;
 import de.cyface.api.Authenticator;
 import de.cyface.api.FailureHandler;
 import de.cyface.api.Hasher;
-import de.cyface.api.MongoAuthHandler;
 import de.cyface.api.Parameter;
 import de.cyface.collector.handler.PreRequestHandler;
 import de.cyface.collector.handler.UserCreationHandler;
@@ -235,8 +234,7 @@ public final class CollectorApiVerticle extends AbstractVerticle {
     private void setupApiV2Router(Router apiV2Router, de.cyface.collector.verticle.v2.Config config) {
 
         // Setup measurement routes
-        final var mongoAuthHandler = new MongoAuthHandler(config.getAuthProvider(), false);
-        final var measurementHandler = new MeasurementHandler(config.getDataDatabase());
+        final var measurementHandler = new MeasurementHandler(config);
         final var failureHandler = ErrorHandler.create(vertx);
         final var bodyHandler = BodyHandler.create().setBodyLimit(BYTES_IN_ONE_GIGABYTE)
                 .setDeleteUploadedFilesOnEnd(true);
@@ -246,7 +244,7 @@ public final class CollectorApiVerticle extends AbstractVerticle {
 
         // Register handlers
         addAuthenticatedPostV2Handler(apiV2Router, config.getJwtAuthProvider(), MEASUREMENTS_ENDPOINT,
-                mongoAuthHandler, measurementHandler, failureHandler, bodyHandler);
+                measurementHandler, failureHandler, bodyHandler);
 
         // Setup web-api route
         apiV2Router.route().handler(StaticHandler.create("webroot/api/v2"));
@@ -261,11 +259,8 @@ public final class CollectorApiVerticle extends AbstractVerticle {
     private void setupApiV3Router(Router apiV3Router, Config config) {
 
         // Setup measurement routes
-        final var preRequestMongoAuthHandler = new MongoAuthHandler(config.getAuthProvider(), false);
-        final var measurementMongoAuthHandler = new MongoAuthHandler(config.getAuthProvider(), true);
-        final var preRequestHandler = new PreRequestHandler(config.getDataDatabase(), config.getMeasurementLimit());
-        final var measurementHandler = new de.cyface.collector.handler.MeasurementHandler(
-                config.getDataDatabase(), config.getMeasurementLimit());
+        final var preRequestHandler = new PreRequestHandler(config);
+        final var measurementHandler = new de.cyface.collector.handler.MeasurementHandler(config);
         final var failureHandler = ErrorHandler.create(vertx);
         final var preRequestBodyHandler = BodyHandler.create().setBodyLimit(BYTES_IN_ONE_KILOBYTE);
 
@@ -281,9 +276,9 @@ public final class CollectorApiVerticle extends AbstractVerticle {
 
         // Register handlers
         addAuthenticatedPostHandler(apiV3Router, config.getJwtAuthProvider(), MEASUREMENTS_ENDPOINT,
-                preRequestMongoAuthHandler, preRequestHandler, failureHandler, preRequestBodyHandler);
+                preRequestHandler, failureHandler, preRequestBodyHandler);
         addAuthenticatedPutHandler(apiV3Router, config.getJwtAuthProvider(), MEASUREMENTS_ENDPOINT,
-                measurementMongoAuthHandler, measurementHandler, failureHandler);
+                measurementHandler, failureHandler);
 
         // Setup web-api route
         apiV3Router.route().handler(StaticHandler.create("webroot/api/v3"));
@@ -295,21 +290,20 @@ public final class CollectorApiVerticle extends AbstractVerticle {
      * @param router The {@code Router} to register the handler to.
      * @param jwtAuth The {@code JWTAuth} provider to be used for handling the authentication.
      * @param endpoint The URL endpoint to wrap
-     * @param mongoAuthHandler The handler which checks the user credentials.
      * @param handler The handler which handles the data.
      * @param failureHandler The handler to add to handle failures.
      * @param bodyHandler The handler to add to handle body size limitations.
      */
     private void addAuthenticatedPostV2Handler(final Router router, final JWTAuth jwtAuth,
-            @SuppressWarnings("SameParameterValue") final String endpoint, final MongoAuthHandler mongoAuthHandler,
-            final Handler<RoutingContext> handler, final ErrorHandler failureHandler, final BodyHandler bodyHandler) {
+            @SuppressWarnings("SameParameterValue") final String endpoint, final Handler<RoutingContext> handler,
+            final ErrorHandler failureHandler, final BodyHandler bodyHandler) {
+
         final var jwtAuthHandler = JWTAuthHandler.create(jwtAuth);
         router.post(endpoint)
                 .consumes("multipart/form-data")
                 .handler(bodyHandler)
                 .handler(LoggerHandler.create())
                 .handler(jwtAuthHandler)
-                .handler(mongoAuthHandler)
                 .handler(handler)
                 .failureHandler(failureHandler);
     }
@@ -320,15 +314,14 @@ public final class CollectorApiVerticle extends AbstractVerticle {
      * @param router The {@code Router} to register the handler to.
      * @param jwtAuth The {@code JWTAuth} provider to be used for handling the authentication.
      * @param endpoint The URL endpoint to wrap
-     * @param mongoAuthHandler The handler which checks the user credentials.
      * @param handler The handler which handles the data.
      * @param failureHandler The handler to add to handle failures.
      * @param bodyHandler The handler to add to handle body size limitations.
      */
     private void addAuthenticatedPostHandler(Router router, JWTAuth jwtAuth,
-            @SuppressWarnings("SameParameterValue") final String endpoint, MongoAuthHandler mongoAuthHandler,
-            final Handler<RoutingContext> handler,
+            @SuppressWarnings("SameParameterValue") final String endpoint, final Handler<RoutingContext> handler,
             final ErrorHandler failureHandler, final BodyHandler bodyHandler) {
+
         final var jwtHandler = JWTAuthHandler.create(jwtAuth);
         router.post(endpoint)
                 .consumes("application/json; charset=UTF-8")
@@ -336,7 +329,6 @@ public final class CollectorApiVerticle extends AbstractVerticle {
                 .handler(bodyHandler)
                 .handler(LoggerHandler.create())
                 .handler(jwtHandler)
-                .handler(mongoAuthHandler)
                 .handler(handler)
                 .failureHandler(failureHandler);
     }
@@ -347,14 +339,13 @@ public final class CollectorApiVerticle extends AbstractVerticle {
      * @param router The {@code Router} to register the handler to.
      * @param jwtAuth The {@code JWTAuth} provider to be used for handling the authentication.
      * @param endpoint The URL endpoint to wrap
-     * @param mongoAuthHandler The handler which checks the user credentials.
      * @param handler The handler which handles the data.
      * @param failureHandler The handler to add to handle failures.
      */
     private void addAuthenticatedPutHandler(final Router router, final JWTAuth jwtAuth,
-            @SuppressWarnings("SameParameterValue") final String endpoint, final MongoAuthHandler mongoAuthHandler,
-            final Handler<RoutingContext> handler,
+            @SuppressWarnings("SameParameterValue") final String endpoint, final Handler<RoutingContext> handler,
             final ErrorHandler failureHandler) {
+
         final var jwtAuthHandler = JWTAuthHandler.create(jwtAuth);
         // The path pattern ../(sid)/.. was chosen because of the documentation of Vert.X SessionHandler
         // https://vertx.io/docs/vertx-web/java/#_handling_sessions
@@ -363,7 +354,6 @@ public final class CollectorApiVerticle extends AbstractVerticle {
                 // Not using BodyHandler as the `request.body()` can only be read once and the {@code #handler} does so.
                 .handler(LoggerHandler.create())
                 .handler(jwtAuthHandler)
-                .handler(mongoAuthHandler)
                 .handler(handler)
                 .failureHandler(failureHandler);
     }

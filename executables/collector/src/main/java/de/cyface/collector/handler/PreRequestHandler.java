@@ -18,19 +18,23 @@
  */
 package de.cyface.collector.handler;
 
-import static de.cyface.api.MongoAuthHandler.ENTITY_UNPARSABLE;
+import java.util.List;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import de.cyface.api.Authorizer;
+import de.cyface.api.PauseAndResumeAfterBodyParsing;
+import de.cyface.api.model.User;
 import de.cyface.collector.handler.exception.IllegalSession;
 import de.cyface.collector.handler.exception.InvalidMetaData;
 import de.cyface.collector.handler.exception.PayloadTooLarge;
 import de.cyface.collector.handler.exception.SkipUpload;
 import de.cyface.collector.handler.exception.Unparsable;
-import io.vertx.core.Handler;
+import de.cyface.collector.verticle.Config;
 import io.vertx.core.MultiMap;
 import io.vertx.core.json.JsonObject;
+import io.vertx.ext.auth.mongo.MongoAuthentication;
 import io.vertx.ext.mongo.MongoClient;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.Session;
@@ -43,7 +47,7 @@ import io.vertx.ext.web.Session;
  * @version 1.0.0
  * @since 6.0.0
  */
-public class PreRequestHandler implements Handler<RoutingContext> {
+public class PreRequestHandler extends Authorizer {
 
     /**
      * The <code>Logger</code> used for objects of this class. Configure it by changing the settings in
@@ -103,16 +107,31 @@ public class PreRequestHandler implements Handler<RoutingContext> {
     /**
      * Creates a fully initialized instance of this class.
      *
+     * @param config the configuration setting required to start the HTTP server
+     */
+    public PreRequestHandler(final Config config) {
+        this(config.getDataDatabase(), config.getAuthProvider(), config.getUserDatabase(),
+                config.getMeasurementLimit());
+    }
+
+    /**
+     * Creates a fully initialized instance of this class.
+     * 
      * @param dataDatabase Vertx <code>MongoClient</code> used to access the database to write the received data to.
+     * @param authProvider An auth provider used by this server to authenticate against the Mongo user database
+     * @param userDatabase The Mongo user database containing all information about users
      * @param measurementLimit The maximal number of {@code Byte}s which may be uploaded in the upload request.
      */
-    public PreRequestHandler(final MongoClient dataDatabase, final long measurementLimit) {
+    public PreRequestHandler(final MongoClient dataDatabase, final MongoAuthentication authProvider,
+            final MongoClient userDatabase, final long measurementLimit) {
+        super(authProvider, userDatabase, new PauseAndResumeAfterBodyParsing());
         this.dataClient = dataDatabase;
         this.measurementLimit = measurementLimit;
     }
 
     @Override
-    public void handle(final RoutingContext ctx) {
+    protected void handleAuthorizedRequest(final RoutingContext ctx, final List<User> users, final MultiMap header) {
+
         LOGGER.info("Received new pre-request.");
         final var request = ctx.request();
         final var session = ctx.session();

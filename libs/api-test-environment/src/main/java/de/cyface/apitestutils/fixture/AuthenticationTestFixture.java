@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2021 Cyface GmbH
+ * Copyright 2020-2022 Cyface GmbH
  *
  * This file is part of the Cyface Data Collector.
  *
@@ -25,29 +25,26 @@ import io.vertx.ext.mongo.MongoClient;
 
 /**
  * The test data used to test authentication requests to a Cyface exporter server.
- * It provides users to authenticate with. Currently this is a user "admin" with a password "secret" and the manager
+ * It provides users to authenticate with. Currently, this is a user "admin" with a password "secret" and the manager
  * role.
  *
  * @author Klemens Muthmann
- * @version 1.0.0
+ * @author Armin Schnabel
+ * @version 2.0.0
  * @since 1.0.0
  */
 @SuppressWarnings("unused") // API
 public final class AuthenticationTestFixture implements TestFixture {
 
     @Override
-    public Future<Void> insertTestData(MongoClient mongoClient) {
+    public Future<String> insertTestData(MongoClient mongoClient) {
 
-        final Promise<Void> promise = Promise.promise();
+        final Promise<String> promise = Promise.promise();
         final var testUser = new DirectTestUser("admin", "secret",
                 "testGroup" + DatabaseConstants.GROUP_MANAGER_ROLE_SUFFIX);
-        testUser.insert(mongoClient, result -> {
-            if (result.succeeded()) {
-                promise.complete();
-            } else {
-                promise.fail(result.cause());
-            }
-        });
+        final var insert = testUser.insert(mongoClient);
+        insert.onSuccess(promise::complete);
+        insert.onFailure(promise::fail);
         return promise.future();
     }
 }

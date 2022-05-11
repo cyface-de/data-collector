@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 Cyface GmbH
+ * Copyright 2021-2022 Cyface GmbH
  *
  * This file is part of the Cyface Data Collector.
  *
@@ -77,8 +77,8 @@ public interface MeasurementRetrievalStrategy {
         final var osVersion = metaData.getString("osVersion");
         final var appVersion = metaData.getString("appVersion");
         final var length = metaData.getDouble("length");
-        final var username = metaData.getString("username");
-        return new MetaData(identifier, deviceType, osVersion, appVersion, length, username, version);
+        final var userId = metaData.getString("userId");
+        return new MetaData(identifier, deviceType, osVersion, appVersion, length, userId, version);
     }
 
     /**

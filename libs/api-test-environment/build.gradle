@@ -1,17 +1,17 @@
 /*
- * Copyright (C) 2019, 2020 Cyface GmbH - All Rights Reserved
+ * Copyright (C) 2019-2022 Cyface GmbH - All Rights Reserved
+ *
  * Unauthorized copying of this file, via any medium is strictly prohibited
  * Proprietary and confidential
  */
 /*
  * @author Armin Schnabel
- * @version 1.0.0
+ * @version 1.1.0
  * @since 1.0.0
  */
 
 dependencies {
   implementation "de.cyface:model:$cyfaceSerializationVersion"
-  implementation project(':libs:api')
 
   implementation "io.vertx:vertx-mongo-client:$vertxVersion"
 

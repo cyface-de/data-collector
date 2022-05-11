@@ -20,7 +20,6 @@ package de.cyface.apitestutils;
 
 import java.io.IOException;
 
-import de.cyface.api.EndpointConfig;
 import de.cyface.apitestutils.fixture.TestFixture;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
@@ -36,10 +35,15 @@ import io.vertx.junit5.VertxTestContext;
  *
  * @author Klemens Muthmann
  * @author Armin Schnabel
- * @version 2.1.0
+ * @version 3.1.0
  * @since 1.0.1
  */
 public final class TestEnvironment {
+
+    /**
+     * The default data source name to use for user and data database if none is provided via configuration.
+     */
+    private final String DEFAULT_MONGO_DATA_SOURCE_NAME = "cyface";
     /**
      * A temporary Mongo database used only for one test.
      */
@@ -114,7 +118,8 @@ public final class TestEnvironment {
 
                     // Set up a Mongo client to access the database
                     final var mongoDbConfiguration = testMongoDatabase.config();
-                    this.mongoClient = EndpointConfig.createSharedMongoClient(vertx, mongoDbConfiguration);
+                    final var dataSourceName = config.getString("data_source_name", DEFAULT_MONGO_DATA_SOURCE_NAME);
+                    this.mongoClient = MongoClient.createShared(vertx, mongoDbConfiguration, dataSourceName);
 
                     resultHandler.handle(Future.succeededFuture());
                 }));
@@ -125,10 +130,10 @@ public final class TestEnvironment {
      * completion.
      *
      * @param fixture The fixture to add to this environment
-     * @return A {@code Future} which is resolved after completion
+     * @return A {@code Future} which is resolves to the id of the created entry if successful.
      */
     @SuppressWarnings("unused") // API
-    public Future<Void> insertFixture(final TestFixture fixture) {
+    public Future<String> insertFixture(final TestFixture fixture) {
         return fixture.insertTestData(mongoClient);
     }
 
@@ -155,5 +160,12 @@ public final class TestEnvironment {
     @SuppressWarnings("unused") // API
     public WebClient getWebClient() {
         return webClient;
+    }
+
+    /**
+     * @return The client to be used to access the test Mongo database.
+     */
+    public MongoClient getMongoClient() {
+        return mongoClient;
     }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2018-2021 Cyface GmbH
+ * Copyright 2018-2022 Cyface GmbH
  *
  * This file is part of the Cyface Data Collector.
  *
@@ -23,7 +23,7 @@ package de.cyface.collector.handler;
  * 
  * @author Klemens Muthmann
  * @author Armin Schnabel
- * @version 3.2.0
+ * @version 3.3.0
  * @since 2.0.0
  */
 public enum FormAttributes {
@@ -52,7 +52,7 @@ public enum FormAttributes {
      */
     LENGTH("length"),
     /**
-     * The count of geo locations in the transmitted measurement.
+     * The count of geographical locations in the transmitted measurement.
      */
     LOCATION_COUNT("locationCount"),
     /**
@@ -74,13 +74,13 @@ public enum FormAttributes {
      */
     START_LOCATION_TS("startLocTS"),
     /**
-     * The latitude of the geolocation at the end of the track represented by the transmitted measurement. This value
+     * The latitude of the geographical location at the end of the track represented by the transmitted measurement. This value
      * is optional and may not be available for measurements without locations. For measurements
      * with one location this equals the {@link #START_LOCATION_LAT}.
      */
     END_LOCATION_LAT("endLocLat"),
     /**
-     * The longitude of the geolocation at the end of the track represented by the transmitted measurement. This value
+     * The longitude of the geographical location at the end of the track represented by the transmitted measurement. This value
      * is optional and may not be available for measurements without locations. For measurements
      * with one location this equals the {@link #START_LOCATION_LON}.
      */
@@ -95,10 +95,6 @@ public enum FormAttributes {
      * The modality type used to capture the measurement.
      */
     MODALITY("modality"),
-    /**
-     * The name of the user uploading the measurement.
-     */
-    USERNAME("username"),
     /**
      * The format version of the transfer file.
      */

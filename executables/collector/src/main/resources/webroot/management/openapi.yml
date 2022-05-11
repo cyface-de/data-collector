@@ -1,4 +1,4 @@
-openapi: 3.0.2
+openapi: 3.0.3
 info:
   title: Cyface Data Collector Management Interface
   description: This is the internal endpoint to manage a Cyface Data Collector

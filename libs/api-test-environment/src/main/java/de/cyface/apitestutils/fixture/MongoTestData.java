@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2021 Cyface GmbH
+ * Copyright 2020-2022 Cyface GmbH
  *
  * This file is part of the Cyface Data Collector.
  *
@@ -18,24 +18,24 @@
  */
 package de.cyface.apitestutils.fixture;
 
-import io.vertx.core.AsyncResult;
-import io.vertx.core.Handler;
+import io.vertx.core.Future;
 import io.vertx.ext.mongo.MongoClient;
 
 /**
  * Some data that can be inserted as test data into the Cyface Mongo database.
  *
  * @author Klemens Muthmann
- * @version 1.0.0
+ * @author Armin Schnabel
+ * @version 2.0.0
  * @since 1.0.0
  */
 public interface MongoTestData {
+
     /**
      * Inserts the data via the provided client and calls the provided <code>resultHandler</code> after completion.
      *
      * @param mongoClient The client to use to insert the data into the Mongo database
-     * @param resultHandler The handler to call after insertion has completed. The provided result contains information
-     *            about whether the data was inserted successfully or not.
+     * @return a {@code Future<String>} which resolves to the id of the created entry if successful.
      */
-    void insert(final MongoClient mongoClient, final Handler<AsyncResult<Void>> resultHandler);
+    Future<String> insert(final MongoClient mongoClient);
 }

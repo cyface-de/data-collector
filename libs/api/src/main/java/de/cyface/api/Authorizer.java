@@ -31,6 +31,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import de.cyface.api.model.Role;
+import de.cyface.api.model.User;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.MultiMap;
@@ -46,7 +47,7 @@ import io.vertx.ext.web.RoutingContext;
  * This class ensures that such requests are properly authorized.
  *
  * @author Armin Schnabel
- * @version 1.0.0
+ * @version 2.0.0
  * @since 6.4.0
  */
 public abstract class Authorizer implements Handler<RoutingContext> {
@@ -57,6 +58,14 @@ public abstract class Authorizer implements Handler<RoutingContext> {
      */
     private static final Logger LOGGER = LoggerFactory.getLogger(Authorizer.class);
     /**
+     * Http code which indicates that the upload request syntax was incorrect.
+     */
+    public static final int ENTITY_UNPARSABLE = 422;
+    /**
+     * Http code which indicates that the request is not authorized.
+     */
+    public static final int UNAUTHORIZED = 401;
+    /**
      * An auth provider used by this server to authenticate against the Mongo user database
      */
     private final MongoAuthentication authProvider;
@@ -64,6 +73,10 @@ public abstract class Authorizer implements Handler<RoutingContext> {
      * The database to check which users a {@code manager} user has access to.
      */
     private final MongoClient mongoUserDatabase;
+    /**
+     * The pause and resume strategy to be used which wraps async calls in {@link #handle(RoutingContext)}.
+     */
+    private final PauseAndResumeStrategy strategy;
 
     /**
      * Creates a new completely initialized instance of this class with access to all required authentication
@@ -71,13 +84,17 @@ public abstract class Authorizer implements Handler<RoutingContext> {
      *
      * @param authProvider An auth provider used by this server to authenticate against the Mongo user database
      * @param mongoUserDatabase The Mongo user database containing all information about users
+     * @param strategy The pause and resume strategy to be used which wraps async calls in
+     *            {@link #handle(RoutingContext)}.
      */
-    public Authorizer(final MongoAuthentication authProvider, final MongoClient mongoUserDatabase) {
+    public Authorizer(final MongoAuthentication authProvider, final MongoClient mongoUserDatabase,
+            final PauseAndResumeStrategy strategy) {
         Validate.notNull(authProvider);
         Validate.notNull(mongoUserDatabase);
 
         this.authProvider = authProvider;
         this.mongoUserDatabase = mongoUserDatabase;
+        this.strategy = strategy;
     }
 
     @Override
@@ -91,13 +108,28 @@ public abstract class Authorizer implements Handler<RoutingContext> {
             // Check authorization
             final var principal = context.user().principal();
             final var username = principal.getString(DEFAULT_USERNAME_FIELD);
+
+            // Before async operations, pause request body parsing to not lose the body or protocol upgrades.
+            strategy.pause(request);
             final var authentication = authProvider.authenticate(principal);
-            authentication.onSuccess(user -> {
+            authentication.onComplete(r -> {
                 try {
-                    final var loadUsers = loadAccessibleUsers(user.principal());
+                    strategy.resume(request);
+
+                    if (!(r.succeeded())) {
+                        LOGGER.error("Authorization failed for user {}!", username);
+                        context.fail(UNAUTHORIZED, r.cause());
+                        return;
+                    }
+
+                    // Before async operations, pause request body parsing to not lose the body or protocol upgrades.
+                    strategy.pause(request);
+                    // Load principal from authentication result, so it also contains the roles
+                    final var loadUsers = loadAccessibleUsers(r.result().principal());
                     loadUsers.onSuccess(accessibleUsers -> {
                         try {
-                            LOGGER.trace("Export request for {} authorized to access users {}", username, accessibleUsers);
+                            strategy.resume(request);
+                            LOGGER.trace("Request for {} authorized to access users {}", username, accessibleUsers);
                             handleAuthorizedRequest(context, accessibleUsers, headers);
                         } catch (RuntimeException e) {
                             context.fail(e);
@@ -105,31 +137,27 @@ public abstract class Authorizer implements Handler<RoutingContext> {
                     });
                     loadUsers.onFailure(e -> {
                         LOGGER.error("Loading accessible users failed for user {}", username, e);
-                        context.fail(500);
+                        context.fail(500, e);
                     });
-                } catch (final RuntimeException e) {
-                    context.fail(500, e);
+                } catch (RuntimeException e) {
+                    context.fail(e);
                 }
-            });
-            authentication.onFailure(e -> {
-                LOGGER.error("Authorization failed for user {}!", username);
-                context.fail(401, e);
             });
         } catch (final NumberFormatException e) {
             LOGGER.error("Data was not parsable!");
-            context.fail(422, e);
+            context.fail(ENTITY_UNPARSABLE, e);
         }
     }
 
     /**
      * This is the method that should be implemented by subclasses to carry out the business logic on an authorized
      * request.
-     *
+     * 
      * @param ctx Vert.x request context
-     * @param usernames A list of usernames for which the request is authorized to export data
+     * @param users A list of usernames for which the request is authorized to export data
      * @param header the header of the request which may contain parameters required to process the request.
      */
-    protected abstract void handleAuthorizedRequest(final RoutingContext ctx, final List<String> usernames,
+    protected abstract void handleAuthorizedRequest(final RoutingContext ctx, final List<User> users,
             final MultiMap header);
 
     /**
@@ -143,33 +171,50 @@ public abstract class Authorizer implements Handler<RoutingContext> {
      * This method is only public because of the `backend/AuthorizationTest`, see last comment on CY-5720.
      *
      * @param principal The principal object of the authenticated {@code User} which requests user data
-     * @return The usernames of the users which the {@code user} can access
+     * @return The ids of the users which the {@code user} can access
      */
-    public Future<List<String>> loadAccessibleUsers(final JsonObject principal) {
+    public Future<List<User>> loadAccessibleUsers(final JsonObject principal) {
+        final Promise<List<User>> promise = Promise.promise();
 
-        final var roles = principal.getJsonArray(DEFAULT_ROLE_FIELD).stream().map(r -> new Role((String)r)).collect(Collectors.toList());
-        final var managerRoles = roles.stream().filter(r -> r.getType().equals(Role.Type.GROUP_MANAGER))
-                .collect(Collectors.toList());
+        // Load id of authenticated user
         final var username = Validate.notEmpty(principal.getString(DEFAULT_USERNAME_FIELD));
+        final var loadUser = new UserRetriever("user", username).load(mongoUserDatabase);
+        loadUser.onSuccess(users -> {
+            try {
+                Validate.isTrue(users.size() == 1);
+                final var user = users.get(0);
 
-        // Guest users and group users can only access their own account
-        if (managerRoles.isEmpty()) {
-            return Future.succeededFuture(Collections.singletonList(username));
-        } else if (managerRoles.size() > 1) {
-            return Future.failedFuture(new IllegalArgumentException(
-                    String.format("User %s is manager of more than one group.", username)));
-        } else {
-            final Promise<List<String>> promise = Promise.promise();
-            final var groupManager = managerRoles.get(0);
-            final var loadUsers = loadAccessibleUsers(groupManager);
-            loadUsers.onSuccess(groupUsers -> {
-                final var users = new ArrayList<>(groupUsers);
-                users.add(username);
-                promise.complete(users);
-            });
-            loadUsers.onFailure(promise::fail);
-            return promise.future();
-        }
+                // Guest users and group users can only access their own account
+                final var roles = principal.getJsonArray(DEFAULT_ROLE_FIELD).stream().map(r -> new Role((String)r))
+                        .collect(Collectors.toList());
+                final var managerRoles = roles.stream().filter(r -> r.getType().equals(Role.Type.GROUP_MANAGER))
+                        .collect(Collectors.toList());
+                if (managerRoles.isEmpty()) {
+                    promise.complete(Collections.singletonList(user));
+                } else if (managerRoles.size() > 1) {
+                    promise.fail(new IllegalArgumentException(
+                            String.format("User %s is manager of more than one group.", user)));
+                } else {
+                    final var groupManager = managerRoles.get(0);
+                    final var loadUsers = loadAccessibleUsers(groupManager);
+                    loadUsers.onSuccess(groupUsers -> {
+                        try {
+                            final var ret = new ArrayList<>(groupUsers);
+                            ret.add(user);
+                            promise.complete(ret);
+                        } catch (RuntimeException e) {
+                            promise.fail(e);
+                        }
+                    });
+                    loadUsers.onFailure(promise::fail);
+                }
+            } catch (RuntimeException e) {
+                promise.fail(e);
+            }
+        });
+        loadUser.onFailure(promise::fail);
+
+        return promise.future();
     }
 
     /**
@@ -178,29 +223,22 @@ public abstract class Authorizer implements Handler<RoutingContext> {
      * This method is only public because of the `backend/AuthorizationTest`, see last comment on CY-5720.
      *
      * @param groupManager The {@code Role} group manager to load the users for
-     * @return The usernames of the users which the {@code groupManager} can access
+     * @return The {@link User}s which the {@code groupManager} can access
      */
-    public Future<List<String>> loadAccessibleUsers(final Role groupManager) {
+    public Future<List<User>> loadAccessibleUsers(final Role groupManager) {
         Validate.isTrue(groupManager.getType().equals(Role.Type.GROUP_MANAGER));
         Validate.notEmpty(groupManager.getGroup());
 
-        final Promise<List<String>> promise = Promise.promise();
-        final var future = promise.future();
+        final Promise<List<User>> promise = Promise.promise();
         final var groupUsersRole = groupManager.getGroup() + DatabaseConstants.USER_GROUP_ROLE_SUFFIX;
-        mongoUserDatabase.find(DatabaseConstants.COLLECTION_USER,
-                new JsonObject().put(DEFAULT_ROLE_FIELD, groupUsersRole),
-                mongoResult -> {
-                    if (mongoResult.succeeded()) {
-                        final var users = mongoResult.result();
-                        final var userNames = users.parallelStream()
-                                .map(groupUser -> groupUser.getString(DEFAULT_USERNAME_FIELD))
-                                .collect(Collectors.toList());
-                        promise.complete(userNames);
-                    } else {
-                        promise.fail(mongoResult.cause());
-                    }
-                });
-        return future;
+        final var query = new JsonObject().put(DEFAULT_ROLE_FIELD, groupUsersRole);
+        final var loadUsers = mongoUserDatabase.find(DatabaseConstants.COLLECTION_USER, query);
+        loadUsers.onSuccess(result -> {
+            final var users = result.parallelStream().map(User::new).collect(Collectors.toList());
+            promise.complete(users);
+        });
+        loadUsers.onFailure(promise::fail);
+        return promise.future();
     }
 
     @SuppressWarnings("unused") // API
