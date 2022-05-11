@@ -47,7 +47,7 @@ import io.vertx.ext.web.RoutingContext;
  * This class ensures that such requests are properly authorized.
  *
  * @author Armin Schnabel
- * @version 2.0.0
+ * @version 2.0.1
  * @since 6.4.0
  */
 public abstract class Authorizer implements Handler<RoutingContext> {

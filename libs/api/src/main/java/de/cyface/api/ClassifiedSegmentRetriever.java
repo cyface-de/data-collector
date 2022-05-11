@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 Cyface GmbH
+ * Copyright 2021 - 2022 Cyface GmbH
  *
  * This file is part of the Cyface Data Collector.
  *
@@ -41,6 +41,7 @@ import static de.cyface.api.model.ClassifiedSegmentFactoryProvider.Mode.MEASUREM
  *
  * @author Armin Schnabel
  * @since 6.1.0
+ * @version 1.0.0
  */
 @SuppressWarnings("unused") // Part of the API
 public class ClassifiedSegmentRetriever<T extends ClassifiedSegment> {

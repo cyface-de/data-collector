@@ -1,5 +1,5 @@
 /*
- * Copyright 2018-2021 Cyface GmbH
+ * Copyright 2018-2022 Cyface GmbH
  *
  * This file is part of the Cyface Data Collector.
  *
@@ -31,6 +31,7 @@ import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+import org.apache.commons.lang3.Validate;
 import org.bson.types.ObjectId;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -57,7 +58,7 @@ import io.vertx.junit5.VertxTestContext;
  * Tests that storing data to an underlying Mongo database works.
  *
  * @author Klemens Muthmann
- * @version 1.1.3
+ * @version 1.1.4
  * @since 2.0.0
  */
 @ExtendWith(VertxExtension.class)
@@ -71,7 +72,7 @@ public final class DataStorageTest {
     @SuppressWarnings("unused")
     private static final Logger LOGGER = LoggerFactory.getLogger(DataStorageTest.class);
     /**
-     * Th version of the app used for the test measurements.
+     * The version of the app used for the test measurements.
      */
     private static final String TEST_DEVICE_APP_VERSION = "4.0.0-alpha1";
     /**
@@ -111,7 +112,7 @@ public final class DataStorageTest {
     }
 
     /**
-     * Tests that handling measurements without geo locations works as expected.
+     * Tests that handling measurements without geographical locations works as expected.
      *
      * @param vertx A <code>Vertx</code> instance used during the test
      * @param ctx The Vert.x context used for testing
@@ -125,7 +126,8 @@ public final class DataStorageTest {
         client.createDefaultGridFsBucketService();
 
         final var gridFsBucketCreationFuture = client.createDefaultGridFsBucketService();
-        final var uploads = List.of(Path.of(this.getClass().getResource("/iphone-neu.ccyf").toURI()));
+        final var file = Validate.notNull(this.getClass().getResource("/iphone-neu.ccyf"));
+        final var uploads = List.of(Path.of(file.toURI()));
 
         gridFsBucketCreationFuture.onSuccess(gridFsClient -> {
             final var fileSystem = vertx.fileSystem();
