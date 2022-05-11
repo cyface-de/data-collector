@@ -1,7 +1,7 @@
 = Collector
 
 image:https://img.shields.io/badge/vert.x-4.1.2-purple.svg[link="https://vertx.io"]
-image:https://img.shields.io/badge/mongo-4.4.4-purple.svg[link="https://mongodb.com/"]
+image:https://img.shields.io/badge/mongo-5.0.8-purple.svg[link="https://mongodb.com/"]
 image:https://github.com/cyface-de/data-collector/workflows/Cyface%20Data%20Collector/badge.svg[link="https://github.com/cyface-de/data-collector/actions"]
 
 This application represents the https://cyface.de[Cyface] data collector software.
