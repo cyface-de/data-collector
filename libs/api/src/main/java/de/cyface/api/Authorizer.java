@@ -47,7 +47,7 @@ import io.vertx.ext.web.RoutingContext;
  * This class ensures that such requests are properly authorized.
  *
  * @author Armin Schnabel
- * @version 2.0.0
+ * @version 2.0.1
  * @since 6.4.0
  */
 public abstract class Authorizer implements Handler<RoutingContext> {
@@ -112,20 +112,14 @@ public abstract class Authorizer implements Handler<RoutingContext> {
             // Before async operations, pause request body parsing to not lose the body or protocol upgrades.
             strategy.pause(request);
             final var authentication = authProvider.authenticate(principal);
-            authentication.onComplete(r -> {
+            authentication.onSuccess(user -> {
                 try {
                     strategy.resume(request);
-
-                    if (!(r.succeeded())) {
-                        LOGGER.error("Authorization failed for user {}!", username);
-                        context.fail(UNAUTHORIZED, r.cause());
-                        return;
-                    }
 
                     // Before async operations, pause request body parsing to not lose the body or protocol upgrades.
                     strategy.pause(request);
                     // Load principal from authentication result, so it also contains the roles
-                    final var loadUsers = loadAccessibleUsers(r.result().principal());
+                    final var loadUsers = loadAccessibleUsers(user.principal());
                     loadUsers.onSuccess(accessibleUsers -> {
                         try {
                             strategy.resume(request);
@@ -139,9 +133,13 @@ public abstract class Authorizer implements Handler<RoutingContext> {
                         LOGGER.error("Loading accessible users failed for user {}", username, e);
                         context.fail(500, e);
                     });
-                } catch (RuntimeException e) {
-                    context.fail(e);
+                } catch (final RuntimeException e) {
+                    context.fail(500, e);
                 }
+            });
+            authentication.onFailure(e -> {
+                LOGGER.error("Authorization failed for user {}!", username);
+                context.fail(401, e);
             });
         } catch (final NumberFormatException e) {
             LOGGER.error("Data was not parsable!");

@@ -20,11 +20,12 @@ package de.cyface.api.model;
 
 import static de.cyface.model.Json.jsonArray;
 import static de.cyface.model.Json.jsonKeyValue;
-import static de.cyface.model.Json.jsonObject;
 
 import java.time.OffsetDateTime;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.function.Consumer;
@@ -128,29 +129,30 @@ public class ClassifiedSegment {
 
     /**
      * Constructs a fully initialized instance of this class.
-     *  @param oid The database identifier of the segment.
+     * 
+     * @param oid The database identifier of the segment.
      * @param forward {@code true} of this segment is orientated in the same direction as the formal direction of the
      *            underlying OSM way id or {@code false} if it's orientated in the opposite direction.
      * @param geometry The geometry of this segment in the GeoJSON format, i.e. containing a `type` attribute with
- *            `LineString` as value and the `coordinates` attribute with an array containing the nodes of this
- *            segment, as loaded from the database.
+     *            `LineString` as value and the `coordinates` attribute with an array containing the nodes of this
+     *            segment, as loaded from the database.
      * @param length The length of this segment in meters.
      * @param modality The {@link Modality} this segment was recorded with.
      * @param vnk The OSM id of the node where the underlying OSM way of this segment starts.
      * @param nnk The OSM id of the node where the underlying OSM way of this segment ends.
      * @param wayOffset The offset in meters from the {@link #getVnk()}}, i.e. where the segment start within
-*            the way.
+     *            the way.
      * @param way The OSM identifier of the OSM way which this segment belongs to.
      * @param tags A subset of the OSM way's tags which this segment belongs to. The value can be a
-*            {@code String}, {@code Double} or an {@code Integer}.
+     *            {@code String}, {@code Double} or an {@code Integer}.
      * @param latestDataPoint The time of the newest data point used to classify this segment.
      * @param userId The id of the user who uploaded the data of this segment.
      * @param expectedValue A mean value from probability theory required to update {@code variance} without requiring
-*            previous points.
+     *            previous points.
      * @param variance The mathematical variance calculated from calibrated vertical accelerations.
      * @param quality The surface quality class calculated for this segment.
      * @param dataPointCount The number of sample points used to calculate {@code variance}. This is required to update
-*            {@code variance} without requiring previous points.
+     *            {@code variance} without requiring previous points.
      * @param version The version of the format of this segment entry.
      */
     @SuppressWarnings("unused") // Part of the API
@@ -180,6 +182,34 @@ public class ClassifiedSegment {
     }
 
     /**
+     * Constructs a fully initialized {@link ClassifiedSegment} from a database entry.
+     *
+     * @param segment The entry from the database.
+     */
+    public ClassifiedSegment(final JsonObject segment) {
+        this.oid = segment.getJsonObject("_id").getString("$oid");
+        this.forward = segment.getBoolean("forward");
+        this.geometry = toGeometry(segment.getJsonObject("geometry"));
+        this.length = segment.getDouble("length");
+        this.modality = Modality.valueOf(segment.getString("modality"));
+        this.way = segment.getLong("way");
+        this.vnk = segment.getLong("vnk");
+        this.nnk = segment.getLong("nnk");
+        this.wayOffset = segment.getDouble("way_offset");
+        this.tags = segment.getJsonObject("tags").getMap();
+        this.latestDataPoint = OffsetDateTime.parse(segment.getJsonObject("latest_data_point").getString("$date"));
+        this.userId = segment.getString("userId");
+        this.expectedValue = segment.getDouble("expected_value");
+        this.variance = segment.getDouble("variance");
+        // We're expecting a large number of segments stored, we store the quality class as Integer instead of String.
+        // This should reduce the collection size (at least when uncompressed).
+        // Later on we might store this as a normalized value between zero and one.
+        this.quality = ClassifiedSegment.SurfaceQuality.valueOf(segment.getInteger("quality"));
+        this.dataPointCount = segment.getLong("data_point_count");
+        this.version = segment.getString("version");
+    }
+
+    /**
      * Exports this measurement as GeoJSON feature.
      *
      * @param handler A handler that gets the GeoJson feature as string
@@ -201,21 +231,31 @@ public class ClassifiedSegment {
         handler.accept(coordinates);
         handler.accept("},");
 
-        final var builder = new Json.JsonObject.Builder();
-        addTag(getTags(), "name", builder);
-        addTag(getTags(), "highway", builder);
-        addTag(getTags(), "surface", builder);
-        final var tagsObject = builder.build();
+        final var properties = propertiesAsGeoJson(handler);
+        handler.accept(jsonKeyValue("properties", properties).getStringValue());
+
+        handler.accept("}");
+    }
+
+    /**
+     * Converts the properties of this measurement as a list of {@link Json.KeyValuePair}s.
+     *
+     * @return the converted properties
+     */
+    protected List<Json.KeyValuePair> properties() {
 
         final var oid = jsonKeyValue("oid", getOid()); // for support
+        final var modality = jsonKeyValue("modality", getModality().getDatabaseIdentifier());
+
         final var way = jsonKeyValue("way", getWay());
         final var forward = jsonKeyValue("forward_moving", isForward());
-        final var modality = jsonKeyValue("modality", getModality().getDatabaseIdentifier());
-        final var length = jsonKeyValue("length", getLength());
         final var wayOffset = jsonKeyValue("way_offset", getWayOffset());
+
+        final var length = jsonKeyValue("length", getLength());
         final var vnk = jsonKeyValue("vnk", getVnk());
         final var nnk = jsonKeyValue("nnk", getNnk());
-        final var tags = jsonKeyValue("tags", tagsObject);
+        final var tags = jsonKeyValue("tags", tagsAsGeoJson());
+
         final var latestDataPoint = jsonKeyValue("timestamp", getLatestDataPoint().toEpochSecond());
         final var quality = jsonKeyValue("quality", getQuality().databaseValue);
         final var color = jsonKeyValue("color",
@@ -223,12 +263,33 @@ public class ClassifiedSegment {
                         : getQuality().databaseValue == 1 ? "yellow"
                                 : getQuality().databaseValue == 2 ? "green"
                                         : getQuality().databaseValue == 3 ? "blue" : "black");
-        final var version = jsonKeyValue("version", getVersion());
-        final var properties = jsonObject(oid, way, forward, modality, length, wayOffset, vnk, nnk, tags,
-                latestDataPoint, quality, color, version);
-        handler.accept(jsonKeyValue("properties", properties).getStringValue());
 
-        handler.accept("}");
+        final var version = jsonKeyValue("version", getVersion());
+
+        return List.of(oid, modality, way, forward, wayOffset, length, vnk, nnk, tags, latestDataPoint,
+                quality, color, version);
+    }
+
+    /**
+     * Exports the properties of this measurement as in the GeoJSON format.
+     *
+     * @param handler A handler that gets the GeoJson string
+     */
+    private Json.JsonObject propertiesAsGeoJson(final Consumer<String> handler) {
+        final var builder = new Json.JsonObject.Builder();
+        properties().forEach(builder::add);
+        return builder.build();
+    }
+
+    /**
+     * Converts the tags of this measurement as {@link Json.JsonObject}.
+     */
+    protected Json.JsonObject tagsAsGeoJson() {
+        final var builder = new Json.JsonObject.Builder();
+        addTag(getTags(), "name", builder);
+        addTag(getTags(), "highway", builder);
+        addTag(getTags(), "surface", builder);
+        return builder.build();
     }
 
     /**
@@ -301,6 +362,23 @@ public class ClassifiedSegment {
         ret.put("data_point_count", getDataPointCount());
         ret.put("version", getVersion());
         return ret;
+    }
+
+    /**
+     * Constructs a fully initialized {@link Geometry} from a database entry.
+     *
+     * @param geometry The entry from the database.
+     * @return The created {@code Geometry} object
+     */
+    private Geometry toGeometry(final JsonObject geometry) {
+        final var type = geometry.getString("type");
+        final var array = geometry.getJsonArray("coordinates");
+        final var coordinates = new ArrayList<Geometry.Coordinate>();
+        array.forEach(coordinate -> {
+            final var c = (JsonArray)coordinate;
+            coordinates.add(new Geometry.Coordinate(c.getDouble(1), c.getDouble(0)));
+        });
+        return new Geometry(type, coordinates.toArray(new Geometry.Coordinate[0]));
     }
 
     @Override
