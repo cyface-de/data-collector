@@ -18,6 +18,8 @@
  */
 package de.cyface.api;
 
+import static de.cyface.api.model.ClassifiedSegmentFactoryProvider.Mode.MEASUREMENT_BASED;
+
 import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -26,6 +28,7 @@ import java.util.stream.Collectors;
 
 import de.cyface.api.model.ClassifiedMeasurementSegment;
 import de.cyface.api.model.ClassifiedSegment;
+import de.cyface.api.model.ClassifiedSegmentFactory;
 import de.cyface.api.model.ClassifiedSegmentFactoryProvider;
 import de.cyface.api.model.User;
 import io.vertx.core.Future;
@@ -33,8 +36,6 @@ import io.vertx.core.Promise;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.mongo.MongoClient;
-
-import static de.cyface.api.model.ClassifiedSegmentFactoryProvider.Mode.MEASUREMENT_BASED;
 
 /**
  * Loads classified segments from the database for a vert.x context.
@@ -59,22 +60,22 @@ public class ClassifiedSegmentRetriever<T extends ClassifiedSegment> {
      */
     private final JsonObject query;
     /**
-     * The aggregation mode.
+     * The factory to be used to create new instances retrieved by this class.
      */
-    private final ClassifiedSegmentFactoryProvider.Mode mode;
+    private final ClassifiedSegmentFactory<?> factory;
 
     /**
-     * Constructs a fully initialized object of this object.
+     * Constructs a fully initialized retriever to load segments by id.
      *
      * @param collectionName The name of the collection in the Mongo database used to store deserialized measurements.
-     * @param mode The aggregation mode.
+     * @param factory The factory to be used to create new instances retrieved by this class.
      * @param segmentIds The identifiers of the segments to loaded
      */
-    public ClassifiedSegmentRetriever(final String collectionName, final ClassifiedSegmentFactoryProvider.Mode mode,
+    public ClassifiedSegmentRetriever(final String collectionName, final ClassifiedSegmentFactory<?> factory,
             final Set<String> segmentIds) {
 
         this.collectionName = collectionName;
-        this.mode = mode;
+        this.factory = factory;
 
         final var ids = new JsonArray();
         segmentIds.forEach(id -> ids.add(new JsonObject().put("_id", new JsonObject().put("$oid", id))));
@@ -82,30 +83,30 @@ public class ClassifiedSegmentRetriever<T extends ClassifiedSegment> {
     }
 
     /**
-     * Constructs a fully initialized instance of this class.
+     * Constructs a fully initialized retriever to load all segments of a list of users.
      *
      * @param collectionName The name of the collection in the Mongo database used to store classified segments.
-     * @param mode The aggregation mode.
+     * @param factory The factory to be used to create new instances retrieved by this class.
      * @param users The users to load data for.
      */
-    public ClassifiedSegmentRetriever(final String collectionName, final ClassifiedSegmentFactoryProvider.Mode mode,
+    public ClassifiedSegmentRetriever(final String collectionName, final ClassifiedSegmentFactory<?> factory,
             final List<User> users) {
-        this(collectionName, mode, users, null, null);
+        this(collectionName, factory, users, null, null);
     }
 
     /**
-     * Constructs a fully initialized instance of this class.
+     * Constructs a fully initialized retriever to load all segments of a list of users for a specific time frame.
      *
      * @param collectionName The name of the collection in the Mongo database used to store classified segments.
-     * @param mode The aggregation mode.
+     * @param factory The factory to be used to create new instances retrieved by this class.
      * @param users The users to load data for.
      * @param startTime The value is {@code null} or a point in time to only return newer results.
      * @param endTime The value is {@code null} or a point in time to only return older results.
      */
-    public ClassifiedSegmentRetriever(final String collectionName, final ClassifiedSegmentFactoryProvider.Mode mode,
+    public ClassifiedSegmentRetriever(final String collectionName, final ClassifiedSegmentFactory<?> factory,
             final List<User> users, final ZonedDateTime startTime, final ZonedDateTime endTime) {
         this.collectionName = collectionName;
-        this.mode = mode;
+        this.factory = factory;
 
         this.query = new JsonObject();
         final var userIds = users.stream().map(User::getIdString).collect(Collectors.toList());
@@ -123,7 +124,8 @@ public class ClassifiedSegmentRetriever<T extends ClassifiedSegment> {
     }
 
     /**
-     * Constructs a fully initialized object of this object.
+     * Constructs a fully initialized retriever which to load all {@link ClassifiedMeasurementSegment}s ("history") of a
+     * {@link ClassifiedSegment}.
      *
      * @param collectionName The name of the collection in the Mongo database used to store deserialized measurements.
      * @param segment The {@link ClassifiedSegment} to load all {@link ClassifiedMeasurementSegment}s for
@@ -131,7 +133,7 @@ public class ClassifiedSegmentRetriever<T extends ClassifiedSegment> {
     public ClassifiedSegmentRetriever(final String collectionName, final ClassifiedSegment segment) {
 
         this.collectionName = collectionName;
-        this.mode = MEASUREMENT_BASED;
+        this.factory = ClassifiedSegmentFactoryProvider.getFactory(MEASUREMENT_BASED);
 
         this.query = new JsonObject()
                 .put("userId", segment.getUserId())
@@ -142,7 +144,7 @@ public class ClassifiedSegmentRetriever<T extends ClassifiedSegment> {
     }
 
     /**
-     * Loads all classified segments of all users of specified users from the database.
+     * Loads the segment defined via the constructor of this class from the database.
      *
      * @param dataClient The client to access the data from.
      * @return a {@code Future} containing the users' data if successful.
@@ -180,7 +182,6 @@ public class ClassifiedSegmentRetriever<T extends ClassifiedSegment> {
         }
 
         // Convert documents
-        final var factory = ClassifiedSegmentFactoryProvider.getFactory(mode);
         final var pojoSegments = segments.stream().map(factory::build);
 
         return pojoSegments.collect(Collectors.toList());

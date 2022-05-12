@@ -30,6 +30,7 @@ import de.cyface.model.Json;
 import de.cyface.model.MeasurementIdentifier;
 import de.cyface.model.Modality;
 import io.vertx.core.json.JsonObject;
+import org.apache.commons.lang3.Validate;
 
 /**
  * Class which represents result elements from the surface pipeline: measurement based classified road segments.
@@ -88,7 +89,7 @@ public class ClassifiedMeasurementSegment extends ClassifiedSegment {
 
         super(oid, forward, geometry, length, modality, vnk, nnk, wayOffset, way, tags, latestDataPoint, userId,
                 expectedValue, variance, quality, dataPointCount, version);
-        this.measurementIdentifier = measurementIdentifier;
+        this.measurementIdentifier = Validate.notNull(measurementIdentifier);
     }
 
     /**
@@ -99,8 +100,8 @@ public class ClassifiedMeasurementSegment extends ClassifiedSegment {
     public ClassifiedMeasurementSegment(final JsonObject segment) {
 
         super(segment);
-        final var deviceId = segment.getString("deviceId");
-        final var measurementId = segment.getLong("measurementId");
+        final var deviceId = Validate.notEmpty(segment.getString("deviceId"));
+        final var measurementId = Validate.notNull(segment.getLong("measurementId"));
         this.measurementIdentifier = new MeasurementIdentifier(deviceId, measurementId);
     }
 
