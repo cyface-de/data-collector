@@ -105,8 +105,8 @@ public final class CollectorApiVerticle extends AbstractVerticle {
     }
 
     @Override
-    public void start(final Promise<Void> startFuture) throws Exception {
-        Validate.notNull(startFuture);
+    public void start(final Promise<Void> startPromise) throws Exception {
+        Validate.notNull(startPromise);
 
         // Setup Measurement event bus
         prepareEventBus();
@@ -157,15 +157,10 @@ public final class CollectorApiVerticle extends AbstractVerticle {
         });
 
         // Block until all futures completed
-        final var startUpFinishedFuture = CompositeFuture.all(userIndexCreation, measurementIndexCreation,
+        final var startUp = CompositeFuture.all(userIndexCreation, measurementIndexCreation,
                 serverStartPromise.future(), userCreation);
-        startUpFinishedFuture.onComplete(r -> {
-            if (r.succeeded()) {
-                startFuture.complete();
-            } else {
-                startFuture.fail(r.cause());
-            }
-        });
+        startUp.onSuccess(success -> startPromise.complete());
+        startUp.onFailure(startPromise::fail);
     }
 
     private Future<Void> createDefaultUser(final MongoClient userClient, final String adminUsername,
