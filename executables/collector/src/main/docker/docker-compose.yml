@@ -15,42 +15,25 @@
 # You should have received a copy of the GNU General Public License
 # along with the Cyface Data Collector. If not, see <http://www.gnu.org/licenses/>.
 #
-# version 2.1.3
+# version 3.0.0
 
 version: "3.7"
 services:
 
   # Mongo Database Container
-  mongo-data:
-    container_name: collector_mongo-data
+  mongo:
+    container_name: collector_mongo
     image: mongo:5.0.8
     ports:
       - "127.0.0.1:27019:27017"
     volumes:
       - type: volume
-        source: collector_mongo-data-db
+        source: collector_mongo-db
         target: /data/db
     networks:
       - database
     environment:
-      - MONGO_INITDB_DATABASE=cyface-data
-
-  mongo-user:
-    container_name: collector_mongo-user
-    image: mongo:5.0.8
-    ports:
-      - "127.0.0.1:27018:27017"
-    volumes:
-      - type: volume
-        source: collector_mongo-user-db
-        target: /data/db
-      - type: bind
-        source: ./init-scripts/mongo-user/
-        target: /docker-entrypoint-initdb.d/
-    networks:
-      - database
-    environment:
-      MONGO_INITDB_DATABASE: cyface-user
+      - MONGO_INITDB_DATABASE=cyface
 
   # The Cyface Collector API Container
   api:
@@ -69,16 +52,14 @@ services:
       - ./logback.xml:/app/logback.xml:ro # read only
       - ./file-uploads:/app/file-uploads # for debugging
     depends_on:
-      - mongo-data
-      - mongo-user
+      - mongo
     environment:
       - ADMIN_USER=admin
       - ADMIN_PASSWORD=secret
       - SALT_FILE=/app/secrets/salt
 
 volumes:
-  collector_mongo-data-db:
-  collector_mongo-user-db:
+  collector_mongo-db:
 
 networks:
   default:

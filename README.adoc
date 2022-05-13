@@ -101,7 +101,7 @@ Now build the system as described in the "Building" section above:
 Then simply run `docker-compose up` inside `executables/collector/build/docker`:
 `cd executables/collector/build/docker/ && docker-compose up -d`
 
-This calls docker to bring up two Mongo-database containers and a container running the Cyface data collector API. The Collector API is by default available via port 8080. This means if you boot up everything using the default settings, the Collector API is accessible via `http://localhost:8080/api/v3/`.
+This calls docker to bring up a Mongo-database container and a container running the Cyface data collector API. The Collector API is by default available via port 8080. This means if you boot up everything using the default settings, the Collector API is accessible via `http://localhost:8080/api/v3/`.
 
 **ATTENTION: The docker setup should only be used for development purposes.**
 It exposes the Cyface data collector as well as the ports of both Mongo database instances freely on the local network.
@@ -180,8 +180,8 @@ Consider reading the https://docs.mongodb.com/manual/administration/[Mongo Datab
 ===== Administration
 To load files from the Mongo GridFS file storage use the https://docs.mongodb.com/manual/reference/program/mongofiles/[Mongofiles] tool.
 
-* Showing files: `mongofiles --port 27019 -d cyface-data list`
-* Downloading files: `mongofiles --port 27019 -d cyface-data get f5823cbc-b8f5-4c80-a4b1-7bf28a3c7944`
+* Showing files: `mongofiles --port 27019 -d cyface list`
+* Downloading files: `mongofiles --port 27019 -d cyface get f5823cbc-b8f5-4c80-a4b1-7bf28a3c7944`
 * Unzipping files: `printf "\x78\x9c" | cat - f5823cbc-b8f5-4c80-a4b1-7bf28a3c7944 | zlib-flate -uncompress > test2`
 
 
