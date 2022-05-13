@@ -44,6 +44,7 @@ import io.vertx.core.Promise;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.auth.HashingStrategy;
 import io.vertx.ext.auth.jwt.JWTAuth;
+import io.vertx.ext.mongo.IndexOptions;
 import io.vertx.ext.mongo.MongoClient;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
@@ -115,8 +116,12 @@ public final class CollectorApiVerticle extends AbstractVerticle {
         final var configV3 = new Config(vertx);
 
         // Create indices
+        final var unique = new IndexOptions().unique(true);
         final var measurementIndex = new JsonObject().put("metadata.deviceId", 1).put("metadata.measurementId", 1);
-        final var indexCreation = configV3.getDataDatabase().createIndex("fs.files", measurementIndex);
+        final var measurementIndexCreation = configV3.getDataDatabase().createIndexWithOptions("fs.files",
+                measurementIndex, unique);
+        final var userIndex = new JsonObject().put("username", 1);
+        final var userIndexCreation = configV3.getUserDatabase().createIndexWithOptions("user", userIndex, unique);
 
         // Start http server
         final var router = setupRoutes(configV2, configV3);
@@ -152,7 +157,8 @@ public final class CollectorApiVerticle extends AbstractVerticle {
         });
 
         // Block until all futures completed
-        final var startUpFinishedFuture = CompositeFuture.all(indexCreation, serverStartPromise.future(), userCreation);
+        final var startUpFinishedFuture = CompositeFuture.all(userIndexCreation, measurementIndexCreation,
+                serverStartPromise.future(), userCreation);
         startUpFinishedFuture.onComplete(r -> {
             if (r.succeeded()) {
                 startFuture.complete();
