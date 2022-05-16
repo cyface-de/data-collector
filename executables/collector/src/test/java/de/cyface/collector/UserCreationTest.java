@@ -109,7 +109,7 @@ public final class UserCreationTest {
                 .put("db_name", "cyface");
 
         final var config = new JsonObject().put(Parameter.MANAGEMENT_HTTP_PORT.key(), port)
-                .put(Parameter.MONGO_USER_DB.key(), mongoDbConfiguration);
+                .put(Parameter.MONGO_DB.key(), mongoDbConfiguration);
         final var options = new DeploymentOptions().setConfig(config);
 
         final var managementApiVerticle = new ManagementApiVerticle("test-salt");

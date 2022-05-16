@@ -23,7 +23,6 @@ import java.io.IOException;
 import org.apache.commons.lang3.Validate;
 
 import de.cyface.api.AuthenticatedEndpointConfig;
-import de.cyface.api.EndpointConfig;
 import de.cyface.api.InvalidConfiguration;
 import de.cyface.api.Parameter;
 import io.vertx.core.Vertx;
@@ -70,13 +69,9 @@ public class Config implements AuthenticatedEndpointConfig {
      */
     private final String endpoint;
     /**
-     * The client to use to access the Mongo database holding the uploaded data
-     */
-    private final MongoClient dataDatabase;
-    /**
      * The client to use to access the Mongo database holding the user account data
      */
-    private final MongoClient userDatabase;
+    private final MongoClient database;
     /**
      * {@code null} or the Authenticator that uses the Mongo user database to store and retrieve credentials.
      */
@@ -123,14 +118,10 @@ public class Config implements AuthenticatedEndpointConfig {
     public Config(final Vertx vertx) throws IOException {
         checkValidConfiguration(vertx.getOrCreateContext().config());
 
-        // Data-database client
-        final var mongoDatabaseConfiguration = Parameter.MONGO_DATA_DB.jsonValue(vertx);
-        this.dataDatabase = EndpointConfig.createSharedMongoClient(vertx, mongoDatabaseConfiguration);
-
-        // User-database client
-        final var mongoUserDatabaseConfiguration = Parameter.MONGO_USER_DB.jsonValue(vertx, new JsonObject());
-        this.userDatabase = AuthenticatedEndpointConfig.createSharedMongoClient(vertx, mongoUserDatabaseConfiguration);
-        this.authProvider = AuthenticatedEndpointConfig.buildMongoAuthProvider(userDatabase);
+        // Database client
+        final var databaseConfiguration = Parameter.MONGO_DB.jsonValue(vertx, new JsonObject());
+        this.database = AuthenticatedEndpointConfig.createSharedMongoClient(vertx, databaseConfiguration);
+        this.authProvider = AuthenticatedEndpointConfig.buildMongoAuthProvider(database);
 
         // Http config
         this.host = Parameter.HTTP_HOST.stringValue(vertx);
@@ -181,12 +172,8 @@ public class Config implements AuthenticatedEndpointConfig {
         return endpoint;
     }
 
-    public MongoClient getDataDatabase() {
-        return dataDatabase;
-    }
-
-    public MongoClient getUserDatabase() {
-        return userDatabase;
+    public MongoClient getDatabase() {
+        return database;
     }
 
     public MongoAuthentication getAuthProvider() {

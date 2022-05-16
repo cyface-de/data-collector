@@ -72,7 +72,7 @@ public abstract class Authorizer implements Handler<RoutingContext> {
     /**
      * The database to check which users a {@code manager} user has access to.
      */
-    private final MongoClient mongoUserDatabase;
+    private final MongoClient mongoDatabase;
     /**
      * The pause and resume strategy to be used which wraps async calls in {@link #handle(RoutingContext)}.
      */
@@ -83,17 +83,17 @@ public abstract class Authorizer implements Handler<RoutingContext> {
      * information to authorize a request and fetch the correct data.
      *
      * @param authProvider An auth provider used by this server to authenticate against the Mongo user database
-     * @param mongoUserDatabase The Mongo user database containing all information about users
+     * @param mongoDatabase The Mongo database containing all information about users
      * @param strategy The pause and resume strategy to be used which wraps async calls in
      *            {@link #handle(RoutingContext)}.
      */
-    public Authorizer(final MongoAuthentication authProvider, final MongoClient mongoUserDatabase,
+    public Authorizer(final MongoAuthentication authProvider, final MongoClient mongoDatabase,
             final PauseAndResumeStrategy strategy) {
         Validate.notNull(authProvider);
-        Validate.notNull(mongoUserDatabase);
+        Validate.notNull(mongoDatabase);
 
         this.authProvider = authProvider;
-        this.mongoUserDatabase = mongoUserDatabase;
+        this.mongoDatabase = mongoDatabase;
         this.strategy = strategy;
     }
 
@@ -176,7 +176,7 @@ public abstract class Authorizer implements Handler<RoutingContext> {
 
         // Load id of authenticated user
         final var username = Validate.notEmpty(principal.getString(DEFAULT_USERNAME_FIELD));
-        final var loadUser = new UserRetriever("user", username).load(mongoUserDatabase);
+        final var loadUser = new UserRetriever("user", username).load(mongoDatabase);
         loadUser.onSuccess(users -> {
             try {
                 Validate.isTrue(users.size() == 1);
@@ -230,7 +230,7 @@ public abstract class Authorizer implements Handler<RoutingContext> {
         final Promise<List<User>> promise = Promise.promise();
         final var groupUsersRole = groupManager.getGroup() + DatabaseConstants.USER_GROUP_ROLE_SUFFIX;
         final var query = new JsonObject().put(DEFAULT_ROLE_FIELD, groupUsersRole);
-        final var loadUsers = mongoUserDatabase.find(DatabaseConstants.COLLECTION_USER, query);
+        final var loadUsers = mongoDatabase.find(DatabaseConstants.COLLECTION_USER, query);
         loadUsers.onSuccess(result -> {
             final var users = result.parallelStream().map(User::new).collect(Collectors.toList());
             promise.complete(users);
@@ -244,7 +244,7 @@ public abstract class Authorizer implements Handler<RoutingContext> {
         return authProvider;
     }
 
-    public MongoClient getMongoUserDatabase() {
-        return mongoUserDatabase;
+    public MongoClient getMongoDatabase() {
+        return mongoDatabase;
     }
 }

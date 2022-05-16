@@ -3,12 +3,7 @@
 	"jwt.private":"src/test/resources/private_key.pem",
 	"jwt.expiration":60,
 	"metrics.enabled":false,
-	"mongo.userdb":{
-	    "db_name":"cyface",
-	    "connection_string":"mongodb://localhost:27019",
-	    "data_source_name":"cyface"
-	},
-	"mongo.datadb":{
+	"mongo.db":{
 	    "db_name":"cyface",
 	    "connection_string":"mongodb://localhost:27019",
 	    "data_source_name":"cyface"

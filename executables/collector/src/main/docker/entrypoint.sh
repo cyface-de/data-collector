@@ -108,16 +108,22 @@ loadCollectorParameters() {
   echo "Enabling metrics reporting by API: $METRICS_ENABLED."
 }
 
+# Injects the database parameters for V3 and V2 databases
 loadConfig() {
   CONFIG="{\
       \"jwt.private\":\"$JWT_PRIVATE_KEY_FILE_PATH\",\
       \"jwt.public\":\"$JWT_PUBLIC_KEY_FILE_PATH\",\
       \"mongo.userdb\":{\
+                \"db_name\":\"cyface\",\
+                \"connection_string\":\"mongodb://mongo:27017\",\
+                \"data_source_name\":\"cyface\"\
+            },\
+      \"mongo.datadb\":{\
           \"db_name\":\"cyface\",\
           \"connection_string\":\"mongodb://mongo:27017\",\
           \"data_source_name\":\"cyface\"\
       },\
-      \"mongo.datadb\":{\
+      \"mongo.db\":{\
           \"db_name\":\"cyface\",\
           \"connection_string\":\"mongodb://mongo:27017\",\
           \"data_source_name\":\"cyface\"\

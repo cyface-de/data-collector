@@ -102,7 +102,7 @@ public class PreRequestHandler extends Authorizer {
     /**
      * Vertx <code>MongoClient</code> used to access the database to write the received data to.
      */
-    private final MongoClient dataClient;
+    private final MongoClient mongoClient;
 
     /**
      * Creates a fully initialized instance of this class.
@@ -110,22 +110,20 @@ public class PreRequestHandler extends Authorizer {
      * @param config the configuration setting required to start the HTTP server
      */
     public PreRequestHandler(final Config config) {
-        this(config.getDataDatabase(), config.getAuthProvider(), config.getUserDatabase(),
-                config.getMeasurementLimit());
+        this(config.getDatabase(), config.getAuthProvider(), config.getMeasurementLimit());
     }
 
     /**
      * Creates a fully initialized instance of this class.
      * 
-     * @param dataDatabase Vertx <code>MongoClient</code> used to access the database to write the received data to.
+     * @param mongoClient Vertx <code>MongoClient</code> used to access the database to write the received data to.
      * @param authProvider An auth provider used by this server to authenticate against the Mongo user database
-     * @param userDatabase The Mongo user database containing all information about users
      * @param measurementLimit The maximal number of {@code Byte}s which may be uploaded in the upload request.
      */
-    public PreRequestHandler(final MongoClient dataDatabase, final MongoAuthentication authProvider,
-            final MongoClient userDatabase, final long measurementLimit) {
-        super(authProvider, userDatabase, new PauseAndResumeAfterBodyParsing());
-        this.dataClient = dataDatabase;
+    public PreRequestHandler(final MongoClient mongoClient, final MongoAuthentication authProvider,
+            final long measurementLimit) {
+        super(authProvider, mongoClient, new PauseAndResumeAfterBodyParsing());
+        this.mongoClient = mongoClient;
         this.measurementLimit = measurementLimit;
     }
 
@@ -149,7 +147,7 @@ public class PreRequestHandler extends Authorizer {
             if (measurementId == null || deviceId == null) {
                 throw new InvalidMetaData("Data incomplete!");
             }
-            final var access = dataClient.createDefaultGridFsBucketService();
+            final var access = mongoClient.createDefaultGridFsBucketService();
             access.onSuccess(gridFs -> {
                 try {
                     final var query = new JsonObject();

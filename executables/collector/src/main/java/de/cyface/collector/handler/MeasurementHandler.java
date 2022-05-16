@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 Cyface GmbH
+ * Copyright 2021-2022 Cyface GmbH
  *
  * This file is part of the Cyface Data Collector.
  *
@@ -32,12 +32,12 @@ import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
-import de.cyface.api.PauseAndResumeBeforeBodyParsing;
 import org.apache.commons.lang3.Validate;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import de.cyface.api.Authorizer;
+import de.cyface.api.PauseAndResumeBeforeBodyParsing;
 import de.cyface.api.model.User;
 import de.cyface.collector.handler.exception.IllegalSession;
 import de.cyface.collector.handler.exception.InvalidMetaData;
@@ -93,7 +93,7 @@ public final class MeasurementHandler extends Authorizer {
     /**
      * Vertx <code>MongoClient</code> used to access the database to write the received data to.
      */
-    private final MongoClient dataClient;
+    private final MongoClient mongoClient;
     /**
      * The maximum number of {@code Byte}s which may be uploaded.
      */
@@ -105,24 +105,22 @@ public final class MeasurementHandler extends Authorizer {
      * @param config the configuration setting required to start the HTTP server
      */
     public MeasurementHandler(final Config config) {
-        this(config.getDataDatabase(), config.getAuthProvider(), config.getUserDatabase(),
-                config.getMeasurementLimit());
+        this(config.getDatabase(), config.getAuthProvider(), config.getMeasurementLimit());
     }
 
     /**
      * Creates a fully initialized instance of this class.
      *
-     * @param dataClient The client to use to access the Mongo database.
+     * @param mongoClient The client to use to access the Mongo database.
      * @param authProvider An auth provider used by this server to authenticate against the Mongo user database
-     * @param userDatabase The Mongo user database containing all information about users
      * @param payloadLimit The maximum number of {@code Byte}s which may be uploaded.
      */
-    public MeasurementHandler(final MongoClient dataClient, final MongoAuthentication authProvider,
-            final MongoClient userDatabase, final long payloadLimit) {
-        super(authProvider, userDatabase, new PauseAndResumeBeforeBodyParsing());
-        Validate.notNull(dataClient);
+    public MeasurementHandler(final MongoClient mongoClient, final MongoAuthentication authProvider,
+            final long payloadLimit) {
+        super(authProvider, mongoClient, new PauseAndResumeBeforeBodyParsing());
+        Validate.notNull(mongoClient);
         Validate.isTrue(payloadLimit > 0);
-        this.dataClient = dataClient;
+        this.mongoClient = mongoClient;
         this.payloadLimit = payloadLimit;
     }
 
@@ -146,7 +144,7 @@ public final class MeasurementHandler extends Authorizer {
 
             // Handle upload status request
             if (bodySize == 0) {
-                new StatusHandler(dataClient).handle(ctx);
+                new StatusHandler(mongoClient).handle(ctx);
                 return;
             }
 
@@ -470,7 +468,7 @@ public final class MeasurementHandler extends Authorizer {
         LOGGER.debug("Inserted measurement with id {}:{}!", measurement.getMetaData().getDeviceIdentifier(),
                 measurement.getMetaData().getMeasurementIdentifier());
 
-        dataClient.createDefaultGridFsBucketService().onSuccess(gridFs -> {
+        mongoClient.createDefaultGridFsBucketService().onSuccess(gridFs -> {
 
             final var fileSystem = ctx.vertx().fileSystem();
             final var fileUpload = measurement.getBinary();

@@ -120,10 +120,10 @@ public final class CollectorApiVerticle extends AbstractVerticle {
         final var measurementIndex = new JsonObject().put("metadata.deviceId", 1).put("metadata.measurementId", 1);
         // While supporting `v2.MeasurementHandler` we must support multiple entries per did/mid (because of `fileType`)
         measurementIndex.put("metadata.fileType", 1);
-        final var measurementIndexCreation = configV3.getDataDatabase().createIndexWithOptions("fs.files",
+        final var measurementIndexCreation = configV3.getDatabase().createIndexWithOptions("fs.files",
                 measurementIndex, unique);
         final var userIndex = new JsonObject().put("username", 1);
-        final var userIndexCreation = configV3.getUserDatabase().createIndexWithOptions("user", userIndex, unique);
+        final var userIndexCreation = configV3.getDatabase().createIndexWithOptions("user", userIndex, unique);
 
         // Start http server
         final var router = setupRoutes(configV2, configV3);
@@ -134,7 +134,7 @@ public final class CollectorApiVerticle extends AbstractVerticle {
         // Insert default admin user
         final var adminUsername = Parameter.ADMIN_USER_NAME.stringValue(vertx, "admin");
         final var adminPassword = Parameter.ADMIN_PASSWORD.stringValue(vertx, "secret");
-        final var userCreation = createDefaultUser(configV3.getUserDatabase(), adminUsername, adminPassword);
+        final var userCreation = createDefaultUser(configV3.getDatabase(), adminUsername, adminPassword);
 
         // Schedule upload file cleaner task
         vertx.setPeriodic(configV3.getUploadExpirationTime(), timerId -> {
@@ -165,11 +165,11 @@ public final class CollectorApiVerticle extends AbstractVerticle {
         startUp.onFailure(startPromise::fail);
     }
 
-    private Future<Void> createDefaultUser(final MongoClient userClient, final String adminUsername,
+    private Future<Void> createDefaultUser(final MongoClient mongoClient, final String adminUsername,
             final String adminPassword) {
 
         final Promise<Void> promise = Promise.promise();
-        userClient.findOne("user", new JsonObject().put("username", adminUsername), null, result -> {
+        mongoClient.findOne("user", new JsonObject().put("username", adminUsername), null, result -> {
             if (result.failed()) {
                 promise.fail(result.cause());
                 return;
@@ -177,7 +177,7 @@ public final class CollectorApiVerticle extends AbstractVerticle {
             if (result.result() == null) {
                 final var hasher = new Hasher(HashingStrategy.load(),
                         salt.getBytes(StandardCharsets.UTF_8));
-                final var userCreationHandler = new UserCreationHandler(userClient, "user", hasher);
+                final var userCreationHandler = new UserCreationHandler(mongoClient, "user", hasher);
                 final var userCreation = userCreationHandler.createUser(adminUsername, adminPassword, ADMIN_ROLE);
                 userCreation.onSuccess(id -> {
                     LOGGER.info("Identifier of new user id: {}", id);
@@ -243,7 +243,7 @@ public final class CollectorApiVerticle extends AbstractVerticle {
                 .setDeleteUploadedFilesOnEnd(true);
 
         // Setup authentication
-        Authenticator.setupAuthentication("/login", apiV2Router, config);
+        de.cyface.api.v2.Authenticator.setupAuthentication("/login", apiV2Router, config);
 
         // Register handlers
         addAuthenticatedPostV2Handler(apiV2Router, config.getJwtAuthProvider(), MEASUREMENTS_ENDPOINT,

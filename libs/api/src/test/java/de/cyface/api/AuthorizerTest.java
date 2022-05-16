@@ -66,7 +66,7 @@ public class AuthorizerTest {
     @Mock
     MongoAuthentication mockProvider;
     @Mock
-    MongoClient mockUserDatabase;
+    MongoClient mockDatabase;
 
     private final static String DEFAULT_USERNAME = "testUser";
     private final static ObjectId TEST_USER_ID = new ObjectId();
@@ -76,13 +76,13 @@ public class AuthorizerTest {
     @MethodSource("testParameters")
     void testLoadAccessibleUsers_forUser_withUser(final TestParameters parameters) {
         // Arrange
-        final var oocut = new TestAuthorizer(mockProvider, mockUserDatabase);
+        final var oocut = new TestAuthorizer(mockProvider, mockDatabase);
         final var principal = new JsonObject();
         principal.put("username", DEFAULT_USERNAME);
         principal.put("roles", parameters.roles);
         final var user = new JsonObject().put("_id", TEST_USER_ID).put("username", DEFAULT_USERNAME).put("roles",
                 parameters.roles);
-        when(mockUserDatabase.findWithOptions(ArgumentMatchers.any(String.class),
+        when(mockDatabase.findWithOptions(ArgumentMatchers.any(String.class),
                 ArgumentMatchers.any(JsonObject.class), ArgumentMatchers.any(FindOptions.class)))
                         .thenReturn(Future.succeededFuture(Collections.singletonList(user)));
 
@@ -97,13 +97,13 @@ public class AuthorizerTest {
     @MethodSource("testManagerRoles")
     void testLoadAccessibleUsers_forUser_withManager(final JsonArray roles) {
         // Arrange
-        final var oocut = new TestAuthorizer(mockProvider, mockUserDatabase);
+        final var oocut = new TestAuthorizer(mockProvider, mockDatabase);
         final var principal = new JsonObject();
         principal.put("username", DEFAULT_USERNAME);
         principal.put("roles", roles);
         final var user = new JsonObject().put("_id", TEST_USER_ID).put("username", DEFAULT_USERNAME).put("roles",
                 roles);
-        when(mockUserDatabase.findWithOptions(ArgumentMatchers.any(String.class),
+        when(mockDatabase.findWithOptions(ArgumentMatchers.any(String.class),
                 ArgumentMatchers.any(JsonObject.class), ArgumentMatchers.any(FindOptions.class)))
                         .thenReturn(Future.succeededFuture(Collections.singletonList(user)));
 
@@ -111,26 +111,26 @@ public class AuthorizerTest {
         oocut.loadAccessibleUsers(principal);
 
         // Assert that the database is search for users of that project
-        verify(mockUserDatabase, times(1)).find(eq(DatabaseConstants.COLLECTION_USER),
+        verify(mockDatabase, times(1)).find(eq(DatabaseConstants.COLLECTION_USER),
                 eq(new JsonObject().put(DEFAULT_ROLE_FIELD, "project_user")));
     }
 
     @Test
     void testLoadAccessibleUsers_forGroupManager() {
         // Arrange
-        final var oocut = new TestAuthorizer(mockProvider, mockUserDatabase);
+        final var oocut = new TestAuthorizer(mockProvider, mockDatabase);
         final var groupManager = new Role(Role.Type.GROUP_MANAGER, "project");
         final var roles = new JsonArray().add("project_manager");
         final var user = new JsonObject().put("_id", TEST_USER_ID).put("username", DEFAULT_USERNAME).put("roles",
                 roles);
-        when(mockUserDatabase.find(ArgumentMatchers.any(String.class), ArgumentMatchers.any(JsonObject.class)))
+        when(mockDatabase.find(ArgumentMatchers.any(String.class), ArgumentMatchers.any(JsonObject.class)))
                 .thenReturn(Future.succeededFuture(Collections.singletonList(user)));
 
         // Act
         oocut.loadAccessibleUsers(groupManager);
 
         // Assert
-        verify(mockUserDatabase, times(1)).find(eq(DatabaseConstants.COLLECTION_USER),
+        verify(mockDatabase, times(1)).find(eq(DatabaseConstants.COLLECTION_USER),
                 eq(new JsonObject().put(DEFAULT_ROLE_FIELD, "project_user")));
     }
 
@@ -165,10 +165,10 @@ public class AuthorizerTest {
          * information to authorize a request and fetch the correct data.
          *
          * @param authProvider An auth provider used by this server to authenticate against the Mongo user database
-         * @param mongoUserDatabase The Mongo user database containing all information about users
+         * @param mongoClient The Mongo user database containing all information about users
          */
-        public TestAuthorizer(MongoAuthentication authProvider, MongoClient mongoUserDatabase) {
-            super(authProvider, mongoUserDatabase, new PauseAndResumeAfterBodyParsing());
+        public TestAuthorizer(MongoAuthentication authProvider, MongoClient mongoClient) {
+            super(authProvider, mongoClient, new PauseAndResumeAfterBodyParsing());
         }
 
         @Override
