@@ -41,7 +41,7 @@ RUN chown user:user entrypoint.sh collector-all.jar
 EXPOSE 8080
 
 # Install tooling required to check for running Mongo Database in entrypoint.sh
-RUN apt-get update && apt-get install -y \
+RUN apt update && apt install -y \
         netcat-openbsd
 
 # Run app by non-privileged user.
