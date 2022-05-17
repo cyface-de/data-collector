@@ -25,11 +25,9 @@ main() {
   loadJwtParameters
   loadSaltParameters
   loadApiParameters
-  loadMongoParameters
   loadCollectorParameters
   loadConfig
-  waitForDatabase "mongo-data"
-  waitForDatabase "mongo-user"
+  waitForDatabase "mongo"
   startApi
 }
 
@@ -76,10 +74,6 @@ loadApiParameters() {
   fi
 }
 
-loadMongoParameters() {
-  MONGO_USER_CONNECTION_STRING="mongodb://mongo-user:27017"
-}
-
 loadCollectorParameters() {
   # JWT Expiration time
   if [ -z $JWT_EXPIRATION_TIME_SECONDS ]; then
@@ -119,14 +113,14 @@ loadConfig() {
       \"jwt.private\":\"$JWT_PRIVATE_KEY_FILE_PATH\",\
       \"jwt.public\":\"$JWT_PUBLIC_KEY_FILE_PATH\",\
       \"mongo.userdb\":{\
-          \"db_name\":\"cyface-user\",\
-          \"connection_string\":\"$MONGO_USER_CONNECTION_STRING\",\
-          \"data_source_name\":\"cyface-user\"\
+          \"db_name\":\"cyface\",\
+          \"connection_string\":\"mongodb://mongo:27017\",\
+          \"data_source_name\":\"cyface\"\
       },\
       \"mongo.datadb\":{\
-          \"db_name\":\"cyface-data\",\
-          \"connection_string\":\"mongodb://mongo-data:27017\",\
-          \"data_source_name\":\"cyface-data\"\
+          \"db_name\":\"cyface\",\
+          \"connection_string\":\"mongodb://mongo:27017\",\
+          \"data_source_name\":\"cyface\"\
       },\
       \"http.port\":$CYFACE_API_PORT,\
       \"http.host\":\"$CYFACE_API_HOST\",\

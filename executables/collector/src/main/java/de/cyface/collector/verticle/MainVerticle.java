@@ -1,5 +1,5 @@
 /*
- * Copyright 2018 Cyface GmbH
+ * Copyright 2018-2022 Cyface GmbH
  * 
  * This file is part of the Cyface Data Collector.
  *
@@ -18,43 +18,41 @@
  */
 package de.cyface.collector.verticle;
 
+import java.io.IOException;
+
 import de.cyface.api.AuthenticatedEndpointConfig;
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.DeploymentOptions;
 import io.vertx.core.Promise;
 
-import java.io.IOException;
-
 /**
  * This Verticle starts the whole application, by deploying all required child Verticles.
  * 
  * @author Klemens Muthmann
  * @author Armin Schnabel
- * @version 2.1.0
+ * @version 2.1.1
  * @since 2.0.0
  */
 public final class MainVerticle extends AbstractVerticle {
 
     @Override
     public void start(final Promise<Void> startFuture) throws Exception {
-        AuthenticatedEndpointConfig.loadSalt(vertx).future().onComplete(result -> {
-            if (result.failed()) {
-                startFuture.fail(result.cause());
-            } else {
-                final var salt = result.result();
-                try {
-                    deploy(startFuture, salt);
-                } catch (IOException e) {
-                    startFuture.fail(e);
-                }
+        final var loadSalt = AuthenticatedEndpointConfig.loadSalt(vertx);
+        loadSalt.onSuccess(salt -> {
+            try {
+                deploy(startFuture, salt);
+            } catch (final IOException | RuntimeException e) {
+                startFuture.fail(e);
             }
         });
+        loadSalt.onFailure(startFuture::fail);
     }
 
     /**
      * Deploys all required Verticles and tells the system when deployment has finished via the provided
      * <code>startFuture</code>.
+     * 
      * @param startFuture The future to complete or fail, depending on the success or failure of Verticle deployment.
      * @param salt The value to be used as encryption salt
      * @throws IOException if key files are inaccessible
@@ -66,19 +64,14 @@ public final class MainVerticle extends AbstractVerticle {
         final var managementApiVerticle = new ManagementApiVerticle(salt);
 
         // Start the collector API as first verticle.
-        final var collectorApiFuture = vertx.deployVerticle(collectorApiVerticle, verticleConfig);
+        final var collectorDeployment = vertx.deployVerticle(collectorApiVerticle, verticleConfig);
 
         // Start the management API as second verticle.
-        final var managementApiFuture = vertx.deployVerticle(managementApiVerticle, verticleConfig);
+        final var managementDeployment = vertx.deployVerticle(managementApiVerticle, verticleConfig);
 
         // As soon as both futures have a succeeded or one failed, finish the startup process.
-        final var startUpProcessFuture = CompositeFuture.all(collectorApiFuture, managementApiFuture);
-        startUpProcessFuture.onComplete(result -> {
-            if (result.succeeded()) {
-                startFuture.complete();
-            } else {
-                startFuture.fail(result.cause());
-            }
-        });
+        final var startUp = CompositeFuture.all(collectorDeployment, managementDeployment);
+        startUp.onSuccess(success -> startFuture.complete());
+        startUp.onFailure(startFuture::fail);
     }
 }
