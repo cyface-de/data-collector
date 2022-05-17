@@ -99,9 +99,9 @@ public class CollectorApiVerticleTest {
                 .put("http.endpoint.v3", "/api/v3/")
                 .put("http.port", Network.getFreeServerPort())
                 .put("mongo.datadb", new JsonObject()
-                        .put("db_name", "cyface-data")
+                        .put("db_name", "cyface")
                         .put("connection_string", "mongodb://localhost:" + mongoPort)
-                        .put("data_source_name", "cyface-data"))
+                        .put("data_source_name", "cyface"))
                 .put("mongo.userdb", mongoTest.clientConfiguration())
                 .put("jwt.expiration", 3600);
 

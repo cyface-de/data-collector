@@ -89,7 +89,7 @@ subprojects {
     junitVersion = '5.7.2'
     mockitoVersion = '3.3.3'
     hamcrestVersion = '2.2'
-    flapdoodleVersion = '3.0.0'
+    flapdoodleVersion = '3.4.5'
 
     jacocoVersion = '0.8.5'
     spotBugsPluginVersion = '1.11.0'

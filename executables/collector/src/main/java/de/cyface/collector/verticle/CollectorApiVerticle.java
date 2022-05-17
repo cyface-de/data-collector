@@ -44,6 +44,7 @@ import io.vertx.core.Promise;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.auth.HashingStrategy;
 import io.vertx.ext.auth.jwt.JWTAuth;
+import io.vertx.ext.mongo.IndexOptions;
 import io.vertx.ext.mongo.MongoClient;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
@@ -104,8 +105,8 @@ public final class CollectorApiVerticle extends AbstractVerticle {
     }
 
     @Override
-    public void start(final Promise<Void> startFuture) throws Exception {
-        Validate.notNull(startFuture);
+    public void start(final Promise<Void> startPromise) throws Exception {
+        Validate.notNull(startPromise);
 
         // Setup Measurement event bus
         prepareEventBus();
@@ -115,8 +116,14 @@ public final class CollectorApiVerticle extends AbstractVerticle {
         final var configV3 = new Config(vertx);
 
         // Create indices
+        final var unique = new IndexOptions().unique(true);
         final var measurementIndex = new JsonObject().put("metadata.deviceId", 1).put("metadata.measurementId", 1);
-        final var indexCreation = configV3.getDataDatabase().createIndex("fs.files", measurementIndex);
+        // While supporting `v2.MeasurementHandler` we must support multiple entries per did/mid (because of `fileType`)
+        measurementIndex.put("metadata.fileType", 1);
+        final var measurementIndexCreation = configV3.getDataDatabase().createIndexWithOptions("fs.files",
+                measurementIndex, unique);
+        final var userIndex = new JsonObject().put("username", 1);
+        final var userIndexCreation = configV3.getUserDatabase().createIndexWithOptions("user", userIndex, unique);
 
         // Start http server
         final var router = setupRoutes(configV2, configV3);
@@ -152,14 +159,10 @@ public final class CollectorApiVerticle extends AbstractVerticle {
         });
 
         // Block until all futures completed
-        final var startUpFinishedFuture = CompositeFuture.all(indexCreation, serverStartPromise.future(), userCreation);
-        startUpFinishedFuture.onComplete(r -> {
-            if (r.succeeded()) {
-                startFuture.complete();
-            } else {
-                startFuture.fail(r.cause());
-            }
-        });
+        final var startUp = CompositeFuture.all(userIndexCreation, measurementIndexCreation,
+                serverStartPromise.future(), userCreation);
+        startUp.onSuccess(success -> startPromise.complete());
+        startUp.onFailure(startPromise::fail);
     }
 
     private Future<Void> createDefaultUser(final MongoClient userClient, final String adminUsername,

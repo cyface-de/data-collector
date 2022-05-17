@@ -106,18 +106,18 @@ public final class FileUploadTest {
      */
     private DataCollectorClient collectorClient;
     /**
-     * A <code>WebClient</code> to access the test API.
-     */
-    private WebClient client;
-    /**
      * A globally unique identifier of the simulated upload device. The actual value does not really matter.
      */
-    private String deviceIdentifier = UUID.randomUUID().toString();
+    private final String deviceIdentifier = UUID.randomUUID().toString();
     /**
      * The measurement identifier used for the test measurement. The actual value does not matter that much. It
      * simulates a device wide unique identifier.
      */
-    private String measurementIdentifier = String.valueOf(1L);
+    private final Long measurementIdentifier = 1L;
+    /**
+     * A <code>WebClient</code> to access the test API.
+     */
+    private WebClient client;
     /**
      * The Vert.x multipart form to upload.
      */
@@ -143,7 +143,7 @@ public final class FileUploadTest {
     @BeforeAll
     public static void setUpMongoDatabase() throws IOException {
         mongoTest = new MongoTest();
-        try (ServerSocket socket = new ServerSocket(0)) {
+        try (final var socket = new ServerSocket(0)) {
             final int mongoPort = socket.getLocalPort();
             socket.close();
             mongoTest.setUpMongoDatabase(mongoPort);
@@ -161,12 +161,9 @@ public final class FileUploadTest {
     public void setUp(final Vertx vertx, final VertxTestContext context) throws IOException {
         deployVerticle(vertx, context);
 
-        this.deviceIdentifier = UUID.randomUUID().toString();
-        this.measurementIdentifier = String.valueOf(1L);
-
         this.form = MultipartForm.create();
         form.attribute(FormAttributes.DEVICE_ID.getValue(), deviceIdentifier);
-        form.attribute(FormAttributes.MEASUREMENT_ID.getValue(), measurementIdentifier);
+        form.attribute(FormAttributes.MEASUREMENT_ID.getValue(), String.valueOf(measurementIdentifier));
         form.attribute(FormAttributes.DEVICE_TYPE.getValue(), "HTC Desire");
         form.attribute(FormAttributes.OS_VERSION.getValue(), "4.4.4");
         form.attribute(FormAttributes.APPLICATION_VERSION.getValue(), "4.0.0-alpha1");
@@ -234,7 +231,7 @@ public final class FileUploadTest {
         // Set invalid value for a form attribute
         this.form = MultipartForm.create();
         form.attribute(FormAttributes.DEVICE_ID.getValue(), deviceIdentifier);
-        form.attribute(FormAttributes.MEASUREMENT_ID.getValue(), measurementIdentifier);
+        form.attribute(FormAttributes.MEASUREMENT_ID.getValue(), String.valueOf(measurementIdentifier));
         form.attribute(FormAttributes.DEVICE_TYPE.getValue(), "HTC Desire");
         form.attribute(FormAttributes.OS_VERSION.getValue(), "4.4.4");
         form.attribute(FormAttributes.APPLICATION_VERSION.getValue(), "4.0.0-alpha1");
@@ -262,8 +259,7 @@ public final class FileUploadTest {
      * @param context The Vert.x test context to use to upload the file
      * @param testFileResourceName A resource name of a file to upload for testing
      */
-    private void uploadAndCheckForSuccess(final VertxTestContext context,
-            final String testFileResourceName) {
+    private void uploadAndCheckForSuccess(final VertxTestContext context, final String testFileResourceName) {
 
         final var returnedRequestFuture = context.checkpoint();
 

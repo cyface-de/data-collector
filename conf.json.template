@@ -4,14 +4,14 @@
 	"jwt.expiration":60,
 	"metrics.enabled":false,
 	"mongo.userdb":{
-	    "db_name":"cyface-user",
-	    "connection_string":"mongodb://localhost:27018",
-	    "data_source_name":"cyface-user"
+	    "db_name":"cyface",
+	    "connection_string":"mongodb://localhost:27019",
+	    "data_source_name":"cyface"
 	},
 	"mongo.datadb":{
-	    "db_name":"cyface-data",
+	    "db_name":"cyface",
 	    "connection_string":"mongodb://localhost:27019",
-	    "data_source_name":"cyface-data"
+	    "data_source_name":"cyface"
 	},
 	"admin.user":"admin",
 	"admin.password":"secret",

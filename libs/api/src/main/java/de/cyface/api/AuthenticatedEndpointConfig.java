@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2021 Cyface GmbH
+ * Copyright 2020-2022 Cyface GmbH
  *
  * This file is part of the Cyface Data Collector.
  *
@@ -27,6 +27,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Objects;
 
+import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
@@ -41,7 +42,7 @@ import io.vertx.ext.mongo.MongoClient;
  * Configuration parameters required to start the HTTP server which also handles routing.
  *
  * @author Armin Schnabel
- * @version 1.0.0
+ * @version 2.0.0
  * @since 6.0.0
  */
 public interface AuthenticatedEndpointConfig extends EndpointConfig {
@@ -130,9 +131,9 @@ public interface AuthenticatedEndpointConfig extends EndpointConfig {
      * Asynchronous implementation as in Vert.X you can only access files asynchronously.
      *
      * @param vertx The current <code>Vertx</code> instance
-     * @return The <code>Promise</code> about a value to be used as encryption salt
+     * @return The {@code Future} which resolves to a value to be used as encryption salt if successful
      */
-    static Promise<String> loadSalt(final Vertx vertx) {
+    static Future<String> loadSalt(final Vertx vertx) {
         final Promise<String> result = Promise.promise();
         final var salt = Parameter.SALT.stringValue(vertx);
         final var saltPath = Parameter.SALT_PATH.stringValue(vertx);
@@ -154,13 +155,14 @@ public interface AuthenticatedEndpointConfig extends EndpointConfig {
                 }
             });
         }
-        return result;
+        return result.future();
     }
 
     /**
+     * Creates a {@code MongoAuthentication} for a specific {@code MongoClient}.
+     *
      * @param client A Mongo client to access the user Mongo database.
-     * @return The <code>Promise</code> about an Authentication provider used to check for valid user accounts used to
-     *         generate new JWT token.
+     * @return The Authentication provider used to check for valid user accounts used to generate new JWT token.
      */
     static MongoAuthentication buildMongoAuthProvider(final MongoClient client) {
         final var authProperties = new MongoAuthenticationOptions();
