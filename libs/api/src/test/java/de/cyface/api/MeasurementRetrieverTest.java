@@ -20,7 +20,6 @@ package de.cyface.api;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 
@@ -32,7 +31,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 
 import de.cyface.apitestutils.TestMongoDatabase;
 import de.cyface.apitestutils.fixture.GeoLocationTestFixture;
-import de.cyface.apitestutils.fixture.TestMeasurementDocument;
 import io.vertx.core.Vertx;
 import io.vertx.ext.mongo.MongoClient;
 import io.vertx.junit5.VertxExtension;
@@ -55,7 +53,7 @@ public class MeasurementRetrieverTest {
     /**
      * The client to be used to access the test Mongo database.
      */
-    private MongoClient dataClient;
+    private MongoClient mongoClient;
     /**
      * The instance under test.
      */
@@ -74,7 +72,7 @@ public class MeasurementRetrieverTest {
 
         // Set up a Mongo client to access the database
         final var mongoDbConfiguration = testMongoDatabase.config();
-        this.dataClient = MongoClient.createShared(vertx, mongoDbConfiguration, "cyface");
+        this.mongoClient = MongoClient.createShared(vertx, mongoDbConfiguration, "cyface");
     }
 
     /**
@@ -95,12 +93,12 @@ public class MeasurementRetrieverTest {
         measurementIdentifiers.add(new MeasurementIdentifier(deviceIdentifier, 1L));
         measurementIdentifiers.add(new MeasurementIdentifier(deviceIdentifier, 2L));
         final var fixture = new GeoLocationTestFixture(measurementIdentifiers);
-        final var future = fixture.insertTestData(dataClient);
+        final var future = fixture.insertTestData(mongoClient);
         future.onSuccess(ownerUserId -> {
             this.oocut = new MeasurementRetriever("deserialized", new MeasurementRetrievalWithoutSensorData(), List.of(new String[]{ownerUserId}));
 
             // Act
-            final var result = oocut.loadMeasurements(dataClient);
+            final var result = oocut.loadMeasurements(mongoClient);
 
             // Assert
             final var returnedMeasurements = testContext.checkpoint(2);

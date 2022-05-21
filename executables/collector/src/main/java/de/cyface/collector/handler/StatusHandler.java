@@ -56,15 +56,15 @@ public class StatusHandler implements Handler<RoutingContext> {
     /**
      * Vertx <code>MongoClient</code> used to access the database to write the received data to.
      */
-    private final MongoClient dataClient;
+    private final MongoClient mongoClient;
 
     /**
      * Creates a fully initialized instance of this class.
      *
-     * @param dataClient Vertx <code>MongoClient</code> used to access the database to write the received data to.
+     * @param mongoClient Vertx <code>MongoClient</code> used to access the database to write the received data to.
      */
-    public StatusHandler(MongoClient dataClient) {
-        this.dataClient = dataClient;
+    public StatusHandler(final MongoClient mongoClient) {
+        this.mongoClient = mongoClient;
     }
 
     @Override
@@ -89,7 +89,7 @@ public class StatusHandler implements Handler<RoutingContext> {
             if (deviceId == null || measurementId == null) {
                 throw new InvalidMetaData("Data incomplete!");
             }
-            final var access = dataClient.createDefaultGridFsBucketService();
+            final var access = mongoClient.createDefaultGridFsBucketService();
             access.onSuccess(gridFs -> {
                 try {
                     final var query = new JsonObject();

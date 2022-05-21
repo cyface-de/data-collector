@@ -146,17 +146,17 @@ public class ClassifiedSegmentRetriever<T extends ClassifiedSegment> {
     /**
      * Loads the segment defined via the constructor of this class from the database.
      *
-     * @param dataClient The client to access the data from.
+     * @param mongoClient The client to access the data from.
      * @return a {@code Future} containing the users' data if successful.
      */
-    public Future<List<? extends ClassifiedSegment>> loadSegments(final MongoClient dataClient) {
+    public Future<List<? extends ClassifiedSegment>> loadSegments(final MongoClient mongoClient) {
         final Promise<List<? extends ClassifiedSegment>> promise = Promise.promise();
 
         // Fix CY-5944: Or must contain elements
         if (query.containsKey("$or") && query.getJsonArray("$or").size() == 0) {
             promise.fail("At least one segment need to be loaded but 0 where requested");
         } else {
-            final var find = dataClient.find(collectionName, query);
+            final var find = mongoClient.find(collectionName, query);
             find.onSuccess(result -> {
                 try {
                     promise.complete(pojo(result));

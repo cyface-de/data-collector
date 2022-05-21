@@ -1,5 +1,5 @@
 /*
- * Copyright 2018-2022 Cyface GmbH
+ * Copyright 2018-2021 Cyface GmbH
  *
  * This file is part of the Cyface Data Collector.
  *
@@ -16,7 +16,7 @@
  * You should have received a copy of the GNU General Public License
  * along with the Cyface Data Collector. If not, see <http://www.gnu.org/licenses/>.
  */
-package de.cyface.api;
+package de.cyface.api.v2;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -29,7 +29,7 @@ import io.vertx.core.json.JsonObject;
  *
  * @author Klemens Muthmann
  * @author Armin Schnabel
- * @version 2.2.0
+ * @version 2.1.0
  * @since 5.3.0
  */
 public enum Parameter {
@@ -63,13 +63,12 @@ public enum Parameter {
      */
     HTTP_PORT("http.port"),
     /**
-     * Detailed connection information about the Mongo database. This database stores all the credentials of users
-     * capable of logging in to the systems and all data received via the REST-API. This should be a JSON object with
-     * supported parameters explained at:
+     * Detailed connection information about the Mongo user database. This database stores all the credentials of users
+     * capable of logging in to the systems. This should be a JSON object with supported parameters explained at:
      * <a href= "https://vertx.io/docs/vertx-mongo-client/java/#_configuring_the_client">
      * https://vertx.io/docs/vertx-mongo-client/java/#_configuring_the_client</a>.
      */
-    MONGO_DB("mongo.db"),
+    MONGO_USER_DB("mongo.userdb"),
     /**
      * The username of a default administration user created on system start.
      */
@@ -86,6 +85,13 @@ public enum Parameter {
      * Path to a file containing the salt used to encrypt passwords in the database.
      */
     SALT_PATH("salt.path"),
+    /**
+     * Detailed connection information about the Mongo data database. This database stores all data received via the
+     * REST-API. This should be a JSON object with supported parameters explained at:
+     * <a href= "https://vertx.io/docs/vertx-mongo-client/java/#_configuring_the_client">
+     * https://vertx.io/docs/vertx-mongo-client/java/#_configuring_the_client</a>.
+     */
+    MONGO_DATA_DB("mongo.datadb"),
     /**
      * A parameter telling the system how long a new JWT token stays valid in seconds.
      */

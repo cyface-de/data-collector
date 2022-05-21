@@ -98,6 +98,8 @@ public class CollectorApiVerticleTest {
                 .put("http.endpoint.v2", "/api/v2/")
                 .put("http.endpoint.v3", "/api/v3/")
                 .put("http.port", Network.getFreeServerPort())
+                .put("mongo.db", mongoTest.clientConfiguration())
+                // for API v2
                 .put("mongo.datadb", new JsonObject()
                         .put("db_name", "cyface")
                         .put("connection_string", "mongodb://localhost:" + mongoPort)

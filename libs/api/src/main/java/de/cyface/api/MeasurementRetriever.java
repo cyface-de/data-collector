@@ -120,11 +120,11 @@ public class MeasurementRetriever {
     /**
      * Loads all measurements of all users of the specified {@code userNames} from the database.
      *
-     * @param dataClient The client to access the data from
+     * @param mongoClient The client to access the data from
      * @return a {@code Future} containing the {@link MeasurementIterator} with the users' data if successful
      */
     @SuppressWarnings("unused") // Part of the API
-    public Future<MeasurementIterator> loadMeasurements(final MongoClient dataClient) {
+    public Future<MeasurementIterator> loadMeasurements(final MongoClient mongoClient) {
 
         final Promise<MeasurementIterator> promise = Promise.promise();
 
@@ -138,7 +138,7 @@ public class MeasurementRetriever {
                     promise.complete(output);
                 }
             };
-            final var bucketStream = dataClient.findBatchWithOptions(collectionName, query, strategy.findOptions());
+            final var bucketStream = mongoClient.findBatchWithOptions(collectionName, query, strategy.findOptions());
             new MeasurementIterator(bucketStream, strategy, promise::fail, initializedHandler);
         }
 

@@ -94,7 +94,6 @@ public class MainVerticleTest {
         Validate.notNull(privateKey);
         // noinspection SpellCheckingInspection
         return new JsonObject()
-                .put("mongo.userdb", mongoTest.clientConfiguration())
                 .put("jwt.public", publicKey.getFile())
                 .put("jwt.private", privateKey.getFile())
                 .put("http.host", "localhost")
@@ -102,6 +101,8 @@ public class MainVerticleTest {
                 .put("http.endpoint.v2", "/api/v2/")
                 .put("http.port", Network.getFreeServerPort())
                 .put("salt", "abcdefg")
+                .put("mongo.db", mongoTest.clientConfiguration())
+                // for API v2
                 .put("mongo.datadb", mongoTest.clientConfiguration());
     }
 

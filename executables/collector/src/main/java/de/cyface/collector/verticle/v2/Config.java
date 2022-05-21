@@ -4,10 +4,10 @@ import java.io.IOException;
 
 import org.apache.commons.lang3.Validate;
 
-import de.cyface.api.AuthenticatedEndpointConfig;
-import de.cyface.api.EndpointConfig;
+import de.cyface.api.v2.AuthenticatedEndpointConfig;
+import de.cyface.api.v2.EndpointConfig;
 import de.cyface.api.InvalidConfiguration;
-import de.cyface.api.Parameter;
+import de.cyface.api.v2.Parameter;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.auth.jwt.JWTAuth;
