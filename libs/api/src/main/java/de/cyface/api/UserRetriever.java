@@ -49,16 +49,16 @@ public class UserRetriever {
     /**
      * Loads the specified {@link User}s from the database.
      *
-     * @param dataClient The client to access the data from.
+     * @param mongoClient The client to access the data from.
      * @return a {@code Future} containing the {@link User}s if successful.
      */
-    public Future<List<User>> load(final MongoClient dataClient) {
+    public Future<List<User>> load(final MongoClient mongoClient) {
 
         final Promise<List<User>> promise = Promise.promise();
         final var fields = new JsonObject().put("_id", 1).put("username", 1);
         final var options = new FindOptions().setFields(fields);
 
-        final var find = dataClient.findWithOptions(collectionName, query, options);
+        final var find = mongoClient.findWithOptions(collectionName, query, options);
         find.onSuccess(result -> {
             final var users = result.stream().map(User::new).collect(Collectors.toList());
             promise.complete(users);

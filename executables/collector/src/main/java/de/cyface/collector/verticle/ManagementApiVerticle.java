@@ -65,10 +65,9 @@ public final class ManagementApiVerticle extends AbstractVerticle {
     public void start(final Promise<Void> startFuture) throws Exception {
         Validate.notNull(startFuture);
 
-        final var mongoUserDatabaseConfiguration = Parameter.MONGO_USER_DB.jsonValue(getVertx(),
-                new JsonObject());
+        final var databaseConfiguration = Parameter.MONGO_DB.jsonValue(getVertx(), new JsonObject());
 
-        final var client = EndpointConfig.createSharedMongoClient(getVertx(), mongoUserDatabaseConfiguration);
+        final var client = EndpointConfig.createSharedMongoClient(getVertx(), databaseConfiguration);
         final var hasher = new Hasher(HashingStrategy.load(), salt.getBytes(StandardCharsets.UTF_8));
         final var router = setupRouter(client, hasher);
 

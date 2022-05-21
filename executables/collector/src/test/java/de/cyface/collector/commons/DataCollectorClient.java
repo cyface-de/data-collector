@@ -94,8 +94,11 @@ public final class DataCollectorClient {
         final var publicKey = this.getClass().getResource("/public.pem");
         Validate.notNull(privateKey);
         Validate.notNull(publicKey);
-        final var config = new JsonObject().put(Parameter.MONGO_DATA_DB.key(), mongoDbConfig)
-                .put(Parameter.MONGO_USER_DB.key(), mongoDbConfig).put(Parameter.HTTP_PORT.key(), port)
+        final var config = new JsonObject().put(Parameter.MONGO_DB.key(), mongoDbConfig)
+                // Databases for API v2
+                .put(de.cyface.api.v2.Parameter.MONGO_DATA_DB.key(), mongoDbConfig)
+                .put(de.cyface.api.v2.Parameter.MONGO_USER_DB.key(), mongoDbConfig)
+                .put(Parameter.HTTP_PORT.key(), port)
                 .put(Parameter.JWT_PRIVATE_KEY_FILE_PATH.key(), privateKey.getFile())
                 .put(Parameter.JWT_PUBLIC_KEY_FILE_PATH.key(), publicKey.getFile())
                 .put(Parameter.HTTP_HOST.key(), "localhost")

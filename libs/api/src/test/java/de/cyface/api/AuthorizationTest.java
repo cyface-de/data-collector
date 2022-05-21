@@ -280,10 +280,10 @@ public class AuthorizationTest {
          * information to authorize a request and fetch the correct data.
          *
          * @param authProvider An auth provider used by this server to authenticate against the Mongo user database
-         * @param mongoUserDatabase The Mongo user database containing all information about users
+         * @param mongoDatabase The Mongo user database containing all information about users
          */
-        public TestAuthorizer(final MongoAuthentication authProvider, final MongoClient mongoUserDatabase) {
-            super(authProvider, mongoUserDatabase, new PauseAndResumeAfterBodyParsing());
+        public TestAuthorizer(final MongoAuthentication authProvider, final MongoClient mongoDatabase) {
+            super(authProvider, mongoDatabase, new PauseAndResumeAfterBodyParsing());
         }
 
         @Override

@@ -16,7 +16,7 @@
  * You should have received a copy of the GNU General Public License
  * along with the Cyface Data Collector. If not, see <http://www.gnu.org/licenses/>.
  */
-package de.cyface.api;
+package de.cyface.api.v2;
 
 import static de.cyface.api.Authenticator.JWT_HASH_ALGORITHM;
 
@@ -174,7 +174,7 @@ public interface AuthenticatedEndpointConfig extends EndpointConfig {
      *
      * @param vertx The <code>Vertx</code> instance to create the client from.
      * @param config Configuration of the newly created client. For further information refer to
-     *            {@link Parameter#MONGO_DB}.
+     *            {@link Parameter#MONGO_DATA_DB} and {@link Parameter#MONGO_USER_DB}.
      * @return A <code>MongoClient</code> ready for usage.
      */
     static MongoClient createSharedMongoClient(final Vertx vertx, final JsonObject config) {
@@ -183,12 +183,12 @@ public interface AuthenticatedEndpointConfig extends EndpointConfig {
                         + "Please provide a valid configuration using the %s parameter and at least as \"db_name\", "
                         + "a \"connection_string\" and a \"data_source_name\"! Also check if your database is running "
                         + "and accessible!",
-                Parameter.MONGO_DB.key()));
+                Parameter.MONGO_USER_DB.key()));
         final var dataSourceName = config.getString("data_source_name", DEFAULT_MONGO_DATA_SOURCE_NAME);
         return MongoClient.createShared(vertx, config, dataSourceName);
     }
 
-    MongoClient getDatabase();
+    MongoClient getUserDatabase();
 
     MongoAuthentication getAuthProvider();
 

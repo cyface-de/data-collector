@@ -58,7 +58,7 @@ public class MeasurementIteratorIntegrationTest {
     /**
      * The client to be used to access the test Mongo database.
      */
-    private MongoClient dataClient;
+    private MongoClient mongoClient;
 
     /**
      * Sets up a fresh test environment with a test mongo database before each test.
@@ -73,7 +73,7 @@ public class MeasurementIteratorIntegrationTest {
 
         // Set up a Mongo client to access the database
         final var mongoDbConfiguration = testMongoDatabase.config();
-        this.dataClient = MongoClient.createShared(vertx, mongoDbConfiguration, "cyface");
+        this.mongoClient = MongoClient.createShared(vertx, mongoDbConfiguration, "cyface");
     }
 
     /**
@@ -90,14 +90,14 @@ public class MeasurementIteratorIntegrationTest {
         // Arrange
 
         // Insert test data
-        final var insert = parameters.fixture.insertTestData(dataClient);
+        final var insert = parameters.fixture.insertTestData(mongoClient);
         insert.onSuccess(succeeded -> {
             // Ensure the test data is there
             final var ids = parameters.measurementIdentifiers.stream().map(id -> new JsonObject()
                     .put("metaData.deviceId", id.getDeviceIdentifier())
                     .put("metaData.measurementId", id.getMeasurementIdentifier())).collect(Collectors.toList());
             final var query = ids.size() > 0 ? new JsonObject().put("$or", ids) : new JsonObject();
-            final var testFind = dataClient.find("deserialized", query);
+            final var testFind = mongoClient.find("deserialized", query);
             testFind.onSuccess(result -> {
                 if (result.size() != parameters.expectedResults) {
                     testContext.failNow("Unexpected number of test documents");
@@ -106,7 +106,7 @@ public class MeasurementIteratorIntegrationTest {
 
                 // Now create the ReadStream<Buckets>
                 final var strategy = new MeasurementRetrievalWithoutSensorData();
-                final var bucketStream = dataClient.findBatchWithOptions("deserialized", query, strategy.findOptions());
+                final var bucketStream = mongoClient.findBatchWithOptions("deserialized", query, strategy.findOptions());
 
                 // Act: load measurements
                 final var returnedMeasurements = testContext.checkpoint(2);
