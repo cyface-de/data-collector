@@ -157,7 +157,7 @@ final public class MeasurementIterator implements Iterator<Future<Measurement>>,
             // Handle bucket of next measurement (i.e. all buckets of previous measurement loaded)
             // System.out.println("MeasurementStream.handle(next measurements buckets) -> resolveNext");
             resolveNext(cachedBuckets, measurementId, bucket);
-        } catch (ParseException e) {
+        } catch (ParseException | RuntimeException e) {
             failureHandler.handle(e);
         }
     }
