@@ -18,25 +18,17 @@
  */
 package de.cyface.api;
 
-import static java.util.stream.Collectors.groupingBy;
-import static java.util.stream.Collectors.toList;
-
 import java.text.ParseException;
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.Iterator;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.Semaphore;
-import java.util.stream.Collectors;
 
 import org.apache.commons.lang3.Validate;
 
-import de.cyface.api.model.TrackBucket;
 import de.cyface.model.Measurement;
 import de.cyface.model.MeasurementIdentifier;
-import de.cyface.model.Track;
+import de.cyface.model.TrackBucket;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Promise;
@@ -50,7 +42,7 @@ import io.vertx.core.streams.ReadStream;
  *
  * @author Armin Schnabel
  * @since 6.0.0
- * @version 1.0.0
+ * @version 1.0.1
  */
 final public class MeasurementIterator implements Iterator<Future<Measurement>>, Handler<JsonObject> {
 
@@ -112,7 +104,7 @@ final public class MeasurementIterator implements Iterator<Future<Measurement>>,
      * @param initializedHandler a {@code Handler} called when the instance of this class is fully initialized
      */
     public MeasurementIterator(final ReadStream<JsonObject> bucketStream, final MeasurementRetrievalStrategy strategy,
-                               final Handler<Throwable> failureHandler, final Handler<MeasurementIterator> initializedHandler) {
+            final Handler<Throwable> failureHandler, final Handler<MeasurementIterator> initializedHandler) {
 
         this.lastMeasurementHandler = new LastMeasurementHandler(this);
         bucketStream
@@ -227,7 +219,7 @@ final public class MeasurementIterator implements Iterator<Future<Measurement>>,
      */
     private void resolveNext(final List<TrackBucket> buckets, final MeasurementIdentifier nextMeasurementId,
             final TrackBucket nextBucket) {
-        final var measurement = measurement(buckets);
+        final var measurement = new Measurement(buckets);
 
         // Prepare cache for the next measurement
         cachedBuckets.clear();
@@ -244,67 +236,6 @@ final public class MeasurementIterator implements Iterator<Future<Measurement>>,
 
         // Resolve `nextMeasurement` promise
         promise.complete(measurement);
-    }
-
-    /**
-     * Constructs a new measurement from a document loaded from the database.
-     *
-     * @param buckets The data to load the measurement from
-     * @return The newly created {@link Measurement}
-     */
-    Measurement measurement(final List<TrackBucket> buckets) {
-        if (buckets.isEmpty()) {
-            throw new IllegalArgumentException("Cannot create a measurement from 0 buckets!");
-        }
-
-        final var tracks = tracks(buckets);
-        return new Measurement(buckets.get(0).getMetaData(), tracks);
-    }
-
-    /**
-     * Merges {@link TrackBucket}s into {@link Track}s.
-     *
-     * @param trackBuckets the data to merge
-     * @return the tracks
-     */
-    List<Track> tracks(final List<TrackBucket> trackBuckets) {
-
-        // Group by trackId
-        final var groupedBuckets = trackBuckets.stream()
-                .collect(groupingBy(TrackBucket::getTrackId));
-
-        // Sort bucket groups by trackId
-        final var sortedBucketGroups = groupedBuckets.entrySet().stream()
-                .sorted(Map.Entry.comparingByKey())
-                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue, (oldValue, newValue) -> oldValue,
-                        LinkedHashMap::new));
-
-        // Convert buckets to Track
-        final var tracks = new ArrayList<Track>();
-        sortedBucketGroups.forEach((trackId, bucketGroup) -> {
-            // Sort buckets
-            final var sortedBuckets = bucketGroup.stream()
-                    .sorted(Comparator.comparing(TrackBucket::getBucket))
-                    .collect(toList());
-
-            // Merge buckets
-            final var locations = sortedBuckets.stream()
-                    .flatMap(bucket -> bucket.getTrack().getLocationRecords().stream())
-                    .collect(Collectors.toList());
-            final var accelerations = sortedBuckets.stream()
-                    .flatMap(bucket -> bucket.getTrack().getAccelerations().stream())
-                    .collect(Collectors.toList());
-            final var rotations = sortedBuckets.stream()
-                    .flatMap(bucket -> bucket.getTrack().getRotations().stream())
-                    .collect(Collectors.toList());
-            final var directions = sortedBuckets.stream()
-                    .flatMap(bucket -> bucket.getTrack().getDirections().stream())
-                    .collect(Collectors.toList());
-
-            final var track = new Track(locations, accelerations, rotations, directions);
-            tracks.add(track);
-        });
-        return tracks;
     }
 
     /**

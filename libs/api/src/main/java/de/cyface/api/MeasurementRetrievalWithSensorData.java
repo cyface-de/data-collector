@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 Cyface GmbH
+ * Copyright 2021-2022 Cyface GmbH
  *
  * This file is part of the Cyface Data Collector.
  *
@@ -19,10 +19,11 @@
 package de.cyface.api;
 
 import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 
-import de.cyface.api.model.TrackBucket;
 import de.cyface.model.Track;
+import de.cyface.model.TrackBucket;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.mongo.FindOptions;
 
@@ -38,8 +39,12 @@ import io.vertx.ext.mongo.FindOptions;
  * - this proxy has not yet loaded the measurement data but knows how to load the data on demand
  * - this proxy might have the ability to load itself on a WriteStream (piece by piece), depending on the output format
  * - i.e. this Measurement Interface MeasurementWriteStream
+ *
+ * @author Armin Schnabel
+ * @since 6.0.0
+ * @version 1.0.0
  */
-public class MeasurementRetrievalWithSensorData extends MeasurementRetrievalImpl {
+public class MeasurementRetrievalWithSensorData implements MeasurementRetrievalStrategy {
 
     @Override
     public FindOptions findOptions() {
@@ -67,6 +72,8 @@ public class MeasurementRetrievalWithSensorData extends MeasurementRetrievalImpl
         final var directions = new ArrayList<>(point3D(directionsDocuments));
 
         final var track = new Track(locationRecords, accelerations, rotations, directions);
-        return new TrackBucket(trackId, bucket, track, metaData);
+        // noinspection SpellCheckingInspection
+        final var date = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'").parse(bucket.getString("$date"));
+        return new TrackBucket(trackId, date, track, metaData);
     }
 }

@@ -22,9 +22,9 @@ import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.List;
 
+import de.cyface.model.TrackBucket;
 import org.apache.commons.lang3.Validate;
 
-import de.cyface.api.model.TrackBucket;
 import de.cyface.model.MeasurementIdentifier;
 import de.cyface.model.MetaData;
 import de.cyface.model.Modality;
@@ -40,6 +40,7 @@ import io.vertx.ext.mongo.FindOptions;
  *
  * @author Armin Schnabel
  * @since 6.0.0
+ * @version 1.0.0
  */
 public interface MeasurementRetrievalStrategy {
 
