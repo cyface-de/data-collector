@@ -37,6 +37,7 @@ import io.vertx.core.Promise;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.mongo.MongoClient;
+import org.bson.types.ObjectId;
 
 /**
  * A test document inside the Mongo database which contains an unpacked (deserialized) measurement.
@@ -93,7 +94,7 @@ public final class TestMeasurementDocument implements MongoTestData {
                 .put(METADATA_OS_VERSION_FIELD, "Android 9.0.0")
                 .put(METADATA_APP_VERSION_FIELD, "1.2.0")
                 .put(METADATA_LENGTH_FIELD, 1500.2)
-                .put(USER_ID_FIELD, ownerUserId)
+                .put(USER_ID_FIELD, new JsonObject(ownerUserId))
                 .put(METADATA_VERSION_FIELD, "2.0.0");
 
         final JsonArray geoLocations = new JsonArray();

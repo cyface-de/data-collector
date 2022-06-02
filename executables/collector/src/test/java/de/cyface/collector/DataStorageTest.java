@@ -146,8 +146,8 @@ public final class DataStorageTest {
 
             fileUploadFutures.add(fileSystem.createTempFile("de.cyface.collector", "test"));
             CompositeFuture.all(fileUploadFutures).compose(result -> {
-                final var uploadedFileId = (String)result.resultAt(0);
-                final var tempFileName = (String)result.list().get(result.list().size() - 1);
+                final var uploadedFileId = (String) result.resultAt(0);
+                final var tempFileName = (String) result.list().get(result.list().size() - 1);
                 return CompositeFuture.all(gridFsClient.downloadFileByID(uploadedFileId, tempFileName),
                         client.find("fs.files", new JsonObject().put("_id",
                                 new JsonObject().put("$oid", new ObjectId(uploadedFileId).toHexString()))));
@@ -190,7 +190,7 @@ public final class DataStorageTest {
          * }
          */
         ret.put(FormAttributes.MODALITY.getValue(), "BICYCLE");
-        ret.put(USER_ID_FIELD, new ObjectId().toString());
+        ret.put(USER_ID_FIELD, new ObjectId());
 
         return ret;
     }
