@@ -21,6 +21,7 @@ package de.cyface.api;
 import java.time.ZonedDateTime;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import de.cyface.model.MeasurementIdentifier;
 import io.vertx.core.Future;
@@ -104,7 +105,8 @@ public class MeasurementRetriever {
 
         this.collectionName = collectionName;
         this.strategy = strategy;
-        this.query = new JsonObject().put("metaData.userId", new JsonObject().put("$in", userIds));
+        final var objectIds = userIds.stream().map(id -> new JsonObject().put("$oid", id)).collect(Collectors.toList());
+        this.query = new JsonObject().put("metaData.userId", new JsonObject().put("$in", objectIds));
         if (startTime != null || endTime != null) {
             final var timeRestriction = new JsonObject();
             if (startTime != null) {

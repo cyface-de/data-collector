@@ -36,6 +36,7 @@ import io.vertx.core.Promise;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.mongo.MongoClient;
+import org.bson.types.ObjectId;
 
 /**
  * Loads classified segments from the database for a vert.x context.
@@ -137,7 +138,7 @@ public class ClassifiedSegmentRetriever<T extends ClassifiedSegment> {
         this.factory = ClassifiedSegmentFactoryProvider.getFactory(MEASUREMENT_BASED);
 
         this.query = new JsonObject()
-                .put("userId", segment.getUserId())
+                .put("userId", new JsonObject().put("$oid", segment.getUserId()))
                 .put("modality", segment.getModality().getDatabaseIdentifier())
                 .put("way", segment.getWay())
                 .put("forward", segment.isForward())

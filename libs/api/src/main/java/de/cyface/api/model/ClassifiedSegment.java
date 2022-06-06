@@ -356,7 +356,7 @@ public class ClassifiedSegment {
         getTags().forEach(tags::put);
         ret.put("tags", tags);
         ret.put("latest_data_point", new JsonObject().put("$date", getLatestDataPoint().toString()));
-        ret.put("userId", new ObjectId(getUserId()));
+        ret.put("userId", new JsonObject().put("$oid",getUserId()));
         ret.put("expected_value", getExpectedValue());
         ret.put("variance", getVariance());
         ret.put("quality", getQuality().databaseValue);
