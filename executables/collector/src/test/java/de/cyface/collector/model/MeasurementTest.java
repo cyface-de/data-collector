@@ -54,7 +54,7 @@ public class MeasurementTest {
         final var modality = "CAR";
         final var userId = "624d8c51c0879068499676c6";
         final var binary = Paths.get("testDir", "testFile").toAbsolutePath().toFile();
-        final var formatVersion = 2;
+        final var formatVersion = 3;
         final var metaData = new RequestMetaData(did, mid, osVersion, deviceType, appVersion, length, locationCount,
                 startLocation, endLocation, modality, formatVersion);
         final var measurement = new Measurement(metaData, userId, binary);

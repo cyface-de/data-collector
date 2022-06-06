@@ -236,7 +236,7 @@ public final class FileUploadTooLargeTest {
                     metaDataBody.put("endLocLat", TEST_MEASUREMENT_END_LOCATION_LAT);
                     metaDataBody.put("osVersion", "testOsVersion");
                     metaDataBody.put("measurementId", measurementIdentifier);
-                    metaDataBody.put("formatVersion", "2");
+                    metaDataBody.put("formatVersion", "3");
 
                     // Send Pre-Request
                     final var builder = client.post(collectorClient.getPort(), "localhost",
@@ -328,7 +328,7 @@ public final class FileUploadTooLargeTest {
                     builder.putHeader("endLocLat", "50.59502970913889");
                     builder.putHeader("osVersion", "testOsVersion");
                     builder.putHeader("measurementId", measurementIdentifier);
-                    builder.putHeader("formatVersion", "2");
+                    builder.putHeader("formatVersion", "3");
 
                     final var file = vertx.fileSystem().openBlocking(testFileResource.getFile(), new OpenOptions());
                     builder.sendStream(file, handler);
