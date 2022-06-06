@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 Cyface GmbH
+ * Copyright 2021 - 2022 Cyface GmbH
  *
  * This file is part of the Cyface Data Collector.
  *
@@ -44,7 +44,7 @@ import io.vertx.ext.web.Session;
  * This end point tells the client if the upload may continue or should be skipped.
  *
  * @author Armin Schnabel
- * @version 1.0.0
+ * @version 1.0.1
  * @since 6.0.0
  */
 public class PreRequestHandler extends Authorizer {
@@ -72,7 +72,7 @@ public class PreRequestHandler extends Authorizer {
      * The current version of the transferred file. This is always specified by the first two bytes of the file
      * transferred and helps compatible APIs to process data from different client versions.
      */
-    public static final int CURRENT_TRANSFER_FILE_FORMAT_VERSION = 2;
+    public static final int CURRENT_TRANSFER_FILE_FORMAT_VERSION = 3;
 
     /**
      * The header field which contains the number of bytes of the "requested" upload.
