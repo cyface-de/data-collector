@@ -226,7 +226,7 @@ public final class Measurement implements Serializable {
             final var modalityLength = buffer.getInt(5 * Integer.BYTES);
             final var usernameLength = buffer.getInt(6 * Integer.BYTES);
             final var formatVersion = buffer.getInt(7 * Integer.BYTES);
-            Validate.isTrue(formatVersion == 2);
+            Validate.isTrue(formatVersion == 3);
 
             final var deviceIdentifierEnd = 8 * Integer.BYTES + deviceIdentifierLength;
             final var deviceIdentifier = buffer.getString(8 * Integer.BYTES, deviceIdentifierEnd);
