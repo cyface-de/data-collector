@@ -28,7 +28,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.util.Collections;
-import java.util.List;
+import java.util.Set;
 import java.util.stream.Stream;
 
 import org.bson.types.ObjectId;
@@ -144,15 +144,15 @@ public class AuthorizerTest {
     @SuppressWarnings("unused")
     static Stream<TestParameters> testParameters() {
         return Stream.of(
-                new TestParameters(new JsonArray().add("guest"), Collections.singletonList(TEST_USER)),
-                new TestParameters(new JsonArray().add("project_user"), Collections.singletonList(TEST_USER)));
+                new TestParameters(new JsonArray().add("guest"), Collections.singleton(TEST_USER)),
+                new TestParameters(new JsonArray().add("project_user"), Collections.singleton(TEST_USER)));
     }
 
     private static class TestParameters {
         JsonArray roles;
-        List<User> expectedResult;
+        Set<User> expectedResult;
 
-        public TestParameters(JsonArray roles, List<User> expectedResult) {
+        public TestParameters(JsonArray roles, Set<User> expectedResult) {
             this.roles = roles;
             this.expectedResult = expectedResult;
         }
@@ -172,7 +172,7 @@ public class AuthorizerTest {
         }
 
         @Override
-        protected void handleAuthorizedRequest(RoutingContext ctx, List<User> users, MultiMap header) {
+        protected void handleAuthorizedRequest(RoutingContext ctx, Set<User> users, MultiMap header) {
             // Nothing to do
         }
     }

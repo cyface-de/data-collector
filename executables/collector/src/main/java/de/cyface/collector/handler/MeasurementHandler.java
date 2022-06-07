@@ -28,7 +28,7 @@ import static de.cyface.collector.handler.StatusHandler.RESUME_INCOMPLETE;
 import java.io.File;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -125,7 +125,7 @@ public final class MeasurementHandler extends Authorizer {
     }
 
     @Override
-    protected void handleAuthorizedRequest(final RoutingContext ctx, final List<de.cyface.api.model.User> users,
+    protected void handleAuthorizedRequest(final RoutingContext ctx, final Set<User> users,
             final MultiMap header) {
         LOGGER.info("Received new measurement request.");
         final var request = ctx.request();
@@ -136,7 +136,7 @@ public final class MeasurementHandler extends Authorizer {
             final var username = ctx.user().principal().getString("username");
             final var matched = users.stream().filter(u -> u.getName().equals(username)).collect(Collectors.toList());
             Validate.isTrue(matched.size() == 1);
-            final var user = users.get(0);
+            final var loggedInUser = matched.stream().findFirst().get(); // Make sure it's the matched user
 
             final var bodySize = bodySize(request.headers(), payloadLimit, "content-length");
             final var metaData = metaData(request);
@@ -151,7 +151,7 @@ public final class MeasurementHandler extends Authorizer {
             // Handle first chunk
             final var contentRange = contentRange(request, bodySize);
             if (session.get(UPLOAD_PATH_FIELD) == null) {
-                handleFirstChunkUpload(ctx, request, session, user, contentRange, metaData, null);
+                handleFirstChunkUpload(ctx, request, session, loggedInUser, contentRange, metaData, null);
                 return;
             }
 
@@ -165,11 +165,11 @@ public final class MeasurementHandler extends Authorizer {
 
                     if (!fileExists) {
                         session.remove(UPLOAD_PATH_FIELD); // was linked to non-existing file
-                        handleFirstChunkUpload(ctx, request, session, user, contentRange, metaData, path);
+                        handleFirstChunkUpload(ctx, request, session, loggedInUser, contentRange, metaData, path);
                         return;
                     }
 
-                    handleSubsequentChunkUpload(ctx, request, session, user, contentRange, metaData, path);
+                    handleSubsequentChunkUpload(ctx, request, session, loggedInUser, contentRange, metaData, path);
                 } catch (final RuntimeException e) {
                     ctx.fail(500, e);
                 }
