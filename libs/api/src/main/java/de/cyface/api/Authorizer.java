@@ -21,9 +21,10 @@ package de.cyface.api;
 import static io.vertx.ext.auth.mongo.MongoAuthorization.DEFAULT_ROLE_FIELD;
 import static io.vertx.ext.auth.mongo.MongoAuthorization.DEFAULT_USERNAME_FIELD;
 
-import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 import org.apache.commons.lang3.Validate;
@@ -150,12 +151,11 @@ public abstract class Authorizer implements Handler<RoutingContext> {
     /**
      * This is the method that should be implemented by subclasses to carry out the business logic on an authorized
      * request.
-     * 
-     * @param ctx Vert.x request context
+     *  @param ctx Vert.x request context
      * @param users A list of usernames for which the request is authorized to export data
      * @param header the header of the request which may contain parameters required to process the request.
      */
-    protected abstract void handleAuthorizedRequest(final RoutingContext ctx, final List<User> users,
+    protected abstract void handleAuthorizedRequest(final RoutingContext ctx, final Set<User> users,
             final MultiMap header);
 
     /**
@@ -171,8 +171,8 @@ public abstract class Authorizer implements Handler<RoutingContext> {
      * @param principal The principal object of the authenticated {@code User} which requests user data
      * @return The ids of the users which the {@code user} can access
      */
-    public Future<List<User>> loadAccessibleUsers(final JsonObject principal) {
-        final Promise<List<User>> promise = Promise.promise();
+    public Future<Set<User>> loadAccessibleUsers(final JsonObject principal) {
+        final Promise<Set<User>> promise = Promise.promise();
 
         // Load id of authenticated user
         final var username = Validate.notEmpty(principal.getString(DEFAULT_USERNAME_FIELD));
@@ -188,7 +188,7 @@ public abstract class Authorizer implements Handler<RoutingContext> {
                 final var managerRoles = roles.stream().filter(r -> r.getType().equals(Role.Type.GROUP_MANAGER))
                         .collect(Collectors.toList());
                 if (managerRoles.isEmpty()) {
-                    promise.complete(Collections.singletonList(user));
+                    promise.complete(Collections.singleton(user));
                 } else if (managerRoles.size() > 1) {
                     promise.fail(new IllegalArgumentException(
                             String.format("User %s is manager of more than one group.", user)));
@@ -197,7 +197,7 @@ public abstract class Authorizer implements Handler<RoutingContext> {
                     final var loadUsers = loadAccessibleUsers(groupManager);
                     loadUsers.onSuccess(groupUsers -> {
                         try {
-                            final var ret = new ArrayList<>(groupUsers);
+                            final var ret = new HashSet<>(groupUsers);
                             ret.add(user);
                             promise.complete(ret);
                         } catch (RuntimeException e) {

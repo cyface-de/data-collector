@@ -18,7 +18,7 @@
  */
 package de.cyface.collector.handler;
 
-import java.util.List;
+import java.util.Set;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -128,7 +128,7 @@ public class PreRequestHandler extends Authorizer {
     }
 
     @Override
-    protected void handleAuthorizedRequest(final RoutingContext ctx, final List<User> users, final MultiMap header) {
+    protected void handleAuthorizedRequest(final RoutingContext ctx, final Set<User> users, final MultiMap header) {
 
         LOGGER.info("Received new pre-request.");
         final var request = ctx.request();

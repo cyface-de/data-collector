@@ -26,6 +26,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -287,7 +288,7 @@ public class AuthorizationTest {
         }
 
         @Override
-        protected void handleAuthorizedRequest(final RoutingContext ctx, final List<User> users,
+        protected void handleAuthorizedRequest(final RoutingContext ctx, final Set<User> users,
                 final MultiMap header) {
             // Nothing to do
         }
