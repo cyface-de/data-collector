@@ -36,6 +36,7 @@ import io.vertx.core.Promise;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.mongo.MongoClient;
+import org.bson.types.ObjectId;
 
 /**
  * Loads classified segments from the database for a vert.x context.
@@ -109,7 +110,7 @@ public class ClassifiedSegmentRetriever<T extends ClassifiedSegment> {
         this.factory = factory;
 
         this.query = new JsonObject();
-        final var userIds = users.stream().map(User::getIdString).collect(Collectors.toList());
+        final var userIds = users.stream().map(u -> new JsonObject().put("$oid", u.getIdString())).collect(Collectors.toList());
         query.put(USER_ID_FIELD, new JsonObject().put("$in", new JsonArray(userIds)));
         if (startTime != null || endTime != null) {
             final var timeRestriction = new JsonObject();
