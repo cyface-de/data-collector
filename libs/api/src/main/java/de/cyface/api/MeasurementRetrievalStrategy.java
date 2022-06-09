@@ -22,9 +22,9 @@ import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.List;
 
+import de.cyface.model.TrackBucket;
 import org.apache.commons.lang3.Validate;
 
-import de.cyface.api.model.TrackBucket;
 import de.cyface.model.MeasurementIdentifier;
 import de.cyface.model.MetaData;
 import de.cyface.model.Modality;
@@ -40,6 +40,7 @@ import io.vertx.ext.mongo.FindOptions;
  *
  * @author Armin Schnabel
  * @since 6.0.0
+ * @version 1.0.0
  */
 public interface MeasurementRetrievalStrategy {
 
@@ -68,8 +69,8 @@ public interface MeasurementRetrievalStrategy {
     default MetaData metaData(final JsonObject document) {
         final var metaData = document.getJsonObject("metaData");
         final var version = metaData.getString("version");
-        Validate.isTrue(version.equals(MetaData.CURRENT_VERSION),
-                "Encountered data in invalid format. Only Cyface Format Version 1.0.0 is supported!");
+        Validate.isTrue(version.matches(MetaData.SUPPORTED_VERSIONS),
+                "Encountered data in an unsupported deserialized format: %s", version);
 
         final var identifier = new MeasurementIdentifier(metaData.getString("deviceId"),
                 metaData.getLong("measurementId"));
