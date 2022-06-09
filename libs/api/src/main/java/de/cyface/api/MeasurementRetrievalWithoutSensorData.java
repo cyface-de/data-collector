@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 Cyface GmbH
+ * Copyright 2021-2022 Cyface GmbH
  *
  * This file is part of the Cyface Data Collector.
  *
@@ -19,10 +19,11 @@
 package de.cyface.api;
 
 import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 
-import de.cyface.api.model.TrackBucket;
 import de.cyface.model.Track;
+import de.cyface.model.TrackBucket;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.mongo.FindOptions;
 
@@ -30,9 +31,13 @@ import io.vertx.ext.mongo.FindOptions;
  * This implementation of the {@link MeasurementRetrievalStrategy} only loads the {@link Track} data from the database
  * when retrieving measurements. I.e. the sensor data lists attached in the tracks will be empty to reduce load.
  * <p>
- * If you need the sensor data, use {@link MeasurementRetrievalWithoutSensorData} instead.
+ * If you need the sensor data, use {@link MeasurementRetrievalWithSensorData} instead.
+ *
+ * @author Armin Schnabel
+ * @since 6.0.0
+ * @version 1.0.0
  */
-public class MeasurementRetrievalWithoutSensorData extends MeasurementRetrievalImpl {
+public class MeasurementRetrievalWithoutSensorData implements MeasurementRetrievalStrategy {
 
     @Override
     public FindOptions findOptions() {
@@ -57,6 +62,8 @@ public class MeasurementRetrievalWithoutSensorData extends MeasurementRetrievalI
         final var locationRecords = geoLocations(geoLocationsDocuments, metaData.getIdentifier());
 
         final var track = new Track(locationRecords, new ArrayList<>(), new ArrayList<>(), new ArrayList<>());
-        return new TrackBucket(trackId, bucket, track, metaData);
+        // noinspection SpellCheckingInspection
+        final var date = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'").parse(bucket.getString("$date"));
+        return new TrackBucket(trackId, date, track, metaData);
     }
 }
