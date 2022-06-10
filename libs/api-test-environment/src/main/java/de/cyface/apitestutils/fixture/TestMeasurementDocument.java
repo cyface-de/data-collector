@@ -29,7 +29,6 @@ import static de.cyface.apitestutils.fixture.DatabaseConstants.METADATA_OS_VERSI
 import static de.cyface.apitestutils.fixture.DatabaseConstants.METADATA_VERSION_FIELD;
 import static de.cyface.apitestutils.fixture.DatabaseConstants.USER_ID_FIELD;
 
-import de.cyface.model.Json;
 import org.apache.commons.lang3.Validate;
 
 import de.cyface.model.Modality;
@@ -38,7 +37,6 @@ import io.vertx.core.Promise;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.mongo.MongoClient;
-import org.bson.types.ObjectId;
 
 /**
  * A test document inside the Mongo database which contains an unpacked (deserialized) measurement.

@@ -36,7 +36,6 @@ import io.vertx.core.Promise;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.mongo.MongoClient;
-import org.bson.types.ObjectId;
 
 /**
  * Loads classified segments from the database for a vert.x context.

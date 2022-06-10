@@ -118,7 +118,10 @@ public final class Measurement implements Serializable {
             ret.put("end", geoJson(metaData.getEndLocation()));
         }
         ret.put(FormAttributes.MODALITY.getValue(), metaData.getModality());
-        ret.put(USER_ID_FIELD, new ObjectId(userId));
+        // We can only store the usedId as string as:
+        // - `new ObjectId(userId)` inserts `{timestamp:1654072354, date:1654072354000}` into the database
+        // - `new JsonObject().put("$oid", userId))` leads to an exception: Invalid BSON field name $oid
+        ret.put(USER_ID_FIELD, userId);
         ret.put(FormAttributes.FORMAT_VERSION.getValue(), metaData.getFormatVersion());
 
         return ret;
