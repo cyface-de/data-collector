@@ -109,7 +109,7 @@ public class ClassifiedSegmentRetriever<T extends ClassifiedSegment> {
         this.factory = factory;
 
         this.query = new JsonObject();
-        final var userIds = users.stream().map(User::getIdString).collect(Collectors.toList());
+        final var userIds = users.stream().map(u -> new JsonObject().put("$oid", u.getIdString())).collect(Collectors.toList());
         query.put(USER_ID_FIELD, new JsonObject().put("$in", new JsonArray(userIds)));
         if (startTime != null || endTime != null) {
             final var timeRestriction = new JsonObject();

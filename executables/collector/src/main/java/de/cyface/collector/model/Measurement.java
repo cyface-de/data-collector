@@ -29,6 +29,7 @@ import io.vertx.core.buffer.Buffer;
 import io.vertx.core.eventbus.MessageCodec;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
+import org.bson.types.ObjectId;
 
 /**
  * A POJO representing a single measurement, which has arrived at the API version 3 and needs to be stored to persistent
@@ -117,7 +118,10 @@ public final class Measurement implements Serializable {
             ret.put("end", geoJson(metaData.getEndLocation()));
         }
         ret.put(FormAttributes.MODALITY.getValue(), metaData.getModality());
-        ret.put(USER_ID_FIELD, userId.toString());
+        // We can only store the usedId as string as:
+        // - `new ObjectId(userId)` inserts `{timestamp:1654072354, date:1654072354000}` into the database
+        // - `new JsonObject().put("$oid", userId))` leads to an exception: Invalid BSON field name $oid
+        ret.put(USER_ID_FIELD, userId);
         ret.put(FormAttributes.FORMAT_VERSION.getValue(), metaData.getFormatVersion());
 
         return ret;
@@ -180,7 +184,7 @@ public final class Measurement implements Serializable {
             buffer.appendInt(operatingSystemVersion.length());
             buffer.appendInt(applicationVersion.length());
             buffer.appendInt(modality.length());
-            buffer.appendInt(userId.toString().length());
+            buffer.appendInt(userId.length());
 
             buffer.appendInt(metaData.getFormatVersion());
             buffer.appendString(deviceIdentifier);
@@ -191,7 +195,7 @@ public final class Measurement implements Serializable {
             buffer.appendDouble(length);
             buffer.appendLong(locationCount);
             buffer.appendString(modality);
-            buffer.appendString(userId.toString());
+            buffer.appendString(userId);
 
             if (locationCount > 0) {
                 final var startLocationLat = metaData.getStartLocation().getLatitude();

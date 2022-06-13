@@ -93,7 +93,7 @@ public final class TestMeasurementDocument implements MongoTestData {
                 .put(METADATA_OS_VERSION_FIELD, "Android 9.0.0")
                 .put(METADATA_APP_VERSION_FIELD, "1.2.0")
                 .put(METADATA_LENGTH_FIELD, 1500.2)
-                .put(USER_ID_FIELD, ownerUserId)
+                .put(USER_ID_FIELD, new JsonObject().put("$oid", ownerUserId)) // new ObjectId() not supported
                 .put(METADATA_VERSION_FIELD, "2.0.0");
 
         final JsonArray geoLocations = new JsonArray();

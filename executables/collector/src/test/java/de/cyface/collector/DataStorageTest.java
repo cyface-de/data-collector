@@ -190,7 +190,7 @@ public final class DataStorageTest {
          * }
          */
         ret.put(FormAttributes.MODALITY.getValue(), "BICYCLE");
-        ret.put(USER_ID_FIELD, new ObjectId().toString());
+        ret.put(USER_ID_FIELD, new ObjectId());
 
         return ret;
     }

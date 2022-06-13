@@ -198,7 +198,7 @@ public class ClassifiedSegment {
         this.wayOffset = segment.getDouble("way_offset");
         this.tags = segment.getJsonObject("tags").getMap();
         this.latestDataPoint = OffsetDateTime.parse(segment.getJsonObject("latest_data_point").getString("$date"));
-        this.userId = segment.getString("userId");
+        this.userId = segment.getJsonObject("userId").getString("$oid");
         this.expectedValue = segment.getDouble("expected_value");
         this.variance = segment.getDouble("variance");
         // We're expecting a large number of segments stored, we store the quality class as Integer instead of String.
@@ -355,7 +355,7 @@ public class ClassifiedSegment {
         getTags().forEach(tags::put);
         ret.put("tags", tags);
         ret.put("latest_data_point", new JsonObject().put("$date", getLatestDataPoint().toString()));
-        ret.put("userId", getUserId());
+        ret.put("userId", new JsonObject().put("$oid", getUserId()));
         ret.put("expected_value", getExpectedValue());
         ret.put("variance", getVariance());
         ret.put("quality", getQuality().databaseValue);
@@ -396,7 +396,7 @@ public class ClassifiedSegment {
                 ", tags=" + tags +
                 ", modality=" + modality +
                 ", latestDataPoint=" + latestDataPoint +
-                ", username='" + userId + '\'' +
+                ", userId='" + userId + '\'' +
                 ", expectedValue=" + expectedValue +
                 ", variance=" + variance +
                 ", quality=" + quality +

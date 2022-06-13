@@ -78,7 +78,7 @@ public interface MeasurementRetrievalStrategy {
         final var osVersion = metaData.getString("osVersion");
         final var appVersion = metaData.getString("appVersion");
         final var length = metaData.getDouble("length");
-        final var userId = metaData.getString("userId");
+        final var userId = metaData.getJsonObject("userId").getString("$oid");
         return new MetaData(identifier, deviceType, osVersion, appVersion, length, userId, version);
     }
 
