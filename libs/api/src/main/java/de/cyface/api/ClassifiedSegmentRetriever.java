@@ -136,7 +136,7 @@ public class ClassifiedSegmentRetriever<T extends ClassifiedSegment> {
         this.factory = ClassifiedSegmentFactoryProvider.getFactory(MEASUREMENT_BASED);
 
         this.query = new JsonObject()
-                .put("userId", segment.getUserId())
+                .put("userId", new JsonObject().put("$oid", segment.getUserId()))
                 .put("modality", segment.getModality().getDatabaseIdentifier())
                 .put("way", segment.getWay())
                 .put("forward", segment.isForward())
