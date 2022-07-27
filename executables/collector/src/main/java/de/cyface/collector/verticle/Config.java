@@ -55,7 +55,7 @@ public class Config implements AuthenticatedEndpointConfig {
     /**
      * A parameter for the endpoint path the API service is available at.
      */
-    private static final Parameter HTTP_ENDPOINT = Parameter.HTTP_ENDPOINT_V3;
+    private static final Parameter HTTP_ENDPOINT = Parameter.HTTP_ENDPOINT;
     /**
      * The port on which the HTTP server should listen
      */

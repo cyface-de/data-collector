@@ -104,8 +104,7 @@ public class Application extends Launcher {
      */
     private void checkValidConfiguration(final JsonObject config) {
         if (config.getString(Parameter.HTTP_HOST.key()) == null
-                || config.getString(Parameter.HTTP_ENDPOINT_V3.key()) == null
-                || config.getString(Parameter.HTTP_ENDPOINT_V2.key()) == null) {
+                || config.getString(Parameter.HTTP_ENDPOINT.key()) == null) {
             throw new InvalidConfiguration(config);
         }
     }
