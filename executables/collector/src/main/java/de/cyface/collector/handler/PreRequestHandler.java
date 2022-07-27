@@ -135,7 +135,7 @@ public class PreRequestHandler extends Authorizer {
         final var session = ctx.session();
 
         // Do not use `request.body()` as the Vert.X `BodyHandler` already reads the body and throws 403 [DAT-749]
-        final var metaData = ctx.getBodyAsJson();
+        final var metaData = ctx.body().asJsonObject();
         try {
             bodySize(request.headers(), measurementLimit, X_UPLOAD_CONTENT_LENGTH_FIELD);
             check(metaData);

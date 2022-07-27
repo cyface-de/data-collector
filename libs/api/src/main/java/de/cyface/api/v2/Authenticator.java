@@ -120,7 +120,7 @@ public final class Authenticator implements Handler<RoutingContext> {
     @Override
     public void handle(final RoutingContext ctx) {
         try {
-            final var body = ctx.getBodyAsJson();
+            final var body = ctx.body().asJsonObject();
             LOGGER.debug("Receiving authentication request for user {}", body.getString("username"));
             final var authentication = authProvider.authenticate(body);
             authentication.onSuccess(user -> {
