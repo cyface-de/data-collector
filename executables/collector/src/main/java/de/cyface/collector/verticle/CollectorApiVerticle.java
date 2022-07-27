@@ -217,8 +217,8 @@ public final class CollectorApiVerticle extends AbstractVerticle {
         final var v2ApiRouter = Router.router(vertx);
         final var v3ApiRouter = Router.router(vertx);
 
-        mainRouter.mountSubRouter(configV2.getEndpoint(), v2ApiRouter);
-        mainRouter.mountSubRouter(configV3.getEndpoint(), v3ApiRouter);
+        mainRouter.route(configV2.getEndpoint()).subRouter(v2ApiRouter);
+        mainRouter.route(configV3.getEndpoint()).subRouter(v3ApiRouter);
         setupApiV2Router(v2ApiRouter, configV2);
         setupApiV3Router(v3ApiRouter, configV3);
 
@@ -304,8 +304,8 @@ public final class CollectorApiVerticle extends AbstractVerticle {
         final var jwtAuthHandler = JWTAuthHandler.create(jwtAuth);
         router.post(endpoint)
                 .consumes("multipart/form-data")
-                .handler(bodyHandler)
                 .handler(LoggerHandler.create())
+                .handler(bodyHandler)
                 .handler(jwtAuthHandler)
                 .handler(handler)
                 .failureHandler(failureHandler);
@@ -329,8 +329,8 @@ public final class CollectorApiVerticle extends AbstractVerticle {
         router.post(endpoint)
                 .consumes("application/json; charset=UTF-8")
                 // Ready request body only once and before async calls or pause/resume must be used see [DAT-749]
-                .handler(bodyHandler)
                 .handler(LoggerHandler.create())
+                .handler(bodyHandler)
                 .handler(jwtHandler)
                 .handler(handler)
                 .failureHandler(failureHandler);

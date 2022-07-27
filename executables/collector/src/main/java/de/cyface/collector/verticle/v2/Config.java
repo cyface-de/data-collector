@@ -136,7 +136,14 @@ public class Config implements AuthenticatedEndpointConfig {
     }
 
     public String getEndpoint() {
-        return endpoint;
+        final var builder = new StringBuilder(endpoint);
+        final var lastChar = endpoint.charAt(endpoint.length()-1);
+        if(lastChar=='/') {
+            builder.append("*");
+        } else if(lastChar!='*'){
+            builder.append("/*");
+        }
+        return builder.toString();
     }
 
     public MongoClient getDataDatabase() {

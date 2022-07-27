@@ -183,8 +183,8 @@ public final class Authenticator implements Handler<RoutingContext> {
                 config.getTokenExpirationTime());
         router.route(loginEndpoint)
                 .consumes("application/json")
-                .handler(BodyHandler.create().setBodyLimit(2 * BYTES_IN_ONE_KILOBYTE))
                 .handler(LoggerHandler.create())
+                .handler(BodyHandler.create().setBodyLimit(2 * BYTES_IN_ONE_KILOBYTE))
                 .handler(authenticator)
                 .failureHandler(new AuthenticationFailureHandler());
     }
