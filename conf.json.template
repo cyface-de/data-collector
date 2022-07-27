@@ -22,7 +22,6 @@
 	"admin.password":"secret",
 	"http.port":8080,
 	"http.host":"localhost",
-	"http.endpoint.v3":"/api/v3",
-	"http.endpoint.v2":"/api/v2",
+	"http.endpoint":"/api/v3",
 	"http.port.management":13371
 }

@@ -37,6 +37,7 @@ import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.mongo.MongoClient;
 
+// TODO: This should probably be deleted or go into some other project.
 /**
  * Loads classified segments from the database for a vert.x context.
  *

@@ -116,14 +116,6 @@ public class DatabaseConstants {
      */
     public static final String CHUNKS_DATA_BINARY_FIELD = "$binary";
     /**
-     * The database field name.
-     */
-    public static final String METADATA_FILE_TYPE_FIELD = "fileType";
-    /**
-     * The file extension of Compressed Cyface "Events" binary files.
-     */
-    public static final String METADATA_FILE_TYPE_CCYFE = "ccyfe";
-    /**
      * The file extension of Compressed Cyface "Events" binary files.
      */
     public static final String METADATA_FILE_TYPE_CCYF = "ccyf";

@@ -37,6 +37,7 @@ import de.cyface.model.Modality;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 
+// TODO: This should probably be deleted or go into some other project.
 /**
  * Class which represents result elements from the surface pipeline: classified road segments.
  * <p>

@@ -32,6 +32,7 @@ import de.cyface.model.Modality;
 import io.vertx.core.json.JsonObject;
 import org.apache.commons.lang3.Validate;
 
+// TODO: This should probably be deleted or go into some other project.
 /**
  * Class which represents result elements from the surface pipeline: measurement based classified road segments.
  * <p>

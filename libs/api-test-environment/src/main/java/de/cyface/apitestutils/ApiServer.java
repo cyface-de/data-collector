@@ -107,9 +107,6 @@ public final class ApiServer {
         final var privateTestKey = this.getClass().getResource("/private_key.pem");
         final var publicTestKey = this.getClass().getResource("/public.pem");
         config.put("mongo.db", mongoDatabase.config())
-                // Databases for API v2
-                .put("mongo.datadb", mongoDatabase.config())
-                .put("mongo.userdb", mongoDatabase.config())
                 .put("http.port", port)
                 .put("jwt.private", Validate.notNull(privateTestKey).getFile())
                 .put("jwt.public", Validate.notNull(publicTestKey).getFile())

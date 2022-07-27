@@ -63,10 +63,6 @@ public abstract class Authorizer implements Handler<RoutingContext> {
      */
     public static final int ENTITY_UNPARSABLE = 422;
     /**
-     * Http code which indicates that the request is not authorized.
-     */
-    public static final int UNAUTHORIZED = 401;
-    /**
      * An auth provider used by this server to authenticate against the Mongo user database
      */
     private final MongoAuthentication authProvider;
@@ -215,6 +211,7 @@ public abstract class Authorizer implements Handler<RoutingContext> {
         return promise.future();
     }
 
+    // TODO: @Armin: Why is this here and not inside the UserRetriever (since it retrieves users).
     /**
      * Loads all users a specific group manager can access.
      * <p>
@@ -242,9 +239,5 @@ public abstract class Authorizer implements Handler<RoutingContext> {
     @SuppressWarnings("unused") // API
     public MongoAuthentication getAuthProvider() {
         return authProvider;
-    }
-
-    public MongoClient getMongoDatabase() {
-        return mongoDatabase;
     }
 }

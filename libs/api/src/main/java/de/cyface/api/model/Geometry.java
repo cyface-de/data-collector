@@ -18,6 +18,7 @@
  */
 package de.cyface.api.model;
 
+// TODO: This should probably be deleted or go into some other project.
 /**
  * This class represents a geometry similar to the GeoJson geometry field.
  *

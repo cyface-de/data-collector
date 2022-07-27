@@ -32,7 +32,6 @@ import de.cyface.api.Hasher;
 import de.cyface.api.Parameter;
 import de.cyface.collector.handler.PreRequestHandler;
 import de.cyface.collector.handler.UserCreationHandler;
-import de.cyface.collector.handler.v2.MeasurementHandler;
 import de.cyface.collector.model.Measurement;
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.CompositeFuture;
@@ -110,32 +109,31 @@ public final class CollectorApiVerticle extends AbstractVerticle {
         prepareEventBus();
 
         // Load configurations
-        final var configV2 = new de.cyface.collector.verticle.v2.Config(vertx);
-        final var configV3 = new Config(vertx);
+        final var config = new Config(vertx);
 
         // Create indices
         final var unique = new IndexOptions().unique(true);
         final var measurementIndex = new JsonObject().put("metadata.deviceId", 1).put("metadata.measurementId", 1);
         // While supporting `v2.MeasurementHandler` we must support multiple entries per did/mid (because of `fileType`)
         measurementIndex.put("metadata.fileType", 1);
-        final var measurementIndexCreation = configV3.getDatabase().createIndexWithOptions("fs.files",
+        final var measurementIndexCreation = config.getDatabase().createIndexWithOptions("fs.files",
                 measurementIndex, unique);
         final var userIndex = new JsonObject().put("username", 1);
-        final var userIndexCreation = configV3.getDatabase().createIndexWithOptions("user", userIndex, unique);
+        final var userIndexCreation = config.getDatabase().createIndexWithOptions("user", userIndex, unique);
 
         // Start http server
-        final var router = setupRoutes(configV2, configV3);
+        final var router = setupRoutes(config);
         final Promise<Void> serverStartPromise = Promise.promise();
-        final var httpServer = new de.cyface.api.HttpServer(configV3.getHttpPort());
+        final var httpServer = new de.cyface.api.HttpServer(config.getHttpPort());
         httpServer.start(vertx, router, serverStartPromise);
 
         // Insert default admin user
         final var adminUsername = Parameter.ADMIN_USER_NAME.stringValue(vertx, "admin");
         final var adminPassword = Parameter.ADMIN_PASSWORD.stringValue(vertx, "secret");
-        final var userCreation = createDefaultUser(configV3.getDatabase(), adminUsername, adminPassword);
+        final var userCreation = createDefaultUser(config.getDatabase(), adminUsername, adminPassword);
 
         // Schedule upload file cleaner task
-        vertx.setPeriodic(configV3.getUploadExpirationTime(), timerId -> {
+        vertx.setPeriodic(config.getUploadExpirationTime(), timerId -> {
             // Remove deprecated temp files
             // There is no way to look through all sessions to identify unreferenced files. Thus, we remove files which
             // have not been changed for a long time. The MeasurementHandler handles sessions with "missing" files.
@@ -145,7 +143,7 @@ public final class CollectorApiVerticle extends AbstractVerticle {
                 Arrays.stream(uploadFiles).parallel().forEach(file -> {
                     Validate.isTrue(file.isFile());
                     final var lastModifiedMillis = file.lastModified();
-                    if (lastModifiedMillis > configV3.getUploadExpirationTime()) {
+                    if (lastModifiedMillis > config.getUploadExpirationTime()) {
                         LOGGER.debug(String.format("Cleaning up temp file: %s", file.getPath()));
                         final var deleted = file.delete();
                         if (!deleted) {
@@ -197,28 +195,22 @@ public final class CollectorApiVerticle extends AbstractVerticle {
      */
     private void prepareEventBus() {
         vertx.eventBus().registerDefaultCodec(Measurement.class, Measurement.getCodec());
-        vertx.eventBus().registerDefaultCodec(de.cyface.collector.model.v2.Measurement.class,
-                de.cyface.collector.model.v2.Measurement.getCodec());
     }
 
     /**
      * Initializes all the routes available via the Cyface Data Collector.
      *
-     * @param configV2 HTTP server configuration parameters required to set up the routes for API V2
-     * @param configV3 HTTP server configuration parameters required to set up the routes for API V3
+     * @param config HTTP server configuration parameters required to set up the routes for the collector API.
      * @return the created main {@code Router}
      */
-    private Router setupRoutes(final de.cyface.collector.verticle.v2.Config configV2, final Config configV3) {
+    private Router setupRoutes(final Config config) {
 
         // Setup V2 and V3 router
         final var mainRouter = Router.router(vertx);
-        final var v2ApiRouter = Router.router(vertx);
-        final var v3ApiRouter = Router.router(vertx);
+        final var apiRouter = Router.router(vertx);
 
-        mainRouter.route(configV2.getEndpoint()).subRouter(v2ApiRouter);
-        mainRouter.route(configV3.getEndpoint()).subRouter(v3ApiRouter);
-        setupApiV2Router(v2ApiRouter, configV2);
-        setupApiV3Router(v3ApiRouter, configV3);
+        mainRouter.route(config.getEndpoint()).subRouter(apiRouter);
+        setupApiRouter(apiRouter, config);
 
         // Setup unknown-resource handler
         mainRouter.route("/*").last().handler(new FailureHandler());
@@ -227,37 +219,12 @@ public final class CollectorApiVerticle extends AbstractVerticle {
     }
 
     /**
-     * Sets up the routing for the API Version 2.
+     * Sets up the routing for the Cyface collector API.
      *
-     * @param apiV2Router The sub-router to be used.
+     * @param apiRouter The sub-router to be used.
      * @param config HTTP server configuration parameters required to set up the routes
      */
-    private void setupApiV2Router(Router apiV2Router, de.cyface.collector.verticle.v2.Config config) {
-
-        // Setup measurement routes
-        final var measurementHandler = new MeasurementHandler(config);
-        final var failureHandler = ErrorHandler.create(vertx);
-        final var bodyHandler = BodyHandler.create().setBodyLimit(BYTES_IN_ONE_GIGABYTE)
-                .setDeleteUploadedFilesOnEnd(true);
-
-        // Setup authentication
-        de.cyface.api.v2.Authenticator.setupAuthentication("/login", apiV2Router, config);
-
-        // Register handlers
-        addAuthenticatedPostV2Handler(apiV2Router, config.getJwtAuthProvider(), MEASUREMENTS_ENDPOINT,
-                measurementHandler, failureHandler, bodyHandler);
-
-        // Setup web-api route
-        apiV2Router.route().handler(StaticHandler.create("webroot/api/v2"));
-    }
-
-    /**
-     * Sets up the routing for the API Version 3.
-     *
-     * @param apiV3Router The sub-router to be used.
-     * @param config HTTP server configuration parameters required to set up the routes
-     */
-    private void setupApiV3Router(Router apiV3Router, Config config) {
+    private void setupApiRouter(Router apiRouter, Config config) {
 
         // Setup measurement routes
         final var preRequestHandler = new PreRequestHandler(config);
@@ -266,22 +233,23 @@ public final class CollectorApiVerticle extends AbstractVerticle {
         final var preRequestBodyHandler = BodyHandler.create().setBodyLimit(BYTES_IN_ONE_KILOBYTE);
 
         // Setup authentication
-        Authenticator.setupAuthentication("/login", apiV3Router, config);
+        Authenticator.setupAuthentication("/login", apiRouter, config);
 
         // Setup session-handler
         // - for all handlers but login and, thus, registering this *after* login
         // - using `cookieless` as our clients pass the session-ID via URI
         final var store = LocalSessionStore.create(vertx);
         final var sessionHandler = SessionHandler.create(store).setCookieless(true);
-        apiV3Router.route().handler(sessionHandler);
+        apiRouter.route().handler(sessionHandler);
 
         // Register handlers
-        addAuthenticatedPostHandler(apiV3Router, config.getJwtAuthProvider(), MEASUREMENTS_ENDPOINT,
+        addAuthenticatedPostHandler(apiRouter, config.getJwtAuthProvider(), MEASUREMENTS_ENDPOINT,
                 preRequestHandler, failureHandler, preRequestBodyHandler);
-        addAuthenticatedPutHandler(apiV3Router, config.getJwtAuthProvider(), MEASUREMENTS_ENDPOINT,
+        addAuthenticatedPutHandler(apiRouter, config.getJwtAuthProvider(), MEASUREMENTS_ENDPOINT,
                 measurementHandler, failureHandler);
 
         // Setup web-api route
+<<<<<<< HEAD
         apiV3Router.route().handler(StaticHandler.create("webroot/api/v3"));
     }
 
@@ -307,6 +275,9 @@ public final class CollectorApiVerticle extends AbstractVerticle {
                 .handler(jwtAuthHandler)
                 .handler(handler)
                 .failureHandler(failureHandler);
+=======
+        apiRouter.route().handler(StaticHandler.create("webroot/api/v3"));
+>>>>>>> 07b0807 (Remove v2 code and add TODOs)
     }
 
     /**

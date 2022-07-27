@@ -27,6 +27,7 @@ import de.cyface.model.TrackBucket;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.mongo.FindOptions;
 
+// TODO: Probably remove this, as it is not necessary for data collection
 /**
  * This implementation of the {@link MeasurementRetrievalStrategy} only loads the {@link Track} data from the database
  * when retrieving measurements. I.e. the sensor data lists attached in the tracks will be empty to reduce load.

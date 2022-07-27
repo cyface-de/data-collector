@@ -49,15 +49,7 @@ public enum Parameter {
     /**
      * A parameter for the endpoint path the API V3 service is available at.
      */
-    HTTP_ENDPOINT_V3("http.endpoint.v3"),
-    /**
-     * A parameter for the endpoint path the API V2 service is available at.
-     */
-    HTTP_ENDPOINT_V2("http.endpoint.v2"),
-    /**
-     * A parameter for the endpoint path the API V1 service is available at.
-     */
-    HTTP_ENDPOINT_V1("http.endpoint.v1"),
+    HTTP_ENDPOINT("http.endpoint"),
     /**
      * The server port the API shall be available at.
      */

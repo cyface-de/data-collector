@@ -96,14 +96,11 @@ public final class DataCollectorClient {
         Validate.notNull(publicKey);
         final var config = new JsonObject().put(Parameter.MONGO_DB.key(), mongoDbConfig)
                 // Databases for API v2
-                .put(de.cyface.api.v2.Parameter.MONGO_DATA_DB.key(), mongoDbConfig)
-                .put(de.cyface.api.v2.Parameter.MONGO_USER_DB.key(), mongoDbConfig)
                 .put(Parameter.HTTP_PORT.key(), port)
                 .put(Parameter.JWT_PRIVATE_KEY_FILE_PATH.key(), privateKey.getFile())
                 .put(Parameter.JWT_PUBLIC_KEY_FILE_PATH.key(), publicKey.getFile())
                 .put(Parameter.HTTP_HOST.key(), "localhost")
-                .put(Parameter.HTTP_ENDPOINT_V3.key(), "/api/v3/")
-                .put(Parameter.HTTP_ENDPOINT_V2.key(), "/api/v2/");
+                .put(Parameter.HTTP_ENDPOINT.key(), "/api/v3/");
         if (measurementLimit != null) {
             config.put(Parameter.MEASUREMENT_PAYLOAD_LIMIT.key(), measurementLimit);
         }

@@ -34,6 +34,7 @@ import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.mongo.FindOptions;
 
+// TODO: Probably remove this, as it is not necessary for data collection
 /**
  * This class defines the interface to allow multiple {@link MeasurementRetrievalStrategy}s such as
  * {@link MeasurementRetrievalWithSensorData} or {@link MeasurementRetrievalWithoutSensorData}.
