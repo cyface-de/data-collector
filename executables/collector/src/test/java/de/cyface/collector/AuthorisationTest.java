@@ -79,7 +79,7 @@ public class AuthorisationTest {
                         .setAlgorithm(JWT_HASH_ALGORITHM)
                         .setBuffer(privateKey)));
 
-        final var issuer = "localhost:8080/api/v2/";
+        final var issuer = "localhost:8080/api/v3/";
         final var body = new JsonObject().put("username", "test").put("password", "test-password")
                 .put("aud", issuer).put("iss", issuer);
         final var jwtOptions = new JWTOptions()

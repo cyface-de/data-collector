@@ -295,7 +295,7 @@ public final class Measurement implements Serializable {
 
         @Override
         public String name() {
-            return "v3.Measurement";
+            return "Measurement";
         }
 
         @Override

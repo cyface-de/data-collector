@@ -114,7 +114,7 @@ public final class CollectorApiVerticle extends AbstractVerticle {
         // Create indices
         final var unique = new IndexOptions().unique(true);
         final var measurementIndex = new JsonObject().put("metadata.deviceId", 1).put("metadata.measurementId", 1);
-        // While supporting `v2.MeasurementHandler` we must support multiple entries per did/mid (because of `fileType`)
+        // While supporting `v2.MeasurementHandler` we must support multiple entries per did/mid (because of `fileType`) <-- TODO: So we could remove this now.
         measurementIndex.put("metadata.fileType", 1);
         final var measurementIndexCreation = config.getDatabase().createIndexWithOptions("fs.files",
                 measurementIndex, unique);
@@ -205,7 +205,7 @@ public final class CollectorApiVerticle extends AbstractVerticle {
      */
     private Router setupRoutes(final Config config) {
 
-        // Setup V2 and V3 router
+        // Setup router
         final var mainRouter = Router.router(vertx);
         final var apiRouter = Router.router(vertx);
 
@@ -249,35 +249,7 @@ public final class CollectorApiVerticle extends AbstractVerticle {
                 measurementHandler, failureHandler);
 
         // Setup web-api route
-<<<<<<< HEAD
-        apiV3Router.route().handler(StaticHandler.create("webroot/api/v3"));
-    }
-
-    /**
-     * Adds a handler for an endpoint and makes sure that handler is wrapped in the correct authentication handlers.
-     * 
-     * @param router The {@code Router} to register the handler to.
-     * @param jwtAuth The {@code JWTAuth} provider to be used for handling the authentication.
-     * @param endpoint The URL endpoint to wrap
-     * @param handler The handler which handles the data.
-     * @param failureHandler The handler to add to handle failures.
-     * @param bodyHandler The handler to add to handle body size limitations.
-     */
-    private void addAuthenticatedPostV2Handler(final Router router, final JWTAuth jwtAuth,
-            @SuppressWarnings("SameParameterValue") final String endpoint, final Handler<RoutingContext> handler,
-            final ErrorHandler failureHandler, final BodyHandler bodyHandler) {
-
-        final var jwtAuthHandler = JWTAuthHandler.create(jwtAuth);
-        router.post(endpoint)
-                .consumes("multipart/form-data")
-                .handler(LoggerHandler.create())
-                .handler(bodyHandler)
-                .handler(jwtAuthHandler)
-                .handler(handler)
-                .failureHandler(failureHandler);
-=======
-        apiRouter.route().handler(StaticHandler.create("webroot/api/v3"));
->>>>>>> 07b0807 (Remove v2 code and add TODOs)
+        apiRouter.route().handler(StaticHandler.create("webroot/api"));
     }
 
     /**

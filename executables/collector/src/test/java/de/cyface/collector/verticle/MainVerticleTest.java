@@ -97,13 +97,10 @@ public class MainVerticleTest {
                 .put("jwt.public", publicKey.getFile())
                 .put("jwt.private", privateKey.getFile())
                 .put("http.host", "localhost")
-                .put("http.endpoint.v3", "/api/v3/")
-                .put("http.endpoint.v2", "/api/v2/")
+                .put("http.endpoint", "/api/v3/")
                 .put("http.port", Network.getFreeServerPort())
                 .put("salt", "abcdefg")
-                .put("mongo.db", mongoTest.clientConfiguration())
-                // for API v2
-                .put("mongo.datadb", mongoTest.clientConfiguration());
+                .put("mongo.db", mongoTest.clientConfiguration());
     }
 
     /**

@@ -65,12 +65,8 @@ loadApiParameters() {
     CYFACE_API_HOST="localhost"
   fi
 
-  if [ -z $CYFACE_API_ENDPOINT_V3 ]; then
-    CYFACE_API_ENDPOINT_V3="/api/v3/"
-  fi
-
-  if [ -z $CYFACE_API_ENDPOINT_V2 ]; then
-    CYFACE_API_ENDPOINT_V2="/api/v2/"
+  if [ -z $CYFACE_API_ENDPOINT ]; then
+    CYFACE_API_ENDPOINT="/api/v3/"
   fi
 }
 
@@ -108,21 +104,11 @@ loadCollectorParameters() {
   echo "Enabling metrics reporting by API: $METRICS_ENABLED."
 }
 
-# Injects the database parameters for V3 and V2 databases
+# Injects the database parameters for databases
 loadConfig() {
   CONFIG="{\
       \"jwt.private\":\"$JWT_PRIVATE_KEY_FILE_PATH\",\
       \"jwt.public\":\"$JWT_PUBLIC_KEY_FILE_PATH\",\
-      \"mongo.userdb\":{\
-                \"db_name\":\"cyface\",\
-                \"connection_string\":\"mongodb://mongo:27017\",\
-                \"data_source_name\":\"cyface\"\
-            },\
-      \"mongo.datadb\":{\
-          \"db_name\":\"cyface\",\
-          \"connection_string\":\"mongodb://mongo:27017\",\
-          \"data_source_name\":\"cyface\"\
-      },\
       \"mongo.db\":{\
           \"db_name\":\"cyface\",\
           \"connection_string\":\"mongodb://mongo:27017\",\
@@ -130,8 +116,7 @@ loadConfig() {
       },\
       \"http.port\":$CYFACE_API_PORT,\
       \"http.host\":\"$CYFACE_API_HOST\",\
-      \"http.endpoint.v3\":\"$CYFACE_API_ENDPOINT_V3\",\
-      \"http.endpoint.v2\":\"$CYFACE_API_ENDPOINT_V2\",\
+      \"http.endpoint\":\"$CYFACE_API_ENDPOINT\",\
       $SALT_PARAMETER,\
       \"jwt.expiration\":$JWT_EXPIRATION_TIME_SECONDS,\
       \"http.port.management\":$CYFACE_MANAGEMENT_PORT,\
@@ -164,7 +149,7 @@ waitForDatabase() {
 }
 
 startApi() {
-  echo "Starting $SERVICE_NAME at $CYFACE_API_HOST:$CYFACE_API_PORT$CYFACE_API_ENDPOINT_V3 and ~$CYFACE_API_ENDPOINT_V2"
+  echo "Starting $SERVICE_NAME at $CYFACE_API_HOST:$CYFACE_API_PORT$CYFACE_API_ENDPOINT"
   java -Dvertx.cacheDirBase=/tmp/vertx-cache \
       -Dlogback.configurationFile=/app/logback.xml \
       -jar $JAR_FILE \
