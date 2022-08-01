@@ -18,8 +18,6 @@
  */
 package de.cyface.collector.verticle;
 
-import static de.cyface.collector.handler.MeasurementHandler.FILE_UPLOADS_FOLDER;
-
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
@@ -141,7 +139,7 @@ public final class CollectorApiVerticle extends AbstractVerticle {
             // Remove deprecated temp files
             // There is no way to look through all sessions to identify unreferenced files. Thus, we remove files which
             // have not been changed for a long time. The MeasurementHandler handles sessions with "missing" files.
-            final var uploadFolder = FILE_UPLOADS_FOLDER.toFile();
+            final var uploadFolder = de.cyface.collector.handler.MeasurementHandler.FILE_UPLOADS_FOLDER.toFile();
             final var uploadFiles = uploadFolder.listFiles();
             if (uploadFiles != null) {
                 Arrays.stream(uploadFiles).parallel().forEach(file -> {

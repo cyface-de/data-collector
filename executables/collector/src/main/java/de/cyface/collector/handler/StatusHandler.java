@@ -18,10 +18,10 @@
  */
 package de.cyface.collector.handler;
 
-import static de.cyface.collector.handler.MeasurementHandler.UPLOAD_PATH_FIELD;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import static de.cyface.collector.handler.MeasurementHandler.UPLOAD_PATH_FIELD;
 
 import de.cyface.collector.handler.exception.InvalidMetaData;
 import io.vertx.core.Handler;
@@ -44,7 +44,7 @@ public class StatusHandler implements Handler<RoutingContext> {
      * The logger for objects of this class. You can change its configuration by
      * adapting the values in <code>src/main/resources/logback.xml</code>.
      */
-    private static final Logger LOGGER = LoggerFactory.getLogger(MeasurementHandler.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(StatusHandler.class);
     /**
      * HTTP status code to return when the client asks to resume an upload and the server replies where to continue.
      */
