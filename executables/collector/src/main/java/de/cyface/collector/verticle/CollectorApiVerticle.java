@@ -328,8 +328,8 @@ public final class CollectorApiVerticle extends AbstractVerticle {
         final var jwtHandler = JWTAuthHandler.create(jwtAuth);
         router.post(endpoint)
                 .consumes("application/json; charset=UTF-8")
-                // Ready request body only once and before async calls or pause/resume must be used see [DAT-749]
                 .handler(LoggerHandler.create())
+                // Ready request body only once and before async calls or pause/resume must be used see [DAT-749]
                 .handler(bodyHandler)
                 .handler(jwtHandler)
                 .handler(handler)
