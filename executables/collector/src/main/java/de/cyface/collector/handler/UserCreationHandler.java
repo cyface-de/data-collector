@@ -80,7 +80,7 @@ public final class UserCreationHandler implements Handler<RoutingContext> {
 
     @Override
     public void handle(final RoutingContext event) {
-        final var body = event.getBodyAsJson();
+        final var body = event.body().asJsonObject();
         final var username = body.getString("username");
         final var password = body.getString("password");
         final var providedRole = body.getString("role");

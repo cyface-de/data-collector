@@ -119,7 +119,7 @@ public final class Authenticator implements Handler<RoutingContext> {
     @Override
     public void handle(final RoutingContext ctx) {
         try {
-            final var body = ctx.getBodyAsJson();
+            final var body = ctx.body().asJsonObject();
             LOGGER.debug("Receiving authentication request for user {}", body.getString("username"));
             final var authentication = authProvider.authenticate(body);
             authentication.onSuccess(user -> {
@@ -183,8 +183,8 @@ public final class Authenticator implements Handler<RoutingContext> {
                 config.getTokenExpirationTime());
         router.route(loginEndpoint)
                 .consumes("application/json")
-                .handler(BodyHandler.create().setBodyLimit(2 * BYTES_IN_ONE_KILOBYTE))
                 .handler(LoggerHandler.create())
+                .handler(BodyHandler.create().setBodyLimit(2 * BYTES_IN_ONE_KILOBYTE))
                 .handler(authenticator)
                 .failureHandler(new AuthenticationFailureHandler());
     }
