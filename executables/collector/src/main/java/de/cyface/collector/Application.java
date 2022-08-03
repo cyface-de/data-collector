@@ -66,8 +66,7 @@ public class Application extends Launcher {
      *            about supported arguments.
      */
     public static void main(final String[] args) {
-        System.setProperty(
-                io.vertx.core.logging.LoggerFactory.LOGGER_DELEGATE_FACTORY_CLASS_NAME,
+        System.setProperty("vertx.logger-delegate-factory-class-name",
                 SLF4JLogDelegateFactory.class.getName());
 
         new Application().dispatch(args);
