@@ -1,7 +1,7 @@
 import com.github.spotbugs.snom.SpotBugsTask
 
 /*
- * Copyright 2020-2021 Cyface GmbH
+ * Copyright 2020-2022 Cyface GmbH
  *
  * This file is part of the Cyface Data Collector.
  *
@@ -22,7 +22,7 @@ import com.github.spotbugs.snom.SpotBugsTask
  * The build gradle file for the Cyface Data Collector.
  *
  * @author Klemens Muthmann
- * @version 1.0.1
+ * @version 1.0.2
  * @since 1.0.0
  */
 buildscript {
@@ -57,7 +57,7 @@ subprojects {
   apply plugin: 'java'
 
   group = 'de.cyface'
-  version = '0.0.0'
+  version = '6.9.5'
 
   tasks.withType(JavaCompile) {
     options.encoding = 'UTF-8'
