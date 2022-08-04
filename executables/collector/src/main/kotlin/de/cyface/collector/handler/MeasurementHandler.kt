@@ -21,7 +21,12 @@ package de.cyface.collector.handler
 import de.cyface.api.Authorizer
 import de.cyface.api.PauseAndResumeBeforeBodyParsing
 import de.cyface.api.model.User
-import de.cyface.collector.handler.exception.*
+import de.cyface.collector.handler.exception.IllegalSession
+import de.cyface.collector.handler.exception.InvalidMetaData
+import de.cyface.collector.handler.exception.PayloadTooLarge
+import de.cyface.collector.handler.exception.SessionExpired
+import de.cyface.collector.handler.exception.SkipUpload
+import de.cyface.collector.handler.exception.Unparsable
 import de.cyface.collector.model.Measurement
 import de.cyface.collector.verticle.Config
 import de.cyface.model.RequestMetaData
@@ -42,7 +47,7 @@ import org.slf4j.LoggerFactory
 import java.io.File
 import java.nio.file.Path
 import java.nio.file.Paths
-import java.util.*
+import java.util.UUID
 import java.util.stream.Collectors
 
 /**
@@ -56,7 +61,8 @@ import java.util.stream.Collectors
  * @since 6.0.0
  */
 class MeasurementHandler(
-    mongoClient: MongoClient, authProvider: MongoAuthentication?,
+    mongoClient: MongoClient,
+    authProvider: MongoAuthentication?,
     payloadLimit: Long
 ) : Authorizer(authProvider, mongoClient, PauseAndResumeBeforeBodyParsing()) {
     /**
@@ -91,7 +97,8 @@ class MeasurementHandler(
     }
 
     override fun handleAuthorizedRequest(
-        ctx: RoutingContext, users: Set<User>,
+        ctx: RoutingContext,
+        users: Set<User>,
         header: MultiMap
     ) {
         LOGGER.info("Received new measurement request.")
@@ -176,8 +183,12 @@ class MeasurementHandler(
      * @param path `String` if the session contained a path to the chunk file or `null` otherwise.
      */
     private fun handleFirstChunkUpload(
-        ctx: RoutingContext, request: HttpServerRequest,
-        session: Session, user: User, contentRange: ContentRange, metaData: RequestMetaData,
+        ctx: RoutingContext,
+        request: HttpServerRequest,
+        session: Session,
+        user: User,
+        contentRange: ContentRange,
+        metaData: RequestMetaData,
         path: String?
     ) {
         if (contentRange.fromIndex != "0") {
@@ -208,8 +219,12 @@ class MeasurementHandler(
      * @param path `String` if the session contained a path to the chunk file or `null` otherwise.
      */
     private fun handleSubsequentChunkUpload(
-        ctx: RoutingContext, request: HttpServerRequest,
-        session: Session, user: User, contentRange: ContentRange, metaData: RequestMetaData,
+        ctx: RoutingContext,
+        request: HttpServerRequest,
+        session: Session,
+        user: User,
+        contentRange: ContentRange,
+        metaData: RequestMetaData,
         path: String
     ) {
         request.pause()
@@ -341,8 +356,7 @@ class MeasurementHandler(
     }
 
     /**
-     * Creates a new upload temp file and calls
-     * [.acceptUpload].
+     * Creates a new upload temp file and calls [.acceptUpload].
      *
      * @param ctx The Vertx `RoutingContext` used to write the response
      * @param request the request to read the body from
@@ -352,8 +366,12 @@ class MeasurementHandler(
      * @param metaData the metadata from the request header
      */
     private fun acceptUpload(
-        ctx: RoutingContext, request: HttpServerRequest, session: Session,
-        user: User, contentRange: ContentRange, metaData: RequestMetaData
+        ctx: RoutingContext,
+        request: HttpServerRequest,
+        session: Session,
+        user: User,
+        contentRange: ContentRange,
+        metaData: RequestMetaData
     ) {
 
         // Create temp file to accept binary
@@ -380,8 +398,13 @@ class MeasurementHandler(
      * @param metaData the metadata from the request header
      */
     private fun acceptUpload(
-        ctx: RoutingContext, request: HttpServerRequest, session: Session,
-        user: User, contentRange: ContentRange, tempFile: File, metaData: RequestMetaData
+        ctx: RoutingContext,
+        request: HttpServerRequest,
+        session: Session,
+        user: User,
+        contentRange: ContentRange,
+        tempFile: File,
+        metaData: RequestMetaData
     ) {
         val fs = ctx.vertx().fileSystem()
         request.pause()
