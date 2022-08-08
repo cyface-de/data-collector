@@ -45,7 +45,7 @@ run {
 }
 
 dependencies {
-    implementation project(':libs:api')
+    implementation "de.cyface:api:$cyfaceApiVersion"
     implementation "de.cyface:model:$cyfaceSerializationVersion"
 
     implementation "io.vertx:vertx-web:$vertxVersion"

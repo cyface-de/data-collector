@@ -1,5 +1,5 @@
 /*
- * Copyright 2018-2021 Cyface GmbH
+ * Copyright 2018-2022 Cyface GmbH
  * 
  * This file is part of the Cyface Data Collector.
  *
@@ -17,9 +17,6 @@
  * along with the Cyface Data Collector. If not, see <http://www.gnu.org/licenses/>.
  */
 
-include ':libs'
-include ':libs:api'
-include ':libs:api-test-environment'
 include ':executables'
 include ':executables:collector'
 
