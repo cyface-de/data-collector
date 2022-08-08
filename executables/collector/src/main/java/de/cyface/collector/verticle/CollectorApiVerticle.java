@@ -78,10 +78,6 @@ public final class CollectorApiVerticle extends AbstractVerticle {
      */
     private static final String MEASUREMENTS_ENDPOINT = "/measurements";
     /**
-     * The number of bytes in one gigabyte. This can be used to limit the amount of data accepted by the server.
-     */
-    private static final long BYTES_IN_ONE_GIGABYTE = 1_073_741_824L;
-    /**
      * The number of bytes in one kilobyte. This can be used to limit the amount of data accepted by the server.
      */
     private static final long BYTES_IN_ONE_KILOBYTE = 1_024L;
@@ -114,8 +110,6 @@ public final class CollectorApiVerticle extends AbstractVerticle {
         // Create indices
         final var unique = new IndexOptions().unique(true);
         final var measurementIndex = new JsonObject().put("metadata.deviceId", 1).put("metadata.measurementId", 1);
-        // While supporting `v2.MeasurementHandler` we must support multiple entries per did/mid (because of `fileType`) <-- TODO: So we could remove this now.
-        measurementIndex.put("metadata.fileType", 1);
         final var measurementIndexCreation = config.getDatabase().createIndexWithOptions("fs.files",
                 measurementIndex, unique);
         final var userIndex = new JsonObject().put("username", 1);

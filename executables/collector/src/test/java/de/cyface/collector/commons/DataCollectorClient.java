@@ -95,7 +95,6 @@ public final class DataCollectorClient {
         Validate.notNull(privateKey);
         Validate.notNull(publicKey);
         final var config = new JsonObject().put(Parameter.MONGO_DB.key(), mongoDbConfig)
-                // Databases for API v2
                 .put(Parameter.HTTP_PORT.key(), port)
                 .put(Parameter.JWT_PRIVATE_KEY_FILE_PATH.key(), privateKey.getFile())
                 .put(Parameter.JWT_PUBLIC_KEY_FILE_PATH.key(), publicKey.getFile())
