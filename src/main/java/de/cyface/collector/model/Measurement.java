@@ -29,7 +29,6 @@ import io.vertx.core.buffer.Buffer;
 import io.vertx.core.eventbus.MessageCodec;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
-import org.bson.types.ObjectId;
 
 /**
  * A POJO representing a single measurement, which has arrived at the API version 3 and needs to be stored to persistent

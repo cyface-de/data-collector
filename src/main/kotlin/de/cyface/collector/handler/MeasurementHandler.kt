@@ -270,7 +270,12 @@ class MeasurementHandler(
             // Location info
             val locationCount = request.getHeader(FormAttributes.LOCATION_COUNT.value).toLong()
             if (locationCount < PreRequestHandler.MINIMUM_LOCATION_COUNT) {
-                throw SkipUpload(String.format("Too few location points %s", locationCount))
+                throw SkipUpload(
+                    String.format(
+                        "Too few location points %s",
+                        locationCount
+                    )
+                )
             }
             val startLocationLatString = request.getHeader(FormAttributes.START_LOCATION_LAT.value)
             val startLocationLonString = request.getHeader(FormAttributes.START_LOCATION_LON.value)
@@ -330,7 +335,12 @@ class MeasurementHandler(
         // The client informs what data is attached: `bytes fromIndex-toIndex/totalBytes`
         val contentRangeString = request.getHeader("Content-Range")
         if (!contentRangeString.matches(Regex("bytes [0-9]+-[0-9]+/[0-9]+"))) {
-            throw Unparsable(String.format("Content-Range request not supported: %s", contentRangeString))
+            throw Unparsable(
+                String.format(
+                    "Content-Range request not supported: %s",
+                    contentRangeString
+                )
+            )
         }
         val startingWithFrom = contentRangeString.substring(6)
         val dashPosition = startingWithFrom.indexOf('-')
@@ -441,7 +451,8 @@ class MeasurementHandler(
                     }
 
                     // Persist data
-                    val measurement = Measurement(metaData, user.idString, tempFile)
+                    val measurement =
+                        Measurement(metaData, user.idString, tempFile)
                     storeToMongoDB(measurement, ctx)
                 }.onFailure { failure: Throwable? ->
                     LOGGER.error("Response: 500, failed to read props from temp file")
@@ -522,10 +533,20 @@ class MeasurementHandler(
             throw SessionExpired("Mid/did missing, session maybe expired, request upload restart (404).")
         }
         if (sessionMeasurementId != metaData.measurementIdentifier) {
-            throw IllegalSession(String.format("Unexpected measurement id: %s.", sessionMeasurementId))
+            throw IllegalSession(
+                String.format(
+                    "Unexpected measurement id: %s.",
+                    sessionMeasurementId
+                )
+            )
         }
         if (sessionDeviceId != metaData.deviceIdentifier) {
-            throw IllegalSession(String.format("Unexpected device id: %s.", sessionDeviceId))
+            throw IllegalSession(
+                String.format(
+                    "Unexpected device id: %s.",
+                    sessionDeviceId
+                )
+            )
         }
     }
 
