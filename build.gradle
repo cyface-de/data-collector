@@ -97,7 +97,7 @@ ext {
   slf4jVersion = '1.7.29'
   commonsLangVersion = '3.12.0'
   logbackVersion = '1.2.5'
-  cyfaceApiVersion = '1.0.0-beta1'
+  cyfaceApiVersion = '1.0.0'
   cyfaceSerializationVersion = '2.2.1'
   gradleWrapperVersion = '6.8.3'
 
