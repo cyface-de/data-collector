@@ -27,7 +27,7 @@ jobs:
 
       - name: Test Docker dev environment setup
         run: |
-          cd executables/collector/src
+          cd src
           mkdir -p main/docker/secrets/jwt
           cp test/resources/public.pem        main/docker/secrets/jwt/
           cp test/resources/private_key.pem   main/docker/secrets/jwt/
@@ -35,9 +35,9 @@ jobs:
           mkdir                               main/docker/logs main/docker/file-uploads
           sudo chmod o+w                      main/docker/logs main/docker/file-uploads
           sudo chown -R 9999:root             main/docker/secrets/jwt
-          cd ../../..
-          ./gradlew :executables:collector:copyToDockerBuildFolder
-          cd executables/collector/build/docker/
+          cd ..
+          ./gradlew :copyToDockerBuildFolder
+          cd build/docker/
           docker-compose up -d
           sleep 10
           # Grep exits with exit code 0 when the API is started and fails with exit code 1 otherwise
@@ -47,12 +47,12 @@ jobs:
       - name: Debugging output (if last step failed)
         if: failure()
         run: |
-          cd executables/collector/src/main/docker/
+          cd src/main/docker/
           echo "main/docker ..."
           ls -alih
           ls -alih logs
           ls -alih secrets
-          cd ../../../build/docker/
+          cd ../build/docker/
           echo "build/docker ..."
           ls -alih
           echo "build/docker/logs ..."
