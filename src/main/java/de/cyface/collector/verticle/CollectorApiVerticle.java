@@ -110,6 +110,8 @@ public final class CollectorApiVerticle extends AbstractVerticle {
         // Create indices
         final var unique = new IndexOptions().unique(true);
         final var measurementIndex = new JsonObject().put("metadata.deviceId", 1).put("metadata.measurementId", 1);
+        // While the db stills contains `v2` data we allow 2 entries per did/mid: fileType:ccyfe & ccyf [DAT-1427]
+        measurementIndex.put("metadata.fileType", 1);
         final var measurementIndexCreation = config.getDatabase().createIndexWithOptions("fs.files",
                 measurementIndex, unique);
         final var userIndex = new JsonObject().put("username", 1);
