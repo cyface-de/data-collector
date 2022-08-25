@@ -18,16 +18,15 @@
  */
 package de.cyface.collector.verticle;
 
-import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 
+import de.cyface.collector.handler.FailureHandler;
 import org.apache.commons.lang3.Validate;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import de.cyface.api.Authenticator;
-import de.cyface.api.FailureHandler;
 import de.cyface.api.Hasher;
 import de.cyface.api.Parameter;
 import de.cyface.collector.handler.PreRequestHandler;
@@ -90,9 +89,8 @@ public final class CollectorApiVerticle extends AbstractVerticle {
      * Creates a new completely initialized object of this class.
      *
      * @param salt The value to be used as encryption salt
-     * @throws IOException if key files are inaccessible
      */
-    public CollectorApiVerticle(final String salt) throws IOException {
+    public CollectorApiVerticle(final String salt) {
         super();
         this.salt = salt;
     }
@@ -209,7 +207,7 @@ public final class CollectorApiVerticle extends AbstractVerticle {
         setupApiRouter(apiRouter, config);
 
         // Setup unknown-resource handler
-        mainRouter.route("/*").last().handler(new FailureHandler());
+        mainRouter.route("/*").last().handler(new de.cyface.api.FailureHandler());
 
         return mainRouter;
     }
@@ -225,7 +223,7 @@ public final class CollectorApiVerticle extends AbstractVerticle {
         // Setup measurement routes
         final var preRequestHandler = new PreRequestHandler(config);
         final var measurementHandler = new de.cyface.collector.handler.MeasurementHandler(config);
-        final var failureHandler = ErrorHandler.create(vertx);
+        final var failureHandler = new FailureHandler(vertx);
         final var preRequestBodyHandler = BodyHandler.create().setBodyLimit(BYTES_IN_ONE_KILOBYTE);
 
         // Setup authentication

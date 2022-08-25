@@ -149,24 +149,23 @@ public class StatusHandler implements Handler<RoutingContext> {
                                             ctx.fail(e);
                                         }
                                     });
-                                    loadProps.onFailure(e -> ctx.fail(500, e));
+                                    loadProps.onFailure(ctx::fail);
                                 } catch (RuntimeException e) {
                                     ctx.fail(e);
                                 }
                             });
-                            fileCheck.onFailure(e -> ctx.fail(500, e));
+                            fileCheck.onFailure(ctx::fail);
                         } catch (RuntimeException e) {
                             ctx.fail(e);
                         }
                     });
-                    findIds.onFailure(e -> ctx.fail(500, e));
+                    findIds.onFailure(ctx::fail);
                 } catch (RuntimeException e) {
                     ctx.fail(e);
                 }
             });
         } catch (InvalidMetaData e) {
-            LOGGER.error(e.getMessage(), e);
-            ctx.fail(ENTITY_UNPARSABLE);
+            ctx.fail(ENTITY_UNPARSABLE, e);
         }
     }
 }
