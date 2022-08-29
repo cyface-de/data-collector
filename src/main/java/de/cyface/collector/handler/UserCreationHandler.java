@@ -92,8 +92,8 @@ public final class UserCreationHandler implements Handler<RoutingContext> {
             event.response().setStatusCode(201).end();
         });
         userCreation.onFailure(e -> {
-            LOGGER.error(String.format("Unable to create user with id: %s", username), e);
-            event.fail(400);
+            LOGGER.error(String.format("Unable to create user with id: %s", username));
+            event.fail(400, e);
         });
     }
 

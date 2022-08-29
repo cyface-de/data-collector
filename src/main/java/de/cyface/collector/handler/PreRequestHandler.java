@@ -153,10 +153,7 @@ public class PreRequestHandler extends Authorizer {
                     query.put("metadata.deviceId", deviceId);
                     query.put("metadata.measurementId", measurementId);
                     final var findIds = gridFs.findIds(query);
-                    findIds.onFailure(failure -> {
-                        LOGGER.error(failure.getMessage(), failure);
-                        ctx.fail(500, failure);
-                    });
+                    findIds.onFailure(ctx::fail);
                     findIds.onSuccess(ids -> {
                         try {
                             if (ids.size() > 1) {
@@ -196,13 +193,11 @@ public class PreRequestHandler extends Authorizer {
                 }
             });
         } catch (final InvalidMetaData | Unparsable | IllegalSession | PayloadTooLarge e) {
-            LOGGER.error(e.getMessage(), e);
-            ctx.fail(ENTITY_UNPARSABLE);
+            ctx.fail(ENTITY_UNPARSABLE, e);
         } catch (SkipUpload e) {
-            LOGGER.debug(e.getMessage(), e);
             // Ask the client to skip the upload, e.g. b/c of geo-fencing, deprecated Binary, missing locations, ...
             // We can add information to the response body to distinguish different causes.
-            ctx.fail(PRECONDITION_FAILED);
+            ctx.fail(PRECONDITION_FAILED, e);
         }
     }
 
