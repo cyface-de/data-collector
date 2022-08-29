@@ -64,7 +64,7 @@ application {
 }
 
 group = 'de.cyface'
-version = '6.10.0'
+version = '6.10.1'
 
 def mainVerticleName = 'de.cyface.collector.verticle.MainVerticle'
 def watchForChange = 'src/**/*'
