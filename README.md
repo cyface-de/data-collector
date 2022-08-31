@@ -1,4 +1,4 @@
-= Collector
+# Collector
 
 image:https://img.shields.io/badge/vert.x-4.3.2-purple.svg[link="https://vertx.io"]
 image:https://img.shields.io/badge/mongo-5.0.8-purple.svg[link="https://mongodb.com/"]
@@ -16,7 +16,7 @@ Changes between versions are found in the link:https://github.com/cyface-de/data
 
 The project uses link:https://gradle.org/[Gradle] as the build system.
 
-== Overview
+## Overview
 
 * link:#_collector[Collector]
 
@@ -28,7 +28,7 @@ The project uses link:https://gradle.org/[Gradle] as the build system.
 
 
 [#_collector]
-== Collector
+## Collector
 
 A program which provides the ability to collect data, as e.g. sent by the Cyface SDKs.
 
@@ -36,7 +36,7 @@ The following sections start with an explanation on how to set up all the requir
 This is a necessary prerequisite for all the following steps.
 So **DO NOT** skip it.
 
-=== Certificates
+### Certificates
 The Cyface Data Collector provides keys you may use for testing and during development.
 Those keys are located in `src/test/resources`.
 To use them outside of Unit tests you need to copy them to an appropriate location.
@@ -48,7 +48,7 @@ Just place the appropriate files as `private_key.pem` and `public.pem` in `secre
 
 To generate new keys follow the instructions in the https://vertx.io/docs/vertx-auth-jwt/java/#_loading_keys[Vert.x documentation] for *Using RSA keys*.
 
-=== Building
+### Building
 
 To build the docker container running the API simply execute `./gradlew :clean :build :copyToDockerBuildFolder`.
 This builds the jar file which is then packed into the Docker container which is build afterwards.
@@ -56,7 +56,7 @@ Please refer to the previous section about **Certificates** prior to building.
 
 When you updated the Swagger UI make sure to clear your browser cache or else it might not update.
 
-=== Execution
+### Execution
 This section describes how to execute the Cyface Data Collector.
 
 It begins with an explanation on how to run the Cyface Data Collector from a Docker environment.
@@ -68,7 +68,7 @@ If you are not using the Docker environment, you will probably have to set a few
 The last two sections provide explanations on how to run the software directly from the terminal or from within an IDE such as Eclipse or IntelliJ.
 For these execution variants you need the parameters explained in the preceding section.
 
-==== Running from Docker
+#### Running from Docker
 
 Make sure you read the "Certificates" section above. For development environment you can use the test certificates: `mkdir -p src/main/docker/secrets/jwt && cp src/test/resources/public.pem src/main/docker/secrets/ && cp src/test/resources/private_key.pem src/main/docker/secrets/`
 
@@ -95,11 +95,11 @@ It exposes the Cyface data collector as well as the ports of both Mongo database
 Use `docker-compose ps` to see which ports are mapped to which by Docker.
 For using such a setup in production, you may create your own Docker setup, based on our development one.
 
-==== Running without Docker
+#### Running without Docker
 Running the Cyface data collector without Docker, like for example from the terminal or from within your IDE is a little more complex.
 It requires a few set up steps and command knowledge as explained in the following paragraphs.
 
-===== Running a Mongo Database for Data and User Storage
+##### Running a Mongo Database for Data and User Storage
 Before you can run the Cyface data collector you need to set up a Mongo database.
 
 If you use the Docker environment as explained above, this is done for you.
@@ -110,7 +110,7 @@ For information on how to install and run a Mongo database on your machine pleas
 If you take the default installation, the default settings of the Cyface data collector should be sufficient to connect to that instance.
 **ATTENTION: However be aware this is not recommended as a production environment.**
 
-==== Data Collector Arguments
+#### Data Collector Arguments
 The Cyface data collector supports a few parameters to fine tune the runtime.
 All of these parameters also provide reasonable defaults for a quick setup.
 The parameters are provided using the typical https://vertx.io/docs/vertx-core/java/#_the_vertx_command_line[Vertx `-conf` parameter] with a value in JSON notation.
@@ -130,7 +130,7 @@ The following parameters are supported:
 * **salt.path:** The path to a salt file used to encrypt passwords stored in the user database even stronger. This defaults to `secrets/salt`. If the file does not exist a default salt is used. **You should not do this in a production environment**.
 * **metrics.enabled:** Set to either `true` or `false`. If `true` the collector API publishes metrics using micrometer. These metrics are accessible by a https://prometheus.io/[Prometheus] server (Which you need to set up yourself) at port `8081`.
 
-==== Running from Command Line
+#### Running from Command Line
 
 To launch your tests:
 
@@ -153,16 +153,16 @@ To run your application:
 ./gradlew run --args="run de.cyface.collector.verticle.MainVerticle -conf conf.json"
 ----
 
-==== Running from IDE
+#### Running from IDE
 To run directly from within your IDE you need to use the `de.cyface.collector.Application` class, which is a subclass of the https://vertx.io/docs/vertx-core/java/#_the_vert_x_launcher[Vert.x launcher]. Just specify it as the main class in your launch configuration with the program argument `run de.cyface.collector.verticle.MainVerticle`.
 
-=== Mongo Database
+### Mongo Database
 
-==== Setup
+#### Setup
 The following is not strictly necessary but advised if you run in production or if you encounter strange problems related to data persistence.
 Consider reading the https://docs.mongodb.com/manual/administration/[Mongo Database Administration Guide] and follow the advice mentioned there.
 
-==== Administration
+#### Administration
 To load files from the Mongo GridFS file storage use the https://docs.mongodb.com/manual/reference/program/mongofiles/[Mongofiles] tool.
 
 * Showing files: `mongofiles --port 27019 -d cyface list`
@@ -171,7 +171,7 @@ To load files from the Mongo GridFS file storage use the https://docs.mongodb.co
 
 
 [#_release_a_new_version]
-== Release a new Version
+## Release a new Version
 
 To release a new version:
 
@@ -203,7 +203,7 @@ link:https://github.com/cyface-de/data-collector/packages[GitHub Registry].
 
 
 [#_publishing_artifacts_to_github_packages_manually]
-== Publishing artifacts to GitHub Packages manually
+## Publishing artifacts to GitHub Packages manually
 
 The artifacts produced by this project are distributed via link:https://github.com/features/packages[GitHubPackages].
 Before you can publish artifacts you need to rename `gradle.properties.template` to `gradle.properties` and enter your GitHub credentials.
@@ -220,14 +220,22 @@ This project uses link:https://semver.org/[semantic versioning].
 
 
 [#_to-do]
-== To Do
+## To Do
 * Setup Cluster
 	* Vertx
 	* MongoDb
 
+# Package de.cyface.collector.storage
 
+Contains the interface to store data in Cyface and several implementations for that interface.
+
+Those implementations provide support for storing data in GridFS, on the local file system and in Google Cloud storage.
+
+The following image shows an overview of the interface and how it is embedded in the Cyface data collector.
+
+![](doc/storage-service.png)
 [#_licensing]
-== Licensing
+## Licensing
 Copyright 2018-2022 Cyface GmbH
 
 This file is part of the Cyface Data Collector.
