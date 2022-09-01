@@ -21,7 +21,10 @@ package de.cyface.collector.verticle;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 
+import de.cyface.collector.handler.AuthorizationHandler;
 import de.cyface.collector.handler.FailureHandler;
+import de.cyface.collector.handler.MeasurementHandler;
+import de.cyface.collector.handler.StatusHandler;
 import org.apache.commons.lang3.Validate;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -35,15 +38,12 @@ import de.cyface.collector.model.Measurement;
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
-import io.vertx.core.Handler;
 import io.vertx.core.Promise;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.auth.HashingStrategy;
-import io.vertx.ext.auth.jwt.JWTAuth;
 import io.vertx.ext.mongo.IndexOptions;
 import io.vertx.ext.mongo.MongoClient;
 import io.vertx.ext.web.Router;
-import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.BodyHandler;
 import io.vertx.ext.web.handler.ErrorHandler;
 import io.vertx.ext.web.handler.JWTAuthHandler;
@@ -221,10 +221,7 @@ public final class CollectorApiVerticle extends AbstractVerticle {
     private void setupApiRouter(Router apiRouter, Config config) {
 
         // Setup measurement routes
-        final var preRequestHandler = new PreRequestHandler(config);
-        final var measurementHandler = new de.cyface.collector.handler.MeasurementHandler(config);
         final var failureHandler = new FailureHandler(vertx);
-        final var preRequestBodyHandler = BodyHandler.create().setBodyLimit(BYTES_IN_ONE_KILOBYTE);
 
         // Setup authentication
         Authenticator.setupAuthentication("/login", apiRouter, config);
@@ -237,10 +234,8 @@ public final class CollectorApiVerticle extends AbstractVerticle {
         apiRouter.route().handler(sessionHandler);
 
         // Register handlers
-        addAuthenticatedPostHandler(apiRouter, config.getJwtAuthProvider(), MEASUREMENTS_ENDPOINT,
-                preRequestHandler, failureHandler, preRequestBodyHandler);
-        addAuthenticatedPutHandler(apiRouter, config.getJwtAuthProvider(), MEASUREMENTS_ENDPOINT,
-                measurementHandler, failureHandler);
+        registerPreRequestHandler(apiRouter, config, failureHandler);
+        registerMeasurementHandler(apiRouter, config, failureHandler);
 
         // Setup web-api route
         apiRouter.route().handler(StaticHandler.create("webroot/api"));
@@ -250,24 +245,24 @@ public final class CollectorApiVerticle extends AbstractVerticle {
      * Adds a handler for an endpoint and makes sure that handler is wrapped in the correct authentication handlers.
      * 
      * @param router The {@code Router} to register the handler to.
-     * @param jwtAuth The {@code JWTAuth} provider to be used for handling the authentication.
-     * @param endpoint The URL endpoint to wrap
-     * @param handler The handler which handles the data.
+     * @param config The configuration parameters used to start the server.
      * @param failureHandler The handler to add to handle failures.
-     * @param bodyHandler The handler to add to handle body size limitations.
      */
-    private void addAuthenticatedPostHandler(Router router, JWTAuth jwtAuth,
-            @SuppressWarnings("SameParameterValue") final String endpoint, final Handler<RoutingContext> handler,
-            final ErrorHandler failureHandler, final BodyHandler bodyHandler) {
+    private void registerPreRequestHandler(final Router router,
+                                           final Config config,
+                                           final ErrorHandler failureHandler) {
 
+        final var jwtAuth = config.getJwtAuthProvider();
         final var jwtHandler = JWTAuthHandler.create(jwtAuth);
-        router.post(endpoint)
+        final var preRequestBodyHandler = BodyHandler.create().setBodyLimit(BYTES_IN_ONE_KILOBYTE);
+        router.post(MEASUREMENTS_ENDPOINT)
                 .consumes("application/json; charset=UTF-8")
                 .handler(LoggerHandler.create())
                 // Ready request body only once and before async calls or pause/resume must be used see [DAT-749]
-                .handler(bodyHandler)
+                .handler(preRequestBodyHandler)
                 .handler(jwtHandler)
-                .handler(handler)
+                .handler(new AuthorizationHandler())
+                .handler(new PreRequestHandler(config))
                 .failureHandler(failureHandler);
     }
 
@@ -275,24 +270,28 @@ public final class CollectorApiVerticle extends AbstractVerticle {
      * Adds a handler for an endpoint and makes sure that handler is wrapped in the correct authentication handlers.
      *
      * @param router The {@code Router} to register the handler to.
-     * @param jwtAuth The {@code JWTAuth} provider to be used for handling the authentication.
-     * @param endpoint The URL endpoint to wrap
-     * @param handler The handler which handles the data.
+     * @param config The configuration parameters used to start the server.
      * @param failureHandler The handler to add to handle failures.
      */
-    private void addAuthenticatedPutHandler(final Router router, final JWTAuth jwtAuth,
-            @SuppressWarnings("SameParameterValue") final String endpoint, final Handler<RoutingContext> handler,
+    private void registerMeasurementHandler(
+            final Router router,
+            final Config config,
             final ErrorHandler failureHandler) {
 
+        final var jwtAuth = config.getJwtAuthProvider();
         final var jwtAuthHandler = JWTAuthHandler.create(jwtAuth);
         // The path pattern ../(sid)/.. was chosen because of the documentation of Vert.X SessionHandler
         // https://vertx.io/docs/vertx-web/java/#_handling_sessions
-        router.putWithRegex(String.format("\\%s\\/\\([a-z0-9]{32}\\)\\/", endpoint))
+        router.putWithRegex(String.format("\\%s\\/\\([a-z0-9]{32}\\)\\/", MEASUREMENTS_ENDPOINT))
                 .consumes("application/octet-stream")
                 // Not using BodyHandler as the `request.body()` can only be read once and the {@code #handler} does so.
                 .handler(LoggerHandler.create())
                 .handler(jwtAuthHandler)
-                .handler(handler)
+                .handler(new AuthorizationHandler())
+                .handler(new MeasurementHandler(
+                        config.getDatabase(),
+                        config.getMeasurementLimit()))
+                .handler(new StatusHandler(config.getDatabase()))
                 .failureHandler(failureHandler);
     }
 }

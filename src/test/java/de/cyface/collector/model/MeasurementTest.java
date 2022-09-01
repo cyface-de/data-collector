@@ -27,7 +27,7 @@ import java.util.UUID;
 
 import org.junit.jupiter.api.Test;
 
-import de.cyface.model.RequestMetaData;
+import de.cyface.collector.model.RequestMetaData;
 import io.vertx.core.buffer.Buffer;
 
 /**
