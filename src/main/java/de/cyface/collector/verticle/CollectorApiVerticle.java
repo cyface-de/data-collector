@@ -19,12 +19,14 @@
 package de.cyface.collector.verticle;
 
 import java.nio.charset.StandardCharsets;
-import java.util.Arrays;
 
+import de.cyface.api.PauseAndResumeAfterBodyParsing;
+import de.cyface.api.PauseAndResumeBeforeBodyParsing;
 import de.cyface.collector.handler.AuthorizationHandler;
 import de.cyface.collector.handler.FailureHandler;
 import de.cyface.collector.handler.MeasurementHandler;
 import de.cyface.collector.handler.StatusHandler;
+import de.cyface.collector.storage.GridFsStorageService;
 import org.apache.commons.lang3.Validate;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -114,6 +116,7 @@ public final class CollectorApiVerticle extends AbstractVerticle {
                 measurementIndex, unique);
         final var userIndex = new JsonObject().put("username", 1);
         final var userIndexCreation = config.getDatabase().createIndexWithOptions("user", userIndex, unique);
+        final var storageService = new GridFsStorageService(config.getDatabase(), vertx.fileSystem());
 
         // Start http server
         final var router = setupRoutes(config);
@@ -126,31 +129,13 @@ public final class CollectorApiVerticle extends AbstractVerticle {
         final var adminPassword = Parameter.ADMIN_PASSWORD.stringValue(vertx, "secret");
         final var userCreation = createDefaultUser(config.getDatabase(), adminUsername, adminPassword);
 
-        // Schedule upload file cleaner task
-        vertx.setPeriodic(config.getUploadExpirationTime(), timerId -> {
-            // Remove deprecated temp files
-            // There is no way to look through all sessions to identify unreferenced files. Thus, we remove files which
-            // have not been changed for a long time. The MeasurementHandler handles sessions with "missing" files.
-            final var uploadFolder = de.cyface.collector.handler.MeasurementHandler.FILE_UPLOADS_FOLDER.toFile();
-            final var uploadFiles = uploadFolder.listFiles();
-            if (uploadFiles != null) {
-                Arrays.stream(uploadFiles).parallel().forEach(file -> {
-                    Validate.isTrue(file.isFile());
-                    final var lastModifiedMillis = file.lastModified();
-                    if (lastModifiedMillis > config.getUploadExpirationTime()) {
-                        LOGGER.debug(String.format("Cleaning up temp file: %s", file.getPath()));
-                        final var deleted = file.delete();
-                        if (!deleted) {
-                            LOGGER.warn(String.format("Failed to remove temp file: %s", file.getPath()));
-                        }
-                    }
-                });
-            }
-        });
-
+        storageService.startPeriodicCleaningOfTempData(config.getUploadExpirationTime(), vertx);
         // Block until all futures completed
-        final var startUp = CompositeFuture.all(userIndexCreation, measurementIndexCreation,
-                serverStartPromise.future(), userCreation);
+        final var startUp = CompositeFuture.all(
+                userIndexCreation,
+                measurementIndexCreation,
+                serverStartPromise.future(),
+                userCreation);
         startUp.onSuccess(success -> startPromise.complete());
         startUp.onFailure(startPromise::fail);
     }
@@ -261,7 +246,7 @@ public final class CollectorApiVerticle extends AbstractVerticle {
                 // Ready request body only once and before async calls or pause/resume must be used see [DAT-749]
                 .handler(preRequestBodyHandler)
                 .handler(jwtHandler)
-                .handler(new AuthorizationHandler())
+                .handler(new AuthorizationHandler(config.getAuthProvider(), config.getDatabase(), new PauseAndResumeAfterBodyParsing()))
                 .handler(new PreRequestHandler(config))
                 .failureHandler(failureHandler);
     }
@@ -282,14 +267,15 @@ public final class CollectorApiVerticle extends AbstractVerticle {
         final var jwtAuthHandler = JWTAuthHandler.create(jwtAuth);
         // The path pattern ../(sid)/.. was chosen because of the documentation of Vert.X SessionHandler
         // https://vertx.io/docs/vertx-web/java/#_handling_sessions
+        final var storageService = new GridFsStorageService(config.getDatabase(), vertx.fileSystem());
         router.putWithRegex(String.format("\\%s\\/\\([a-z0-9]{32}\\)\\/", MEASUREMENTS_ENDPOINT))
                 .consumes("application/octet-stream")
                 // Not using BodyHandler as the `request.body()` can only be read once and the {@code #handler} does so.
                 .handler(LoggerHandler.create())
                 .handler(jwtAuthHandler)
-                .handler(new AuthorizationHandler())
+                .handler(new AuthorizationHandler(config.getAuthProvider(), config.getDatabase(), new PauseAndResumeBeforeBodyParsing()))
                 .handler(new MeasurementHandler(
-                        config.getDatabase(),
+                        storageService,
                         config.getMeasurementLimit()))
                 .handler(new StatusHandler(config.getDatabase()))
                 .failureHandler(failureHandler);

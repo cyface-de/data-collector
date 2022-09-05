@@ -18,29 +18,30 @@
  */
 package de.cyface.collector.handler
 
-import de.cyface.api.Authorizer.ENTITY_UNPARSABLE
 import de.cyface.api.model.User
 import de.cyface.collector.handler.exception.IllegalSession
 import de.cyface.collector.handler.exception.InvalidMetaData
 import de.cyface.collector.handler.exception.PayloadTooLarge
 import de.cyface.collector.handler.exception.SessionExpired
 import de.cyface.collector.handler.exception.SkipUpload
+import de.cyface.collector.handler.exception.UnexpectedContentRange
 import de.cyface.collector.handler.exception.Unparsable
 import de.cyface.collector.model.ContentRange
-import de.cyface.collector.model.Measurement
 import de.cyface.collector.storage.DataStorageService
-import de.cyface.collector.storage.GridFsStorageService
-import de.cyface.collector.verticle.Config
 import de.cyface.collector.model.RequestMetaData
+import de.cyface.collector.storage.Status
+import de.cyface.collector.storage.StatusType
+import io.vertx.core.Future
 import io.vertx.core.Handler
+import io.vertx.core.Promise
+import io.vertx.core.buffer.Buffer
 import io.vertx.core.http.HttpServerRequest
-import io.vertx.ext.mongo.MongoClient
+import io.vertx.core.streams.Pipe
 import io.vertx.ext.web.RoutingContext
 import io.vertx.ext.web.Session
 import org.apache.commons.lang3.Validate
 import org.slf4j.LoggerFactory
-import java.io.File
-import java.nio.file.Path
+import java.util.UUID
 import java.util.stream.Collectors
 
 /**
@@ -77,7 +78,11 @@ class MeasurementHandler(
         try {
             // Load authenticated user
             val username = ctx.user().principal().getString("username")
-            // TODO: Get Users from Context (or return 401 or 403)
+            val users = ctx.get<Set<User>?>("accessible-users")
+            if (users == null) {
+                ctx.response().setStatusCode(401).end()
+                return
+            }
             val matched = users.stream().filter { u: User -> u.name == username }.collect(Collectors.toList())
             Validate.isTrue(matched.size == 1)
             val loggedInUser = matched.stream().findFirst().get() // Make sure it's the matched user
@@ -92,24 +97,28 @@ class MeasurementHandler(
 
             // Handle first chunk
             val contentRange = contentRange(request, bodySize)
-            val path = session.get<Any?>(UPLOAD_PATH_FIELD) as String?
-            if (contentRange.fromIndex != "0") {
-                if (path == null) {
-                    // I.e. the server received data in a previous request but now cannot find the `path` session value.
-                    // Unsure when this can happen. Not accepting the data. Asking to restart upload (`404`).
-                    LOGGER.warn(String.format("Response: 404, path is null and unexpected content range: %s", contentRange))
-                } else {
-                    // Server received data in a previous request but the chunk file was probably cleaned by cleaner task.
-                    // Can't return 308. Google API client lib throws `Preconditions` on subsequent chunk upload.
-                    // This makes sense as the server reported before that bytes (>0) were received.
-                    LOGGER.warn(String.format("Response: 404, Unexpected content range: %s", contentRange))
+            val checkResult = check(session, loggedInUser, request.pipe(), contentRange, metaData)
+            checkResult.onSuccess { result ->
+                when(result.type) {
+                    StatusType.INCOMPLETE -> {
+                        val byteSize = result.byteSize
+                        val range = String.format("bytes=0-%d", byteSize - 1)
+                        ctx.response().putHeader("Range", range)
+                        ctx.response().putHeader("Content-Length", "0")
+                        ctx.response().setStatusCode(StatusHandler.RESUME_INCOMPLETE).end()
+                    }
+                    StatusType.COMPLETE -> {
+                        // not removing session
+                        session.remove<Any>(UPLOAD_PATH_FIELD)
+                        storageService.clean(result.uploadIdentifier).onSuccess {
+                                ctx.response().setStatusCode(201).end()
+                            }.onFailure { cause ->
+                                ctx.fail(cause)
+                            }
+                    }
                 }
-                ctx.response().setStatusCode(NOT_FOUND).end() // client sends a new pre-request for this upload
-            } else {
-                val storageResult = storageService.store(request.pipe(), loggedInUser, contentRange, metaData, path)
-                storageResult.onSuccess { result -> }
-                storageResult.onFailure(MeasurementFailureHandler())
             }
+            checkResult.onFailure(MeasurementFailureHandler(ctx))
         } catch (e: InvalidMetaData) {
             LOGGER.error("Response: 422", e)
             ctx.fail(ENTITY_UNPARSABLE, e)
@@ -124,11 +133,74 @@ class MeasurementHandler(
             ctx.response().setStatusCode(NOT_FOUND).end() // client sends a new pre-request for this upload
         } catch (e: SkipUpload) {
             LOGGER.debug(e.message, e)
-            remove(session) // client won't resume
+            session.destroy() // client won't resume
             ctx.fail(PreRequestHandler.PRECONDITION_FAILED, e)
+        } catch (e: PayloadTooLarge) {
+            LOGGER.error("Response: 422", e)
+            // client won't resume
+            session.destroy()
+            ctx.fail(ENTITY_UNPARSABLE, e)
         } catch (e: RuntimeException) {
             ctx.fail(e)
         }
+    }
+
+    private fun check(session: Session, user: User, pipe: Pipe<Buffer>, contentRange: ContentRange, metaData: RequestMetaData): Future<Status> {
+        val ret = Promise.promise<Status>()
+        val uploadIdentifier = session.get<UUID?>(UPLOAD_PATH_FIELD)
+
+        if (uploadIdentifier == null && contentRange.fromIndex != "0") {
+           // I.e. the server received data in a previous request but now cannot find the `path` session value.
+           // Unsure when this can happen. Not accepting the data. Asking to restart upload (`404`).
+           val message = String.format("Response: 404, path is null and unexpected content range: %s", contentRange)
+           LOGGER.warn(message)
+           ret.fail(UnexpectedContentRange(message))
+        } else if(uploadIdentifier!=null && contentRange.fromIndex == "0") {
+            // Server received data in a previous request but the chunk file was probably cleaned by cleaner task.
+            // Can't return 308. Google API client lib throws `Preconditions` on subsequent chunk upload.
+            // This makes sense as the server reported before that bytes (>0) were received.
+            val message = String.format("Response: 404, Unexpected content range: %s", contentRange)
+            LOGGER.warn(message)
+            ret.fail(UnexpectedContentRange(message))
+        } else if(uploadIdentifier==null) {
+            // Create temp file to accept binary
+            val newUploadIdentifier = UUID.randomUUID()
+
+            // Bind session to this measurement and mark as "pre-request accepted"
+            session.put(UPLOAD_PATH_FIELD, newUploadIdentifier)
+            val acceptUploadResult = storageService.store(pipe, user, contentRange, newUploadIdentifier, metaData)
+            acceptUploadResult.onSuccess { result -> ret.complete(result) }
+            acceptUploadResult.onFailure { cause -> ret.fail(cause) }
+        } else {
+
+            // Search for previous upload chunk
+            storageService.bytesUploaded(uploadIdentifier).onSuccess {byteSize ->
+                // Wrong chunk uploaded
+                if (contentRange.fromIndex != byteSize.toString()) {
+                    // Ask client to resume from the correct position
+                    val range = String.format("bytes=0-%d", byteSize - 1)
+                    LOGGER.debug("Response: 308, Range {} (partial data)", range)
+                    ret.complete(Status(uploadIdentifier, StatusType.INCOMPLETE, byteSize))
+                } else {
+                    val acceptUploadResult = storageService.store(pipe, user, contentRange, uploadIdentifier, metaData)
+                    acceptUploadResult.onSuccess { result -> ret.complete(result) }
+                    acceptUploadResult.onFailure { cause -> ret.fail(cause) }
+                }
+            }.onFailure {
+                session.remove<Any>(UPLOAD_PATH_FIELD) // was linked to non-existing file
+
+                // Create new upload identifier for this upload
+                val newUploadIdentifier = UUID.randomUUID()
+
+                // Bind session to this measurement and mark as "pre-request accepted"
+                session.put(UPLOAD_PATH_FIELD, newUploadIdentifier)
+                val acceptUploadResult = storageService.store(pipe, user, contentRange, newUploadIdentifier, metaData)
+                acceptUploadResult.onSuccess { result -> ret.complete(result) }
+                acceptUploadResult.onFailure { cause -> ret.fail(cause) }
+            }
+        }
+
+        return ret.future()
     }
 
     /**
@@ -284,26 +356,6 @@ class MeasurementHandler(
         }
     }
 
-    private fun remove(session: Session, upload: File) {
-        remove(session)
-        remove(upload)
-    }
-
-    private fun clean(session: Session, upload: File) {
-        // not removing session
-        session.remove<Any>(UPLOAD_PATH_FIELD)
-        remove(upload)
-    }
-
-    private fun remove(upload: File) {
-        val deleted = upload.delete()
-        Validate.isTrue(deleted)
-    }
-
-    private fun remove(session: Session) {
-        session.destroy()
-    }
-
     companion object {
         /**
          * The logger for objects of this class. You can change its configuration by
@@ -315,6 +367,10 @@ class MeasurementHandler(
          * HTTP status code to return when the client tries to resume an upload but the session has expired.
          */
         const val NOT_FOUND = 404
+        /**
+         * Http code which indicates that the upload request syntax was incorrect.
+         */
+        private const val ENTITY_UNPARSABLE = 422
 
         /**
          * The field name for the session entry which contains the path of the temp file containing the upload binary.
@@ -322,7 +378,6 @@ class MeasurementHandler(
          *
          * This field is set in the [MeasurementHandler] to support resumable upload.
          */
-        @JvmField
-        val UPLOAD_PATH_FIELD = "upload-path"
+        const val UPLOAD_PATH_FIELD = "upload-path"
     }
 }
