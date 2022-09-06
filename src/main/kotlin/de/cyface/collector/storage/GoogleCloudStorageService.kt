@@ -22,10 +22,6 @@ class GoogleCloudStorageService: DataStorageService {
         TODO("Not yet implemented")
     }
 
-    override fun isStored(measurement: Measurement): Future<Boolean> {
-        TODO("Not yet implemented")
-    }
-
     override fun bytesUploaded(uploadIdentifier: UUID): Future<Long> {
         TODO("Not yet implemented")
     }
@@ -35,6 +31,10 @@ class GoogleCloudStorageService: DataStorageService {
     }
 
     override fun startPeriodicCleaningOfTempData(uploadExpirationTime: Long, vertx: Vertx) {
+        TODO("Not yet implemented")
+    }
+
+    override fun isStored(deviceId: String, measurementId: Long): Future<Boolean> {
         TODO("Not yet implemented")
     }
 }

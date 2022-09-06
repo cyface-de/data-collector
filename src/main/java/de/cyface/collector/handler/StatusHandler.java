@@ -21,6 +21,7 @@ package de.cyface.collector.handler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import static de.cyface.collector.handler.HTTPStatus.*;
 import static de.cyface.collector.handler.MeasurementHandler.UPLOAD_PATH_FIELD;
 
 import de.cyface.collector.handler.exception.InvalidMetaData;
@@ -45,14 +46,7 @@ public class StatusHandler implements Handler<RoutingContext> {
      * adapting the values in <code>src/main/resources/logback.xml</code>.
      */
     private static final Logger LOGGER = LoggerFactory.getLogger(StatusHandler.class);
-    /**
-     * HTTP status code to return when the client asks to resume an upload and the server replies where to continue.
-     */
-    static final int RESUME_INCOMPLETE = 308;
-    /**
-     * Http code which indicates that the upload request syntax was incorrect.
-     */
-    private static final int ENTITY_UNPARSABLE = 422;
+
     /**
      * Vertx <code>MongoClient</code> used to access the database to write the received data to.
      */
@@ -101,11 +95,11 @@ public class StatusHandler implements Handler<RoutingContext> {
                             if (ids.size() > 1) {
                                 LOGGER.error(String.format("More than one measurement found for did %s mid %s",
                                         deviceId, measurementId));
-                                ctx.fail(500);
+                                ctx.fail(SERVER_ERROR);
                             }
                             if (ids.size() == 1) {
                                 LOGGER.debug("Response: 200, measurement already exists, no upload needed");
-                                ctx.response().setStatusCode(200).end();
+                                ctx.response().setStatusCode(OK).end();
                             }
 
                             // If no bytes have been received, return 308 but without a `Range` header to indicate this

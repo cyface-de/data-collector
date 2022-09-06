@@ -1,6 +1,6 @@
 -verbose
 
-# Preserving `java` modules via the configuration in `libs/build.gradle`
+# Preserving `java` modules via the configuration in `build.gradle.kts.kts`
 # - If the `java.lang` class is not found, make sure your local `java.home` and `java.version` are set correctly.
 #   E.g. by reinstalling `sudo apt install openjdk-11-jdk`
 

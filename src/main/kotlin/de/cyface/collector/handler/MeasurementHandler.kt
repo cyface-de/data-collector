@@ -19,6 +19,10 @@
 package de.cyface.collector.handler
 
 import de.cyface.api.model.User
+import de.cyface.collector.handler.HTTPStatus.ENTITY_UNPARSABLE
+import de.cyface.collector.handler.HTTPStatus.NOT_FOUND
+import de.cyface.collector.handler.HTTPStatus.PRECONDITION_FAILED
+import de.cyface.collector.handler.HTTPStatus.RESUME_INCOMPLETE
 import de.cyface.collector.handler.exception.IllegalSession
 import de.cyface.collector.handler.exception.InvalidMetaData
 import de.cyface.collector.handler.exception.PayloadTooLarge
@@ -105,7 +109,7 @@ class MeasurementHandler(
                         val range = String.format("bytes=0-%d", byteSize - 1)
                         ctx.response().putHeader("Range", range)
                         ctx.response().putHeader("Content-Length", "0")
-                        ctx.response().setStatusCode(StatusHandler.RESUME_INCOMPLETE).end()
+                        ctx.response().setStatusCode(RESUME_INCOMPLETE).end()
                     }
                     StatusType.COMPLETE -> {
                         // not removing session
@@ -134,7 +138,7 @@ class MeasurementHandler(
         } catch (e: SkipUpload) {
             LOGGER.debug(e.message, e)
             session.destroy() // client won't resume
-            ctx.fail(PreRequestHandler.PRECONDITION_FAILED, e)
+            ctx.fail(PRECONDITION_FAILED, e)
         } catch (e: PayloadTooLarge) {
             LOGGER.error("Response: 422", e)
             // client won't resume
@@ -362,15 +366,6 @@ class MeasurementHandler(
          * adapting the values in `src/main/resources/logback.xml`.
          */
         private val LOGGER = LoggerFactory.getLogger(MeasurementHandler::class.java)
-
-        /**
-         * HTTP status code to return when the client tries to resume an upload but the session has expired.
-         */
-        const val NOT_FOUND = 404
-        /**
-         * Http code which indicates that the upload request syntax was incorrect.
-         */
-        private const val ENTITY_UNPARSABLE = 422
 
         /**
          * The field name for the session entry which contains the path of the temp file containing the upload binary.

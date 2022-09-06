@@ -12,8 +12,8 @@ import java.util.UUID
 
 sealed interface DataStorageService {
     fun store(pipe: Pipe<Buffer>, user: User, contentRange: ContentRange, uploadIdentifier: UUID, metaData: RequestMetaData): Future<Status>
-    fun isStored(measurement: Measurement): Future<Boolean>
     fun bytesUploaded(uploadIdentifier: UUID): Future<Long>
     fun clean(uploadIdentifier: UUID): Future<Void>
     fun startPeriodicCleaningOfTempData(uploadExpirationTime: Long, vertx: Vertx)
+    fun isStored(deviceId: String, measurementId: Long): Future<Boolean>
 }

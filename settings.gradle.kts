@@ -17,4 +17,4 @@
  * along with the Cyface Data Collector. If not, see <http://www.gnu.org/licenses/>.
  */
 
-rootProject.name = 'collector'
+rootProject.name = "collector"

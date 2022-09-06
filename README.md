@@ -225,6 +225,10 @@ This project uses link:https://semver.org/[semantic versioning].
 	* Vertx
 	* MongoDb
 
+# Package de.cyface.collector.model
+
+Contains all the data model files required by the Cyface data collector.
+
 # Package de.cyface.collector.storage
 
 Contains the interface to store data in Cyface and several implementations for that interface.

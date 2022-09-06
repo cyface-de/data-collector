@@ -1,6 +1,7 @@
 package de.cyface.collector.handler
 
-import de.cyface.collector.handler.MeasurementHandler.Companion.NOT_FOUND
+import de.cyface.collector.handler.HTTPStatus.NOT_FOUND
+import de.cyface.collector.handler.HTTPStatus.SERVER_ERROR
 import de.cyface.collector.handler.exception.UnexpectedContentRange
 import io.vertx.core.Handler
 import io.vertx.ext.web.RoutingContext
@@ -16,7 +17,7 @@ class MeasurementFailureHandler(private val ctx: RoutingContext): Handler<Throwa
 
             else -> {
                 LOGGER.debug(event.localizedMessage)
-                ctx.fail(500, event)
+                ctx.fail(SERVER_ERROR, event)
             }
         }
     }

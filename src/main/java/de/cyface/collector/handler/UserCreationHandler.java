@@ -89,11 +89,11 @@ public final class UserCreationHandler implements Handler<RoutingContext> {
         final var userCreation = createUser(username, password, role);
         userCreation.onSuccess(id -> {
             LOGGER.info("Added new user with name: {}", username);
-            event.response().setStatusCode(201).end();
+            event.response().setStatusCode(HTTPStatus.CREATED).end();
         });
         userCreation.onFailure(e -> {
             LOGGER.error(String.format("Unable to create user with id: %s", username));
-            event.fail(400, e);
+            event.fail(HTTPStatus.BAD_REQUEST, e);
         });
     }
 

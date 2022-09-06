@@ -5,6 +5,7 @@ import de.cyface.collector.model.ContentRange
 import de.cyface.collector.model.Measurement
 import de.cyface.collector.model.RequestMetaData
 import de.cyface.collector.storage.exception.ContentRangeNotMatchingFileSize
+import de.cyface.collector.storage.exception.DuplicatesInDatabase
 import de.cyface.collector.storage.exception.GridFsFailed
 import io.vertx.core.Future
 import io.vertx.core.Promise
@@ -22,6 +23,7 @@ import io.vertx.ext.mongo.MongoGridFsClient
 import org.apache.commons.lang3.Validate
 import org.slf4j.LoggerFactory
 import java.io.File
+import java.lang.RuntimeException
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.util.UUID
@@ -87,8 +89,45 @@ class GridFsStorageService(private val mongoClient: MongoClient, val fs: FileSys
         return promise.future()
     }
 
-    override fun isStored(measurement: Measurement): Future<Boolean> {
-        TODO("Not yet implemented")
+    override fun isStored(deviceId: String, measurementId: Long): Future<Boolean> {
+        val ret = Promise.promise<Boolean>()
+        val access = mongoClient.createDefaultGridFsBucketService()
+        access.onSuccess { gridFs: MongoGridFsClient ->
+            try {
+                val query = JsonObject()
+                query.put("metadata.deviceId", deviceId)
+                query.put("metadata.measurementId", measurementId)
+                val findIds = gridFs.findIds(query)
+                findIds.onFailure { cause -> ret.fail(cause) }
+                findIds.onSuccess { ids: List<String> ->
+                    try {
+                        if (ids.size > 1) {
+                            LOGGER.error("More than one measurement found for did {} mid {}", deviceId, measurementId)
+                            ret.fail(
+                                DuplicatesInDatabase(
+                                    String.format(
+                                        "Found %d datasets with deviceId %s and measurementId %d",
+                                        ids.size,
+                                        deviceId,
+                                        measurementId
+                                    )
+                                )
+                            )
+                        } else if (ids.size == 1) {
+                            ret.complete(true)
+                        } else {
+                            ret.complete(false)
+                        }
+                    } catch (exception: RuntimeException) {
+                        ret.fail(exception)
+                    }
+                }
+            } catch (exception: RuntimeException) {
+                ret.fail(exception)
+            }
+        }
+
+        return ret.future()
     }
 
     override fun bytesUploaded(uploadIdentifier: UUID): Future<Long> {
