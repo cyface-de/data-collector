@@ -16,34 +16,14 @@
  * You should have received a copy of the GNU General Public License
  * along with the Cyface Data Collector. If not, see <http://www.gnu.org/licenses/>.
  */
-package de.cyface.collector.handler.exception;
+package de.cyface.collector.handler.exception
 
 /**
- * Exception thrown when the upload or pre-request contains a too large payload.
+ * Exception thrown when the server does not want to receive the data offered in the upload pre-request.
  *
  * @author Armin Schnabel
  * @version 1.0.0
  * @since 7.0.0
+ * @param message Details about the reason for this exception.
  */
-public class PayloadTooLarge extends Exception {
-
-    /**
-     * Creates a fully initialized instance of this class.
-     *
-     * @param message Details about the reason for this exception.
-     */
-    public PayloadTooLarge(String message) {
-        super(message);
-    }
-
-    /**
-     * Creates a fully initialized instance of this class.
-     *
-     * @param message Details about the reason for this exception.
-     * @param e The causing error.
-     */
-    @SuppressWarnings("unused")
-    public PayloadTooLarge(String message, RuntimeException e) {
-        super(message, e);
-    }
-}
+class SkipUpload(message: String): Exception(message)

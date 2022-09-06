@@ -16,34 +16,14 @@
  * You should have received a copy of the GNU General Public License
  * along with the Cyface Data Collector. If not, see <http://www.gnu.org/licenses/>.
  */
-package de.cyface.collector.handler.exception;
+package de.cyface.collector.handler.exception
 
 /**
- * Exception thrown when the upload session is used incorrectly by the client.
+ * Exception thrown when the upload session is not found, e.g. when it's expired.
  *
  * @author Armin Schnabel
  * @version 1.0.0
  * @since 7.0.0
+ * @param message Details about the reason for this exception.
  */
-public class IllegalSession extends Exception {
-
-    /**
-     * Creates a fully initialized instance of this class.
-     *
-     * @param message Details about the reason for this exception.
-     */
-    public IllegalSession(String message) {
-        super(message);
-    }
-
-    /**
-     * Creates a fully initialized instance of this class.
-     *
-     * @param message Details about the reason for this exception.
-     * @param e The causing error.
-     */
-    @SuppressWarnings("unused")
-    public IllegalSession(String message, RuntimeException e) {
-        super(message, e);
-    }
-}
+class SessionExpired(message: String) : Exception(message)

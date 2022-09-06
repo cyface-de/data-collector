@@ -16,7 +16,7 @@
  * You should have received a copy of the GNU General Public License
  * along with the Cyface Data Collector. If not, see <http://www.gnu.org/licenses/>.
  */
-package de.cyface.collector.handler.exception;
+package de.cyface.collector.handler.exception
 
 /**
  * Exception thrown when the upload or pre-request does not contain the expected metadata.
@@ -24,25 +24,14 @@ package de.cyface.collector.handler.exception;
  * @author Armin Schnabel
  * @version 1.0.0
  * @since 7.0.0
+ * @param message Details about the reason for this exception.
+ * @param cause The causing error.
  */
-public class InvalidMetaData extends Exception {
-
-    /**
+class InvalidMetaData(message: String, cause: java.lang.Exception?) : Exception(message, cause) {
+    /**<
      * Creates a fully initialized instance of this class.
      *
      * @param message Details about the reason for this exception.
      */
-    public InvalidMetaData(String message) {
-        super(message);
-    }
-
-    /**
-     * Creates a fully initialized instance of this class.
-     *
-     * @param message Details about the reason for this exception.
-     * @param e The causing error.
-     */
-    public InvalidMetaData(String message, RuntimeException e) {
-        super(message, e);
-    }
+    constructor(message: String): this(message,null) {}
 }

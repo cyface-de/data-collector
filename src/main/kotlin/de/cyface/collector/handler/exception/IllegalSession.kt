@@ -16,34 +16,14 @@
  * You should have received a copy of the GNU General Public License
  * along with the Cyface Data Collector. If not, see <http://www.gnu.org/licenses/>.
  */
-package de.cyface.collector.handler.exception;
+package de.cyface.collector.handler.exception
 
 /**
- * Exception thrown when the upload or pre-request is not parsable, e.g. when the pre-request does not contain the
- * expected header fields like the content-length of the upload.
+ * Exception thrown when the upload session is used incorrectly by the client.
  *
  * @author Armin Schnabel
  * @version 1.0.0
  * @since 7.0.0
+ * @param message Details about the reason for this exception.
  */
-public class Unparsable extends Exception {
-
-    /**
-     * Creates a fully initialized instance of this class.
-     *
-     * @param message Details about the reason for this exception.
-     */
-    public Unparsable(String message) {
-        super(message);
-    }
-
-    /**
-     * Creates a fully initialized instance of this class.
-     *
-     * @param message Details about the reason for this exception.
-     * @param e The causing error.
-     */
-    public Unparsable(String message, RuntimeException e) {
-        super(message, e);
-    }
-}
+class IllegalSession(message: String) : Exception(message)
