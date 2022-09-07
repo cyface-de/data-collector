@@ -26,6 +26,7 @@ import de.cyface.collector.handler.AuthorizationHandler;
 import de.cyface.collector.handler.FailureHandler;
 import de.cyface.collector.handler.MeasurementHandler;
 import de.cyface.collector.handler.StatusHandler;
+import de.cyface.collector.storage.DataStorageService;
 import de.cyface.collector.storage.GridFsStorageService;
 import org.apache.commons.lang3.Validate;
 import org.slf4j.Logger;
@@ -119,7 +120,7 @@ public final class CollectorApiVerticle extends AbstractVerticle {
         final var storageService = new GridFsStorageService(config.getDatabase(), vertx.fileSystem());
 
         // Start http server
-        final var router = setupRoutes(config);
+        final var router = setupRoutes(config, storageService);
         final Promise<Void> serverStartPromise = Promise.promise();
         final var httpServer = new de.cyface.api.HttpServer(config.getHttpPort());
         httpServer.start(vertx, router, serverStartPromise);
@@ -180,16 +181,17 @@ public final class CollectorApiVerticle extends AbstractVerticle {
      * Initializes all the routes available via the Cyface Data Collector.
      *
      * @param config HTTP server configuration parameters required to set up the routes for the collector API.
+     * @param storageService The service used to store the received data.
      * @return the created main {@code Router}
      */
-    private Router setupRoutes(final Config config) {
+    private Router setupRoutes(final Config config, final DataStorageService storageService) {
 
         // Setup router
         final var mainRouter = Router.router(vertx);
         final var apiRouter = Router.router(vertx);
 
         mainRouter.route(config.getEndpoint()).subRouter(apiRouter);
-        setupApiRouter(apiRouter, config);
+        setupApiRouter(apiRouter, config, storageService);
 
         // Setup unknown-resource handler
         mainRouter.route("/*").last().handler(new de.cyface.api.FailureHandler());
@@ -203,7 +205,7 @@ public final class CollectorApiVerticle extends AbstractVerticle {
      * @param apiRouter The sub-router to be used.
      * @param config HTTP server configuration parameters required to set up the routes
      */
-    private void setupApiRouter(Router apiRouter, Config config) {
+    private void setupApiRouter(final Router apiRouter, final Config config, final DataStorageService storageService) {
 
         // Setup measurement routes
         final var failureHandler = new FailureHandler(vertx);
@@ -219,8 +221,8 @@ public final class CollectorApiVerticle extends AbstractVerticle {
         apiRouter.route().handler(sessionHandler);
 
         // Register handlers
-        registerPreRequestHandler(apiRouter, config, failureHandler);
-        registerMeasurementHandler(apiRouter, config, failureHandler);
+        registerPreRequestHandler(apiRouter, config, failureHandler, storageService);
+        registerMeasurementHandler(apiRouter, config, failureHandler, storageService);
 
         // Setup web-api route
         apiRouter.route().handler(StaticHandler.create("webroot/api"));
@@ -232,10 +234,12 @@ public final class CollectorApiVerticle extends AbstractVerticle {
      * @param router The {@code Router} to register the handler to.
      * @param config The configuration parameters used to start the server.
      * @param failureHandler The handler to add to handle failures.
+     * @param storageService Service used to write the received data.
      */
     private void registerPreRequestHandler(final Router router,
                                            final Config config,
-                                           final ErrorHandler failureHandler) {
+                                           final ErrorHandler failureHandler,
+                                           final DataStorageService storageService) {
 
         final var jwtAuth = config.getJwtAuthProvider();
         final var jwtHandler = JWTAuthHandler.create(jwtAuth);
@@ -247,7 +251,7 @@ public final class CollectorApiVerticle extends AbstractVerticle {
                 .handler(preRequestBodyHandler)
                 .handler(jwtHandler)
                 .handler(new AuthorizationHandler(config.getAuthProvider(), config.getDatabase(), new PauseAndResumeAfterBodyParsing()))
-                .handler(new PreRequestHandler(config))
+                .handler(new PreRequestHandler(storageService, config.getMeasurementLimit()))
                 .failureHandler(failureHandler);
     }
 
@@ -257,17 +261,18 @@ public final class CollectorApiVerticle extends AbstractVerticle {
      * @param router The {@code Router} to register the handler to.
      * @param config The configuration parameters used to start the server.
      * @param failureHandler The handler to add to handle failures.
+     * @param storageService Service used to write the received data.
      */
     private void registerMeasurementHandler(
             final Router router,
             final Config config,
-            final ErrorHandler failureHandler) {
+            final ErrorHandler failureHandler,
+            final DataStorageService storageService) {
 
         final var jwtAuth = config.getJwtAuthProvider();
         final var jwtAuthHandler = JWTAuthHandler.create(jwtAuth);
         // The path pattern ../(sid)/.. was chosen because of the documentation of Vert.X SessionHandler
         // https://vertx.io/docs/vertx-web/java/#_handling_sessions
-        final var storageService = new GridFsStorageService(config.getDatabase(), vertx.fileSystem());
         router.putWithRegex(String.format("\\%s\\/\\([a-z0-9]{32}\\)\\/", MEASUREMENTS_ENDPOINT))
                 .consumes("application/octet-stream")
                 // Not using BodyHandler as the `request.body()` can only be read once and the {@code #handler} does so.

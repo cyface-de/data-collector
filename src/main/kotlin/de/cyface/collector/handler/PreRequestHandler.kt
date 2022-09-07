@@ -62,14 +62,14 @@ class PreRequestHandler(
             check(session)
 
             // Check if measurement already exists in database
-            val measurementId = metaData.getLong(FormAttributes.MEASUREMENT_ID.value)
+            val measurementId = metaData.getString(FormAttributes.MEASUREMENT_ID.value)
             val deviceId = metaData.getString(FormAttributes.DEVICE_ID.value)
             if (measurementId == null || deviceId == null) {
                 throw InvalidMetaData("Data incomplete!")
             }
 
-            storageService.isStored(deviceId, measurementId)
-                .onSuccess { measurementExists ->
+            val isStoredResult = storageService.isStored(deviceId, measurementId.toLong())
+            isStoredResult.onSuccess { measurementExists ->
                     if(measurementExists) {
                         LOGGER.debug("Response: 409, measurement already exists, no upload needed")
                         ctx.response().setStatusCode(HTTP_CONFLICT).end()
@@ -91,7 +91,8 @@ class PreRequestHandler(
                             .putHeader("Content-Length", "0")
                             .setStatusCode(OK).end()
                     }
-                }.onFailure { ctx.fail(SERVER_ERROR) }
+                }
+            isStoredResult.onFailure { ctx.fail(SERVER_ERROR) }
         } catch (e: InvalidMetaData) {
             ctx.fail(ENTITY_UNPARSABLE, e)
         } catch (e: Unparsable) {

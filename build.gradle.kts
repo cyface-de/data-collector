@@ -38,7 +38,7 @@ plugins {
   id("eclipse")
   id("idea")
   //noinspection SpellCheckingInspection
-  id("com.github.johnrengelman.shadow") version "6.1.0"
+  id("com.github.johnrengelman.shadow") version "7.0.0"
   // TODO: Remove this as it only applies to Java
   //id "com.github.spotbugs" version "4.7.1"
   // Plugin to display the Gradle task graph
@@ -109,9 +109,10 @@ extra["gradleWrapperVersion"] = "7.5.1"
 
 // Versions of testing dependencies
 extra["junitVersion"] = "5.7.2"
-extra["mockitoVersion"] = "3.3.3"
+extra["mockitoVersion"] = "4.7.0"
 extra["hamcrestVersion"] = "2.2"
 extra["flapdoodleVersion"] = "3.4.5"
+extra["mockitoKotlinVersion"] = "4.0.0"
 
 // TODO: Remove these as they only apply to Java
 //jacocoVersion = '0.8.5'
@@ -156,6 +157,7 @@ dependencies {
   testImplementation("org.hamcrest:hamcrest:${project.extra["hamcrestVersion"]}")
   testImplementation("org.mockito:mockito-core:${project.extra["mockitoVersion"]}")
   testImplementation("org.mockito:mockito-junit-jupiter:${project.extra["mockitoVersion"]}")
+  testImplementation("org.mockito.kotlin:mockito-kotlin:${project.extra["mockitoKotlinVersion"]}")
   testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine")
 
   testImplementation("io.vertx:vertx-junit5:${project.extra["vertxVersion"]}")
@@ -264,6 +266,7 @@ repositories {
 }
 
 tasks.shadowJar {
+
   manifest {
     attributes(mapOf("Main-Verticle" to mainVerticleName))
   }
