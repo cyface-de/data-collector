@@ -68,10 +68,16 @@ paths:
             
   /measurements:
     post:
-      summary: Measurements currently collected by the API.
+      summary: Pre-request to ask for an upload session id.
       operationId: uploadMeasurementPreRequest
       security:
         - bearerAuth: []
+      parameters:
+        - in: header
+          name: x-upload-content-length
+          schema:
+            type: string
+            example: 123
       requestBody:
         required: true
         content:
@@ -135,7 +141,7 @@ paths:
                   example: BICYCLE
                 formatVersion:
                   type: string
-                  example: 2
+                  example: 3
               required:
                 - fileToUpload
                 - eventsFile
@@ -154,7 +160,6 @@ paths:
                 - endLocTS
                 - modality
                 - formatVersion
-              
       responses:
         '200':
           description: If the file may be uploaded.
@@ -162,7 +167,7 @@ paths:
             Location:
               schema:
                 type: string
-                example: https://some.end/point?uploadType=resumable
+                example: https://example.com/api/v3/measurements/(e9076dbc2c8f15dd26aa76b4b5b49595)/
               description: Endpoint to upload the measurement to.
             Content-Length:
               schema:
@@ -186,11 +191,129 @@ paths:
         '500':
           description: Reported on any internal server error, such as the storage layer was not accessible.
 
+  /measurements/({sessionId})/:
     put:
-      summary: Measurements currently collected by the API.
+      summary: Measurement upload request.
       operationId: uploadMeasurement
       security:
         - bearerAuth: []
+      parameters:
+        - in: path
+          name: sessionId
+          required: true
+          description: The upload session id received in the response `location` parameter of the pre-request.
+          schema:
+            type: string
+          example:
+            e9076dbc2c8f15dd26aa76b4b5b49595
+        - in: header
+          name: Content-Range
+          required: true
+          schema:
+            type: string
+            example: bytes 0-122/123
+        - in: header
+          name: deviceId
+          required: true
+          schema:
+            type: string
+            description: The worldwide unique identifier of the device that uploaded the data.
+            example: d329c6ec-2764-44b1-b56a-9e3506508424
+        - in: header
+          name: measurementId
+          required: true
+          schema:
+            type: string
+            description: The device wide unique identifier of the uploaded measurement.
+            example: 1
+        - in: header
+          name: deviceType
+          required: true
+          schema:
+            type: string
+            description: The type of the device, that uploaded the data.
+            example: HTC Desire
+        - in: header
+          name: osVersion
+          required: true
+          schema:
+            type: string
+            description: The version of the device operating system.
+            example: 4.4.4
+        - in: header
+          name: appVersion
+          required: true
+          schema:
+            type: string
+            example: 1.0.2
+        - in: header
+          name: length
+          required: true
+          schema:
+            type: number
+            format: double
+            example: 468.429108633028
+        - in: header
+          name: locationCount
+          required: true
+          schema:
+            type: integer
+            format: int64
+            example: 172
+        - in: header
+          name: startLocLat
+          required: true
+          schema:
+            type: number
+            format: double
+            example: 51.05220494330958
+        - in: header
+          name: startLocLon
+          required: true
+          schema:
+            type: number
+            format: double
+            example: 13.729234272626908
+        - in: header
+          name: startLocTS
+          required: true
+          schema:
+            type: integer
+            format: int64
+            example: 1551436825471
+        - in: header
+          name: endLocLat
+          required: true
+          schema:
+            type: number
+            format: double
+            example: 51.05209006932662
+        - in: header
+          name: endLocLon
+          required: true
+          schema:
+            type: number
+            format: double
+            example: 13.728697160271674
+        - in: header
+          name: endLocTS
+          required: true
+          schema:
+            type: integer
+            format: int64
+            example: 1551436996091
+        - in: header
+          name: modality
+          required: true
+          schema:
+            type: string
+            example: BICYCLE
+        - in: header
+          name: formatVersion
+          required: true
+          schema:
+            type: string
+            example: 3
       requestBody:
         required: true
         content:
@@ -198,85 +321,6 @@ paths:
             schema:
               type: string
               format: binary
-      headers:
-        schema:
-          type: object
-          properties:
-            deviceId:
-              #description: The worldwide unique identifier of the device that uploaded the data.
-              type: string
-              example: d329c6ec-2764-44b1-b56a-9e3506508424
-            measurementId:
-              #description: The device wide unique identifier of the uploaded measurement.
-              type: string
-              example: 1
-            deviceType:
-              #description: The type of the device, that uploaded the data.
-              type: string
-              example: HTC Desire
-            osVersion:
-              #description: The version of the device operating system.
-              type: string
-              example: 4.4.4
-            appVersion:
-              type: string
-              example: 1.0.2
-            length:
-              type: integer
-              format: int64
-              example: 468.429108633028
-            locationCount:
-              type: number
-              format: double
-              example: 172
-            startLocLat:
-              type: number
-              format: double
-              example: 51.05220494330958
-            startLocLon:
-              type: number
-              format: double
-              example: 13.729234272626908
-            startLocTS:
-              type: integer
-              format: int64
-              example: 1551436825471
-            endLocLat:
-              type: number
-              format: double
-              example: 51.05209006932662
-            endLocLon:
-              type: number
-              format: double
-              example: 13.728697160271674
-            endLocTS:
-              type: integer
-              format: int64
-              example: 1551436996091
-            modality:
-              type: string
-              example: BICYCLE
-            formatVersion:
-              type: string
-              example: 2
-          required:
-            - fileToUpload
-            - eventsFile
-            - deviceId
-            - measurementId
-            - deviceType
-            - osVersion
-            - appVersion
-            - length
-            - locationCount
-            - startLocLat
-            - startLocLon
-            - startLocTS
-            - endLocLat
-            - endLocLon
-            - endLocTS
-            - modality
-            - formatVersion
 
       responses:
         '201':
