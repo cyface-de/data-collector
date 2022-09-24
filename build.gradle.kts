@@ -62,7 +62,7 @@ application {
 }
 
 group = "de.cyface"
-version = "6.10.1"
+version = "6.10.2"
 
 val mainVerticleName = "de.cyface.collector.verticle.MainVerticle"
 val watchForChange = "src/**/*"
