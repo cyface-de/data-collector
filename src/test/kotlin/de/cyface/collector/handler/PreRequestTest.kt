@@ -1,6 +1,5 @@
 package de.cyface.collector.handler
 
-import de.cyface.collector.FileUploadTooLargeTest
 import de.cyface.collector.handler.exception.PayloadTooLarge
 import de.cyface.collector.storage.DataStorageService
 import io.vertx.core.Future
@@ -21,12 +20,9 @@ import org.mockito.Mock
 import org.mockito.Mockito
 import org.mockito.Mockito.any
 import org.mockito.Mockito.anyInt
-import org.mockito.Mockito.doAnswer
 import org.mockito.Mockito.verify
-import org.mockito.Mockito.`when`
 import org.mockito.junit.jupiter.MockitoExtension
 import org.mockito.kotlin.whenever
-import org.mockito.stubbing.Answer
 import java.util.UUID
 
 @ExtendWith(MockitoExtension::class)

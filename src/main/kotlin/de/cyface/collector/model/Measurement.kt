@@ -18,10 +18,8 @@
  */
 package de.cyface.collector.model
 
-import de.cyface.collector.handler.FormAttributes
 import io.vertx.core.buffer.Buffer
 import io.vertx.core.eventbus.MessageCodec
-import io.vertx.core.json.JsonArray
 import io.vertx.core.json.JsonObject
 import org.apache.commons.lang3.Validate
 import java.io.File
@@ -45,44 +43,12 @@ data class Measurement(val metaData: RequestMetaData, val userId: String, val bi
      * @return A JSON representation of this measurement.
      */
     fun toJson(): JsonObject {
-        val ret = JsonObject()
-        ret.put(FormAttributes.DEVICE_ID.value, metaData.deviceIdentifier)
-        ret.put(FormAttributes.MEASUREMENT_ID.value, metaData.measurementIdentifier)
-        ret.put(FormAttributes.OS_VERSION.value, metaData.operatingSystemVersion)
-        ret.put(FormAttributes.DEVICE_TYPE.value, metaData.deviceType)
-        ret.put(FormAttributes.APPLICATION_VERSION.value, metaData.applicationVersion)
-        ret.put(FormAttributes.LENGTH.value, metaData.length)
-        ret.put(FormAttributes.LOCATION_COUNT.value, metaData.locationCount)
-        if (metaData.locationCount > 0) {
-            ret.put("start", geoJson(metaData.startLocation))
-            ret.put("end", geoJson(metaData.endLocation))
-        }
-        ret.put(FormAttributes.MODALITY.value, metaData.modality)
+        val ret = metaData.toJson()
         // We can only store the usedId as string as:
         // - `new ObjectId(userId)` inserts `{timestamp:1654072354, date:1654072354000}` into the database
         // - `new JsonObject().put("$oid", userId))` leads to an exception: Invalid BSON field name $oid
         ret.put(USER_ID_FIELD, userId)
-        ret.put(FormAttributes.FORMAT_VERSION.value, metaData.formatVersion)
         return ret
-    }
-
-    /**
-     * Converts a location record into `JSON` which supports the mongoDB `GeoJSON` format:
-     * https://docs.mongodb.com/manual/geospatial-queries/
-     *
-     * @param record the location record to be converted
-     * @return the converted location record as JSON
-     */
-    private fun geoJson(record: RequestMetaData.GeoLocation?): JsonObject {
-        val lat = record!!.latitude
-        val lon = record.longitude
-        val ts = record.timestamp
-        val geometry = JsonObject()
-            .put("type", "Point")
-            .put("coordinates", JsonArray().add(lon).add(lat))
-        return JsonObject()
-            .put("location", geometry)
-            .put("timestamp", ts)
     }
 
     /**

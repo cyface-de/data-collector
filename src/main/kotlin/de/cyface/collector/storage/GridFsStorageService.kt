@@ -6,7 +6,6 @@ import de.cyface.collector.model.Measurement
 import de.cyface.collector.model.RequestMetaData
 import de.cyface.collector.storage.exception.ContentRangeNotMatchingFileSize
 import de.cyface.collector.storage.exception.DuplicatesInDatabase
-import de.cyface.collector.storage.exception.GridFsFailed
 import io.vertx.core.Future
 import io.vertx.core.Promise
 import io.vertx.core.Vertx
@@ -21,15 +20,17 @@ import io.vertx.ext.mongo.GridFsUploadOptions
 import io.vertx.ext.mongo.MongoClient
 import io.vertx.ext.mongo.MongoGridFsClient
 import org.apache.commons.lang3.Validate
+import org.bson.types.ObjectId
 import org.slf4j.LoggerFactory
 import java.io.File
-import java.lang.RuntimeException
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.util.UUID
 import kotlin.io.path.absolutePathString
 import kotlin.io.path.getLastModifiedTime
 import kotlin.io.path.isRegularFile
+import kotlin.io.path.name
+
 
 class GridFsStorageService(private val mongoClient: MongoClient, val fs: FileSystem): DataStorageService {
 
@@ -45,12 +46,15 @@ class GridFsStorageService(private val mongoClient: MongoClient, val fs: FileSys
     override fun store(pipe: Pipe<Buffer>, user: User, contentRange: ContentRange, uploadIdentifier: UUID, metaData: RequestMetaData): Future<Status> {
         val promise = Promise.promise<Status>()
         val temporaryStorageFile = pathToTemporaryFile(uploadIdentifier)
-        fs.open(temporaryStorageFile.absolutePathString(), OpenOptions().setAppend(true)).onSuccess { asyncFile: AsyncFile ->
+        val fsOpenResult = fs.open(temporaryStorageFile.absolutePathString(), OpenOptions().setAppend(true))
+        fsOpenResult.onSuccess { asyncFile: AsyncFile ->
 
             // Pipe body to reduce memory usage and store body of interrupted connections (to support resume)
-            pipe.to(asyncFile).onSuccess {
+            val pipeResult = pipe.to(asyncFile)
+            pipeResult.onSuccess {
                 // Check if the upload is complete or if this was just a chunk
-                fs.props(temporaryStorageFile.toString()).onSuccess { props: FileProps ->
+                val fsPropsResult = fs.props(temporaryStorageFile.toString())
+                fsPropsResult.onSuccess { props: FileProps ->
 
                     // We could reuse information but to be sure we check the actual file size
                     val byteSize = props.size()
@@ -69,19 +73,28 @@ class GridFsStorageService(private val mongoClient: MongoClient, val fs: FileSys
                         // Persist data
                         val measurement =
                             Measurement(metaData, user.idString, temporaryStorageFile.toFile())
-                        val storeToMongoDBResult = storeToMongoDB(measurement)
-                        storeToMongoDBResult.onSuccess { promise.complete(Status(uploadIdentifier, StatusType.COMPLETE, byteSize)) }
-                        storeToMongoDBResult.onFailure { cause -> promise.fail(cause) }
+                        val storeToMongoDBResult = storeToMongoDB(measurement, temporaryStorageFile)
+                        storeToMongoDBResult.onSuccess {
+                            LOGGER.debug("Stored measurement {}:{} under object id {}!", measurement.metaData.deviceIdentifier, measurement.metaData.measurementIdentifier, it.toString())
+                            promise.complete(Status(uploadIdentifier, StatusType.COMPLETE, byteSize))
+                        }
+                        storeToMongoDBResult.onFailure {
+                            LOGGER.debug("Failed to store measurement {}:{}!", measurement.metaData.deviceIdentifier, measurement.metaData.measurementIdentifier)
+                            promise.fail(it)
+                        }
                     }
-                }.onFailure { cause: Throwable ->
+                }
+                fsPropsResult.onFailure { cause: Throwable ->
                     LOGGER.error("Response: 500, failed to read props from temp file")
                     promise.fail(cause)
                 }
-            }.onFailure { cause: Throwable ->
+            }
+            pipeResult.onFailure { cause: Throwable ->
                 LOGGER.error("Response: 500", cause)
                 promise.fail(cause)
             }
-        }.onFailure { cause: Throwable ->
+        }
+        fsOpenResult.onFailure { cause: Throwable ->
             LOGGER.error("Unable to open temporary file to stream request to!", cause)
             promise.fail(cause)
         }
@@ -96,9 +109,9 @@ class GridFsStorageService(private val mongoClient: MongoClient, val fs: FileSys
             try {
                 val query = JsonObject()
                 query.put("metadata.deviceId", deviceId)
-                query.put("metadata.measurementId", measurementId)
+                query.put("metadata.measurementId", measurementId.toString())
                 val findIds = gridFs.findIds(query)
-                findIds.onFailure { cause -> ret.fail(cause) }
+                findIds.onFailure(ret::fail)
                 findIds.onSuccess { ids: List<String> ->
                     try {
                         if (ids.size > 1) {
@@ -137,7 +150,7 @@ class GridFsStorageService(private val mongoClient: MongoClient, val fs: FileSys
             // Wrong chunk uploaded
             val byteSize = props.size()
            ret.complete(byteSize)
-        }.onFailure { cause -> ret.fail(cause) }
+        }.onFailure(ret::fail)
 
         return ret.future()
     }
@@ -146,8 +159,8 @@ class GridFsStorageService(private val mongoClient: MongoClient, val fs: FileSys
         val ret = Promise.promise<Void>()
         val pathToTemporaryFile = pathToTemporaryFile(uploadIdentifier)
         fs.delete(pathToTemporaryFile.absolutePathString())
-            .onSuccess { ret.complete() }
-            .onFailure { cause -> ret.fail(cause) }
+            .onSuccess(ret::complete)
+            .onFailure(ret::fail)
         return ret.future()
     }
 
@@ -179,36 +192,51 @@ class GridFsStorageService(private val mongoClient: MongoClient, val fs: FileSys
      * Stores a [Measurement] to a Mongo database. This method never fails. If a failure occurs it is logged and
      * status code 422 is used for the response.
      *
-     * @param measurement The measured data to write to the Mongo database
+     * @param measurement The measured data to write to the Mongo database.
+     * @param temporaryStorage The temporary storage for the uploaded data to store.
      */
-    private fun storeToMongoDB(measurement: Measurement): Future<String> {
-        val promise = Promise.promise<String>()
+    private fun storeToMongoDB(measurement: Measurement, temporaryStorage: Path): Future<ObjectId> {
+        val promise = Promise.promise<ObjectId>()
         LOGGER.debug(
-            "Inserted measurement with id {}:{}!", measurement.metaData.deviceIdentifier,
+            "Insert measurement with id {}:{}!", measurement.metaData.deviceIdentifier,
             measurement.metaData.measurementIdentifier
         )
-        mongoClient.createDefaultGridFsBucketService().onSuccess { gridFs: MongoGridFsClient ->
-            val fileUpload = measurement.binary
-            val openFuture = fs.open(fileUpload.absolutePath, OpenOptions())
-            val uploadFuture = openFuture.compose { file: AsyncFile? ->
-                val options = GridFsUploadOptions()
-                val metaData = measurement.toJson()
-                options.metadata = JsonObject(metaData.toString())
-                gridFs.uploadByFileNameWithOptions(file, fileUpload.name, options)
-            }
 
-            // Wait for all file uploads to complete
-            uploadFuture.onSuccess { result: String ->
-                // Not removing session to allow the client to check the upload status if interrupted
-                LOGGER.debug("Response: 201")
-                promise.complete(result)
-            }.onFailure { cause: Throwable ->
-                LOGGER.error("Unable to store file to MongoDatabase!", cause)
-                promise.fail(cause)
+        //////
+        /*val compositeResult = CompositeFuture.all<MongoGridFsClient, AsyncFile>(
+            mongoClient.createDefaultGridFsBucketService(),
+            fs.open(temporaryStorage.absolutePathString(), OpenOptions()))
+        val uploadResult = compositeResult.compose {
+            val gridFs = it.resultAt<MongoGridFsClient>(0)
+            val file = it.resultAt<AsyncFile>(1)
+            val options = GridFsUploadOptions()
+            options.metadata = measurement.toJson()
+            gridFs.uploadByFileNameWithOptions(
+                file,
+                temporaryStorage.name,
+                options
+            )
+        }
+
+        uploadResult.onSuccess {idString -> ObjectId(idString)}
+        uploadResult.onFailure(promise::fail)*/
+        //////
+        val bucketServiceCreationResult = mongoClient.createDefaultGridFsBucketService()
+        bucketServiceCreationResult.onFailure(promise::fail)
+        bucketServiceCreationResult.onSuccess { gridfs ->
+            val temporaryFileOpenResult = fs.open(temporaryStorage.absolutePathString(), OpenOptions())
+            temporaryFileOpenResult.onFailure(promise::fail)
+            temporaryFileOpenResult.onSuccess { temporaryStorageFile ->
+                val options = GridFsUploadOptions()
+                options.metadata = measurement.toJson()
+                val uploadResult = gridfs.uploadByFileNameWithOptions(
+                    temporaryStorageFile,
+                    temporaryStorage.name,
+                    options
+                )
+                uploadResult.onFailure(promise::fail)
+                uploadResult.onSuccess { objectId -> promise.complete(ObjectId(objectId)) }
             }
-        }.onFailure { cause: Throwable ->
-            LOGGER.error("Unable to open connection to Mongo Database!", cause)
-            promise.fail(GridFsFailed(cause))
         }
         return promise.future()
     }

@@ -23,6 +23,7 @@ import de.cyface.collector.handler.HTTPStatus.ENTITY_UNPARSABLE
 import de.cyface.collector.handler.HTTPStatus.NOT_FOUND
 import de.cyface.collector.handler.HTTPStatus.PRECONDITION_FAILED
 import de.cyface.collector.handler.HTTPStatus.RESUME_INCOMPLETE
+import de.cyface.collector.handler.SessionFields.UPLOAD_PATH_FIELD
 import de.cyface.collector.handler.exception.IllegalSession
 import de.cyface.collector.handler.exception.InvalidMetaData
 import de.cyface.collector.handler.exception.PayloadTooLarge
@@ -70,11 +71,6 @@ class MeasurementHandler(
         Validate.isTrue(payloadLimit > 0)
     }
 
-    /*override fun handleAuthorizedRequest(
-        ctx: RoutingContext,
-        users: Set<User>,
-        header: MultiMap
-    ) */
     override fun handle(ctx: RoutingContext) {
         LOGGER.info("Received new measurement request.")
         val request = ctx.request()
@@ -366,13 +362,5 @@ class MeasurementHandler(
          * adapting the values in `src/main/resources/logback.xml`.
          */
         private val LOGGER = LoggerFactory.getLogger(MeasurementHandler::class.java)
-
-        /**
-         * The field name for the session entry which contains the path of the temp file containing the upload binary.
-         *
-         *
-         * This field is set in the [MeasurementHandler] to support resumable upload.
-         */
-        const val UPLOAD_PATH_FIELD = "upload-path"
     }
 }

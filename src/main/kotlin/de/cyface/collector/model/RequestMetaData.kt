@@ -18,7 +18,11 @@
  */
 package de.cyface.collector.model
 
+import de.cyface.collector.handler.FormAttributes
+import io.vertx.core.json.JsonArray
+import io.vertx.core.json.JsonObject
 import org.apache.commons.lang3.Validate
+import org.bson.BsonString
 import java.io.Serializable
 import java.nio.charset.Charset
 
@@ -103,6 +107,26 @@ data class RequestMetaData(
         )
     }
 
+    fun toJson(): JsonObject {
+        val ret = JsonObject()
+        ret.put(FormAttributes.DEVICE_ID.value, deviceIdentifier)
+        ret.put(FormAttributes.MEASUREMENT_ID.value, measurementIdentifier)
+        ret.put(FormAttributes.OS_VERSION.value, operatingSystemVersion)
+        ret.put(FormAttributes.DEVICE_TYPE.value, deviceType)
+        ret.put(FormAttributes.APPLICATION_VERSION.value, applicationVersion)
+        ret.put(FormAttributes.LENGTH.value, length)
+        ret.put(FormAttributes.LOCATION_COUNT.value, locationCount)
+        if (startLocation!=null) {
+            ret.put("start", startLocation.geoJson())
+        }
+        if (endLocation!=null) {
+            ret.put("end", endLocation.geoJson())
+        }
+        ret.put(FormAttributes.MODALITY.value, modality)
+        ret.put(FormAttributes.FORMAT_VERSION.value, formatVersion)
+        return ret
+    }
+
     /**
      * This class represents a geolocation at the start or end of a track.
      *
@@ -113,7 +137,23 @@ data class RequestMetaData(
      * @property latitude Geographical latitude in coordinates (decimal fraction) raging from -90° (south) to 90° (north).
      * @property longitude Geographical longitude in coordinates (decimal fraction) ranging from -180° (west) to 180° (east).
      */
-    data class GeoLocation(val timestamp: Long, val latitude: Double, val longitude: Double)
+    data class GeoLocation(val timestamp: Long, val latitude: Double, val longitude: Double) {
+        /**
+         * Converts this location record into `JSON` which supports the mongoDB `GeoJSON` format:
+         * https://docs.mongodb.com/manual/geospatial-queries/
+         *
+         * @return the converted location record as JSON
+         */
+        fun geoJson(): JsonObject {
+            val ret = JsonObject()
+            ret.put("timestamp", timestamp.toString())
+            val geometry = JsonObject()
+                .put("type", "Point")
+                .put("coordinates", JsonArray().add(longitude).add(latitude))
+            ret.put("location", geometry)
+            return ret
+        }
+    }
 
     companion object {
         /**

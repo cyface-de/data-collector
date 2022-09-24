@@ -96,7 +96,11 @@ tasks.withType<KotlinCompile>().configureEach {
   }
 }
 
-extra["vertxVersion"] = "4.3.2"
+// If you increase this version, check in the next line if the manual mongo driver version is still necessary.
+extra["vertxVersion"] = "4.3.3"
+// The following is only required since Vert.x GridFS Client is not working correctly in Version 4.3.3.
+// To check this run GridFSStorageIT
+extra["mongoDriverVersion"] = "4.7.1"
 extra["micrometerVersion"] = "1.7.2"
 extra["slf4jVersion"] = "1.7.29"
 extra["commonsLangVersion"] = "3.12.0"
@@ -110,8 +114,10 @@ extra["gradleWrapperVersion"] = "7.5.1"
 // Versions of testing dependencies
 extra["junitVersion"] = "5.7.2"
 extra["mockitoVersion"] = "4.7.0"
+// TODO: Remove the following. It belongs to java and should be replaced by hamKrest
 extra["hamcrestVersion"] = "2.2"
-extra["flapdoodleVersion"] = "3.4.5"
+extra["hamKrestVersion"] = "1.8.0.1"
+extra["flapdoodleVersion"] = "3.4.9"
 extra["mockitoKotlinVersion"] = "4.0.0"
 
 // TODO: Remove these as they only apply to Java
@@ -128,12 +134,14 @@ dependencies {
 
   implementation("io.vertx:vertx-web:${project.extra["vertxVersion"]}")
   implementation("io.vertx:vertx-mongo-client:${project.extra["vertxVersion"]}")
+  implementation("org.mongodb:mongodb-driver-core:${project.extra["mongoDriverVersion"]}")
+  implementation("org.mongodb:mongodb-driver-reactivestreams:${project.extra["mongoDriverVersion"]}")
   implementation("io.vertx:vertx-web-api-contract:${project.extra["vertxVersion"]}")
 
   // Kotlin Support
   implementation("io.vertx:vertx-core:${project.extra["vertxVersion"]}")
   implementation("io.vertx:vertx-lang-kotlin:${project.extra["vertxVersion"]}")
-  implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8")
+  implementation(kotlin("stdlib-jdk8"))
 
   // Authentication
   implementation("io.vertx:vertx-auth-common:${project.extra["vertxVersion"]}")
@@ -155,6 +163,9 @@ dependencies {
   testImplementation(platform("org.junit:junit-bom:${project.extra["junitVersion"]}"))
   testImplementation("org.junit.jupiter:junit-jupiter-params")  // Required for parameterized tests
   testImplementation("org.hamcrest:hamcrest:${project.extra["hamcrestVersion"]}")
+  testImplementation("com.natpryce:hamkrest:${project.extra["hamKrestVersion"]}")
+  testImplementation(kotlin("reflect"))//"org.jetbrains.kotlin:kotlin-reflect:1.7.10") // Required by hamkrest
+  testImplementation(kotlin("test"))
   testImplementation("org.mockito:mockito-core:${project.extra["mockitoVersion"]}")
   testImplementation("org.mockito:mockito-junit-jupiter:${project.extra["mockitoVersion"]}")
   testImplementation("org.mockito.kotlin:mockito-kotlin:${project.extra["mockitoKotlinVersion"]}")

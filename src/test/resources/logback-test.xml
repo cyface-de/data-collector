@@ -29,9 +29,9 @@
   <!-- An appender throwing all messages away. This is used by default to supress logging in CI-->
   <appender name="NO-OP" class="ch.qos.logback.core.helpers.NOPAppender" />
 
-  <!--<logger name="com.lordofthejars.foo" level="INFO" additivity="false">-->
-   <!--<appender-ref ref="STDOUT" />-->
-  <!--</logger>-->
+  <logger name="de.cyface" level="DEBUG" additivity="false">
+   <appender-ref ref="STDOUT" />
+  </logger>
 
   <!-- Strictly speaking, the level attribute is not necessary since -->
   <!-- the level of the root level is set to DEBUG by default.       -->
