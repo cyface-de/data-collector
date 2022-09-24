@@ -1,33 +1,31 @@
 # Collector
 
-image:https://img.shields.io/badge/vert.x-4.3.2-purple.svg[link="https://vertx.io"]
-image:https://img.shields.io/badge/mongo-5.0.8-purple.svg[link="https://mongodb.com/"]
-image:https://github.com/cyface-de/data-collector/workflows/Cyface%20Data%20Collector/badge.svg[link="https://github.com/cyface-de/data-collector/actions"]
+![https://vertx.io](https://img.shields.io/badge/vert.x-4.3.3-purple.svg)
+![https://mongodb.com/](https://img.shields.io/badge/mongo-5.0.8-purple.svg)
+![https://github.com/cyface-de/data-collector/actions](https://github.com/cyface-de/data-collector/workflows/Cyface%20Data%20Collector/badge.svg)
 
-This application represents the https://cyface.de[Cyface] data collector software.
+This application represents the [Cyface](https://cyface.de) data collector software.
 
 It is used to collect traffic data from Cyface measurement devices, such as our sensor box or our smartphone application.
 
-Our smartphone SDK is available as GPL application for https://github.com/cyface-de/android-backend[Android] and https://github.com/cyface-de/ios-backend[iOS] (or as https://github.com/cyface-de/ios-podspecs[Podspec]) as well.
+Our smartphone SDK is available as GPL application for [Android](https://github.com/cyface-de/android-backend) and [iOS](https://github.com/cyface-de/ios-backend) (or as [Podspec](https://github.com/cyface-de/ios-podspecs)) as well.
 
-If you require this software under a closed source license for you own projects, please https://www.cyface.de/#kontakt[contact us].
+If you require this software under a closed source license for you own projects, please [contact us](https://www.cyface.de/#kontakt).
 
-Changes between versions are found in the link:https://github.com/cyface-de/data-collector/releases[Release Section].
+Changes between versions are found in the [Release Section](https://github.com/cyface-de/data-collector/releases).
 
-The project uses link:https://gradle.org/[Gradle] as the build system.
+The project uses [Gradle](https://gradle.org/) as the build system.
 
 ## Overview
 
-* link:#_collector[Collector]
+* [Collector](#Collector)
 
 .General information
-* link:#_release_a_new_version[Release a new Version]
-* link:#_publishing_artifacts_to_github_packages_manually[Publishing Artifacts to GitHub Packages manually]
-* link:#_to-do[To Do]
-* link:#_licensing[Licensing]
+* [Release a new Version](#release-a-new-version)
+* [Publishing Artifacts to GitHub Packages manually](#publishing-artifacts-to-github-packages-manually)
+* [To Do](#to-do)
+* [Licensing](#licensing)
 
-
-[#_collector]
 ## Collector
 
 A program which provides the ability to collect data, as e.g. sent by the Cyface SDKs.
@@ -46,7 +44,7 @@ Since they are in our repository, they are openly available to everyone on the i
 The Cyface Data Collector requires two keys to issue and authenticate JWT tokens for users trying to communicate with the service.
 Just place the appropriate files as `private_key.pem` and `public.pem` in `secrets/jwt`, right next to the `docker-compose.yml` file, or in the "working directory" selected in your run configuration in your IDE (e.g. `data-collector/`).
 
-To generate new keys follow the instructions in the https://vertx.io/docs/vertx-auth-jwt/java/#_loading_keys[Vert.x documentation] for *Using RSA keys*.
+To generate new keys follow the instructions in the [Vert.x documentation](https://vertx.io/docs/vertx-auth-jwt/java/#_loading_keys) for *Using RSA keys*.
 
 ### Building
 
@@ -106,14 +104,14 @@ If you use the Docker environment as explained above, this is done for you.
 If you run the Cyface data collector on your own, you are responsible for providing a valid environment, including Mongo.
 
 The database is used to store the collected data and information about valid user accounts.
-For information on how to install and run a Mongo database on your machine please follow the https://docs.mongodb.com/manual/installation/#mongodb-community-edition[tutorial].
+For information on how to install and run a Mongo database on your machine please follow the [tutorial](https://docs.mongodb.com/manual/installation/#mongodb-community-edition).
 If you take the default installation, the default settings of the Cyface data collector should be sufficient to connect to that instance.
 **ATTENTION: However be aware this is not recommended as a production environment.**
 
 #### Data Collector Arguments
 The Cyface data collector supports a few parameters to fine tune the runtime.
 All of these parameters also provide reasonable defaults for a quick setup.
-The parameters are provided using the typical https://vertx.io/docs/vertx-core/java/#_the_vertx_command_line[Vertx `-conf` parameter] with a value in JSON notation.
+The parameters are provided using the typical [Vertx `-conf` parameter](https://vertx.io/docs/vertx-core/java/#_the_vertx_command_line) with a value in JSON notation.
 
 The following parameters are supported:
 
@@ -124,59 +122,55 @@ The following parameters are supported:
 * **http.endpoint.v3:** The path to the endpoint the Cyface Data Collector is running. This can be something like `/api/v3`.
 * **http.endpoint.v2:** The path to the endpoint the Cyface Data Collector is running. This can be something like `/api/v2`.
 * **http.port.management:** The port the management API is available at. This defaults to `13371`.
-* **mongo.db:** Settings for a Mongo database storing information about all the users capable of logging into the system and all data uploaded via the Cyface data collector. This defaults to a Mongo database available at `mongodb://127.0.0.1:27017`. The value of this should be a JSON object configured as described https://vertx.io/docs/vertx-mongo-client/java/#_configuring_the_client[here].
+* **mongo.db:** Settings for a Mongo database storing information about all the users capable of logging into the system and all data uploaded via the Cyface data collector. This defaults to a Mongo database available at `mongodb://127.0.0.1:27017`. The value of this should be a JSON object configured as described [here](https://vertx.io/docs/vertx-mongo-client/java/#_configuring_the_client).
 * **admin.user:** The username of a default administration account which is created if it does not exist upon start up. This defaults to `admin`. **You must change this in a production environment**.
 * **admin.password:** The password for the default administration account. This defaults to `secret`. **You must change this in a production environment**.
 * **salt.path:** The path to a salt file used to encrypt passwords stored in the user database even stronger. This defaults to `secrets/salt`. If the file does not exist a default salt is used. **You should not do this in a production environment**.
-* **metrics.enabled:** Set to either `true` or `false`. If `true` the collector API publishes metrics using micrometer. These metrics are accessible by a https://prometheus.io/[Prometheus] server (Which you need to set up yourself) at port `8081`.
+* **metrics.enabled:** Set to either `true` or `false`. If `true` the collector API publishes metrics using micrometer. These metrics are accessible by a [Prometheus](https://prometheus.io/) server (Which you need to set up yourself) at port `8081`.
 
 #### Running from Command Line
 
 To launch your tests:
 
-[source]
-----
+```
 ./gradlew clean test
-----
+```
 
 To package your application:
 
-[source]
-----
+```
 ./gradlew clean assemble
-----
+```
 
 To run your application:
 
-[source]
-----
+```
 ./gradlew run --args="run de.cyface.collector.verticle.MainVerticle -conf conf.json"
-----
+```
 
 #### Running from IDE
-To run directly from within your IDE you need to use the `de.cyface.collector.Application` class, which is a subclass of the https://vertx.io/docs/vertx-core/java/#_the_vert_x_launcher[Vert.x launcher]. Just specify it as the main class in your launch configuration with the program argument `run de.cyface.collector.verticle.MainVerticle`.
+To run directly from within your IDE you need to use the `de.cyface.collector.Application` class, which is a subclass of the [Vert.x launcher](https://vertx.io/docs/vertx-core/java/#_the_vert_x_launcher). Just specify it as the main class in your launch configuration with the program argument `run de.cyface.collector.verticle.MainVerticle`.
 
 ### Mongo Database
 
 #### Setup
 The following is not strictly necessary but advised if you run in production or if you encounter strange problems related to data persistence.
-Consider reading the https://docs.mongodb.com/manual/administration/[Mongo Database Administration Guide] and follow the advice mentioned there.
+Consider reading the [Mongo Database Administration Guide](https://docs.mongodb.com/manual/administration/) and follow the advice mentioned there.
 
 #### Administration
-To load files from the Mongo GridFS file storage use the https://docs.mongodb.com/manual/reference/program/mongofiles/[Mongofiles] tool.
+To load files from the Mongo GridFS file storage use the [Mongofiles](https://docs.mongodb.com/manual/reference/program/mongofiles/) tool.
 
 * Showing files: `mongofiles --port 27019 -d cyface list`
 * Downloading files: `mongofiles --port 27019 -d cyface get f5823cbc-b8f5-4c80-a4b1-7bf28a3c7944`
 * Unzipping files: `printf "\x78\x9c" | cat - f5823cbc-b8f5-4c80-a4b1-7bf28a3c7944 | zlib-flate -uncompress > test2`
 
 
-[#_release_a_new_version]
 ## Release a new Version
 
 To release a new version:
 
 1. *Create a new release branch* following the format `release-x.y.z`.
-a. `x.y.z` is the number of the new version following link:http://semver.org[Semantic Versioning].
+a. `x.y.z` is the number of the new version following [Semantic Versioning](http://semver.org).
 b. *Hotfixes can be branched from the already existing release-branch*
 A. Merge the hotfix into the `main` and `release` branch, create pull requests and pass reviewing.
 B. No new features are allowed on a release-branch, only fixes and minor changes.
@@ -192,22 +186,21 @@ c. Get the Pull Request accepted and merge it.
 
 4. *Tag the new release on the release branch*.
 a. Ensure you are on the correct branch and commit.
-b. Follow the guidelines from link:https://keepachangelog.com["Keep a Changelog"] in your tag description.
+b. Follow the guidelines from ["Keep a Changelog"](https://keepachangelog.com) in your tag description.
 
 5. *Push the release tag to GitHub*.
 a. The docker image and GitHub packages are automatically published when a new version is tagged and pushed by our
-link:https://github.com/cyface-de/data-collector/actions[GitHub Actions] to the
-link:https://github.com/cyface-de/data-collector/packages[GitHub Registry].
+   [GitHub Actions](https://github.com/cyface-de/data-collector/actions) to the
+   [GitHub Registry](https://github.com/cyface-de/data-collector/packages).
 
-6. *Mark the released version as 'new Release' on link:https://github.com/cyface-de/data-collector/releases[GitHub]*.
+6. *Mark the released version as 'new Release' on [GitHub](https://github.com/cyface-de/data-collector/releases)*.
 
 
-[#_publishing_artifacts_to_github_packages_manually]
 ## Publishing artifacts to GitHub Packages manually
 
-The artifacts produced by this project are distributed via link:https://github.com/features/packages[GitHubPackages].
+The artifacts produced by this project are distributed via [GitHubPackages](https://github.com/features/packages).
 Before you can publish artifacts you need to rename `gradle.properties.template` to `gradle.properties` and enter your GitHub credentials.
-How to obtain these credentials is described link:https://help.github.com/en/github/managing-packages-with-github-packages/about-github-packages#about-tokens[here].
+How to obtain these credentials is described [here](https://help.github.com/en/github/managing-packages-with-github-packages/about-github-packages#about-tokens).
 
 To publish a new version of an artifact you need to:
 
@@ -216,10 +209,8 @@ To publish a new version of an artifact you need to:
 
 This will upload a new artifact to GitHub packages with the new version.
 GitHub Packages will not accept to overwrite an existing version or to upload a lower version.
-This project uses link:https://semver.org/[semantic versioning].
+This project uses [semantic versioning](https://semver.org/).
 
-
-[#_to-do]
 ## To Do
 * Setup Cluster
 	* Vertx
@@ -238,7 +229,6 @@ Those implementations provide support for storing data in GridFS, on the local f
 The following image shows an overview of the interface and how it is embedded in the Cyface data collector.
 
 ![](doc/storage-service.png)
-[#_licensing]
 ## Licensing
 Copyright 2018-2022 Cyface GmbH
 
