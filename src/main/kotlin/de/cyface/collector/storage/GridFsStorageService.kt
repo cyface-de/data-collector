@@ -202,25 +202,6 @@ class GridFsStorageService(private val mongoClient: MongoClient, val fs: FileSys
             measurement.metaData.measurementIdentifier
         )
 
-        //////
-        /*val compositeResult = CompositeFuture.all<MongoGridFsClient, AsyncFile>(
-            mongoClient.createDefaultGridFsBucketService(),
-            fs.open(temporaryStorage.absolutePathString(), OpenOptions()))
-        val uploadResult = compositeResult.compose {
-            val gridFs = it.resultAt<MongoGridFsClient>(0)
-            val file = it.resultAt<AsyncFile>(1)
-            val options = GridFsUploadOptions()
-            options.metadata = measurement.toJson()
-            gridFs.uploadByFileNameWithOptions(
-                file,
-                temporaryStorage.name,
-                options
-            )
-        }
-
-        uploadResult.onSuccess {idString -> ObjectId(idString)}
-        uploadResult.onFailure(promise::fail)*/
-        //////
         val bucketServiceCreationResult = mongoClient.createDefaultGridFsBucketService()
         bucketServiceCreationResult.onFailure(promise::fail)
         bucketServiceCreationResult.onSuccess { gridfs ->

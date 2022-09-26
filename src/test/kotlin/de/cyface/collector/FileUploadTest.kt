@@ -37,6 +37,7 @@ import org.hamcrest.MatcherAssert.assertThat
 import org.hamcrest.Matchers
 import org.hamcrest.Matchers.equalTo
 import org.hamcrest.Matchers.`is`
+import org.hamcrest.Matchers.notNullValue
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.BeforeEach
@@ -183,9 +184,9 @@ class FileUploadTest {
                 0, 3, 4, deviceIdentifier,
                 context.succeeding { ar: HttpResponse<Buffer?> ->
                     context.verify {
-                        MatcherAssert.assertThat(
+                        assertThat(
                             "Wrong HTTP status code when uploading unparsable meta data!", ar.statusCode(),
-                            Matchers.`is`(Matchers.equalTo(422))
+                            `is`(equalTo(422))
                         )
                         context.completeNow()
                     }
@@ -200,13 +201,13 @@ class FileUploadTest {
             uploadStatus(context, uploadUri, "bytes */4",
                 context.succeeding { ar: HttpResponse<Buffer?> ->
                     context.verify {
-                        MatcherAssert.assertThat(
+                        assertThat(
                             "Wrong HTTP status code when asking for upload status!", ar.statusCode(),
-                            Matchers.`is`(Matchers.equalTo(308))
+                            `is`(equalTo(308))
                         )
                         val range = ar.getHeader("Range")
                         // As we did not upload data yet, the server should respond without Range header
-                        MatcherAssert.assertThat("Unexpected Range header!", range, Matchers.nullValue())
+                        assertThat("Unexpected Range header!", range, Matchers.nullValue())
                         context.completeNow()
                     }
                 })
@@ -221,26 +222,26 @@ class FileUploadTest {
                 0, 3, 8 /* partial */, deviceIdentifier,
                 context.succeeding { ar: HttpResponse<Buffer?> ->
                     context.verify {
-                        MatcherAssert.assertThat(
+                        assertThat(
                             "Wrong HTTP status code when uploading a file chunk!", ar.statusCode(),
-                            Matchers.`is`(Matchers.equalTo(308))
+                            `is`(equalTo(308))
                         )
                         uploadStatus(context, uploadUri, "bytes */8",
                             context.succeeding { res: HttpResponse<Buffer?> ->
                                 context.verify {
 
                                     // The upload should be successful, expecting to return 200/201 here
-                                    MatcherAssert.assertThat(
+                                    assertThat(
                                         "Wrong HTTP status code when asking for upload status!",
                                         res.statusCode(),
-                                        Matchers.`is`(Matchers.equalTo(308))
+                                        `is`(equalTo(308))
                                     )
                                     val range = ar.getHeader("Range")
                                     // The server tells us what data it's holding for us to calculate where to resume
-                                    MatcherAssert.assertThat(
+                                    assertThat(
                                         "Unexpected Range header!",
                                         range,
-                                        Matchers.`is`(Matchers.equalTo("bytes=0-3"))
+                                        `is`(equalTo("bytes=0-3"))
                                     )
                                     context.completeNow()
                                 }
@@ -262,19 +263,19 @@ class FileUploadTest {
                             "Wrong HTTP status code when uploading unparsable meta data!", ar.statusCode(),
                             `is`(equalTo(201))
                         )
-                        //uploadStatus(context, uploadUri, "bytes */4",
-                            //context.succeeding { res: HttpResponse<Buffer?> ->
-                                //context.verify {
+                        uploadStatus(context, uploadUri, "bytes */4",
+                            context.succeeding { res: HttpResponse<Buffer?> ->
+                                context.verify {
 
                                     // The upload should be successful, expecting to return 200/201 here
-                                    //assertThat(
+                                    assertThat(
                                         //"Wrong HTTP status code when asking for upload status!",
-                                        //res.statusCode(),
-                                        //`is`(equalTo(200))
-                                    //)
+                                        res.statusCode(),
+                                        `is`(equalTo(200))
+                                    )
                                     context.completeNow()
-                                //}
-                            //})
+                                }
+                            })
                     }
                 })
         }
@@ -286,13 +287,13 @@ class FileUploadTest {
             0, 3, 4, deviceIdentifier,
             context.succeeding { ar: HttpResponse<Buffer?> ->
                 context.verify {
-                    MatcherAssert.assertThat(
+                    assertThat(
                         "Wrong HTTP status code when uploading with invalid session!", ar.statusCode(),
-                        Matchers.`is`(Matchers.equalTo(404))
+                        `is`(equalTo(404))
                     )
-                    MatcherAssert.assertThat(
+                    assertThat(
                         "Wrong HTTP status message when uploading with invalid session!", ar.statusMessage(),
-                        Matchers.`is`(Matchers.equalTo("Not Found"))
+                        `is`(equalTo("Not Found"))
                     )
                     context.completeNow()
                 }
@@ -308,9 +309,9 @@ class FileUploadTest {
     fun preRequest_happyPath(context: VertxTestContext) {
         preRequest(context, 2, false, context.succeeding { ar: HttpResponse<Buffer?> ->
             context.verify {
-                MatcherAssert.assertThat(
+                assertThat(
                     "Wrong HTTP status code on happy path pre-request test!", ar.statusCode(), Matchers.`is`(
-                        Matchers.equalTo(200)
+                        equalTo(200)
                     )
                 )
                 context.completeNow()
@@ -352,9 +353,9 @@ class FileUploadTest {
                 0, 3, 4, "deviceIdHack",
                 context.succeeding { ar: HttpResponse<Buffer?> ->
                     context.verify {
-                        MatcherAssert.assertThat(
+                        assertThat(
                             "Wrong HTTP status code when uploading with a wrong device id!",
-                            ar.statusCode(), Matchers.`is`(Matchers.equalTo(422))
+                            ar.statusCode(), `is`(equalTo(422))
                         )
                         context.completeNow()
                     }
@@ -379,14 +380,14 @@ class FileUploadTest {
             context.succeeding { authResponse: HttpResponse<Buffer?> ->
                 val authToken = authResponse.getHeader("Authorization")
                 context.verify {
-                    MatcherAssert.assertThat(
+                    assertThat(
                         "Wrong HTTP status on authentication request!",
                         authResponse.statusCode(),
-                        Matchers.`is`(200)
+                        `is`(200)
                     )
-                    MatcherAssert.assertThat(
+                    assertThat(
                         "Auth token was missing from authentication request!", authToken,
-                        Matchers.`is`(Matchers.notNullValue())
+                        `is`(Matchers.notNullValue())
                     )
                 }
 
@@ -446,10 +447,10 @@ class FileUploadTest {
                 0, (binaryLength - 1).toLong(), binaryLength.toLong(), deviceIdentifier,
                 context.succeeding { ar: HttpResponse<Buffer?> ->
                     context.verify {
-                        MatcherAssert.assertThat(
+                        assertThat(
                             "Wrong HTTP status code on uploading data!",
                             ar.statusCode(),
-                            Matchers.`is`(Matchers.equalTo(201))
+                            `is`(equalTo(201))
                         )
                         returnedRequestFuture.flag()
                     }
@@ -460,19 +461,19 @@ class FileUploadTest {
     private fun preRequestAndReturnLocation(context: VertxTestContext, uploadUriHandler: Handler<String>) {
         preRequest(context, 2, false, context.succeeding { res: HttpResponse<Buffer?> ->
             context.verify {
-                MatcherAssert.assertThat(
+                assertThat(
                     "Wrong HTTP status code on happy path pre-request test!", res.statusCode(), Matchers.`is`(
-                        Matchers.equalTo(200)
+                        equalTo(200)
                     )
                 )
                 val location = res.getHeader("Location")
-                MatcherAssert.assertThat(
+                assertThat(
                     "Missing HTTP Location header in pre-request response!",
                     location,
-                    Matchers.notNullValue()
+                    notNullValue()
                 )
                 val locationPattern = "http://10\\.0\\.2\\.2:8081/api/v3/measurements/\\([a-z0-9]{32}\\)/"
-                MatcherAssert.assertThat(
+                assertThat(
                     "Wrong HTTP Location header on pre-request!",
                     location,
                     Matchers.matchesPattern(locationPattern)
@@ -504,14 +505,14 @@ class FileUploadTest {
             context.succeeding { authResponse: HttpResponse<Buffer?> ->
                 val authToken = authResponse.getHeader("Authorization")
                 context.verify {
-                    MatcherAssert.assertThat(
+                    assertThat(
                         "Wrong HTTP status on authentication request!",
                         authResponse.statusCode(),
-                        Matchers.`is`(200)
+                        `is`(200)
                     )
-                    MatcherAssert.assertThat(
+                    assertThat(
                         "Auth token was missing from authentication request!", authToken,
-                        Matchers.`is`(Matchers.notNullValue())
+                        `is`(notNullValue())
                     )
                 }
                 val testFileResource = this.javaClass.getResource(testFileResourceName)

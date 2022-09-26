@@ -62,7 +62,6 @@ class AuthorizationHandler(
                                 accessibleUsers
                             )
                             context.put("accessible-users", accessibleUsers).next()
-                            //handleAuthorizedRequest(context, accessibleUsers, headers)
                         } catch (e: RuntimeException) {
                             context.fail(e)
                         }

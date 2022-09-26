@@ -32,7 +32,6 @@ import io.vertx.ext.web.client.HttpResponse
 import io.vertx.ext.web.client.WebClient
 import io.vertx.junit5.VertxExtension
 import io.vertx.junit5.VertxTestContext
-import org.apache.commons.lang3.Validate
 import org.hamcrest.MatcherAssert
 import org.hamcrest.MatcherAssert.assertThat
 import org.hamcrest.Matchers
@@ -48,6 +47,7 @@ import java.util.UUID
 import org.hamcrest.Matchers.`is`
 import org.hamcrest.Matchers.matchesPattern
 import org.hamcrest.Matchers.notNullValue
+import kotlin.test.assertNotNull
 
 /**
  * Tests that uploading measurements to the Cyface API works as expected.
@@ -61,7 +61,7 @@ class FileUploadTooLargeTest {
     /**
      * A client used to connect with the Cyface Data Collector.
      */
-    private var collectorClient: DataCollectorClient? = null
+    private lateinit var collectorClient: DataCollectorClient
 
     /**
      * A globally unique identifier of the simulated upload device. The actual value does not really matter.
@@ -77,8 +77,7 @@ class FileUploadTooLargeTest {
     /**
      * A `WebClient` to access the test API.
      */
-    private var client: WebClient? = null
-    private var vertx: Vertx? = null
+    private lateinit var client: WebClient
 
     /**
      * Deploys the [CollectorApiVerticle] in a test context.
@@ -89,11 +88,10 @@ class FileUploadTooLargeTest {
      */
     @Throws(IOException::class)
     private fun deployVerticle(vertx: Vertx, ctx: VertxTestContext) {
-        this.vertx = vertx
         // FIXME: can we somehow overwrite the @setup method to reuse {@link FileUploadTest}?
         // Set maximal payload size to 1 KB (test upload is 130 KB)
         collectorClient = DataCollectorClient(Authenticator.BYTES_IN_ONE_KILOBYTE)
-        client = collectorClient!!.createWebClient(vertx, ctx, mongoTest!!.mongoPort)
+        client = collectorClient.createWebClient(vertx, ctx, mongoTest.mongoPort)
     }
 
     /**
@@ -133,14 +131,15 @@ class FileUploadTooLargeTest {
     /**
      * Tests that an upload with a too large payload returns a 422 error.
      *
-     * @param context The test context for running `Vertx` under test
+     * @param vertx The Vert.x instance used to run this test.
+     * @param context The test context for running `Vertx` under test.
      */
     @Test
-    fun testUploadWithTooLargePayload_Returns422(context: VertxTestContext) {
+    fun testUploadWithTooLargePayload_Returns422(vertx: Vertx, context: VertxTestContext) {
         preRequestAndReturnLocation(
             context, 1000 /* fake a small upload to bypass pre-request size check */
         ) { uploadUri: String ->
-            upload(context, "/iphone-neu.ccyf", "0.0", UPLOAD_SIZE, false, uploadUri,
+            upload(vertx, context, "/iphone-neu.ccyf", "0.0", UPLOAD_SIZE, false, uploadUri,
                 0, (UPLOAD_SIZE - 1).toLong(), UPLOAD_SIZE.toLong(), deviceIdentifier,
                 context.succeeding { ar: HttpResponse<Buffer?> ->
                     context.verify {
@@ -169,7 +168,7 @@ class FileUploadTooLargeTest {
         preRequestResponseHandler: Handler<AsyncResult<HttpResponse<Buffer?>>>
     ) {
         LOGGER.debug("Sending authentication request!")
-        TestUtils.authenticate(client, collectorClient!!.port, LOGIN_UPLOAD_ENDPOINT_PATH,
+        TestUtils.authenticate(client, collectorClient.port, LOGIN_UPLOAD_ENDPOINT_PATH,
             context.succeeding { authResponse: HttpResponse<Buffer?> ->
                 val authToken = authResponse.getHeader("Authorization")
                 context.verify {
@@ -203,8 +202,8 @@ class FileUploadTooLargeTest {
                 metaDataBody.put("formatVersion", "3")
 
                 // Send Pre-Request
-                val builder = client!!.post(
-                    collectorClient!!.port, "localhost",
+                val builder = client.post(
+                    collectorClient.port, "localhost",
                     MEASUREMENTS_UPLOAD_ENDPOINT_PATH
                 )
                 builder.putHeader("Authorization", "Bearer " + if (useInvalidToken) "invalidToken" else authToken)
@@ -252,50 +251,62 @@ class FileUploadTooLargeTest {
      * Uploads the provided file using an authenticated request. You may listen to the completion of this upload using
      * any of the provided handlers.
      *
+     * @param vertx The Vert.x instance used to load the test data file.
      * @param context The test context to use.
      * @param testFileResourceName The Java resource name of a file to upload.
-     * @param length the meter-length of the track
-     * @param binarySize number of bytes in the binary to upload
+     * @param length the meter-length of the track.
+     * @param binarySize number of bytes in the binary to upload.
+     * @param useInvalidToken Whether to use a valid auth token on a full integration test or use an invalid test token
+     *  on a test without database access.
+     * @param requestUri The URI to upload the data to.
+     * @param from The zero based index of the first byte to send.
+     * @param to The zero based index of the last byte to send.
+     * @param total The total number of bytes to send. On a happy path test this should be to - from.
+     * @param deviceId The worldwide unique device identifier of the uploading device. This is usually a UUID.
      * @param handler The handler called if the client received a response.
      */
     private fun upload(
+        vertx: Vertx,
         context: VertxTestContext,
         testFileResourceName: String,
         length: String,
         binarySize: Int,
         useInvalidToken: Boolean,
-        requestUri: String, from: Long,
-        to: Long, total: Long,
-        deviceId: String, handler: Handler<AsyncResult<HttpResponse<Buffer?>>>
+        requestUri: String,
+        from: Long,
+        to: Long,
+        total: Long,
+        deviceId: String,
+        handler: Handler<AsyncResult<HttpResponse<Buffer?>>>
     ) {
         LOGGER.debug("Sending authentication request!")
-        TestUtils.authenticate(client, collectorClient!!.port, LOGIN_UPLOAD_ENDPOINT_PATH,
+        TestUtils.authenticate(client, collectorClient.port, LOGIN_UPLOAD_ENDPOINT_PATH,
             context.succeeding { authResponse: HttpResponse<Buffer?> ->
                 val authToken = authResponse.getHeader("Authorization")
                 context.verify {
-                    MatcherAssert.assertThat(
+                    assertThat(
                         "Wrong HTTP status on authentication request!",
                         authResponse.statusCode(),
-                        Matchers.`is`(200)
+                        `is`(200)
                     )
-                    MatcherAssert.assertThat(
+                    assertThat(
                         "Auth token was missing from authentication request!", authToken,
-                        Matchers.`is`(Matchers.notNullValue())
+                        `is`(notNullValue())
                     )
                 }
                 val testFileResource = this.javaClass.getResource(testFileResourceName)
-                Validate.notNull(testFileResource)
+                assertNotNull(testFileResource)
 
                 // Upload data (4 Bytes of data)
                 val path = requestUri.substring(requestUri.indexOf("/api"))
-                val builder = client!!.put(collectorClient!!.port, "localhost", path)
-                val jwtBearer = "Bearer " + if (useInvalidToken) "invalidToken" else authToken
+                val builder = client.put(collectorClient.port, "localhost", path)
+                val jwtBearer = "Bearer ${if (useInvalidToken) "invalidToken" else authToken}"
                 builder.putHeader("Authorization", jwtBearer)
                 builder.putHeader("Accept-Encoding", "gzip")
                 builder.putHeader("Content-Range", String.format("bytes %d-%d/%d", from, to, total))
                 builder.putHeader("User-Agent", "Google-HTTP-Java-Client/1.39.2 (gzip)")
                 builder.putHeader("Content-Type", "application/octet-stream")
-                builder.putHeader("Host", "localhost:" + collectorClient!!.port)
+                builder.putHeader("Host", "localhost:${collectorClient.port}")
                 builder.putHeader("Connection", "Keep-Alive")
                 // If the binary length is not set correctly, the connection is closed and no handler called
                 // [DAT-735]
@@ -316,7 +327,7 @@ class FileUploadTooLargeTest {
                 builder.putHeader("osVersion", "testOsVersion")
                 builder.putHeader("measurementId", measurementIdentifier)
                 builder.putHeader("formatVersion", "3")
-                val file = vertx!!.fileSystem().openBlocking(testFileResource.file, OpenOptions())
+                val file = vertx.fileSystem().openBlocking(testFileResource.file, OpenOptions())
                 builder.sendStream(file, handler)
             })
     }
@@ -362,7 +373,11 @@ class FileUploadTooLargeTest {
          * A Mongo database lifecycle handler. This provides the test with the capabilities to run and shutdown a Mongo
          * database for testing purposes.
          */
-        private var mongoTest: MongoTest? = null
+        private val mongoTest: MongoTest = MongoTest()
+
+        /**
+         * A very large payload size, used to test how the system reacts to large uploads.
+         */
         private const val UPLOAD_SIZE = 134697
 
         /**
@@ -374,8 +389,7 @@ class FileUploadTooLargeTest {
         @JvmStatic
         @Throws(IOException::class)
         fun setUpMongoDatabase() {
-            mongoTest = MongoTest()
-            mongoTest!!.setUpMongoDatabase(Network.freeServerPort(Network.getLocalHost()))
+            mongoTest.setUpMongoDatabase(Network.freeServerPort(Network.getLocalHost()))
         }
 
         /**
@@ -384,7 +398,7 @@ class FileUploadTooLargeTest {
         @AfterAll
         @JvmStatic
         fun stopMongoDatabase() {
-            mongoTest!!.stopMongoDb()
+            mongoTest.stopMongoDb()
         }
     }
 }
