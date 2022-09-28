@@ -48,7 +48,6 @@ import java.io.File
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.util.UUID
-import java.util.stream.Collectors
 
 /**
  * A handler for receiving HTTP PUT requests on the "measurements" end point.
@@ -98,18 +97,15 @@ class MeasurementHandler(
 
     override fun handleAuthorizedRequest(
         ctx: RoutingContext,
-        users: Set<User>,
-        header: MultiMap
+        user: User,
+        users: MutableSet<User>,
+        header: MultiMap?
     ) {
         LOGGER.info("Received new measurement request.")
         val request = ctx.request()
         val session = ctx.session()
         try {
             // Load authenticated user
-            val username = ctx.user().principal().getString("username")
-            val matched = users.stream().filter { u: User -> u.name == username }.collect(Collectors.toList())
-            Validate.isTrue(matched.size == 1)
-            val loggedInUser = matched.stream().findFirst().get() // Make sure it's the matched user
             val bodySize = PreRequestHandler.bodySize(request.headers(), payloadLimit, "content-length")
             val metaData = metaData(request)
             checkSessionValidity(session, metaData)
@@ -123,7 +119,7 @@ class MeasurementHandler(
             // Handle first chunk
             val contentRange = contentRange(request, bodySize)
             if (session.get<Any?>(UPLOAD_PATH_FIELD) == null) {
-                handleFirstChunkUpload(ctx, request, session, loggedInUser, contentRange, metaData, null)
+                handleFirstChunkUpload(ctx, request, session, user, contentRange, metaData, null)
                 return
             }
 
@@ -136,10 +132,10 @@ class MeasurementHandler(
                     request.resume()
                     if (!fileExists!!) {
                         session.remove<Any>(UPLOAD_PATH_FIELD) // was linked to non-existing file
-                        handleFirstChunkUpload(ctx, request, session, loggedInUser, contentRange, metaData, path)
+                        handleFirstChunkUpload(ctx, request, session, user, contentRange, metaData, path)
                         return@onSuccess
                     }
-                    handleSubsequentChunkUpload(ctx, request, session, loggedInUser, contentRange, metaData, path)
+                    handleSubsequentChunkUpload(ctx, request, session, user, contentRange, metaData, path)
                 } catch (e: RuntimeException) {
                     ctx.fail(500, e)
                 }
