@@ -1,3 +1,21 @@
+/*
+ * Copyright 2022 Cyface GmbH
+ *
+ * This file is part of the Cyface Data Collector.
+ *
+ * The Cyface Data Collector is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * The Cyface Data Collector is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with the Cyface Data Collector. If not, see <http://www.gnu.org/licenses/>.
+ */
 package de.cyface.collector.storage
 
 import de.cyface.api.model.User
@@ -31,9 +49,20 @@ import kotlin.io.path.getLastModifiedTime
 import kotlin.io.path.isRegularFile
 import kotlin.io.path.name
 
-
+/**
+ * A storage service to write the data to Mongo database Grid FS.
+ *
+ * @author Klemens Muthmann
+ * @version 1.0.0
+ * @property mongoClient A Vert.x Mongo database client, used to write data to the Grid FS.
+ * @property fs The Vert.x file system, used to read the temporarily stored data, from the local disk.
+ */
 class GridFsStorageService(private val mongoClient: MongoClient, val fs: FileSystem): DataStorageService {
 
+    /**
+     * Local folder to store temporary files, containing the temporary data received, before everything is written to
+     * the Grid FS storage.
+     */
     private val uploadFolder: File
         get() {
             val uploadFolder = FILE_UPLOADS_FOLDER.toFile()
@@ -184,6 +213,9 @@ class GridFsStorageService(private val mongoClient: MongoClient, val fs: FileSys
         }
     }
 
+    /**
+     * Finds the storage path on the local file system to the temporary data file, based on the `uploadIdentifier`.
+     */
     private fun pathToTemporaryFile(uploadIdentifier: UUID): Path {
        return Paths.get(uploadFolder.path, uploadIdentifier.toString())
     }

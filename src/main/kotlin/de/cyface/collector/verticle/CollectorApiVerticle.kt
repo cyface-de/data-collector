@@ -108,6 +108,13 @@ class CollectorApiVerticle (private val salt: String) : AbstractVerticle() {
         startUp.onFailure { cause: Throwable? -> startPromise.fail(cause) }
     }
 
+    /**
+     * Create an initial default user as specified by the settings.
+     *
+     * @param mongoClient the Mongo database client used to save the user information.
+     * @param adminUsername The username of the default user.
+     * @param adminPassword The initial password of the default user.
+     */
     private fun createDefaultUser(
         mongoClient: MongoClient,
         adminUsername: String,

@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 Cyface GmbH
+ * Copyright 2021-2022 Cyface GmbH
  *
  * This file is part of the Cyface Data Collector.
  *
@@ -24,6 +24,6 @@ package de.cyface.collector.handler.exception
  * @author Armin Schnabel
  * @version 1.0.0
  * @since 7.0.0
- * @param message Details about the reason for this exception.
+ * @param message Details about the reason for this `Exception`.
  */
 class SkipUpload(message: String): Exception(message)

@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 Cyface GmbH
+ * Copyright 2021-2022 Cyface GmbH
  *
  * This file is part of the Cyface Data Collector.
  *
@@ -25,7 +25,6 @@ import de.cyface.collector.handler.SessionFields.UPLOAD_PATH_FIELD
 import de.cyface.collector.handler.exception.InvalidMetaData
 import de.cyface.collector.storage.DataStorageService
 import io.vertx.core.Handler
-import io.vertx.core.file.FileProps
 import io.vertx.ext.web.RoutingContext
 import org.slf4j.LoggerFactory
 import java.util.UUID

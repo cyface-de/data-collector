@@ -1,7 +1,3 @@
-import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
-
-//import com.github.spotbugs.snom.SpotBugsTask
-
 /*
  * Copyright 2020-2022 Cyface GmbH
  *
@@ -20,6 +16,9 @@ import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
  *  You should have received a copy of the GNU General Public License
  *  along with the Cyface Data Collector.  If not, see <http://www.gnu.org/licenses/>.
  */
+import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
+import io.gitlab.arturbosch.detekt.Detekt
+import io.gitlab.arturbosch.detekt.DetektCreateBaselineTask
 /**
  * The build gradle file for the Cyface Data Collector.
  *
@@ -38,23 +37,23 @@ plugins {
   id("eclipse")
   id("idea")
   //noinspection SpellCheckingInspection
-  id("com.github.johnrengelman.shadow") version "7.0.0"
+  id("com.github.johnrengelman.shadow").version("7.0.0")
   // TODO: Remove this as it only applies to Java
   //id "com.github.spotbugs" version "4.7.1"
   // Plugin to display the Gradle task graph
   //noinspection SpellCheckingInspection
-  id("org.barfuin.gradle.taskinfo") version "1.0.5"
+  id("org.barfuin.gradle.taskinfo").version("1.0.5")
 
   // TODO: Remoe this as it only applies to Java
   id("java")
   id("application")
   id("maven-publish")
-  kotlin("jvm") version "1.7.10"
+  kotlin("jvm").version("1.7.10")
 
-  // TODO: Remove the following three as they only apply to Java
-  //id 'jacoco'
-  //id 'checkstyle'
-  //id 'pmd'
+  // For static code checks
+  id("io.gitlab.arturbosch.detekt").version("1.21.0")
+  // For Generation of Documentation
+  id("org.jetbrains.dokka").version("1.7.10")
 }
 // Vert.x Gradle redeploy on file changes, see https://github.com/vert-x3/vertx-examples/tree/master/gradle-redeploy
 application {
@@ -74,16 +73,6 @@ tasks.run.get().args(listOf("run", mainVerticleName, "--redeploy=$watchForChange
 java {
   sourceCompatibility = JavaVersion.VERSION_11
   targetCompatibility = JavaVersion.VERSION_11
-
-  /*checkstyle {
-    toolVersion = '8.31'
-    // use one common config file for all subprojects
-    configFile = project(':').file("config/checkstyle/checkstyle.xml")
-    //noinspection SpellCheckingInspection
-    configProperties = ["suppressionFile": project(':').file("config/checkstyle/suppressions.xml")]
-    ignoreFailures = true
-    showViolations = true
-  }*/
 }
 
 tasks.withType<JavaCompile>() {
@@ -176,8 +165,6 @@ dependencies {
   testImplementation("io.vertx:vertx-web-client:${project.extra["vertxVersion"]}")
   // This is required to run an embedded Mongo instance for integration testing.
   testImplementation("de.flapdoodle.embed:de.flapdoodle.embed.mongo:${project.extra["flapdoodleVersion"]}")
-
-  //spotbugsPlugins("com.h3xstream.findsecbugs:findsecbugs-plugin:$spotBugsPluginVersion")
 }
 
 tasks.test {
@@ -193,44 +180,6 @@ tasks.test {
     showStandardStreams = false
   }
 }
-
-// TODO: Remove the following five sections as they only apply to Java.
-/*jacoco {
-  toolVersion = "$jacocoVersion"
-  reportsDir = file("$buildDir/reports/jacoco")
-}
-
-jacocoTestReport {
-  reports {
-    xml.enabled true
-    csv.enabled true
-    html.destination file("${buildDir}/reports/jacocoHtml")
-  }
-}
-
-spotbugs {
-  toolVersion = '4.2.3'
-  ignoreFailures = true
-  excludeFilter = file("$rootProject.projectDir/config/spotbugs/excludeFilter.xml")
-}
-
-tasks.withType(SpotBugsTask) {
-  reports {
-    xml.enabled = false
-    html.enabled = true
-  }
-  //pluginClasspath = project.configurations.spotbugsPlugins
-}
-
-pmd {
-  toolVersion = '6.22.0'
-  incrementalAnalysis = true
-  ruleSetFiles = project(':').files('config/pmd.xml')
-  rulePriority = 4
-  ruleSets = []
-  // There are so many violations and currently it is not really important in this application.
-  ignoreFailures = true
-}*/
 
 // Definitions for the maven-publish Plugin
 publishing {
@@ -306,6 +255,41 @@ publishing {
     create<MavenPublication>("publishExecutable") {
       //noinspection GroovyAssignabilityCheck
       from(components["java"])
+    }
+  }
+}
+
+// Begin detekt configuration
+detekt {
+  buildUponDefaultConfig = true // preconfigure defaults
+  allRules = false // activate all available (even unstable) rules.
+  config = files("$projectDir/config/detekt.yml") // point to your custom config defining rules to run, overwriting default behavior
+  //baseline = file("$projectDir/config/baseline.xml") // a way of suppressing issues before introducing detekt
+}
+
+tasks.withType<Detekt>().configureEach {
+  reports {
+    html.required.set(true) // observe findings in your browser with structure and code snippets
+    //xml.required.set(true) // checkstyle like format mainly for integrations like Jenkins
+    //txt.required.set(true) // similar to the console output, contains issue signature to manually edit baseline files
+    sarif.required.set(true) // standardized SARIF format (https://sarifweb.azurewebsites.net/) to support integrations with Github Code Scanning
+    //md.required.set(true) // simple Markdown format
+  }
+}
+
+tasks.withType<Detekt>().configureEach {
+  jvmTarget = "11"
+}
+tasks.withType<DetektCreateBaselineTask>().configureEach {
+  jvmTarget = "11"
+}
+
+// End detekt configuration
+
+tasks.withType<org.jetbrains.dokka.gradle.DokkaTaskPartial>().configureEach {
+  dokkaSourceSets {
+    configureEach {
+      includes.from("README.md")
     }
   }
 }

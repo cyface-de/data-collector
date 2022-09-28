@@ -1,3 +1,21 @@
+/*
+ * Copyright 2022 Cyface GmbH
+ *
+ * This file is part of the Cyface Data Collector.
+ *
+ * The Cyface Data Collector is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * The Cyface Data Collector is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with the Cyface Data Collector. If not, see <http://www.gnu.org/licenses/>.
+ */
 package de.cyface.collector.handler
 
 import de.cyface.api.Authorizer
@@ -20,6 +38,9 @@ import org.slf4j.LoggerFactory
 import java.util.stream.Collectors
 
 /**
+ * A `RequestHandler` to ensure correct user authentication.
+ * This should be one of the first handlers on each route requiring authorization.
+ *
  * @author Klemens Muthmann
  * @version 1.0.0
  * @property authProvider An auth provider used by this server to authenticate against the Mongo user database.
@@ -87,13 +108,10 @@ class AuthorizationHandler(
     /**
      * Loads all users which the authenticated `User` can access.
      *
-     *
      * If the user is not a group manager, only the user itself is returned.
-     *
      *
      * If the user holds a [DatabaseConstants.GROUP_MANAGER_ROLE_SUFFIX] role, identifying it as the manager of
      * that group, all users of that group are loaded from the user collection.
-     *
      *
      * This method is only public because of the `backend/AuthorizationTest`, see last comment on CY-5720.
      *

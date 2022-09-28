@@ -59,6 +59,7 @@ import java.util.stream.Collectors
  * @property payloadLimit The maximum number of `Byte`s which may be uploaded.
  *
  * @author Armin Schnabel
+ * @author Klemens Muthmann
  * @version 1.0.0
  * @since 6.0.0
  */
@@ -145,6 +146,16 @@ class MeasurementHandler(
         }
     }
 
+    /**
+     * Check the request for validity and either fail the response or continue with handling the request.
+     *
+     * @param session The HTTP session used as a context for this request.
+     * @param user The user trying to upload the data.
+     * @param pipe The pipe containing the data to upload.
+     * @param contentRange Range information about the data to upload.
+     * This data should have been provided via HTTP content-range parameter.
+     * @param metaData Meta information about the measurement to handle.
+     */
     private fun check(session: Session, user: User, pipe: Pipe<Buffer>, contentRange: ContentRange, metaData: RequestMetaData): Future<Status> {
         val ret = Promise.promise<Status>()
         val uploadIdentifier = session.get<UUID?>(UPLOAD_PATH_FIELD)

@@ -41,6 +41,7 @@ import org.slf4j.LoggerFactory
  * This end point tells the client if the upload may continue or should be skipped.
  *
  * @author Armin Schnabel
+ * @author Klemens Muthmann
  * @version 1.0.1
  * @since 6.0.0
  * @property storageService The service used to store data and retrieve information about stored data by this application.
@@ -174,9 +175,12 @@ class PreRequestHandler(
             val endLocationLat = body.getString(FormAttributes.END_LOCATION_LAT.value)
             val endLocationLon = body.getString(FormAttributes.END_LOCATION_LON.value)
             val endLocationTs = body.getString(FormAttributes.END_LOCATION_TS.value)
-            if (startLocationLat == null || startLocationLon == null || startLocationTs == null || endLocationLat == null || endLocationLon == null || endLocationTs == null) {
-                throw InvalidMetaData("Data incomplete!")
-            }
+            if (startLocationLat == null) throw InvalidMetaData("Data incomplete startLocationLat was null!")
+            if (startLocationLon == null) throw InvalidMetaData("Data incomplete startLocationLon was null!")
+            if (startLocationTs == null) throw InvalidMetaData("Data incomplete startLocationTs was null!")
+            if (endLocationLat == null) throw InvalidMetaData("Data incomplete endLocationLat was null!")
+            if (endLocationLon == null) throw InvalidMetaData("Data incomplete endLocationLon was null!")
+            if (endLocationTs == null) throw InvalidMetaData("Data incomplete endLocationTs was null!")
             val measurementId = body.getString(FormAttributes.MEASUREMENT_ID.value)
             val deviceId = body.getString(FormAttributes.DEVICE_ID.value)
             if (measurementId == null || deviceId == null) {
