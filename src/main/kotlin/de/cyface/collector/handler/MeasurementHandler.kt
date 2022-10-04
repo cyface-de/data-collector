@@ -418,7 +418,7 @@ class MeasurementHandler(
             request.resume()
 
             // Pipe body to reduce memory usage and store body of interrupted connections (to support resume)
-            request.pipeTo(asyncFile).onSuccess { _: Void? ->
+            request.pipeTo(asyncFile).onSuccess { success: Void? ->
                 // Check if the upload is complete or if this was just a chunk
                 fs.props(tempFile.toString()).onSuccess { props: FileProps ->
 
@@ -478,7 +478,7 @@ class MeasurementHandler(
      * @param measurement The measured data to write to the Mongo database
      * @param ctx The Vertx `RoutingContext` used to write the response
      */
-    private fun storeToMongoDB(measurement: Measurement, ctx: RoutingContext) {
+    fun storeToMongoDB(measurement: Measurement, ctx: RoutingContext) {
         LOGGER.debug(
             "Inserted measurement with id {}:{}!", measurement.metaData.deviceIdentifier,
             measurement.metaData.measurementIdentifier
@@ -495,7 +495,7 @@ class MeasurementHandler(
             }
 
             // Wait for all file uploads to complete
-            uploadFuture.onSuccess { _: String? ->
+            uploadFuture.onSuccess { result: String? ->
                 // Not removing session to allow the client to check the upload status if interrupted
                 LOGGER.debug("Response: 201")
                 clean(ctx.session(), measurement.binary)
