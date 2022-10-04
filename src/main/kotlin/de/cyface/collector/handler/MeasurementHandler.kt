@@ -97,7 +97,7 @@ class MeasurementHandler(
 
     override fun handleAuthorizedRequest(
         ctx: RoutingContext,
-        user: User,
+        loggedInUser: User,
         users: MutableSet<User>,
         header: MultiMap?
     ) {
@@ -119,7 +119,7 @@ class MeasurementHandler(
             // Handle first chunk
             val contentRange = contentRange(request, bodySize)
             if (session.get<Any?>(UPLOAD_PATH_FIELD) == null) {
-                handleFirstChunkUpload(ctx, request, session, user, contentRange, metaData, null)
+                handleFirstChunkUpload(ctx, request, session, loggedInUser, contentRange, metaData, null)
                 return
             }
 
@@ -132,10 +132,10 @@ class MeasurementHandler(
                     request.resume()
                     if (!fileExists!!) {
                         session.remove<Any>(UPLOAD_PATH_FIELD) // was linked to non-existing file
-                        handleFirstChunkUpload(ctx, request, session, user, contentRange, metaData, path)
+                        handleFirstChunkUpload(ctx, request, session, loggedInUser, contentRange, metaData, path)
                         return@onSuccess
                     }
-                    handleSubsequentChunkUpload(ctx, request, session, user, contentRange, metaData, path)
+                    handleSubsequentChunkUpload(ctx, request, session, loggedInUser, contentRange, metaData, path)
                 } catch (e: RuntimeException) {
                     ctx.fail(500, e)
                 }
