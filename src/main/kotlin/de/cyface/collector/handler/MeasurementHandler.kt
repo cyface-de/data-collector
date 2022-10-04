@@ -48,7 +48,6 @@ import java.io.File
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.util.UUID
-import java.util.stream.Collectors
 
 /**
  * A handler for receiving HTTP PUT requests on the "measurements" end point.
@@ -98,18 +97,15 @@ class MeasurementHandler(
 
     override fun handleAuthorizedRequest(
         ctx: RoutingContext,
-        users: Set<User>,
-        header: MultiMap
+        loggedInUser: User,
+        users: MutableSet<User>,
+        header: MultiMap?
     ) {
         LOGGER.info("Received new measurement request.")
         val request = ctx.request()
         val session = ctx.session()
         try {
             // Load authenticated user
-            val username = ctx.user().principal().getString("username")
-            val matched = users.stream().filter { u: User -> u.name == username }.collect(Collectors.toList())
-            Validate.isTrue(matched.size == 1)
-            val loggedInUser = matched.stream().findFirst().get() // Make sure it's the matched user
             val bodySize = PreRequestHandler.bodySize(request.headers(), payloadLimit, "content-length")
             val metaData = metaData(request)
             checkSessionValidity(session, metaData)

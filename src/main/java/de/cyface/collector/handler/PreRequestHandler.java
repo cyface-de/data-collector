@@ -128,7 +128,7 @@ public class PreRequestHandler extends Authorizer {
     }
 
     @Override
-    protected void handleAuthorizedRequest(final RoutingContext ctx, final Set<User> users, final MultiMap header) {
+    protected void handleAuthorizedRequest(final RoutingContext ctx, final User user, final Set<User> users, final MultiMap header) {
 
         LOGGER.info("Received new pre-request.");
         final var request = ctx.request();
