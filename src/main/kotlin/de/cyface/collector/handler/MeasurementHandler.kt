@@ -78,15 +78,11 @@ class MeasurementHandler(
         val session = ctx.session()
         try {
             // Load authenticated user
-            val username = ctx.user().principal().getString("username")
-            val users = ctx.get<Set<User>?>("accessible-users")
-            if (users == null) {
+            val loggedInUser = ctx.get<User?>("logged-in-user")
+            if (loggedInUser == null) {
                 ctx.response().setStatusCode(401).end()
                 return
             }
-            val matched = users.stream().filter { u: User -> u.name == username }.collect(Collectors.toList())
-            Validate.isTrue(matched.size == 1)
-            val loggedInUser = matched.stream().findFirst().get() // Make sure it's the matched user
             val bodySize = PreRequestHandler.bodySize(request.headers(), payloadLimit, "content-length")
             val metaData = metaData(request)
             checkSessionValidity(session, metaData)

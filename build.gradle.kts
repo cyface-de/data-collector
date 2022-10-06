@@ -70,7 +70,7 @@ application {
 }
 
 group = "de.cyface"
-version = "6.10.2"
+version = "6.10.3"
 
 val mainVerticleName = "de.cyface.collector.verticle.MainVerticle"
 val watchForChange = "src/**/*"
@@ -105,7 +105,7 @@ extra["slf4jVersion"] = "1.7.29"
 extra["commonsLangVersion"] = "3.12.0"
 extra["logbackVersion"] = "1.2.5"
 // TODO: Check if this is still necessary
-extra["cyfaceApiVersion"] = "1.0.0"
+extra["cyfaceApiVersion"] = "2.0.1"
 // TODO: Check if this is still necessary
 extra["cyfaceSerializationVersion"] = "2.2.1"
 extra["gradleWrapperVersion"] = "7.5.1"

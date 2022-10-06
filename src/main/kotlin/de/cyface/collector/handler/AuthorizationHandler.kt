@@ -82,6 +82,9 @@ class AuthorizationHandler(
                                 username,
                                 accessibleUsers
                             )
+                            val matched = accessibleUsers.stream().filter { u: User -> u.name == username }.collect(Collectors.toList())
+                            Validate.isTrue(matched.size == 1)
+                            context.put("logged-in-user", matched.stream().findFirst().get()) // Make sure it's the matched user
                             context.put("accessible-users", accessibleUsers).next()
                         } catch (e: RuntimeException) {
                             context.fail(e)
