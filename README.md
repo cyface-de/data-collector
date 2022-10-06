@@ -1,4 +1,4 @@
-# Collector
+# Module collector
 
 ![https://vertx.io](https://img.shields.io/badge/vert.x-4.3.3-purple.svg)
 ![https://mongodb.com/](https://img.shields.io/badge/mongo-5.0.8-purple.svg)
@@ -18,7 +18,7 @@ The project uses [Gradle](https://gradle.org/) as the build system.
 
 ## Overview
 
-* [Collector](#Collector)
+* [Collector](##collector)
 
 .General information
 * [Release a new Version](#release-a-new-version)
@@ -216,19 +216,6 @@ This project uses [semantic versioning](https://semver.org/).
 	* Vertx
 	* MongoDb
 
-# Package de.cyface.collector.model
-
-Contains all the data model files required by the Cyface data collector.
-
-# Package de.cyface.collector.storage
-
-Contains the interface to store data in Cyface and several implementations for that interface.
-
-Those implementations provide support for storing data in GridFS, on the local file system and in Google Cloud storage.
-
-The following image shows an overview of the interface and how it is embedded in the Cyface data collector.
-
-![](doc/storage-service.png)
 ## Licensing
 Copyright 2018-2022 Cyface GmbH
 
@@ -246,3 +233,17 @@ GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
 along with the Cyface Data Collector.  If not, see http://www.gnu.org/licenses/.
+
+# Package de.cyface.collector.model
+
+Contains all the data model files required by the Cyface data collector.
+
+# Package de.cyface.collector.storage
+
+Contains the interface to store data in Cyface and several implementations for that interface.
+
+Those implementations provide support for storing data in GridFS, on the local file system and in Google Cloud storage.
+
+The following image shows an overview of the interface and how it is embedded in the Cyface data collector.
+
+<img src="../../images/storage-service.png" alt="Test" width="1128px" height="330px">

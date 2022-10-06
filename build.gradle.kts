@@ -19,6 +19,10 @@
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 import io.gitlab.arturbosch.detekt.Detekt
 import io.gitlab.arturbosch.detekt.DetektCreateBaselineTask
+import org.jetbrains.dokka.gradle.DokkaTask
+import org.jetbrains.dokka.base.DokkaBase
+import org.jetbrains.dokka.base.DokkaBaseConfiguration
+import java.net.URL
 /**
  * The build gradle file for the Cyface Data Collector.
  *
@@ -30,6 +34,11 @@ import io.gitlab.arturbosch.detekt.DetektCreateBaselineTask
 buildscript {
   repositories {
     mavenCentral()
+  }
+  dependencies {
+    // This is required to configure the dokka base plugin to include images.
+    // classpath("<plugin coordinates>:<plugin version>")
+    classpath("org.jetbrains.dokka:dokka-base:1.7.10")
   }
 }
 
@@ -89,6 +98,7 @@ tasks.withType<KotlinCompile>().configureEach {
 extra["vertxVersion"] = "4.3.3"
 // The following is only required since Vert.x GridFS Client is not working correctly in Version 4.3.3.
 // To check this run GridFSStorageIT
+// We reported the problem to Vertx Github. A fix is scheduled for Vertx 4.3.4
 extra["mongoDriverVersion"] = "4.7.1"
 extra["micrometerVersion"] = "1.7.2"
 extra["slf4jVersion"] = "1.7.29"
@@ -108,10 +118,7 @@ extra["hamcrestVersion"] = "2.2"
 extra["hamKrestVersion"] = "1.8.0.1"
 extra["flapdoodleVersion"] = "3.4.9"
 extra["mockitoKotlinVersion"] = "4.0.0"
-
-// TODO: Remove these as they only apply to Java
-//jacocoVersion = '0.8.5'
-//spotBugsPluginVersion = '1.11.0'
+extra["dokkaVersion"] = "1.7.10"
 
 tasks.wrapper {
   gradleVersion = project.extra["gradleWrapperVersion"].toString()
@@ -153,7 +160,7 @@ dependencies {
   testImplementation("org.junit.jupiter:junit-jupiter-params")  // Required for parameterized tests
   testImplementation("org.hamcrest:hamcrest:${project.extra["hamcrestVersion"]}")
   testImplementation("com.natpryce:hamkrest:${project.extra["hamKrestVersion"]}")
-  testImplementation(kotlin("reflect"))//"org.jetbrains.kotlin:kotlin-reflect:1.7.10") // Required by hamkrest
+  testImplementation(kotlin("reflect")) // Required by hamkrest
   testImplementation(kotlin("test"))
   testImplementation("org.mockito:mockito-core:${project.extra["mockitoVersion"]}")
   testImplementation("org.mockito:mockito-junit-jupiter:${project.extra["mockitoVersion"]}")
@@ -165,6 +172,10 @@ dependencies {
   testImplementation("io.vertx:vertx-web-client:${project.extra["vertxVersion"]}")
   // This is required to run an embedded Mongo instance for integration testing.
   testImplementation("de.flapdoodle.embed:de.flapdoodle.embed.mongo:${project.extra["flapdoodleVersion"]}")
+
+  // Required to create inline documentation
+  dokkaHtmlPlugin("org.jetbrains.dokka:kotlin-as-java-plugin:${project.extra["dokkaVersion"]}")
+  dokkaHtmlPlugin("org.jetbrains.dokka:dokka-base:${project.extra["dokkaVersion"]}")
 }
 
 tasks.test {
@@ -286,10 +297,17 @@ tasks.withType<DetektCreateBaselineTask>().configureEach {
 
 // End detekt configuration
 
-tasks.withType<org.jetbrains.dokka.gradle.DokkaTaskPartial>().configureEach {
+tasks.withType<DokkaTask>().configureEach {
+  pluginConfiguration<DokkaBase, DokkaBaseConfiguration> {
+    customAssets = listOf(file("doc/storage-service.png"))
+  }
   dokkaSourceSets {
-    configureEach {
+    named("main") {
       includes.from("README.md")
+      sourceLink {
+        localDirectory.set(file("src/main/kotlin"))
+        remoteUrl.set(URL("https://github.com/cyface-de/data-collector/build/dokka/"))
+      }
     }
   }
 }

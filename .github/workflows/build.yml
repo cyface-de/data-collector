@@ -5,6 +5,7 @@ on:
     branches:
       - main
       - release
+      - task/RFR-57_fix-case-sensitivity-in-email-address
   pull_request:
     branches:
       - main
@@ -20,10 +21,21 @@ jobs:
           java-version: 11
 
       - name: Build with Gradle
-        run: ./gradlew build
+        run: ./gradlew build dokkaHtml
         env:
           USERNAME: ${{ github.actor }}
           PASSWORD: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Deploy
+        uses: peaceiris/actions-gh-pages@v3
+        # If you're changing the branch from main,
+        # also change the `main` in `refs/heads/main`
+        # below accordingly.
+        #if: ${{ github.ref == 'refs/heads/main' }}
+        if: ${{ gitHub.ref == 'refs/heads/task/RFR-57_fix-case-sensitivity-in-email-address' }}
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./build/dokka/html
 
       - name: Test Docker dev environment setup
         run: |
