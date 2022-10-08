@@ -39,14 +39,22 @@ object HTTPStatus {
      * The request was malformed somehow.
      */
     const val BAD_REQUEST = 400
+
+    /**
+     * The user that tried to access the resource is unauthorized.
+     */
+    const val UNAUTHORIZED = 401
+
     /**
      * HTTP status code to return when the client tries to resume an upload but the session has expired.
      */
     const val NOT_FOUND = 404
+
     /**
      * Http code which indicates that the upload request syntax was incorrect.
      */
     const val ENTITY_UNPARSABLE = 422
+
     /**
      * Http code which indicates that the upload intended by the client should be skipped.
      *

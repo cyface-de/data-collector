@@ -35,6 +35,7 @@ import io.vertx.ext.mongo.MongoClient
 import io.vertx.ext.web.RoutingContext
 import org.apache.commons.lang3.Validate
 import org.slf4j.LoggerFactory
+import java.util.Locale
 import java.util.stream.Collectors
 
 /**
@@ -45,12 +46,14 @@ import java.util.stream.Collectors
  * @version 1.0.0
  * @property authProvider An auth provider used by this server to authenticate against the Mongo user database.
  * @property mongoDatabase The database to check which users a {@code manager} user has access to.
- * @property strategy The pause and resume strategy to be used which wraps async calls in {@link #handle(RoutingContext)}.
+ * @property strategy The pause and resume strategy to be used which wraps async calls
+ *                    in {@link #handle(RoutingContext)}.
  */
 class AuthorizationHandler(
     private val authProvider: MongoAuthentication,
     private val mongoDatabase: MongoClient,
-    private val strategy: PauseAndResumeStrategy): Handler<RoutingContext> {
+    private val strategy: PauseAndResumeStrategy
+) : Handler<RoutingContext> {
     override fun handle(context: RoutingContext) {
         try {
             LOGGER.info("Received new request.")
@@ -82,9 +85,13 @@ class AuthorizationHandler(
                                 username,
                                 accessibleUsers
                             )
-                            val matched = accessibleUsers.stream().filter { u: User -> u.name == username }.collect(Collectors.toList())
+                            val matched = accessibleUsers.stream().filter {
+                                    u: User ->
+                                u.name == username
+                            }.collect(Collectors.toList())
                             Validate.isTrue(matched.size == 1)
-                            context.put("logged-in-user", matched.stream().findFirst().get()) // Make sure it's the matched user
+                            // Make sure it's the matched user
+                            context.put("logged-in-user", matched.stream().findFirst().get())
                             context.put("accessible-users", accessibleUsers).next()
                         } catch (e: RuntimeException) {
                             context.fail(e)
@@ -92,15 +99,15 @@ class AuthorizationHandler(
                     }
                     loadUsers.onFailure { e: Throwable ->
                         LOGGER.error("Loading accessible users failed for user {}", username, e)
-                        context.fail(500, e)
+                        context.fail(HTTPStatus.SERVER_ERROR, e)
                     }
                 } catch (e: RuntimeException) {
-                    context.fail(500, e)
+                    context.fail(HTTPStatus.SERVER_ERROR, e)
                 }
             }
             authentication.onFailure { e: Throwable ->
                 LOGGER.error("Authorization failed for user {}!", username)
-                context.fail(401, e)
+                context.fail(HTTPStatus.UNAUTHORIZED, e)
             }
         } catch (e: NumberFormatException) {
             LOGGER.error("Data was not parsable!")
@@ -149,6 +156,7 @@ class AuthorizationHandler(
                     promise.fail(
                         IllegalArgumentException(
                             String.format(
+                                Locale.ENGLISH,
                                 "User %s is manager of more than one group.",
                                 user
                             )

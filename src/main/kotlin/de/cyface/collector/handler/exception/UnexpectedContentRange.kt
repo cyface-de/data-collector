@@ -27,4 +27,4 @@ package de.cyface.collector.handler.exception
  * @version 1.0.0
  * @param message Details about the reason for this `Exception`.
  */
-class UnexpectedContentRange(message: String): Exception(message)
+class UnexpectedContentRange(message: String) : Exception(message)

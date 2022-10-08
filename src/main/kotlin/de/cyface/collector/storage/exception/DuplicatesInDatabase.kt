@@ -27,4 +27,4 @@ import java.lang.Exception
  * @version 1.0.0
  * @param message A user readable message to display as part of the stack trace.
  */
-class DuplicatesInDatabase(message: String): Exception(message)
+class DuplicatesInDatabase(message: String) : Exception(message)

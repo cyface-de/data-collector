@@ -48,7 +48,15 @@ import java.util.UUID
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 
+/**
+ * Tests that storing data to Mongo Grid FS works as expected.
+ *
+ * @author Klemens Muthmann
+ * @version 1.0.0
+ */
 class GridFSStorageTest {
+    // Explicit Type Arguments are required by Mockito.
+    @Suppress("RemoveExplicitTypeArguments")
     @Test
     fun `Happy path for storing a file to GridFS`() {
         // Arrange
@@ -101,8 +109,8 @@ class GridFSStorageTest {
             startLocation,
             endLocation,
             modality,
-            formatVersion)
-        val expectedObjectId = ObjectId("632c541b7021f939b7521e39")
+            formatVersion
+        )
         val oocut = GridFsStorageService(mockMongoClient, fileSystem)
 
         // Act
@@ -110,7 +118,6 @@ class GridFSStorageTest {
         val result = oocut.store(mockPipe, user, contentRange, uploadIdentifier, metaData)
         result.onFailure { cause ->
             fail("Failed Storing test data", cause)
-            countDownLatch.countDown()
         }
         result.onSuccess {
             assertThat(it.type, `is`(StatusType.COMPLETE))
@@ -155,13 +162,13 @@ class GridFSStorageTest {
         }
         assertThat(countDownLatch.await(2, TimeUnit.SECONDS), `is`(true))
 
-
         argumentCaptor<GridFsUploadOptions> {
             verify(mockMongoGridFSClient).uploadByFileNameWithOptions(any(), any(), capture())
 
             val expectedMetaData = metaData.toJson()
-            assertThat(firstValue.metadata.getString("deviceId"), `is`(equalTo(expectedMetaData.getString("deviceId"))))
-            assertThat(firstValue.metadata.getString("measurementId"), `is`(equalTo(expectedMetaData.getString("measurementId"))))
+            val metadata = firstValue.metadata
+            assertThat(metadata.getString("deviceId"), equalTo(expectedMetaData.getString("deviceId")))
+            assertThat(metadata.getString("measurementId"), equalTo(expectedMetaData.getString("measurementId")))
         }
     }
 }

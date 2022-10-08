@@ -30,8 +30,6 @@ import de.cyface.collector.handler.MeasurementHandler
 import de.cyface.collector.handler.PreRequestHandler
 import de.cyface.collector.handler.StatusHandler
 import de.cyface.collector.handler.UserCreationHandler
-import de.cyface.collector.model.Measurement
-import de.cyface.collector.model.Measurement.Companion.codec
 import de.cyface.collector.storage.DataStorageService
 import de.cyface.collector.storage.GridFsStorageService
 import io.vertx.core.AbstractVerticle
@@ -53,6 +51,7 @@ import io.vertx.ext.web.handler.StaticHandler
 import io.vertx.ext.web.sstore.LocalSessionStore
 import org.slf4j.LoggerFactory
 import java.nio.charset.StandardCharsets
+import java.util.Locale
 
 /**
  * This Verticle is the Cyface collectors main entry point. It orchestrates all other Verticles and configures the
@@ -64,12 +63,9 @@ import java.nio.charset.StandardCharsets
  * @since 2.0.0
  * @property salt The value to be used as encryption salt
  */
-class CollectorApiVerticle (private val salt: String) : AbstractVerticle() {
+class CollectorApiVerticle(private val salt: String) : AbstractVerticle() {
     @Throws(Exception::class)
     override fun start(startPromise: Promise<Void>) {
-        // Setup Measurement event bus
-        prepareEventBus()
-
         // Load configurations
         val config = Config(vertx)
 
@@ -153,13 +149,6 @@ class CollectorApiVerticle (private val salt: String) : AbstractVerticle() {
     }
 
     /**
-     * Prepares the Vertx event bus during startup of the application.
-     */
-    private fun prepareEventBus() {
-        vertx.eventBus().registerDefaultCodec(Measurement::class.java, codec)
-    }
-
-    /**
      * Initializes all the routes available via the Cyface Data Collector.
      *
      * @param config HTTP server configuration parameters required to set up the routes for the collector API.
@@ -227,7 +216,8 @@ class CollectorApiVerticle (private val salt: String) : AbstractVerticle() {
         val preRequestBodyHandler = BodyHandler.create().setBodyLimit(BYTES_IN_ONE_KILOBYTE)
         router.post(MEASUREMENTS_ENDPOINT)
             .consumes("application/json; charset=UTF-8")
-            .handler(LoggerHandler.create()) // Ready request body only once and before async calls or pause/resume must be used see [DAT-749]
+            // Ready request body only once and before async calls or pause/resume must be used see [DAT-749]
+            .handler(LoggerHandler.create())
             .handler(preRequestBodyHandler)
             .handler(jwtHandler)
             .handler(AuthorizationHandler(config.authProvider, config.database, PauseAndResumeAfterBodyParsing()))
@@ -253,8 +243,9 @@ class CollectorApiVerticle (private val salt: String) : AbstractVerticle() {
         val jwtAuthHandler = JWTAuthHandler.create(jwtAuth)
         // The path pattern ../(sid)/.. was chosen because of the documentation of Vert.X SessionHandler
         // https://vertx.io/docs/vertx-web/java/#_handling_sessions
-        router.putWithRegex(String.format("\\%s\\/\\([a-z0-9]{32}\\)\\/", MEASUREMENTS_ENDPOINT))
-            .consumes("application/octet-stream") // Not using BodyHandler as the `request.body()` can only be read once and the {@code #handler} does so.
+        router.putWithRegex(String.format(Locale.ENGLISH, "\\%s\\/\\([a-z0-9]{32}\\)\\/", MEASUREMENTS_ENDPOINT))
+            // Not using BodyHandler as the `request.body()` can only be read once and the {@code #handler} does so.
+            .consumes("application/octet-stream")
             .handler(LoggerHandler.create())
             .handler(jwtAuthHandler)
             .handler(AuthorizationHandler(config.authProvider, config.database, PauseAndResumeBeforeBodyParsing()))

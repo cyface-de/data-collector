@@ -35,6 +35,7 @@ import io.vertx.core.json.JsonObject
 import io.vertx.ext.web.RoutingContext
 import io.vertx.ext.web.Session
 import org.slf4j.LoggerFactory
+import java.util.Locale
 
 /**
  * A handler for receiving HTTP POST requests on the "measurements" end point.
@@ -44,13 +45,14 @@ import org.slf4j.LoggerFactory
  * @author Klemens Muthmann
  * @version 1.0.1
  * @since 6.0.0
- * @property storageService The service used to store data and retrieve information about stored data by this application.
+ * @property storageService The service used to store data and retrieve information about stored data
+ *                          by this application.
  * @property measurementLimit The maximal number of `Byte`s which may be uploaded in the upload request.
  */
 class PreRequestHandler(
     private val storageService: DataStorageService,
     private val measurementLimit: Long
-): Handler<RoutingContext> {
+) : Handler<RoutingContext> {
 
     override fun handle(ctx: RoutingContext) {
         LOGGER.info("Received new pre-request.")
@@ -71,28 +73,28 @@ class PreRequestHandler(
 
             val isStoredResult = storageService.isStored(deviceId, measurementId.toLong())
             isStoredResult.onSuccess { measurementExists ->
-                    if(measurementExists) {
-                        LOGGER.debug("Response: 409, measurement already exists, no upload needed")
-                        ctx.response().setStatusCode(HTTP_CONFLICT).end()
-                    } else {
-                        // Bind session to this measurement and mark as "pre-request accepted"
-                        session.put(MEASUREMENT_ID_FIELD, measurementId)
-                        session.put(DEVICE_ID_FIELD, deviceId)
+                if (measurementExists) {
+                    LOGGER.debug("Response: 409, measurement already exists, no upload needed")
+                    ctx.response().setStatusCode(HTTP_CONFLICT).end()
+                } else {
+                    // Bind session to this measurement and mark as "pre-request accepted"
+                    session.put(MEASUREMENT_ID_FIELD, measurementId)
+                    session.put(DEVICE_ID_FIELD, deviceId)
 
-                        // Google uses the `Location` format:
-                        // `https://host/endpoint?uploadType=resumable&upload_id=SESSION_ID`
-                        // To use the Vert.X session parsing we use:
-                        // `https://host/endpoint?uploadType=resumable&upload_id=(SESSION_ID)"
-                        val requestUri = request.absoluteURI()
-                        val protocol = request.getHeader("X-Forwarded-Proto")
-                        val locationUri = locationUri(requestUri, protocol, session.id())
-                        LOGGER.debug("Response 200, Location: $locationUri")
-                        ctx.response()
-                            .putHeader("Location", locationUri)
-                            .putHeader("Content-Length", "0")
-                            .setStatusCode(OK).end()
-                    }
+                    // Google uses the `Location` format:
+                    // `https://host/endpoint?uploadType=resumable&upload_id=SESSION_ID`
+                    // To use the Vert.X session parsing we use:
+                    // `https://host/endpoint?uploadType=resumable&upload_id=(SESSION_ID)"
+                    val requestUri = request.absoluteURI()
+                    val protocol = request.getHeader("X-Forwarded-Proto")
+                    val locationUri = locationUri(requestUri, protocol, session.id())
+                    LOGGER.debug("Response 200, Location: $locationUri")
+                    ctx.response()
+                        .putHeader("Location", locationUri)
+                        .putHeader("Content-Length", "0")
+                        .setStatusCode(OK).end()
                 }
+            }
             isStoredResult.onFailure { ctx.fail(SERVER_ERROR) }
         } catch (e: InvalidMetaData) {
             ctx.fail(ENTITY_UNPARSABLE, e)
@@ -122,10 +124,10 @@ class PreRequestHandler(
         val measurementId = session.get<Any>(MEASUREMENT_ID_FIELD)
         val deviceId = session.get<Any>(DEVICE_ID_FIELD)
         if (measurementId != null) {
-            throw IllegalSession(String.format("Unexpected measurement id: %s.", measurementId))
+            throw IllegalSession(String.format(Locale.ENGLISH, "Unexpected measurement id: %s.", measurementId))
         }
         if (deviceId != null) {
-            throw IllegalSession(String.format("Unexpected device id: %s.", deviceId))
+            throw IllegalSession(String.format(Locale.ENGLISH, "Unexpected device id: %s.", deviceId))
         }
     }
 
@@ -147,7 +149,7 @@ class PreRequestHandler(
         // offers an endpoint address in the format `measurement/(SID)` we remove the `uploadType` parameter.
         // We don't need to process the `uploadType` as we're only offering one upload type: resumable.
         val uploadTypeRemoved = protocolReplaced.replace("?uploadType=resumable", "")
-        return String.format("%s/(%s)/", uploadTypeRemoved, sessionId)
+        return String.format(Locale.ENGLISH, "%s/(%s)/", uploadTypeRemoved, sessionId)
     }
 
     /**
@@ -163,11 +165,11 @@ class PreRequestHandler(
         try {
             val locationCount = body.getString(FormAttributes.LOCATION_COUNT.value).toLong()
             if (locationCount < MINIMUM_LOCATION_COUNT) {
-                throw SkipUpload(String.format("Too few location points %s", locationCount))
+                throw SkipUpload(String.format(Locale.ENGLISH, "Too few location points %s", locationCount))
             }
             val formatVersion = body.getString(FormAttributes.FORMAT_VERSION.value).toInt()
             if (formatVersion != CURRENT_TRANSFER_FILE_FORMAT_VERSION) {
-                throw SkipUpload(String.format("Unsupported format version: %s", formatVersion))
+                throw SkipUpload(String.format(Locale.ENGLISH, "Unsupported format version: %s", formatVersion))
             }
             val startLocationLat = body.getString(FormAttributes.START_LOCATION_LAT.value)
             val startLocationLon = body.getString(FormAttributes.START_LOCATION_LON.value)
@@ -247,7 +249,7 @@ class PreRequestHandler(
         @Throws(Unparsable::class, PayloadTooLarge::class)
         fun bodySize(headers: MultiMap, measurementLimit: Long, uploadLengthField: String?): Long {
             if (!headers.contains(uploadLengthField)) {
-                throw Unparsable(String.format("The header is missing the field %s", uploadLengthField))
+                throw Unparsable(String.format(Locale.ENGLISH, "The header is missing the field %s", uploadLengthField))
             }
             val uploadLengthString = headers[uploadLengthField]
             return try {
@@ -255,6 +257,7 @@ class PreRequestHandler(
                 if (uploadLength > measurementLimit) {
                     throw PayloadTooLarge(
                         String.format(
+                            Locale.ENGLISH,
                             "Upload size in the pre-request (%d) is too large, limit is %d bytes.",
                             uploadLength, measurementLimit
                         )
@@ -264,6 +267,7 @@ class PreRequestHandler(
             } catch (e: NumberFormatException) {
                 throw Unparsable(
                     String.format(
+                        Locale.ENGLISH,
                         "The header field %s is unparsable: %s",
                         uploadLengthField,
                         uploadLengthString

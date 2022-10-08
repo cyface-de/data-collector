@@ -32,8 +32,8 @@ import de.cyface.collector.handler.exception.SkipUpload
 import de.cyface.collector.handler.exception.UnexpectedContentRange
 import de.cyface.collector.handler.exception.Unparsable
 import de.cyface.collector.model.ContentRange
-import de.cyface.collector.storage.DataStorageService
 import de.cyface.collector.model.RequestMetaData
+import de.cyface.collector.storage.DataStorageService
 import de.cyface.collector.storage.Status
 import de.cyface.collector.storage.StatusType
 import io.vertx.core.Future
@@ -46,8 +46,8 @@ import io.vertx.ext.web.RoutingContext
 import io.vertx.ext.web.Session
 import org.apache.commons.lang3.Validate
 import org.slf4j.LoggerFactory
+import java.util.Locale
 import java.util.UUID
-import java.util.stream.Collectors
 
 /**
  * A handler for receiving HTTP PUT requests on the "measurements" end point.
@@ -80,7 +80,7 @@ class MeasurementHandler(
             // Load authenticated user
             val loggedInUser = ctx.get<User?>("logged-in-user")
             if (loggedInUser == null) {
-                ctx.response().setStatusCode(401).end()
+                ctx.response().setStatusCode(HTTPStatus.UNAUTHORIZED).end()
                 return
             }
             val bodySize = PreRequestHandler.bodySize(request.headers(), payloadLimit, "content-length")
@@ -94,26 +94,9 @@ class MeasurementHandler(
 
             // Handle first chunk
             val contentRange = contentRange(request, bodySize)
-            val checkResult = check(session, loggedInUser, request.pipe(), contentRange, metaData)
+            val checkResult = checkAndStore(session, loggedInUser, request.pipe(), contentRange, metaData)
             checkResult.onSuccess { result ->
-                when(result.type) {
-                    StatusType.INCOMPLETE -> {
-                        val byteSize = result.byteSize
-                        val range = String.format("bytes=0-%d", byteSize - 1)
-                        ctx.response().putHeader("Range", range)
-                        ctx.response().putHeader("Content-Length", "0")
-                        ctx.response().setStatusCode(RESUME_INCOMPLETE).end()
-                    }
-                    StatusType.COMPLETE -> {
-                        // not removing session
-                        session.remove<Any>(UPLOAD_PATH_FIELD)
-                        storageService.clean(result.uploadIdentifier).onSuccess {
-                                ctx.response().setStatusCode(201).end()
-                            }.onFailure { cause ->
-                                ctx.fail(cause)
-                            }
-                    }
-                }
+                onCheckSuccessful(result, ctx, session)
             }
             checkResult.onFailure(MeasurementFailureHandler(ctx))
         } catch (e: InvalidMetaData) {
@@ -142,6 +125,27 @@ class MeasurementHandler(
         }
     }
 
+    private fun onCheckSuccessful(status: Status, context: RoutingContext, session: Session) {
+        when (status.type) {
+            StatusType.INCOMPLETE -> {
+                val byteSize = status.byteSize
+                val range = String.format(Locale.ENGLISH, "bytes=0-%d", byteSize - 1)
+                context.response().putHeader("Range", range)
+                context.response().putHeader("Content-Length", "0")
+                context.response().setStatusCode(RESUME_INCOMPLETE).end()
+            }
+            StatusType.COMPLETE -> {
+                // not removing session
+                session.remove<Any>(UPLOAD_PATH_FIELD)
+                storageService.clean(status.uploadIdentifier).onSuccess {
+                    context.response().setStatusCode(HTTPStatus.CREATED).end()
+                }.onFailure { cause ->
+                    context.fail(cause)
+                }
+            }
+        }
+    }
+
     /**
      * Check the request for validity and either fail the response or continue with handling the request.
      *
@@ -152,24 +156,38 @@ class MeasurementHandler(
      * This data should have been provided via HTTP content-range parameter.
      * @param metaData Meta information about the measurement to handle.
      */
-    private fun check(session: Session, user: User, pipe: Pipe<Buffer>, contentRange: ContentRange, metaData: RequestMetaData): Future<Status> {
+    private fun checkAndStore(
+        session: Session,
+        user: User,
+        pipe: Pipe<Buffer>,
+        contentRange: ContentRange,
+        metaData: RequestMetaData
+    ): Future<Status> {
         val ret = Promise.promise<Status>()
         val uploadIdentifier = session.get<UUID?>(UPLOAD_PATH_FIELD)
 
         if (uploadIdentifier == null && contentRange.fromIndex != "0") {
-           // I.e. the server received data in a previous request but now cannot find the `path` session value.
-           // Unsure when this can happen. Not accepting the data. Asking to restart upload (`404`).
-           val message = String.format("Response: 404, path is null and unexpected content range: %s", contentRange)
-           LOGGER.warn(message)
-           ret.fail(UnexpectedContentRange(message))
-        } else if(uploadIdentifier!=null && contentRange.fromIndex == "0") {
+            // I.e. the server received data in a previous request but now cannot find the `path` session value.
+            // Unsure when this can happen. Not accepting the data. Asking to restart upload (`404`).
+            val message = String.format(
+                Locale.ENGLISH,
+                "Response: 404, path is null and unexpected content range: %s",
+                contentRange
+            )
+            LOGGER.warn(message)
+            ret.fail(UnexpectedContentRange(message))
+        } else if (uploadIdentifier != null && contentRange.fromIndex == "0") {
             // Server received data in a previous request but the chunk file was probably cleaned by cleaner task.
             // Can't return 308. Google API client lib throws `Preconditions` on subsequent chunk upload.
             // This makes sense as the server reported before that bytes (>0) were received.
-            val message = String.format("Response: 404, Unexpected content range: %s", contentRange)
+            val message = String.format(
+                Locale.ENGLISH,
+                "Response: 404, Unexpected content range: %s",
+                contentRange
+            )
             LOGGER.warn(message)
             ret.fail(UnexpectedContentRange(message))
-        } else if(uploadIdentifier==null) {
+        } else if (uploadIdentifier == null) {
             // Create temp file to accept binary
             val newUploadIdentifier = UUID.randomUUID()
 
@@ -181,11 +199,11 @@ class MeasurementHandler(
         } else {
 
             // Search for previous upload chunk
-            storageService.bytesUploaded(uploadIdentifier).onSuccess {byteSize ->
+            storageService.bytesUploaded(uploadIdentifier).onSuccess { byteSize ->
                 // Wrong chunk uploaded
                 if (contentRange.fromIndex != byteSize.toString()) {
                     // Ask client to resume from the correct position
-                    val range = String.format("bytes=0-%d", byteSize - 1)
+                    val range = String.format(Locale.ENGLISH, "bytes=0-%d", byteSize - 1)
                     LOGGER.debug("Response: 308, Range {} (partial data)", range)
                     ret.complete(Status(uploadIdentifier, StatusType.INCOMPLETE, byteSize))
                 } else {
@@ -223,30 +241,33 @@ class MeasurementHandler(
         return try {
             // Identifiers
             val deviceId = request.getHeader(FormAttributes.DEVICE_ID.value)
+                ?: throw InvalidMetaData("DeviceId missing in header")
             val measurementId = request.getHeader(FormAttributes.MEASUREMENT_ID.value)
-            if (measurementId == null || deviceId == null) {
-                throw InvalidMetaData("Measurement- and/or DeviceId missing in header")
-            }
+                ?: throw InvalidMetaData("MeasurementId missing in header")
 
             // Location info
             val locationCount = request.getHeader(FormAttributes.LOCATION_COUNT.value).toLong()
             if (locationCount < PreRequestHandler.MINIMUM_LOCATION_COUNT) {
                 throw SkipUpload(
                     String.format(
+                        Locale.ENGLISH,
                         "Too few location points %s",
                         locationCount
                     )
                 )
             }
             val startLocationLatString = request.getHeader(FormAttributes.START_LOCATION_LAT.value)
+                ?: throw InvalidMetaData("Start location latitude is missing!")
             val startLocationLonString = request.getHeader(FormAttributes.START_LOCATION_LON.value)
+                ?: throw InvalidMetaData("Start location longitude is missing")
             val startLocationTsString = request.getHeader(FormAttributes.START_LOCATION_TS.value)
+                ?: throw InvalidMetaData("Start location timestamp is missing")
             val endLocationLatString = request.getHeader(FormAttributes.END_LOCATION_LAT.value)
+                ?: throw InvalidMetaData("End location latitude is missing")
             val endLocationLonString = request.getHeader(FormAttributes.END_LOCATION_LON.value)
+                ?: throw InvalidMetaData("End location Longitude is missing")
             val endLocationTsString = request.getHeader(FormAttributes.END_LOCATION_TS.value)
-            if (startLocationLatString == null || startLocationLonString == null || startLocationTsString == null || endLocationLatString == null || endLocationLonString == null) {
-                throw InvalidMetaData("Start-/end location data incomplete!")
-            }
+                ?: throw InvalidMetaData("End location timestamp is missing")
             val startLocationLat = startLocationLatString.toDouble()
             val startLocationLon = startLocationLonString.toDouble()
             val startLocationTs = startLocationTsString.toLong()
@@ -295,29 +316,13 @@ class MeasurementHandler(
 
         // The client informs what data is attached: `bytes fromIndex-toIndex/totalBytes`
         val contentRangeString = request.getHeader("Content-Range")
-        if (!contentRangeString.matches(Regex("bytes [0-9]+-[0-9]+/[0-9]+"))) {
-            throw Unparsable(
-                String.format(
-                    "Content-Range request not supported: %s",
-                    contentRangeString
-                )
-            )
-        }
-        val startingWithFrom = contentRangeString.substring(6)
-        val dashPosition = startingWithFrom.indexOf('-')
-        Validate.isTrue(dashPosition != -1)
-        val from = startingWithFrom.substring(0, dashPosition)
-        val startingWithTo = startingWithFrom.substring(dashPosition + 1)
-        val slashPosition = startingWithTo.indexOf('/')
-        Validate.isTrue(slashPosition != -1)
-        val to = startingWithTo.substring(0, slashPosition)
-        val total = startingWithTo.substring(slashPosition + 1)
-        val contentRange = ContentRange(from, to, total)
+        val contentRange = ContentRange.fromHTTPHeader(contentRangeString)
 
         // Make sure content-length matches the content range (to-from+1)
         if (bodySize != contentRange.toIndex.toLong() - contentRange.fromIndex.toLong() + 1) {
             throw Unparsable(
                 String.format(
+                    Locale.ENGLISH,
                     "Upload size (%d) does not match content rang of header (%s)!",
                     bodySize, contentRange
                 )
@@ -325,7 +330,6 @@ class MeasurementHandler(
         }
         return contentRange
     }
-
 
     /**
      * Checks if the session is considered "valid", i.e. there was a pre-request which was accepted by the server with
@@ -348,6 +352,7 @@ class MeasurementHandler(
         if (sessionMeasurementId != metaData.measurementIdentifier) {
             throw IllegalSession(
                 String.format(
+                    Locale.ENGLISH,
                     "Unexpected measurement id: %s.",
                     sessionMeasurementId
                 )
@@ -356,6 +361,7 @@ class MeasurementHandler(
         if (sessionDeviceId != metaData.deviceIdentifier) {
             throw IllegalSession(
                 String.format(
+                    Locale.ENGLISH,
                     "Unexpected device id: %s.",
                     sessionDeviceId
                 )

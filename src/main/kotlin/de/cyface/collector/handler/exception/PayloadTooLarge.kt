@@ -26,4 +26,4 @@ package de.cyface.collector.handler.exception
  * @since 7.0.0
  * @param message Details about the reason for this `Exception`.
  */
-class PayloadTooLarge(message: String): Exception(message)
+class PayloadTooLarge(message: String) : Exception(message)

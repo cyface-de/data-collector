@@ -33,7 +33,7 @@ import java.util.UUID
  * @author Klemens Muthmann
  * @version 1.0.0
  */
-class GoogleCloudStorageService: DataStorageService {
+class GoogleCloudStorageService : DataStorageService {
 
     override fun store(
         pipe: Pipe<Buffer>,

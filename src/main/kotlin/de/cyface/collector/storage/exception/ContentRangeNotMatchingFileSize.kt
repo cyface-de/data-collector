@@ -25,4 +25,4 @@ package de.cyface.collector.storage.exception
  * @author Klemens Muthmann
  * @version 1.0.0
  */
-class ContentRangeNotMatchingFileSize: Exception()
+class ContentRangeNotMatchingFileSize : Exception()

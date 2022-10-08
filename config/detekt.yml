@@ -120,13 +120,15 @@ complexity:
   LongMethod:
     active: true
     threshold: 60
+    excludes: ['**/test/**']
   LongParameterList:
     active: true
-    functionThreshold: 6
+    functionThreshold: 9
     constructorThreshold: 7
     ignoreDefaultParameters: false
     ignoreDataClasses: true
     ignoreAnnotatedParameter: []
+    excludes: ['**/test/**']
   MethodOverloading:
     active: false
     threshold: 6
@@ -280,8 +282,8 @@ exceptions:
       - 'Exception'
       - 'IllegalMonitorStateException'
       - 'IndexOutOfBoundsException'
-      - 'NullPointerException'
-      - 'RuntimeException'
+      #- 'NullPointerException'
+      #- 'RuntimeException'
       - 'Throwable'
     allowedExceptionNameRegex: '_|(ignore|expected).*'
   TooGenericExceptionThrown:

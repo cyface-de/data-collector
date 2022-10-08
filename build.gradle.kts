@@ -119,6 +119,7 @@ extra["hamKrestVersion"] = "1.8.0.1"
 extra["flapdoodleVersion"] = "3.4.9"
 extra["mockitoKotlinVersion"] = "4.0.0"
 extra["dokkaVersion"] = "1.7.10"
+extra["detektVersion"] = "1.21.0"
 
 tasks.wrapper {
   gradleVersion = project.extra["gradleWrapperVersion"].toString()
@@ -176,6 +177,9 @@ dependencies {
   // Required to create inline documentation
   dokkaHtmlPlugin("org.jetbrains.dokka:kotlin-as-java-plugin:${project.extra["dokkaVersion"]}")
   dokkaHtmlPlugin("org.jetbrains.dokka:dokka-base:${project.extra["dokkaVersion"]}")
+
+  // Required for Linting
+  detektPlugins("io.gitlab.arturbosch.detekt:detekt-formatting:${project.extra["detektVersion"]}")
 }
 
 tasks.test {

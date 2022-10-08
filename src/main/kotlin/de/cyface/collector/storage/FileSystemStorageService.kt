@@ -36,7 +36,7 @@ import java.util.UUID
  * @version 1.0.0
  * @property vertx The Vert.x instance used to access the data and the file system.
  */
-class FileSystemStorageService(val vertx: Vertx): DataStorageService {
+class FileSystemStorageService(val vertx: Vertx) : DataStorageService {
 
     override fun store(
         pipe: Pipe<Buffer>,
@@ -45,10 +45,12 @@ class FileSystemStorageService(val vertx: Vertx): DataStorageService {
         uploadIdentifier: UUID,
         metaData: RequestMetaData
     ): Future<Status> {
+        @Suppress("UnusedPrivateMember")
         val vertxFileSystem = vertx.fileSystem()
+        @Suppress("ForbiddenComment")
         // TODO: What is the difference between createFile and writeFile?
         // TODO: How to append to an already existing file? Do I need to extend the interface with an append method?
-        //pipe.to(measurement.binary.path)
+        // pipe.to(measurement.binary.path)
         TODO("Not yet implemented")
     }
 

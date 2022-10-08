@@ -27,6 +27,7 @@ import de.cyface.collector.storage.DataStorageService
 import io.vertx.core.Handler
 import io.vertx.ext.web.RoutingContext
 import org.slf4j.LoggerFactory
+import java.util.Locale
 import java.util.UUID
 
 /**
@@ -40,7 +41,7 @@ import java.util.UUID
  * @since 6.0.0
  * @property storageService Service used to write and interact with received data.
  */
-class StatusHandler (private val storageService: DataStorageService) : Handler<RoutingContext> {
+class StatusHandler(private val storageService: DataStorageService) : Handler<RoutingContext> {
     override fun handle(ctx: RoutingContext) {
         LOGGER.info("Received new upload status request.")
         val request = ctx.request()
@@ -66,7 +67,7 @@ class StatusHandler (private val storageService: DataStorageService) : Handler<R
             isStoredResult.onSuccess {
                 val uploadIdentifier = session.get<UUID>(UPLOAD_PATH_FIELD)
 
-                if(it) {
+                if (it) {
                     LOGGER.debug("Measurement {}:{} is already stored.", deviceId, measurementId)
                     ctx.response().setStatusCode(OK).end()
                 } else if (uploadIdentifier == null) {
@@ -75,23 +76,23 @@ class StatusHandler (private val storageService: DataStorageService) : Handler<R
                     ctx.response().putHeader("Content-Length", "0")
                     ctx.response().setStatusCode(RESUME_INCOMPLETE).end()
                 } else {
-                   storageService.bytesUploaded(uploadIdentifier).onSuccess { byteSize ->
-                       // Indicate that, e.g. for 100 received bytes, bytes 0-99 have been received
-                       val range = String.format("bytes=0-%d", byteSize - 1)
-                       LOGGER.debug(String.format("Response: 308, Range %s", range))
-                       ctx.response().putHeader("Range", range)
-                       ctx.response().putHeader("Content-Length", "0")
-                       ctx.response().setStatusCode(RESUME_INCOMPLETE).end()
-                   }.onFailure {
-                       // As this links to a non-existing file, remove this
-                       session.remove<UUID>(UPLOAD_PATH_FIELD)
+                    storageService.bytesUploaded(uploadIdentifier).onSuccess { byteSize ->
+                        // Indicate that, e.g. for 100 received bytes, bytes 0-99 have been received
+                        val range = String.format(Locale.GERMAN, "bytes=0-%d", byteSize - 1)
+                        LOGGER.debug(String.format(Locale.GERMAN, "Response: 308, Range %s", range))
+                        ctx.response().putHeader("Range", range)
+                        ctx.response().putHeader("Content-Length", "0")
+                        ctx.response().setStatusCode(RESUME_INCOMPLETE).end()
+                    }.onFailure {
+                        // As this links to a non-existing file, remove this
+                        session.remove<UUID>(UPLOAD_PATH_FIELD)
 
-                       // If no bytes have been received, return 308 but without a `Range` header to
-                       // indicate this
-                       LOGGER.debug("Response: 308, no Range (path, no file)")
-                       ctx.response().putHeader("Content-Length", "0")
-                       ctx.response().setStatusCode(RESUME_INCOMPLETE).end()
-                   }
+                        // If no bytes have been received, return 308 but without a `Range` header to
+                        // indicate this
+                        LOGGER.debug("Response: 308, no Range (path, no file)")
+                        ctx.response().putHeader("Content-Length", "0")
+                        ctx.response().setStatusCode(RESUME_INCOMPLETE).end()
+                    }
                 }
             }
             isStoredResult.onFailure(ctx::fail)

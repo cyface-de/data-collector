@@ -22,7 +22,6 @@ import de.cyface.collector.handler.FormAttributes
 import io.vertx.core.json.JsonArray
 import io.vertx.core.json.JsonObject
 import org.apache.commons.lang3.Validate
-import org.bson.BsonString
 import java.io.Serializable
 import java.nio.charset.Charset
 
@@ -65,20 +64,20 @@ data class RequestMetaData(
             "Field deviceId was not exactly 128 Bit, which is required for UUIDs!"
         )
         Validate.isTrue(
-            !deviceType.isEmpty() && deviceType.length <= MAX_GENERIC_METADATA_FIELD_LENGTH,
+            deviceType.isNotEmpty() && deviceType.length <= MAX_GENERIC_METADATA_FIELD_LENGTH,
             "Field deviceType had an invalid length of %d!", deviceType.length.toLong()
         )
         Validate.isTrue(
-            !measurementIdentifier.isEmpty() && measurementIdentifier.length <= MAX_MEASUREMENT_ID_LENGTH,
+            measurementIdentifier.isNotEmpty() && measurementIdentifier.length <= MAX_MEASUREMENT_ID_LENGTH,
             "Field measurementId had an invalid length of %d!", measurementIdentifier.length.toLong()
         )
         Validate.isTrue(
-            !operatingSystemVersion.isEmpty()
-                    && operatingSystemVersion.length <= MAX_GENERIC_METADATA_FIELD_LENGTH,
+            operatingSystemVersion.isNotEmpty() &&
+                operatingSystemVersion.length <= MAX_GENERIC_METADATA_FIELD_LENGTH,
             "Field osVersion had an invalid length of %d!", operatingSystemVersion.length.toLong()
         )
         Validate.isTrue(
-            !applicationVersion.isEmpty() && applicationVersion.length <= MAX_GENERIC_METADATA_FIELD_LENGTH,
+            applicationVersion.isNotEmpty() && applicationVersion.length <= MAX_GENERIC_METADATA_FIELD_LENGTH,
             "Field applicationVersion had an invalid length of %d!", applicationVersion.length.toLong()
         )
         Validate.isTrue(
@@ -98,7 +97,7 @@ data class RequestMetaData(
             "End location should only be defined if there is at least one location in the uploaded track!"
         )
         Validate.isTrue(
-            !modality.isEmpty() && modality.length <= MAX_GENERIC_METADATA_FIELD_LENGTH,
+            modality.isNotEmpty() && modality.length <= MAX_GENERIC_METADATA_FIELD_LENGTH,
             "Field modality had an invalid length of %d!", modality.length.toLong()
         )
         Validate.isTrue(
@@ -116,10 +115,10 @@ data class RequestMetaData(
         ret.put(FormAttributes.APPLICATION_VERSION.value, applicationVersion)
         ret.put(FormAttributes.LENGTH.value, length)
         ret.put(FormAttributes.LOCATION_COUNT.value, locationCount)
-        if (startLocation!=null) {
+        if (startLocation != null) {
             ret.put("start", startLocation.geoJson())
         }
-        if (endLocation!=null) {
+        if (endLocation != null) {
             ret.put("end", endLocation.geoJson())
         }
         ret.put(FormAttributes.MODALITY.value, modality)
@@ -134,8 +133,10 @@ data class RequestMetaData(
      * @version 1.0.0
      * @since 6.0.0
      * @property timestamp The timestamp this location was captured on in milliseconds since 1st January 1970 (epoch).
-     * @property latitude Geographical latitude in coordinates (decimal fraction) raging from -90° (south) to 90° (north).
-     * @property longitude Geographical longitude in coordinates (decimal fraction) ranging from -180° (west) to 180° (east).
+     * @property latitude Geographical latitude in coordinates (decimal fraction)
+     *                    ranging from -90° (south) to 90° (north).
+     * @property longitude Geographical longitude in coordinates (decimal fraction)
+     *                     ranging from -180° (west) to 180° (east).
      */
     data class GeoLocation(val timestamp: Long, val latitude: Double, val longitude: Double) {
         /**
@@ -172,8 +173,8 @@ data class RequestMetaData(
         private const val DEFAULT_CHARSET = "UTF-8"
 
         /**
-         * Maximum size of a metadata field, with plenty space for future development. This prevents attackers from putting
-         * arbitrary long data into these fields.
+         * Maximum size of a metadata field, with plenty space for future development.
+         * This prevents attackers from putting arbitrary long data into these fields.
          */
         const val MAX_GENERIC_METADATA_FIELD_LENGTH = 30
 

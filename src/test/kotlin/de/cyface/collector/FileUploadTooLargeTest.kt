@@ -36,6 +36,9 @@ import org.hamcrest.MatcherAssert
 import org.hamcrest.MatcherAssert.assertThat
 import org.hamcrest.Matchers
 import org.hamcrest.Matchers.equalTo
+import org.hamcrest.Matchers.`is`
+import org.hamcrest.Matchers.matchesPattern
+import org.hamcrest.Matchers.notNullValue
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.BeforeEach
@@ -43,10 +46,8 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
 import org.slf4j.LoggerFactory
 import java.io.IOException
+import java.util.Locale
 import java.util.UUID
-import org.hamcrest.Matchers.`is`
-import org.hamcrest.Matchers.matchesPattern
-import org.hamcrest.Matchers.notNullValue
 import kotlin.test.assertNotNull
 
 /**
@@ -88,6 +89,7 @@ class FileUploadTooLargeTest {
      */
     @Throws(IOException::class)
     private fun deployVerticle(vertx: Vertx, ctx: VertxTestContext) {
+        @Suppress("ForbiddenComment")
         // FIXME: can we somehow overwrite the @setup method to reuse {@link FileUploadTest}?
         // Set maximal payload size to 1 KB (test upload is 130 KB)
         collectorClient = DataCollectorClient(Authenticator.BYTES_IN_ONE_KILOBYTE)
@@ -116,7 +118,11 @@ class FileUploadTooLargeTest {
      */
     @Test
     fun testPreRequestWithTooLargePayload_Returns422(context: VertxTestContext) {
-        preRequest(context, 2, false, UPLOAD_SIZE.toLong(),
+        preRequest(
+            context,
+            2,
+            false,
+            UPLOAD_SIZE.toLong(),
             context.succeeding { ar: HttpResponse<Buffer?> ->
                 context.verify {
                     MatcherAssert.assertThat(
@@ -125,7 +131,8 @@ class FileUploadTooLargeTest {
                     )
                     context.completeNow()
                 }
-            })
+            }
+        )
     }
 
     /**
@@ -139,8 +146,18 @@ class FileUploadTooLargeTest {
         preRequestAndReturnLocation(
             context, 1000 /* fake a small upload to bypass pre-request size check */
         ) { uploadUri: String ->
-            upload(vertx, context, "/iphone-neu.ccyf", "0.0", UPLOAD_SIZE, false, uploadUri,
-                0, (UPLOAD_SIZE - 1).toLong(), UPLOAD_SIZE.toLong(), deviceIdentifier,
+            upload(
+                vertx,
+                context,
+                "/iphone-neu.ccyf",
+                "0.0",
+                UPLOAD_SIZE,
+                false,
+                uploadUri,
+                0,
+                (UPLOAD_SIZE - 1).toLong(),
+                UPLOAD_SIZE.toLong(),
+                deviceIdentifier,
                 context.succeeding { ar: HttpResponse<Buffer?> ->
                     context.verify {
                         MatcherAssert.assertThat(
@@ -149,7 +166,8 @@ class FileUploadTooLargeTest {
                         )
                         context.completeNow()
                     }
-                })
+                }
+            )
         }
     }
 
@@ -168,7 +186,10 @@ class FileUploadTooLargeTest {
         preRequestResponseHandler: Handler<AsyncResult<HttpResponse<Buffer?>>>
     ) {
         LOGGER.debug("Sending authentication request!")
-        TestUtils.authenticate(client, collectorClient.port, LOGIN_UPLOAD_ENDPOINT_PATH,
+        TestUtils.authenticate(
+            client,
+            collectorClient.port,
+            LOGIN_UPLOAD_ENDPOINT_PATH,
             context.succeeding { authResponse: HttpResponse<Buffer?> ->
                 val authToken = authResponse.getHeader("Authorization")
                 context.verify {
@@ -216,35 +237,43 @@ class FileUploadTooLargeTest {
                 builder.putHeader("Connection", "Keep-Alive")
                 builder.putHeader("content-length", "406") // random metadata length for this test
                 builder.sendJson(metaDataBody, preRequestResponseHandler)
-            })
+            }
+        )
     }
 
     private fun preRequestAndReturnLocation(
-        context: VertxTestContext, uploadSize: Long,
+        context: VertxTestContext,
+        uploadSize: Long,
         uploadUriHandler: Handler<String>
     ) {
-        preRequest(context, 2, false, uploadSize, context.succeeding { res: HttpResponse<Buffer?> ->
-            context.verify {
-                assertThat(
-                    "Wrong HTTP status code on happy path pre-request test!",
-                    res.statusCode(),
-                    `is`(equalTo(200))
-                )
-                val location = res.getHeader("Location")
-                assertThat(
-                    "Missing HTTP Location header in pre-request response!",
-                    location,
-                    notNullValue()
-                )
-                val locationPattern = "http://10\\.0\\.2\\.2:8081/api/v3/measurements/\\([a-z0-9]{32}\\)/"
-                assertThat(
-                    "Wrong HTTP Location header on pre-request!",
-                    location,
-                    matchesPattern(locationPattern)
-                )
-                uploadUriHandler.handle(location)
+        preRequest(
+            context,
+            2,
+            false,
+            uploadSize,
+            context.succeeding { res: HttpResponse<Buffer?> ->
+                context.verify {
+                    assertThat(
+                        "Wrong HTTP status code on happy path pre-request test!",
+                        res.statusCode(),
+                        `is`(equalTo(200))
+                    )
+                    val location = res.getHeader("Location")
+                    assertThat(
+                        "Missing HTTP Location header in pre-request response!",
+                        location,
+                        notNullValue()
+                    )
+                    val locationPattern = "http://10\\.0\\.2\\.2:8081/api/v3/measurements/\\([a-z0-9]{32}\\)/"
+                    assertThat(
+                        "Wrong HTTP Location header on pre-request!",
+                        location,
+                        matchesPattern(locationPattern)
+                    )
+                    uploadUriHandler.handle(location)
+                }
             }
-        })
+        )
     }
 
     /**
@@ -280,7 +309,10 @@ class FileUploadTooLargeTest {
         handler: Handler<AsyncResult<HttpResponse<Buffer?>>>
     ) {
         LOGGER.debug("Sending authentication request!")
-        TestUtils.authenticate(client, collectorClient.port, LOGIN_UPLOAD_ENDPOINT_PATH,
+        TestUtils.authenticate(
+            client,
+            collectorClient.port,
+            LOGIN_UPLOAD_ENDPOINT_PATH,
             context.succeeding { authResponse: HttpResponse<Buffer?> ->
                 val authToken = authResponse.getHeader("Authorization")
                 context.verify {
@@ -303,7 +335,7 @@ class FileUploadTooLargeTest {
                 val jwtBearer = "Bearer ${if (useInvalidToken) "invalidToken" else authToken}"
                 builder.putHeader("Authorization", jwtBearer)
                 builder.putHeader("Accept-Encoding", "gzip")
-                builder.putHeader("Content-Range", String.format("bytes %d-%d/%d", from, to, total))
+                builder.putHeader("Content-Range", String.format(Locale.ENGLISH, "bytes %d-%d/%d", from, to, total))
                 builder.putHeader("User-Agent", "Google-HTTP-Java-Client/1.39.2 (gzip)")
                 builder.putHeader("Content-Type", "application/octet-stream")
                 builder.putHeader("Host", "localhost:${collectorClient.port}")
@@ -329,7 +361,8 @@ class FileUploadTooLargeTest {
                 builder.putHeader("formatVersion", "3")
                 val file = vertx.fileSystem().openBlocking(testFileResource.file, OpenOptions())
                 builder.sendStream(file, handler)
-            })
+            }
+        )
     }
 
     companion object {

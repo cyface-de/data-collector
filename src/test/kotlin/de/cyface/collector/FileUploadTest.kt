@@ -45,6 +45,7 @@ import org.junit.jupiter.api.extension.ExtendWith
 import org.slf4j.LoggerFactory
 import java.io.IOException
 import java.net.InetAddress
+import java.util.Locale
 import java.util.UUID
 import kotlin.test.assertNotNull
 
@@ -56,6 +57,8 @@ import kotlin.test.assertNotNull
  * @version 4.0.0
  * @since 2.0.0
  */
+// This warning is supress since it is wrong for Vert.x Tests.
+@Suppress("JUnitMalformedDeclaration")
 @ExtendWith(VertxExtension::class)
 class FileUploadTest {
     /**
@@ -80,7 +83,7 @@ class FileUploadTest {
     private var measurementIdentifier = 1L.toString()
 
     /**
-     * Deploys the [CollectorApiVerticle] in a test context.
+     * Deploys the [de.cyface.collector.verticle.CollectorApiVerticle] in a test context.
      *
      * @param vertx The `Vertx` instance to deploy the verticle to
      * @param ctx The test context used to control the test `Vertx`
@@ -114,16 +117,23 @@ class FileUploadTest {
      */
     @Test
     fun preRequestWithWrongCredentials_Returns401(context: VertxTestContext) {
-        preRequest(context, 2, true, context.succeeding { ar: HttpResponse<Buffer?> ->
-            context.verify {
-                assertThat(
-                    "Wrong HTTP status code on invalid authentication!", ar.statusCode(), `is`(
-                        equalTo(401)
+        preRequest(
+            context,
+            2,
+            true,
+            context.succeeding { ar: HttpResponse<Buffer?> ->
+                context.verify {
+                    assertThat(
+                        "Wrong HTTP status code on invalid authentication!",
+                        ar.statusCode(),
+                        `is`(
+                            equalTo(401)
+                        )
                     )
-                )
-                context.completeNow()
+                    context.completeNow()
+                }
             }
-        })
+        )
     }
 
     /**
@@ -135,18 +145,31 @@ class FileUploadTest {
     @Test
     fun uploadWithWrongCredentials_Returns401(vertx: Vertx, context: VertxTestContext) {
         val returnedRequestFuture = context.checkpoint()
-        upload(vertx, context, "/test.bin", "0.0", 4, true, UPLOAD_PATH_WITH_INVALID_SESSION,
-            0, 3, 4, deviceIdentifier,
+        upload(
+            vertx,
+            context,
+            "/test.bin",
+            "0.0",
+            4,
+            true,
+            UPLOAD_PATH_WITH_INVALID_SESSION,
+            0,
+            3,
+            4,
+            deviceIdentifier,
             context.succeeding { ar: HttpResponse<Buffer?> ->
                 context.verify {
                     assertThat(
-                        "Wrong HTTP status code on invalid authentication!", ar.statusCode(), `is`(
+                        "Wrong HTTP status code on invalid authentication!",
+                        ar.statusCode(),
+                        `is`(
                             equalTo(401)
                         )
                     )
                     returnedRequestFuture.flag()
                 }
-            })
+            }
+        )
     }
 
     /**
@@ -156,16 +179,23 @@ class FileUploadTest {
      */
     @Test
     fun preRequestWithoutLocations_Returns412(context: VertxTestContext) {
-        preRequest(context, 0, false, context.succeeding { ar: HttpResponse<Buffer?> ->
-            context.verify {
-                assertThat(
-                    "Wrong HTTP status code on pre-request without locations!", ar.statusCode(), `is`(
-                        equalTo(412)
+        preRequest(
+            context,
+            0,
+            false,
+            context.succeeding { ar: HttpResponse<Buffer?> ->
+                context.verify {
+                    assertThat(
+                        "Wrong HTTP status code on pre-request without locations!",
+                        ar.statusCode(),
+                        `is`(
+                            equalTo(412)
+                        )
                     )
-                )
-                context.completeNow()
+                    context.completeNow()
+                }
             }
-        })
+        )
     }
 
     /**
@@ -180,17 +210,29 @@ class FileUploadTest {
         preRequestAndReturnLocation(context) { uploadUri: String ->
 
             // Set invalid value for a form attribute
-            upload(vertx, context, "/test.bin", "Sir! You are being hacked!", 4, false, uploadUri,
-                0, 3, 4, deviceIdentifier,
+            upload(
+                vertx,
+                context,
+                "/test.bin",
+                "Sir! You are being hacked!",
+                4,
+                false,
+                uploadUri,
+                0,
+                3,
+                4,
+                deviceIdentifier,
                 context.succeeding { ar: HttpResponse<Buffer?> ->
                     context.verify {
                         assertThat(
-                            "Wrong HTTP status code when uploading unparsable meta data!", ar.statusCode(),
+                            "Wrong HTTP status code when uploading unparsable meta data!",
+                            ar.statusCode(),
                             `is`(equalTo(422))
                         )
                         context.completeNow()
                     }
-                })
+                }
+            )
         }
     }
 
@@ -198,11 +240,15 @@ class FileUploadTest {
     fun testUploadStatusWithoutPriorUpload_happyPath(context: VertxTestContext) {
         // Create upload session
         preRequestAndReturnLocation(context) { uploadUri: String ->
-            uploadStatus(context, uploadUri, "bytes */4",
+            uploadStatus(
+                context,
+                uploadUri,
+                "bytes */4",
                 context.succeeding { ar: HttpResponse<Buffer?> ->
                     context.verify {
                         assertThat(
-                            "Wrong HTTP status code when asking for upload status!", ar.statusCode(),
+                            "Wrong HTTP status code when asking for upload status!",
+                            ar.statusCode(),
                             `is`(equalTo(308))
                         )
                         val range = ar.getHeader("Range")
@@ -210,7 +256,8 @@ class FileUploadTest {
                         assertThat("Unexpected Range header!", range, Matchers.nullValue())
                         context.completeNow()
                     }
-                })
+                }
+            )
         }
     }
 
@@ -218,15 +265,29 @@ class FileUploadTest {
     fun testUploadStatusAfterPartialUpload_happyPath(vertx: Vertx, context: VertxTestContext) {
         // Create upload session
         preRequestAndReturnLocation(context) { uploadUri: String ->
-            upload(vertx, context, "/test.bin", "0.0", 4, false, uploadUri,
-                0, 3, 8 /* partial */, deviceIdentifier,
+            upload(
+                vertx,
+                context,
+                "/test.bin",
+                "0.0",
+                4,
+                false,
+                uploadUri,
+                0,
+                3,
+                8 /* partial */,
+                deviceIdentifier,
                 context.succeeding { ar: HttpResponse<Buffer?> ->
                     context.verify {
                         assertThat(
-                            "Wrong HTTP status code when uploading a file chunk!", ar.statusCode(),
+                            "Wrong HTTP status code when uploading a file chunk!",
+                            ar.statusCode(),
                             `is`(equalTo(308))
                         )
-                        uploadStatus(context, uploadUri, "bytes */8",
+                        uploadStatus(
+                            context,
+                            uploadUri,
+                            "bytes */8",
                             context.succeeding { res: HttpResponse<Buffer?> ->
                                 context.verify {
 
@@ -245,9 +306,11 @@ class FileUploadTest {
                                     )
                                     context.completeNow()
                                 }
-                            })
+                            }
+                        )
                     }
-                })
+                }
+            )
         }
     }
 
@@ -255,29 +318,44 @@ class FileUploadTest {
     fun testUploadStatusAfterSuccessfulUpload_happyPath(vertx: Vertx, context: VertxTestContext) {
         // Create upload session
         preRequestAndReturnLocation(context) { uploadUri: String ->
-            upload(vertx, context, "/test.bin", "0.0", 4, false, uploadUri,
-                0, 3, 4, deviceIdentifier,
+            upload(
+                vertx,
+                context,
+                "/test.bin",
+                "0.0",
+                4,
+                false,
+                uploadUri,
+                0,
+                3,
+                4,
+                deviceIdentifier,
                 context.succeeding { ar: HttpResponse<Buffer?> ->
                     context.verify {
                         assertThat(
                             "Wrong HTTP status code when uploading unparsable meta data!", ar.statusCode(),
                             `is`(equalTo(201))
                         )
-                        uploadStatus(context, uploadUri, "bytes */4",
+                        uploadStatus(
+                            context,
+                            uploadUri,
+                            "bytes */4",
                             context.succeeding { res: HttpResponse<Buffer?> ->
                                 context.verify {
 
                                     // The upload should be successful, expecting to return 200/201 here
                                     assertThat(
-                                        //"Wrong HTTP status code when asking for upload status!",
+                                        // "Wrong HTTP status code when asking for upload status!",
                                         res.statusCode(),
                                         `is`(equalTo(200))
                                     )
                                     context.completeNow()
                                 }
-                            })
+                            }
+                        )
                     }
-                })
+                }
+            )
         }
     }
 
@@ -289,8 +367,18 @@ class FileUploadTest {
      */
     @Test
     fun testUploadWithInvalidSession_returns404(vertx: Vertx, context: VertxTestContext) {
-        upload(vertx, context, "/test.bin", "0.0", 4, false, UPLOAD_PATH_WITH_INVALID_SESSION,
-            0, 3, 4, deviceIdentifier,
+        upload(
+            vertx,
+            context,
+            "/test.bin",
+            "0.0",
+            4,
+            false,
+            UPLOAD_PATH_WITH_INVALID_SESSION,
+            0,
+            3,
+            4,
+            deviceIdentifier,
             context.succeeding { ar: HttpResponse<Buffer?> ->
                 context.verify {
                     assertThat(
@@ -303,7 +391,8 @@ class FileUploadTest {
                     )
                     context.completeNow()
                 }
-            })
+            }
+        )
     }
 
     /**
@@ -313,16 +402,23 @@ class FileUploadTest {
      */
     @Test
     fun preRequest_happyPath(context: VertxTestContext) {
-        preRequest(context, 2, false, context.succeeding { ar: HttpResponse<Buffer?> ->
-            context.verify {
-                assertThat(
-                    "Wrong HTTP status code on happy path pre-request test!", ar.statusCode(), `is`(
-                        equalTo(200)
+        preRequest(
+            context,
+            2,
+            false,
+            context.succeeding { ar: HttpResponse<Buffer?> ->
+                context.verify {
+                    assertThat(
+                        "Wrong HTTP status code on happy path pre-request test!",
+                        ar.statusCode(),
+                        `is`(
+                            equalTo(200)
+                        )
                     )
-                )
-                context.completeNow()
+                    context.completeNow()
+                }
             }
-        })
+        )
     }
 
     /**
@@ -358,8 +454,18 @@ class FileUploadTest {
         preRequestAndReturnLocation(
             context
         ) { uploadUri: String ->
-            upload(vertx, context, "/test.bin", "0.0", 4, false, uploadUri,
-                0, 3, 4, "deviceIdHack",
+            upload(
+                vertx,
+                context,
+                "/test.bin",
+                "0.0",
+                4,
+                false,
+                uploadUri,
+                0,
+                3,
+                4,
+                "deviceIdHack",
                 context.succeeding { ar: HttpResponse<Buffer?> ->
                     context.verify {
                         assertThat(
@@ -368,7 +474,8 @@ class FileUploadTest {
                         )
                         context.completeNow()
                     }
-                })
+                }
+            )
         }
     }
 
@@ -380,12 +487,16 @@ class FileUploadTest {
      * @param preRequestResponseHandler The handler called if the client received a response.
      */
     private fun preRequest(
-        context: VertxTestContext, locationCount: Int,
+        context: VertxTestContext,
+        locationCount: Int,
         useInvalidToken: Boolean,
         preRequestResponseHandler: Handler<AsyncResult<HttpResponse<Buffer?>>>
     ) {
         LOGGER.debug("Sending authentication request!")
-        TestUtils.authenticate(client, collectorClient.port, LOGIN_UPLOAD_ENDPOINT_PATH,
+        TestUtils.authenticate(
+            client,
+            collectorClient.port,
+            LOGIN_UPLOAD_ENDPOINT_PATH,
             context.succeeding { authResponse: HttpResponse<Buffer?> ->
                 val authToken = authResponse.getHeader("Authorization")
                 context.verify {
@@ -433,7 +544,8 @@ class FileUploadTest {
                 builder.putHeader("Connection", "Keep-Alive")
                 builder.putHeader("content-length", "406") // random value, must be correct for the upload
                 builder.sendJson(metaDataBody, preRequestResponseHandler)
-            })
+            }
+        )
     }
 
     /**
@@ -448,14 +560,25 @@ class FileUploadTest {
     private fun uploadAndCheckForSuccess(
         vertx: Vertx,
         context: VertxTestContext,
-        testFileResourceName: String, binaryLength: Int
+        testFileResourceName: String,
+        binaryLength: Int
     ) {
         val returnedRequestFuture = context.checkpoint()
         preRequestAndReturnLocation(
             context
         ) { uploadUri: String ->
-            upload(vertx, context, testFileResourceName, "0.0", binaryLength, false, uploadUri,
-                0, (binaryLength - 1).toLong(), binaryLength.toLong(), deviceIdentifier,
+            upload(
+                vertx,
+                context,
+                testFileResourceName,
+                "0.0",
+                binaryLength,
+                false,
+                uploadUri,
+                0,
+                (binaryLength - 1).toLong(),
+                binaryLength.toLong(),
+                deviceIdentifier,
                 context.succeeding { ar: HttpResponse<Buffer?> ->
                     context.verify {
                         assertThat(
@@ -465,33 +588,41 @@ class FileUploadTest {
                         )
                         returnedRequestFuture.flag()
                     }
-                })
+                }
+            )
         }
     }
 
     private fun preRequestAndReturnLocation(context: VertxTestContext, uploadUriHandler: Handler<String>) {
-        preRequest(context, 2, false, context.succeeding { res: HttpResponse<Buffer?> ->
-            context.verify {
-                assertThat(
-                    "Wrong HTTP status code on happy path pre-request test!", res.statusCode(), `is`(
-                        equalTo(200)
+        preRequest(
+            context,
+            2,
+            false,
+            context.succeeding { res: HttpResponse<Buffer?> ->
+                context.verify {
+                    assertThat(
+                        "Wrong HTTP status code on happy path pre-request test!",
+                        res.statusCode(),
+                        `is`(
+                            equalTo(200)
+                        )
                     )
-                )
-                val location = res.getHeader("Location")
-                assertThat(
-                    "Missing HTTP Location header in pre-request response!",
-                    location,
-                    notNullValue()
-                )
-                val locationPattern = "http://10\\.0\\.2\\.2:8081/api/v3/measurements/\\([a-z0-9]{32}\\)/"
-                assertThat(
-                    "Wrong HTTP Location header on pre-request!",
-                    location,
-                    matchesPattern(locationPattern)
-                )
-                uploadUriHandler.handle(location)
+                    val location = res.getHeader("Location")
+                    assertThat(
+                        "Missing HTTP Location header in pre-request response!",
+                        location,
+                        notNullValue()
+                    )
+                    val locationPattern = "http://10\\.0\\.2\\.2:8081/api/v3/measurements/\\([a-z0-9]{32}\\)/"
+                    assertThat(
+                        "Wrong HTTP Location header on pre-request!",
+                        location,
+                        matchesPattern(locationPattern)
+                    )
+                    uploadUriHandler.handle(location)
+                }
             }
-        })
+        )
     }
 
     /**
@@ -516,14 +647,17 @@ class FileUploadTest {
         binarySize: Int,
         useInvalidToken: Boolean,
         requestUri: String,
-        from: Long,
+        @Suppress("SameParameterValue") from: Long,
         to: Long,
         total: Long,
         deviceId: String,
         handler: Handler<AsyncResult<HttpResponse<Buffer?>>>
     ) {
         LOGGER.debug("Sending authentication request!")
-        TestUtils.authenticate(client, collectorClient.port, LOGIN_UPLOAD_ENDPOINT_PATH,
+        TestUtils.authenticate(
+            client,
+            collectorClient.port,
+            LOGIN_UPLOAD_ENDPOINT_PATH,
             context.succeeding { authResponse: HttpResponse<Buffer?> ->
                 val authToken = authResponse.getHeader("Authorization")
                 context.verify {
@@ -546,7 +680,7 @@ class FileUploadTest {
                 val jwtBearer = "Bearer " + if (useInvalidToken) "invalidToken" else authToken
                 builder.putHeader("Authorization", jwtBearer)
                 builder.putHeader("Accept-Encoding", "gzip")
-                builder.putHeader("Content-Range", String.format("bytes %d-%d/%d", from, to, total))
+                builder.putHeader("Content-Range", String.format(Locale.ENGLISH, "bytes %d-%d/%d", from, to, total))
                 builder.putHeader("User-Agent", "Google-HTTP-Java-Client/1.39.2 (gzip)")
                 builder.putHeader("Content-Type", "application/octet-stream")
                 builder.putHeader("Host", "localhost:" + collectorClient.port)
@@ -572,16 +706,21 @@ class FileUploadTest {
                 builder.putHeader("formatVersion", "3")
                 val file = vertx.fileSystem().openBlocking(testFileResource.file, OpenOptions())
                 builder.sendStream(file, handler)
-            })
+            }
+        )
     }
 
     private fun uploadStatus(
-        context: VertxTestContext, requestUri: String,
+        context: VertxTestContext,
+        requestUri: String,
         contentRange: String,
         handler: Handler<AsyncResult<HttpResponse<Buffer?>>>
     ) {
         LOGGER.debug("Sending authentication request!")
-        TestUtils.authenticate(client, collectorClient.port, LOGIN_UPLOAD_ENDPOINT_PATH,
+        TestUtils.authenticate(
+            client,
+            collectorClient.port,
+            LOGIN_UPLOAD_ENDPOINT_PATH,
             context.succeeding { authResponse: HttpResponse<Buffer?> ->
                 val authToken = authResponse.getHeader("Authorization")
                 context.verify {
@@ -627,7 +766,8 @@ class FileUploadTest {
                 builder.putHeader("measurementId", measurementIdentifier)
                 builder.putHeader("formatVersion", "3")
                 builder.send(handler)
-            })
+            }
+        )
     }
 
     companion object {

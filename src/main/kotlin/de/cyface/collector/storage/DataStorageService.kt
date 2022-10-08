@@ -20,7 +20,6 @@ package de.cyface.collector.storage
 
 import de.cyface.api.model.User
 import de.cyface.collector.model.ContentRange
-import de.cyface.collector.model.Measurement
 import de.cyface.collector.model.RequestMetaData
 import io.vertx.core.Future
 import io.vertx.core.Vertx
@@ -50,7 +49,13 @@ sealed interface DataStorageService {
      * without the need to deserialize the data.
      * @return A `Future` providing the ``Status`` of the upload, when it has finished.
      */
-    fun store(pipe: Pipe<Buffer>, user: User, contentRange: ContentRange, uploadIdentifier: UUID, metaData: RequestMetaData): Future<Status>
+    fun store(
+        pipe: Pipe<Buffer>,
+        user: User,
+        contentRange: ContentRange,
+        uploadIdentifier: UUID,
+        metaData: RequestMetaData
+    ): Future<Status>
 
     /**
      * Provides the amount of already uploaded bytes for the provided `uploadIdentifier`.
@@ -68,6 +73,7 @@ sealed interface DataStorageService {
      */
     fun clean(uploadIdentifier: UUID): Future<Void>
 
+    @Suppress("ForbiddenComment")
     // TODO: This should probably be its own verticle.
     /**
      * Start a background timer, which cleans all temporary files not associated with an active upload anymore.
