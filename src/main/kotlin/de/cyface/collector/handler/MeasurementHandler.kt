@@ -125,6 +125,14 @@ class MeasurementHandler(
         }
     }
 
+    /**
+     * Called if checking the data and loading it either to temporary storage or to the final location, has finished
+     * successfully.
+     *
+     * @param status: The return status of the check.
+     * @param context: The `RoutingContext` used by the current request.
+     * @param session: The current HTTP session.
+     */
     private fun onCheckSuccessful(status: Status, context: RoutingContext, session: Session) {
         when (status.type) {
             StatusType.INCOMPLETE -> {

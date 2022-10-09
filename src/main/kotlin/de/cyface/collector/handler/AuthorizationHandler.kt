@@ -123,8 +123,6 @@ class AuthorizationHandler(
      * If the user holds a [DatabaseConstants.GROUP_MANAGER_ROLE_SUFFIX] role, identifying it as the manager of
      * that group, all users of that group are loaded from the user collection.
      *
-     * This method is only public because of the `backend/AuthorizationTest`, see last comment on CY-5720.
-     *
      * @param principal The principal object of the authenticated `User` which requests user data
      * @return The ids of the users which the `user` can access
      */
