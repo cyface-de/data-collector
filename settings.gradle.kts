@@ -18,3 +18,18 @@
  */
 
 rootProject.name = "collector"
+
+plugins {
+    // Required to publish Gradle Build Scans from Github Workflow
+    id("com.gradle.enterprise") version("3.9")
+}
+
+gradleEnterprise {
+    if (System.getenv("CI") != null) {
+        buildScan {
+            publishAlways()
+            termsOfServiceUrl = "https://gradle.com/terms-of-service"
+            termsOfServiceAgree = "yes"
+        }
+    }
+}
