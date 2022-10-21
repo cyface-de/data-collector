@@ -28,6 +28,12 @@ jobs:
           USERNAME: ${{ github.actor }}
           PASSWORD: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Create Inline Documentation
+        run: ./gradlew dokkaHtml
+        env:
+          USERNAME: ${{ github.actor }}
+          PASSWORD: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Deploy
         uses: peaceiris/actions-gh-pages@v3
         # If you're changing the branch from main,
