@@ -216,8 +216,8 @@ class CollectorApiVerticle(private val salt: String) : AbstractVerticle() {
         val preRequestBodyHandler = BodyHandler.create().setBodyLimit(BYTES_IN_ONE_KILOBYTE)
         router.post(MEASUREMENTS_ENDPOINT)
             .consumes("application/json; charset=UTF-8")
-            // Ready request body only once and before async calls or pause/resume must be used see [DAT-749]
             .handler(LoggerHandler.create())
+            // Read request body only once and before async calls or pause/resume must be used see [DAT-749]
             .handler(preRequestBodyHandler)
             .handler(jwtHandler)
             .handler(AuthorizationHandler(config.authProvider, config.database, PauseAndResumeAfterBodyParsing()))
@@ -244,8 +244,8 @@ class CollectorApiVerticle(private val salt: String) : AbstractVerticle() {
         // The path pattern ../(sid)/.. was chosen because of the documentation of Vert.X SessionHandler
         // https://vertx.io/docs/vertx-web/java/#_handling_sessions
         router.putWithRegex(String.format(Locale.ENGLISH, "\\%s\\/\\([a-z0-9]{32}\\)\\/", MEASUREMENTS_ENDPOINT))
-            // Not using BodyHandler as the `request.body()` can only be read once and the {@code #handler} does so.
             .consumes("application/octet-stream")
+            // Not using BodyHandler as the `request.body()` can only be read once and the {@code #handler} does so.
             .handler(LoggerHandler.create())
             .handler(jwtAuthHandler)
             .handler(AuthorizationHandler(config.authProvider, config.database, PauseAndResumeBeforeBodyParsing()))

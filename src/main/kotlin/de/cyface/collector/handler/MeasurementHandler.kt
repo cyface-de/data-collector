@@ -118,9 +118,14 @@ class MeasurementHandler(
         } catch (e: PayloadTooLarge) {
             LOGGER.error("Response: 422", e)
             // client won't resume
+            val uploadIdentifier = session.get<UUID?>(UPLOAD_PATH_FIELD)
+            if (uploadIdentifier != null) {
+                storageService.clean(uploadIdentifier)
+            }
             session.destroy()
             ctx.fail(ENTITY_UNPARSABLE, e)
         } catch (e: RuntimeException) {
+            // Not cleaning session/uploads to allow resume (on uncaught errors)
             ctx.fail(e)
         }
     }
@@ -143,7 +148,9 @@ class MeasurementHandler(
                 context.response().setStatusCode(RESUME_INCOMPLETE).end()
             }
             StatusType.COMPLETE -> {
-                // not removing session
+                // In case the response does not arrive at the client, the client will receive a 409 on a reupload.
+                // In case of the 409, the client can handle the successful upload. Therefore, the session is removed
+                // here to avoid dangling session references.
                 session.remove<Any>(UPLOAD_PATH_FIELD)
                 storageService.clean(status.uploadIdentifier).onSuccess {
                     context.response().setStatusCode(HTTPStatus.CREATED).end()
@@ -174,7 +181,7 @@ class MeasurementHandler(
         val ret = Promise.promise<Status>()
         val uploadIdentifier = session.get<UUID?>(UPLOAD_PATH_FIELD)
 
-        if (uploadIdentifier == null && contentRange.fromIndex != "0") {
+        if (uploadIdentifier == null && contentRange.fromIndex != 0L) {
             // I.e. the server received data in a previous request but now cannot find the `path` session value.
             // Unsure when this can happen. Not accepting the data. Asking to restart upload (`404`).
             val message = String.format(
@@ -184,7 +191,7 @@ class MeasurementHandler(
             )
             LOGGER.warn(message)
             ret.fail(UnexpectedContentRange(message))
-        } else if (uploadIdentifier != null && contentRange.fromIndex == "0") {
+        } else if (uploadIdentifier != null && contentRange.fromIndex == 0L) {
             // Server received data in a previous request but the chunk file was probably cleaned by cleaner task.
             // Can't return 308. Google API client lib throws `Preconditions` on subsequent chunk upload.
             // This makes sense as the server reported before that bytes (>0) were received.
@@ -196,20 +203,20 @@ class MeasurementHandler(
             LOGGER.warn(message)
             ret.fail(UnexpectedContentRange(message))
         } else if (uploadIdentifier == null) {
-            // Create temp file to accept binary
-            val newUploadIdentifier = UUID.randomUUID()
-
-            // Bind session to this measurement and mark as "pre-request accepted"
-            session.put(UPLOAD_PATH_FIELD, newUploadIdentifier)
-            val acceptUploadResult = storageService.store(pipe, user, contentRange, newUploadIdentifier, metaData)
-            acceptUploadResult.onSuccess { result -> ret.complete(result) }
-            acceptUploadResult.onFailure { cause -> ret.fail(cause) }
+            acceptNewUpload(
+                session,
+                ret,
+                pipe,
+                user,
+                contentRange,
+                metaData
+            )
         } else {
 
             // Search for previous upload chunk
             storageService.bytesUploaded(uploadIdentifier).onSuccess { byteSize ->
                 // Wrong chunk uploaded
-                if (contentRange.fromIndex != byteSize.toString()) {
+                if (contentRange.fromIndex != byteSize) {
                     // Ask client to resume from the correct position
                     val range = String.format(Locale.ENGLISH, "bytes=0-%d", byteSize - 1)
                     LOGGER.debug("Response: 308, Range {} (partial data)", range)
@@ -222,18 +229,36 @@ class MeasurementHandler(
             }.onFailure {
                 session.remove<Any>(UPLOAD_PATH_FIELD) // was linked to non-existing file
 
-                // Create new upload identifier for this upload
-                val newUploadIdentifier = UUID.randomUUID()
-
-                // Bind session to this measurement and mark as "pre-request accepted"
-                session.put(UPLOAD_PATH_FIELD, newUploadIdentifier)
-                val acceptUploadResult = storageService.store(pipe, user, contentRange, newUploadIdentifier, metaData)
-                acceptUploadResult.onSuccess { result -> ret.complete(result) }
-                acceptUploadResult.onFailure { cause -> ret.fail(cause) }
+                acceptNewUpload(
+                    session,
+                    ret,
+                    pipe,
+                    user,
+                    contentRange,
+                    metaData
+                )
             }
         }
 
         return ret.future()
+    }
+
+    private fun acceptNewUpload(
+        session: Session,
+        uploadAccepted: Promise<Status>,
+        pipe: Pipe<Buffer>,
+        user: User,
+        contentRange: ContentRange,
+        metaData: RequestMetaData
+    ) {
+        // Create new upload identifier for this upload
+        val newUploadIdentifier = UUID.randomUUID()
+
+        // Bind session to this measurement and mark as "pre-request accepted"
+        session.put(UPLOAD_PATH_FIELD, newUploadIdentifier)
+        val acceptUpload = storageService.store(pipe, user, contentRange, newUploadIdentifier, metaData)
+        acceptUpload.onSuccess { result -> uploadAccepted.complete(result) }
+        acceptUpload.onFailure { cause -> uploadAccepted.fail(cause) }
     }
 
     /**
@@ -327,7 +352,8 @@ class MeasurementHandler(
         val contentRange = ContentRange.fromHTTPHeader(contentRangeString)
 
         // Make sure content-length matches the content range (to-from+1)
-        if (bodySize != contentRange.toIndex.toLong() - contentRange.fromIndex.toLong() + 1) {
+        val sizeAccordingToContentRange = contentRange.toIndex - contentRange.fromIndex + 1L
+        if (bodySize != sizeAccordingToContentRange) {
             throw Unparsable(
                 String.format(
                     Locale.ENGLISH,

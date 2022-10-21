@@ -16,7 +16,7 @@ import java.util.Locale
  * @property totalBytes The total amount of bytes. On a properly formatted content range, this should be
  * `toIndex` - `fromIndex`.
  */
-data class ContentRange(val fromIndex: String, val toIndex: String, val totalBytes: String) {
+data class ContentRange(val fromIndex: Long, val toIndex: Long, val totalBytes: Long) {
     companion object {
         /**
          * The index the actual content range starts in the value of the content-range HTTP header field.
@@ -41,7 +41,10 @@ data class ContentRange(val fromIndex: String, val toIndex: String, val totalByt
             Validate.isTrue(slashPosition != -1)
             val to = startingWithTo.substring(0, slashPosition)
             val total = startingWithTo.substring(slashPosition + 1)
-            return ContentRange(from, to, total)
+            val parsedFrom = from.toLong()
+            val parsedTo = to.toLong()
+            val parsedTotal = total.toLong()
+            return ContentRange(parsedFrom, parsedTo, parsedTotal)
         }
     }
 }

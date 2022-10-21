@@ -82,8 +82,8 @@ class GridFsStorageService(private val mongoClient: MongoClient, val fs: FileSys
     ): Future<Status> {
         val promise = Promise.promise<Status>()
         val temporaryStorageFile = pathToTemporaryFile(uploadIdentifier)
-        val fsOpenResult = fs.open(temporaryStorageFile.absolutePathString(), OpenOptions().setAppend(true))
-        fsOpenResult.onSuccess { asyncFile ->
+        val fsOpenCall = fs.open(temporaryStorageFile.absolutePathString(), OpenOptions().setAppend(true))
+        fsOpenCall.onSuccess { asyncFile ->
             onTemporaryFileOpened(
                 asyncFile,
                 promise,
@@ -95,7 +95,7 @@ class GridFsStorageService(private val mongoClient: MongoClient, val fs: FileSys
                 user
             )
         }
-        fsOpenResult.onFailure { cause: Throwable ->
+        fsOpenCall.onFailure { cause: Throwable ->
             LOGGER.error("Unable to open temporary file to stream request to!", cause)
             promise.fail(cause)
         }
@@ -207,21 +207,21 @@ class GridFsStorageService(private val mongoClient: MongoClient, val fs: FileSys
             measurement.metaData.measurementIdentifier
         )
 
-        val bucketServiceCreationResult = mongoClient.createDefaultGridFsBucketService()
-        bucketServiceCreationResult.onFailure(promise::fail)
-        bucketServiceCreationResult.onSuccess { gridfs ->
-            val temporaryFileOpenResult = fs.open(temporaryStorage.absolutePathString(), OpenOptions())
-            temporaryFileOpenResult.onFailure(promise::fail)
-            temporaryFileOpenResult.onSuccess { temporaryStorageFile ->
+        val bucketServiceCreationCall = mongoClient.createDefaultGridFsBucketService()
+        bucketServiceCreationCall.onFailure(promise::fail)
+        bucketServiceCreationCall.onSuccess { gridfs ->
+            val temporaryFileOpenCall = fs.open(temporaryStorage.absolutePathString(), OpenOptions())
+            temporaryFileOpenCall.onFailure(promise::fail)
+            temporaryFileOpenCall.onSuccess { temporaryStorageFile ->
                 val options = GridFsUploadOptions()
                 options.metadata = measurement.toJson()
-                val uploadResult = gridfs.uploadByFileNameWithOptions(
+                val uploadCall = gridfs.uploadByFileNameWithOptions(
                     temporaryStorageFile,
                     temporaryStorage.name,
                     options
                 )
-                uploadResult.onFailure(promise::fail)
-                uploadResult.onSuccess { objectId -> promise.complete(ObjectId(objectId)) }
+                uploadCall.onFailure(promise::fail)
+                uploadCall.onSuccess { objectId -> promise.complete(ObjectId(objectId)) }
             }
         }
         return promise.future()
@@ -242,29 +242,27 @@ class GridFsStorageService(private val mongoClient: MongoClient, val fs: FileSys
         user: User
     ) {
         // Pipe body to reduce memory usage and store body of interrupted connections (to support resume)
-        val pipeResult = pipe.to(asyncFile)
-        pipeResult.onSuccess {
+        val pipeToCall = pipe.to(asyncFile)
+        pipeToCall.onSuccess {
             // Check if the upload is complete or if this was just a chunk
-            val fsPropsResult = fs.props(temporaryStorageFile.toString())
-            fsPropsResult.onSuccess { props: FileProps ->
+            val fsPropsCall = fs.props(temporaryStorageFile.toString())
+            fsPropsCall.onSuccess { props: FileProps ->
 
-                // We could reuse information but to be sure we check the actual file size
+                // Checking that the data was actually written successfully.
                 val byteSize = props.size()
-                if (byteSize - 1 != contentRange.toIndex.toLong()) {
+                if (byteSize - 1 != contentRange.toIndex) {
                     LOGGER.error(
                         "Response: 500, Content-Range ({}) not matching file size ({} - 1)",
                         contentRange,
                         byteSize
                     )
                     promise.fail(ContentRangeNotMatchingFileSize())
-                } else if (contentRange.toIndex.toLong() != contentRange.totalBytes.toLong() - 1) {
+                } else if (contentRange.toIndex != contentRange.totalBytes - 1) {
                     // This was not the final chunk of data
                     // Indicate that, e.g. for 100 received bytes, bytes 0-99 have been received
                     val range = String.format(Locale.ENGLISH, "bytes=0-%d", byteSize - 1)
                     LOGGER.debug("Response: 308, Range {}", range)
-                    clean(uploadIdentifier)
-                        .onSuccess { promise.complete(Status(uploadIdentifier, StatusType.INCOMPLETE, byteSize)) }
-                        .onFailure { cause -> promise.fail(cause) }
+                    promise.complete(Status(uploadIdentifier, StatusType.INCOMPLETE, byteSize))
                 } else {
                     // Persist data
                     val measurement =
@@ -289,12 +287,12 @@ class GridFsStorageService(private val mongoClient: MongoClient, val fs: FileSys
                     }
                 }
             }
-            fsPropsResult.onFailure { cause: Throwable ->
+            fsPropsCall.onFailure { cause: Throwable ->
                 LOGGER.error("Response: 500, failed to read props from temp file")
                 promise.fail(cause)
             }
         }
-        pipeResult.onFailure { cause: Throwable ->
+        pipeToCall.onFailure { cause: Throwable ->
             LOGGER.error("Response: 500", cause)
             promise.fail(cause)
         }

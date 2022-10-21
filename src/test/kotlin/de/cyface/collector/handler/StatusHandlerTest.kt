@@ -101,7 +101,7 @@ class StatusHandlerTest {
         oocut.handle(mockRoutingContext)
 
         // Assert
-        argumentCaptor<Handler<Boolean>>().apply {
+        argumentCaptor<Handler<Boolean>>() {
             verify(mockIsStoredFuture).onSuccess(capture())
 
             firstValue.handle(true)

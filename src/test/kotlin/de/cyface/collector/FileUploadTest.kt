@@ -315,7 +315,7 @@ class FileUploadTest {
     }
 
     @Test
-    fun testUploadStatusAfterSuccessfulUpload_happyPath(vertx: Vertx, context: VertxTestContext) {
+    fun `Test happy path for uploads retuns HTTP Status 200`(vertx: Vertx, context: VertxTestContext) {
         // Create upload session
         preRequestAndReturnLocation(context) { uploadUri: String ->
             upload(
