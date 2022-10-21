@@ -299,6 +299,7 @@ tasks.withType<DetektCreateBaselineTask>().configureEach {
 // End detekt configuration
 
 tasks.withType<DokkaTask>().configureEach {
+  outputDirectory.set(file("doc/"))
   pluginConfiguration<DokkaBase, DokkaBaseConfiguration> {
     customAssets = listOf(file("doc/storage-service.png"))
   }
