@@ -38,6 +38,7 @@ import io.vertx.core.json.JsonObject;
  * @since 2.0.0
  */
 public final class MongoTest {
+    private static final MongodStarter starter = MongodStarter.getDefaultInstance();
     /**
      * The test Mongo database. This must be shut down after finishing this Mongo database run.
      */
@@ -75,10 +76,12 @@ public final class MongoTest {
      */
     public void setUpMongoDatabase(final int mongoPort) throws IOException {
         this.mongoPort = mongoPort;
-        final var starter = MongodStarter.getDefaultInstance();
         // noinspection SpellCheckingInspection
-        final var mongodConfig = MongodConfig.builder().version(Version.Main.V3_6)
-                .net(new Net("localhost", mongoPort, Network.localhostIsIPv6())).build();
+        final var mongodConfig = MongodConfig
+                .builder()
+                .version(Version.Main.V4_4)
+                .net(new Net("localhost", mongoPort, Network.localhostIsIPv6()))
+                .build();
         mongodExecutable = starter.prepare(mongodConfig);
         mongo = mongodExecutable.start();
     }

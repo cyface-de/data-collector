@@ -18,35 +18,35 @@
  */
 package de.cyface.collector.handler
 
-import de.cyface.api.Authorizer
-import de.cyface.api.PauseAndResumeBeforeBodyParsing
 import de.cyface.api.model.User
+import de.cyface.collector.handler.HTTPStatus.ENTITY_UNPARSABLE
+import de.cyface.collector.handler.HTTPStatus.NOT_FOUND
+import de.cyface.collector.handler.HTTPStatus.PRECONDITION_FAILED
+import de.cyface.collector.handler.HTTPStatus.RESUME_INCOMPLETE
+import de.cyface.collector.handler.SessionFields.UPLOAD_PATH_FIELD
 import de.cyface.collector.handler.exception.IllegalSession
 import de.cyface.collector.handler.exception.InvalidMetaData
 import de.cyface.collector.handler.exception.PayloadTooLarge
 import de.cyface.collector.handler.exception.SessionExpired
 import de.cyface.collector.handler.exception.SkipUpload
+import de.cyface.collector.handler.exception.UnexpectedContentRange
 import de.cyface.collector.handler.exception.Unparsable
-import de.cyface.collector.model.Measurement
-import de.cyface.collector.verticle.Config
-import de.cyface.model.RequestMetaData
-import io.vertx.core.MultiMap
-import io.vertx.core.file.AsyncFile
-import io.vertx.core.file.FileProps
-import io.vertx.core.file.OpenOptions
+import de.cyface.collector.model.ContentRange
+import de.cyface.collector.model.RequestMetaData
+import de.cyface.collector.storage.DataStorageService
+import de.cyface.collector.storage.Status
+import de.cyface.collector.storage.StatusType
+import io.vertx.core.Future
+import io.vertx.core.Handler
+import io.vertx.core.Promise
+import io.vertx.core.buffer.Buffer
 import io.vertx.core.http.HttpServerRequest
-import io.vertx.core.json.JsonObject
-import io.vertx.ext.auth.mongo.MongoAuthentication
-import io.vertx.ext.mongo.GridFsUploadOptions
-import io.vertx.ext.mongo.MongoClient
-import io.vertx.ext.mongo.MongoGridFsClient
+import io.vertx.core.streams.Pipe
 import io.vertx.ext.web.RoutingContext
 import io.vertx.ext.web.Session
 import org.apache.commons.lang3.Validate
 import org.slf4j.LoggerFactory
-import java.io.File
-import java.nio.file.Path
-import java.nio.file.Paths
+import java.util.Locale
 import java.util.UUID
 
 /**
@@ -55,194 +55,210 @@ import java.util.UUID
  * new measurements from any measurement device and forwarding those
  * measurements for persistent storage.
  *
+ * @property storageService A service used to store the received data to some persistent data store.
+ * @property payloadLimit The maximum number of `Byte`s which may be uploaded.
+ *
  * @author Armin Schnabel
+ * @author Klemens Muthmann
  * @version 1.0.0
  * @since 6.0.0
  */
 class MeasurementHandler(
-    mongoClient: MongoClient,
-    authProvider: MongoAuthentication?,
-    payloadLimit: Long
-) : Authorizer(authProvider, mongoClient, PauseAndResumeBeforeBodyParsing()) {
-    /**
-     * Vertx `MongoClient` used to access the database to write the received data to.
-     */
-    private val mongoClient: MongoClient
-
-    /**
-     * The maximum number of `Byte`s which may be uploaded.
-     */
+    private val storageService: DataStorageService,
     private val payloadLimit: Long
+) : Handler<RoutingContext> {
 
-    /**
-     * Creates a fully initialized instance of this class.
-     *
-     * @param config the configuration setting required to start the HTTP server
-     */
-    constructor(config: Config) : this(config.database, config.authProvider, config.measurementLimit) {}
-
-    /**
-     * Creates a fully initialized instance of this class.
-     *
-     * @param mongoClient The client to use to access the Mongo database.
-     * @param authProvider An auth provider used by this server to authenticate against the Mongo user database
-     * @param payloadLimit The maximum number of `Byte`s which may be uploaded.
-     */
     init {
-        Validate.notNull(mongoClient)
         Validate.isTrue(payloadLimit > 0)
-        this.mongoClient = mongoClient
-        this.payloadLimit = payloadLimit
     }
 
-    override fun handleAuthorizedRequest(
-        ctx: RoutingContext,
-        loggedInUser: User,
-        users: MutableSet<User>,
-        header: MultiMap?
-    ) {
+    override fun handle(ctx: RoutingContext) {
         LOGGER.info("Received new measurement request.")
         val request = ctx.request()
         val session = ctx.session()
         try {
             // Load authenticated user
+            val loggedInUser = ctx.get<User?>("logged-in-user")
+            if (loggedInUser == null) {
+                ctx.response().setStatusCode(HTTPStatus.UNAUTHORIZED).end()
+                return
+            }
             val bodySize = PreRequestHandler.bodySize(request.headers(), payloadLimit, "content-length")
             val metaData = metaData(request)
             checkSessionValidity(session, metaData)
 
             // Handle upload status request
             if (bodySize == 0L) {
-                StatusHandler(mongoClient).handle(ctx)
-                return
+                return ctx.next()
             }
 
             // Handle first chunk
             val contentRange = contentRange(request, bodySize)
-            if (session.get<Any?>(UPLOAD_PATH_FIELD) == null) {
-                handleFirstChunkUpload(ctx, request, session, loggedInUser, contentRange, metaData, null)
-                return
+            val checkResult = checkAndStore(session, loggedInUser, request.pipe(), contentRange, metaData)
+            checkResult.onSuccess { result ->
+                onCheckSuccessful(result, ctx, session)
             }
-
-            // Search for previous upload chunk
-            val fs = ctx.vertx().fileSystem()
-            val path = session.get<Any>(UPLOAD_PATH_FIELD) as String
-            request.pause()
-            fs.exists(path).onSuccess { fileExists: Boolean? ->
-                try {
-                    request.resume()
-                    if (!fileExists!!) {
-                        session.remove<Any>(UPLOAD_PATH_FIELD) // was linked to non-existing file
-                        handleFirstChunkUpload(ctx, request, session, loggedInUser, contentRange, metaData, path)
-                        return@onSuccess
-                    }
-                    handleSubsequentChunkUpload(ctx, request, session, loggedInUser, contentRange, metaData, path)
-                } catch (e: RuntimeException) {
-                    ctx.fail(500, e)
-                }
-            }.onFailure { failure: Throwable? ->
-                LOGGER.error("Response: 500, failed to check if temp file exists")
-                ctx.fail(500, failure)
-            }
+            checkResult.onFailure(MeasurementFailureHandler(ctx))
         } catch (e: InvalidMetaData) {
-            LOGGER.error(String.format("Response: 422, %s", e.message), e)
+            LOGGER.error("Response: 422", e)
             ctx.fail(ENTITY_UNPARSABLE, e)
         } catch (e: Unparsable) {
-            LOGGER.error(String.format("Response: 422, %s", e.message), e)
+            LOGGER.error("Response: 422", e)
             ctx.fail(ENTITY_UNPARSABLE, e)
         } catch (e: IllegalSession) {
-            LOGGER.error(String.format("Response: 422, %s", e.message), e)
-            ctx.fail(ENTITY_UNPARSABLE, e)
-        } catch (e: PayloadTooLarge) {
-            LOGGER.error(String.format("Response: 422, %s", e.message), e)
+            LOGGER.error("Response: 422", e)
             ctx.fail(ENTITY_UNPARSABLE, e)
         } catch (e: SessionExpired) {
-            LOGGER.warn(String.format("Response: 404, %s", e.message), e)
+            LOGGER.warn("Response: 404", e)
             ctx.response().setStatusCode(NOT_FOUND).end() // client sends a new pre-request for this upload
         } catch (e: SkipUpload) {
             LOGGER.debug(e.message, e)
-            remove(session) // client won't resume
-            ctx.fail(PreRequestHandler.PRECONDITION_FAILED, e)
+            session.destroy() // client won't resume
+            ctx.fail(PRECONDITION_FAILED, e)
+        } catch (e: PayloadTooLarge) {
+            LOGGER.error("Response: 422", e)
+            // client won't resume
+            val uploadIdentifier = session.get<UUID?>(UPLOAD_PATH_FIELD)
+            if (uploadIdentifier != null) {
+                storageService.clean(uploadIdentifier)
+            }
+            session.destroy()
+            ctx.fail(ENTITY_UNPARSABLE, e)
         } catch (e: RuntimeException) {
+            // Not cleaning session/uploads to allow resume (on uncaught errors)
             ctx.fail(e)
         }
     }
 
     /**
-     * Handles the chunk upload request when there was no chunk file found on the server yet.
+     * Called if checking the data and loading it either to temporary storage or to the final location, has finished
+     * successfully.
      *
-     * @param ctx The Vertx `RoutingContext` used to write the response
-     * @param request the request to read the body from
-     * @param session the session which was passed with the request
-     * @param user the user which was authenticated to this request
-     * @param contentRange the content range information from the header
-     * @param metaData the metadata from the request header
-     * @param path `String` if the session contained a path to the chunk file or `null` otherwise.
+     * @param status: The return status of the check.
+     * @param context: The `RoutingContext` used by the current request.
+     * @param session: The current HTTP session.
      */
-    private fun handleFirstChunkUpload(
-        ctx: RoutingContext,
-        request: HttpServerRequest,
-        session: Session,
-        user: User,
-        contentRange: ContentRange,
-        metaData: RequestMetaData,
-        path: String?
-    ) {
-        if (contentRange.fromIndex != "0") {
-            if (path == null) {
-                // I.e. the server received data in a previous request but now cannot find the `path` session value.
-                // Unsure when this can happen. Not accepting the data. Asking to restart upload (`404`).
-                LOGGER.warn(String.format("Response: 404, path is null and unexpected content range: %s", contentRange))
-            } else {
-                // Server received data in a previous request but the chunk file was probably cleaned by cleaner task.
-                // Can't return 308. Google API client lib throws `Preconditions` on subsequent chunk upload.
-                // This makes sense as the server reported before that bytes (>0) were received.
-                LOGGER.warn(String.format("Response: 404, Unexpected content range: %s", contentRange))
+    private fun onCheckSuccessful(status: Status, context: RoutingContext, session: Session) {
+        when (status.type) {
+            StatusType.INCOMPLETE -> {
+                val byteSize = status.byteSize
+                val range = String.format(Locale.ENGLISH, "bytes=0-%d", byteSize - 1)
+                context.response().putHeader("Range", range)
+                context.response().putHeader("Content-Length", "0")
+                context.response().setStatusCode(RESUME_INCOMPLETE).end()
             }
-            ctx.response().setStatusCode(NOT_FOUND).end() // client sends a new pre-request for this upload
-            return
+            StatusType.COMPLETE -> {
+                // In case the response does not arrive at the client, the client will receive a 409 on a reupload.
+                // In case of the 409, the client can handle the successful upload. Therefore, the session is removed
+                // here to avoid dangling session references.
+                session.remove<Any>(UPLOAD_PATH_FIELD)
+                storageService.clean(status.uploadIdentifier).onSuccess {
+                    context.response().setStatusCode(HTTPStatus.CREATED).end()
+                }.onFailure { cause ->
+                    context.fail(cause)
+                }
+            }
         }
-        acceptUpload(ctx, request, session, user, contentRange, metaData)
     }
-    // Cache found, expecting upload to continue the cached file
+
     /**
+     * Check the request for validity and either fail the response or continue with handling the request.
      *
-     * @param ctx The Vertx `RoutingContext` used to write the response
-     * @param request the request to read the body from
-     * @param session the session which was passed with the request
-     * @param user the user which was authenticated to this request
-     * @param contentRange the content range information from the header
-     * @param metaData the metadata from the request header
-     * @param path `String` if the session contained a path to the chunk file or `null` otherwise.
+     * @param session The HTTP session used as a context for this request.
+     * @param user The user trying to upload the data.
+     * @param pipe The pipe containing the data to upload.
+     * @param contentRange Range information about the data to upload.
+     * This data should have been provided via HTTP content-range parameter.
+     * @param metaData Meta information about the measurement to handle.
      */
-    private fun handleSubsequentChunkUpload(
-        ctx: RoutingContext,
-        request: HttpServerRequest,
+    private fun checkAndStore(
         session: Session,
         user: User,
+        pipe: Pipe<Buffer>,
         contentRange: ContentRange,
-        metaData: RequestMetaData,
-        path: String
-    ) {
-        request.pause()
-        val fs = ctx.vertx().fileSystem()
-        fs.props(path).onSuccess { props: FileProps ->
-            request.resume()
-            // Wrong chunk uploaded
-            val byteSize = props.size()
-            if (contentRange.fromIndex != byteSize.toString()) {
-                // Ask client to resume from the correct position
-                val range = String.format("bytes=0-%d", byteSize - 1)
-                LOGGER.debug(String.format("Response: 308, Range %s (partial data)", range))
-                ctx.response().putHeader("Range", range)
-                ctx.response().putHeader("Content-Length", "0")
-                ctx.response().setStatusCode(StatusHandler.RESUME_INCOMPLETE).end()
-                return@onSuccess
+        metaData: RequestMetaData
+    ): Future<Status> {
+        val ret = Promise.promise<Status>()
+        val uploadIdentifier = session.get<UUID?>(UPLOAD_PATH_FIELD)
+
+        if (uploadIdentifier == null && contentRange.fromIndex != 0L) {
+            // I.e. the server received data in a previous request but now cannot find the `path` session value.
+            // Unsure when this can happen. Not accepting the data. Asking to restart upload (`404`).
+            val message = String.format(
+                Locale.ENGLISH,
+                "Response: 404, path is null and unexpected content range: %s",
+                contentRange
+            )
+            LOGGER.warn(message)
+            ret.fail(UnexpectedContentRange(message))
+        } else if (uploadIdentifier != null && contentRange.fromIndex == 0L) {
+            // Server received data in a previous request but the chunk file was probably cleaned by cleaner task.
+            // Can't return 308. Google API client lib throws `Preconditions` on subsequent chunk upload.
+            // This makes sense as the server reported before that bytes (>0) were received.
+            val message = String.format(
+                Locale.ENGLISH,
+                "Response: 404, Unexpected content range: %s",
+                contentRange
+            )
+            LOGGER.warn(message)
+            ret.fail(UnexpectedContentRange(message))
+        } else if (uploadIdentifier == null) {
+            acceptNewUpload(
+                session,
+                ret,
+                pipe,
+                user,
+                contentRange,
+                metaData
+            )
+        } else {
+
+            // Search for previous upload chunk
+            storageService.bytesUploaded(uploadIdentifier).onSuccess { byteSize ->
+                // Wrong chunk uploaded
+                if (contentRange.fromIndex != byteSize) {
+                    // Ask client to resume from the correct position
+                    val range = String.format(Locale.ENGLISH, "bytes=0-%d", byteSize - 1)
+                    LOGGER.debug("Response: 308, Range {} (partial data)", range)
+                    ret.complete(Status(uploadIdentifier, StatusType.INCOMPLETE, byteSize))
+                } else {
+                    val acceptUploadResult = storageService.store(pipe, user, contentRange, uploadIdentifier, metaData)
+                    acceptUploadResult.onSuccess { result -> ret.complete(result) }
+                    acceptUploadResult.onFailure { cause -> ret.fail(cause) }
+                }
+            }.onFailure {
+                session.remove<Any>(UPLOAD_PATH_FIELD) // was linked to non-existing file
+
+                acceptNewUpload(
+                    session,
+                    ret,
+                    pipe,
+                    user,
+                    contentRange,
+                    metaData
+                )
             }
-            acceptUpload(ctx, request, session, user, contentRange, File(path), metaData)
-        }.onFailure { failure: Throwable? ->
-            LOGGER.error("Response: 500, failed to read props from temp file")
-            ctx.fail(500, failure)
         }
+
+        return ret.future()
+    }
+
+    private fun acceptNewUpload(
+        session: Session,
+        uploadAccepted: Promise<Status>,
+        pipe: Pipe<Buffer>,
+        user: User,
+        contentRange: ContentRange,
+        metaData: RequestMetaData
+    ) {
+        // Create new upload identifier for this upload
+        val newUploadIdentifier = UUID.randomUUID()
+
+        // Bind session to this measurement and mark as "pre-request accepted"
+        session.put(UPLOAD_PATH_FIELD, newUploadIdentifier)
+        val acceptUpload = storageService.store(pipe, user, contentRange, newUploadIdentifier, metaData)
+        acceptUpload.onSuccess { result -> uploadAccepted.complete(result) }
+        acceptUpload.onFailure { cause -> uploadAccepted.fail(cause) }
     }
 
     /**
@@ -258,30 +274,33 @@ class MeasurementHandler(
         return try {
             // Identifiers
             val deviceId = request.getHeader(FormAttributes.DEVICE_ID.value)
+                ?: throw InvalidMetaData("DeviceId missing in header")
             val measurementId = request.getHeader(FormAttributes.MEASUREMENT_ID.value)
-            if (measurementId == null || deviceId == null) {
-                throw InvalidMetaData("Measurement- and/or DeviceId missing in header")
-            }
+                ?: throw InvalidMetaData("MeasurementId missing in header")
 
             // Location info
             val locationCount = request.getHeader(FormAttributes.LOCATION_COUNT.value).toLong()
             if (locationCount < PreRequestHandler.MINIMUM_LOCATION_COUNT) {
                 throw SkipUpload(
                     String.format(
+                        Locale.ENGLISH,
                         "Too few location points %s",
                         locationCount
                     )
                 )
             }
             val startLocationLatString = request.getHeader(FormAttributes.START_LOCATION_LAT.value)
+                ?: throw InvalidMetaData("Start location latitude is missing!")
             val startLocationLonString = request.getHeader(FormAttributes.START_LOCATION_LON.value)
+                ?: throw InvalidMetaData("Start location longitude is missing")
             val startLocationTsString = request.getHeader(FormAttributes.START_LOCATION_TS.value)
+                ?: throw InvalidMetaData("Start location timestamp is missing")
             val endLocationLatString = request.getHeader(FormAttributes.END_LOCATION_LAT.value)
+                ?: throw InvalidMetaData("End location latitude is missing")
             val endLocationLonString = request.getHeader(FormAttributes.END_LOCATION_LON.value)
+                ?: throw InvalidMetaData("End location Longitude is missing")
             val endLocationTsString = request.getHeader(FormAttributes.END_LOCATION_TS.value)
-            if (startLocationLatString == null || startLocationLonString == null || startLocationTsString == null || endLocationLatString == null || endLocationLonString == null) {
-                throw InvalidMetaData("Start-/end location data incomplete!")
-            }
+                ?: throw InvalidMetaData("End location timestamp is missing")
             val startLocationLat = startLocationLatString.toDouble()
             val startLocationLon = startLocationLonString.toDouble()
             val startLocationTs = startLocationTsString.toLong()
@@ -330,184 +349,20 @@ class MeasurementHandler(
 
         // The client informs what data is attached: `bytes fromIndex-toIndex/totalBytes`
         val contentRangeString = request.getHeader("Content-Range")
-        if (!contentRangeString.matches(Regex("bytes [0-9]+-[0-9]+/[0-9]+"))) {
-            throw Unparsable(
-                String.format(
-                    "Content-Range request not supported: %s",
-                    contentRangeString
-                )
-            )
-        }
-        val startingWithFrom = contentRangeString.substring(6)
-        val dashPosition = startingWithFrom.indexOf('-')
-        Validate.isTrue(dashPosition != -1)
-        val from = startingWithFrom.substring(0, dashPosition)
-        val startingWithTo = startingWithFrom.substring(dashPosition + 1)
-        val slashPosition = startingWithTo.indexOf('/')
-        Validate.isTrue(slashPosition != -1)
-        val to = startingWithTo.substring(0, slashPosition)
-        val total = startingWithTo.substring(slashPosition + 1)
-        val contentRange = ContentRange(from, to, total)
+        val contentRange = ContentRange.fromHTTPHeader(contentRangeString)
 
         // Make sure content-length matches the content range (to-from+1)
-        if (bodySize != contentRange.toIndex.toLong() - contentRange.fromIndex.toLong() + 1) {
+        val sizeAccordingToContentRange = contentRange.toIndex - contentRange.fromIndex + 1L
+        if (bodySize != sizeAccordingToContentRange) {
             throw Unparsable(
                 String.format(
+                    Locale.ENGLISH,
                     "Upload size (%d) does not match content rang of header (%s)!",
                     bodySize, contentRange
                 )
             )
         }
         return contentRange
-    }
-
-    /**
-     * Creates a new upload temp file and calls [.acceptUpload].
-     *
-     * @param ctx The Vertx `RoutingContext` used to write the response
-     * @param request the request to read the body from
-     * @param session the session which was passed with the request
-     * @param user the user which was authenticated to this request
-     * @param contentRange the content range information from the header
-     * @param metaData the metadata from the request header
-     */
-    private fun acceptUpload(
-        ctx: RoutingContext,
-        request: HttpServerRequest,
-        session: Session,
-        user: User,
-        contentRange: ContentRange,
-        metaData: RequestMetaData
-    ) {
-
-        // Create temp file to accept binary
-        val fileName = UUID.randomUUID().toString()
-        val uploadFolder = FILE_UPLOADS_FOLDER.toFile()
-        if (!uploadFolder.exists()) {
-            Validate.isTrue(uploadFolder.mkdir())
-        }
-        val tempFile = Paths.get(uploadFolder.path, fileName).toAbsolutePath().toFile()
-
-        // Bind session to this measurement and mark as "pre-request accepted"
-        session.put(UPLOAD_PATH_FIELD, tempFile)
-        acceptUpload(ctx, request, session, user, contentRange, tempFile, metaData)
-    }
-
-    /**
-     * Streams the request body into a temp file and persists the file after it's fully uploaded.
-     *
-     * @param ctx The Vertx `RoutingContext` used to write the response
-     * @param request the request to read the body from
-     * @param session the session which was passed with the request
-     * @param user the user which was authenticated to this request
-     * @param contentRange the content range information from the header
-     * @param metaData the metadata from the request header
-     */
-    private fun acceptUpload(
-        ctx: RoutingContext,
-        request: HttpServerRequest,
-        session: Session,
-        user: User,
-        contentRange: ContentRange,
-        tempFile: File,
-        metaData: RequestMetaData
-    ) {
-        val fs = ctx.vertx().fileSystem()
-        request.pause()
-        fs.open(tempFile.absolutePath, OpenOptions().setAppend(true)).onSuccess { asyncFile: AsyncFile ->
-            request.resume()
-
-            // Pipe body to reduce memory usage and store body of interrupted connections (to support resume)
-            request.pipeTo(asyncFile).onSuccess { success: Void? ->
-                // Check if the upload is complete or if this was just a chunk
-                fs.props(tempFile.toString()).onSuccess { props: FileProps ->
-
-                    // We could reuse information but to be sure we check the actual file size
-                    val byteSize = props.size()
-                    if (byteSize - 1 != contentRange.toIndex.toLong()) {
-                        LOGGER.error(
-                            String.format(
-                                "Response: 500, Content-Range (%s) not matching file size (%d - 1)",
-                                contentRange, byteSize
-                            )
-                        )
-                        ctx.fail(500)
-                        return@onSuccess
-                    }
-
-                    // This was not the final chunk of data
-                    if (contentRange.toIndex.toLong() != contentRange.totalBytes.toLong() - 1) {
-                        // Indicate that, e.g. for 100 received bytes, bytes 0-99 have been received
-                        val range = String.format("bytes=0-%d", byteSize - 1)
-                        LOGGER.debug(String.format("Response: 308, Range %s", range))
-                        ctx.response().putHeader("Range", range)
-                        ctx.response().putHeader("Content-Length", "0")
-                        ctx.response().setStatusCode(StatusHandler.RESUME_INCOMPLETE).end()
-                        return@onSuccess
-                    }
-
-                    // Persist data
-                    val measurement =
-                        Measurement(metaData, user.idString, tempFile)
-                    storeToMongoDB(measurement, ctx)
-                }.onFailure { failure: Throwable? ->
-                    LOGGER.error("Response: 500, failed to read props from temp file")
-                    ctx.fail(500, failure)
-                }
-            }.onFailure { failure: Throwable ->
-                if (failure.javaClass == PayloadTooLarge::class.java) {
-                    remove(session, tempFile) // client won't resume
-                    LOGGER.error(String.format("Response: 422: %s", failure.message), failure)
-                    ctx.fail(ENTITY_UNPARSABLE, failure.cause)
-                    return@onFailure
-                }
-                // Not cleaning session/uploads to allow resume
-                LOGGER.error(String.format("Response: 500: %s", failure.message), failure)
-                ctx.fail(500, failure)
-            }
-        }.onFailure { failure: Throwable? ->
-            LOGGER.error("Unable to open temporary file to stream request to!", failure)
-            ctx.fail(500, failure)
-        }
-    }
-
-    /**
-     * Stores a [Measurement] to a Mongo database. This method never fails. If a failure occurs it is logged and
-     * status code 422 is used for the response.
-     *
-     * @param measurement The measured data to write to the Mongo database
-     * @param ctx The Vertx `RoutingContext` used to write the response
-     */
-    fun storeToMongoDB(measurement: Measurement, ctx: RoutingContext) {
-        LOGGER.debug(
-            "Inserted measurement with id {}:{}!", measurement.metaData.deviceIdentifier,
-            measurement.metaData.measurementIdentifier
-        )
-        mongoClient.createDefaultGridFsBucketService().onSuccess { gridFs: MongoGridFsClient ->
-            val fileSystem = ctx.vertx().fileSystem()
-            val fileUpload = measurement.binary
-            val openFuture = fileSystem.open(fileUpload.absolutePath, OpenOptions())
-            val uploadFuture = openFuture.compose { file: AsyncFile? ->
-                val options = GridFsUploadOptions()
-                val metaData = measurement.toJson()
-                options.metadata = JsonObject(metaData.toString())
-                gridFs.uploadByFileNameWithOptions(file, fileUpload.name, options)
-            }
-
-            // Wait for all file uploads to complete
-            uploadFuture.onSuccess { result: String? ->
-                // Not removing session to allow the client to check the upload status if interrupted
-                LOGGER.debug("Response: 201")
-                clean(ctx.session(), measurement.binary)
-                ctx.response().setStatusCode(201).end()
-            }.onFailure { cause: Throwable? ->
-                LOGGER.error("Unable to store file to MongoDatabase!", cause)
-                ctx.fail(500, cause)
-            }
-        }.onFailure { cause: Throwable? ->
-            LOGGER.error("Unable to open connection to Mongo Database!", cause)
-            ctx.fail(500, cause)
-        }
     }
 
     /**
@@ -531,6 +386,7 @@ class MeasurementHandler(
         if (sessionMeasurementId != metaData.measurementIdentifier) {
             throw IllegalSession(
                 String.format(
+                    Locale.ENGLISH,
                     "Unexpected measurement id: %s.",
                     sessionMeasurementId
                 )
@@ -539,47 +395,11 @@ class MeasurementHandler(
         if (sessionDeviceId != metaData.deviceIdentifier) {
             throw IllegalSession(
                 String.format(
+                    Locale.ENGLISH,
                     "Unexpected device id: %s.",
                     sessionDeviceId
                 )
             )
-        }
-    }
-
-    private fun remove(session: Session, upload: File) {
-        remove(session)
-        remove(upload)
-    }
-
-    private fun clean(session: Session, upload: File) {
-        // not removing session
-        session.remove<Any>(UPLOAD_PATH_FIELD)
-        remove(upload)
-    }
-
-    private fun remove(upload: File) {
-        val deleted = upload.delete()
-        Validate.isTrue(deleted)
-    }
-
-    private fun remove(session: Session) {
-        session.destroy()
-    }
-
-    /**
-     * The content range information as transmitted by the request header.
-     *
-     * @author Armin Schnabel
-     * @version 1.0.0
-     * @since 6.0.0
-     */
-    private class ContentRange(val fromIndex: String, val toIndex: String, val totalBytes: String) {
-        override fun toString(): String {
-            return "ContentRange{" +
-                    "fromIndex='" + fromIndex + '\'' +
-                    ", toIndex='" + toIndex + '\'' +
-                    ", totalBytes='" + totalBytes + '\'' +
-                    '}'
         }
     }
 
@@ -589,25 +409,5 @@ class MeasurementHandler(
          * adapting the values in `src/main/resources/logback.xml`.
          */
         private val LOGGER = LoggerFactory.getLogger(MeasurementHandler::class.java)
-
-        /**
-         * HTTP status code to return when the client tries to resume an upload but the session has expired.
-         */
-        const val NOT_FOUND = 404
-
-        /**
-         * The field name for the session entry which contains the path of the temp file containing the upload binary.
-         *
-         *
-         * This field is set in the [MeasurementHandler] to support resumable upload.
-         */
-        @JvmField
-        val UPLOAD_PATH_FIELD = "upload-path"
-
-        /**
-         * The folder to cache file uploads until they are persisted.
-         */
-        @JvmField
-        val FILE_UPLOADS_FOLDER = Path.of("file-uploads/")
     }
 }
