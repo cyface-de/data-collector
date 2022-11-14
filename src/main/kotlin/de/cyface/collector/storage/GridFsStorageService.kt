@@ -175,7 +175,8 @@ class GridFsStorageService(private val mongoClient: MongoClient, val fs: FileSys
             fs.readDir(FILE_UPLOADS_FOLDER.absolutePathString()).onSuccess { uploadFiles ->
                 uploadFiles.filter { pathname ->
                     val path = Paths.get(pathname)
-                    path.isRegularFile() && path.getLastModifiedTime().toMillis() > uploadExpirationTime
+                    val notModifiedFor = System.currentTimeMillis() - path.getLastModifiedTime().toMillis()
+                    path.isRegularFile() && notModifiedFor > uploadExpirationTime
                 }.forEach { pathname ->
                     LOGGER.debug("Cleaning up temp file: {}", pathname)
                     fs.delete(pathname).onFailure {
