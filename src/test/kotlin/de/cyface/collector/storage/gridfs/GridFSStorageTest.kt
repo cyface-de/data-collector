@@ -16,12 +16,13 @@
  * You should have received a copy of the GNU General Public License
  * along with the Cyface Data Collector. If not, see <http://www.gnu.org/licenses/>.
  */
-package de.cyface.collector.storage
+package de.cyface.collector.storage.gridfs
 
 import de.cyface.api.model.User
 import de.cyface.collector.model.ContentRange
 import de.cyface.collector.model.RequestMetaData
 import de.cyface.collector.model.RequestMetaData.GeoLocation
+import de.cyface.collector.storage.StatusType
 import io.vertx.core.Future
 import io.vertx.core.Handler
 import io.vertx.core.buffer.Buffer

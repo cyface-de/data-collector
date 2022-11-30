@@ -16,11 +16,13 @@
  * You should have received a copy of the GNU General Public License
  * along with the Cyface Data Collector. If not, see <http://www.gnu.org/licenses/>.
  */
-package de.cyface.collector.storage
+package de.cyface.collector.storage.local
 
 import de.cyface.api.model.User
 import de.cyface.collector.model.ContentRange
 import de.cyface.collector.model.RequestMetaData
+import de.cyface.collector.storage.DataStorageService
+import de.cyface.collector.storage.Status
 import io.vertx.core.Future
 import io.vertx.core.Vertx
 import io.vertx.core.buffer.Buffer
