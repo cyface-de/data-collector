@@ -18,7 +18,6 @@
  */
 package de.cyface.collector.storage.gridfs
 
-
 import com.natpryce.hamkrest.assertion.assertThat
 import com.natpryce.hamkrest.equalTo
 import de.cyface.api.model.User
