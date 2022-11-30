@@ -18,24 +18,40 @@
  */
 package de.cyface.collector.storage.cloud
 
+import com.google.auth.Credentials
 import de.cyface.api.model.User
 import de.cyface.collector.model.ContentRange
 import de.cyface.collector.model.RequestMetaData
 import de.cyface.collector.storage.CleanupOperation
 import de.cyface.collector.storage.DataStorageService
 import de.cyface.collector.storage.Status
+import de.cyface.collector.storage.StatusType
 import io.vertx.core.Future
+import io.vertx.core.Promise
 import io.vertx.core.Vertx
 import io.vertx.core.buffer.Buffer
 import io.vertx.core.streams.Pipe
+import io.vertx.ext.reactivestreams.ReactiveWriteStream
+import org.reactivestreams.Subscriber
+import org.reactivestreams.Subscription
 import java.util.UUID
+
 /**
- * A storage service to write data to a Google cloud store.
+ * A storage service to write data from a Vertx `Pipe` to a Google cloud store.
+ *
+ * Credentials for the service are provided as described
+ * [here](https://cloud.google.com/docs/authentication/application-default-credentials).
  *
  * @author Klemens Muthmann
  * @version 1.0.0
  */
-class GoogleCloudStorageService : DataStorageService {
+class GoogleCloudStorageService(
+    private val dao: Database,
+    private val vertx: Vertx,
+    private val credentials: Credentials,
+    private val projectIdentifier: String,
+    private val bucketName: String
+) : DataStorageService {
 
     override fun store(
         pipe: Pipe<Buffer>,
@@ -44,15 +60,50 @@ class GoogleCloudStorageService : DataStorageService {
         uploadIdentifier: UUID,
         metaData: RequestMetaData
     ): Future<Status> {
-        TODO("Not yet implemented")
+        val ret = Promise.promise<Status>()
+        val targetStream = ReactiveWriteStream.writeStream<Buffer>(Vertx.vertx())
+        val cloud = createStorage(uploadIdentifier)
+        val subscriber = CloudStorageSubscriber<Buffer>(cloud)
+
+        targetStream.subscribe(subscriber)
+        pipe.to(targetStream).onSuccess {
+            // if finished store the metadata to Mongo and delete the tmp file.
+            if (cloud.bytesUploaded() == contentRange.totalBytes) {
+                ret.complete(
+                    Status(
+                        uploadIdentifier,
+                        StatusType.COMPLETE,
+                        contentRange.toIndex - contentRange.fromIndex
+                    )
+                )
+                dao.storeMetadata(metaData)
+            } else {
+                ret.complete(
+                    Status(
+                        uploadIdentifier,
+                        StatusType.INCOMPLETE,
+                        contentRange.toIndex - contentRange.fromIndex
+                    )
+                )
+            }
+        }.onFailure(ret::fail)
+
+        return ret.future()
     }
 
     override fun bytesUploaded(uploadIdentifier: UUID): Future<Long> {
-        TODO("Not yet implemented")
+        return vertx.executeBlocking {
+            val cloud = createStorage(uploadIdentifier)
+            it.complete(cloud.bytesUploaded())
+        }
     }
 
     override fun clean(uploadIdentifier: UUID): Future<Void> {
-        TODO("Not yet implemented")
+        return vertx.executeBlocking {
+            val cloud = createStorage(uploadIdentifier)
+            cloud.delete()
+            it.complete()
+        }
     }
 
     override fun startPeriodicCleaningOfTempData(
@@ -66,6 +117,45 @@ class GoogleCloudStorageService : DataStorageService {
     }
 
     override fun isStored(deviceId: String, measurementId: Long): Future<Boolean> {
-        TODO("Not yet implemented")
+        /*
+        This solution is incorrect. Since I do not store files in gridFS there will be no metadata either.
+        Where should I store the metadata? According to stackoverflow in a separate database. So probably inside the
+        mongo database as well.
+        See: https://stackoverflow.com/questions/55337912/is-it-possible-to-query-google-cloud-storage-custom-metadata
+         */
+        return dao.exists(deviceId, measurementId)
+    }
+
+    private fun createStorage(uploadIdentifier: UUID): GoogleCloudStorage {
+        return GoogleCloudStorage(credentials, projectIdentifier, bucketName, uploadIdentifier)
+    }
+}
+
+class CloudStorageSubscriber<in T : Buffer>(
+    private val cloudStorage: CloudStorage
+) : Subscriber<@UnsafeVariance T> {
+
+    private lateinit var subscription: Subscription
+    var error: Throwable? = null
+    override fun onSubscribe(subscription: Subscription) {
+        this.subscription = subscription
+        this.subscription.request(1)
+    }
+
+    override fun onError(t: Throwable) {
+        // Delete content from Google Cloud
+        this.subscription.cancel()
+        cloudStorage.delete()
+        this.error = t
+    }
+
+    override fun onComplete() {
+        this.subscription.cancel()
+    }
+
+    override fun onNext(t: T) {
+        // Write to Google Cloud
+        cloudStorage.write(t.bytes)
+        this.subscription.request(1)
     }
 }

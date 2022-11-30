@@ -129,6 +129,8 @@ dependencies {
 
   implementation("io.vertx:vertx-web:${project.extra["vertxVersion"]}")
   implementation("io.vertx:vertx-mongo-client:${project.extra["vertxVersion"]}")
+  implementation("io.vertx:vertx-reactive-streams:${project.extra["vertxVersion"]}")
+  // These two are required since Vert.x currently has a buggy version.
   implementation("org.mongodb:mongodb-driver-core:${project.extra["mongoDriverVersion"]}")
   implementation("org.mongodb:mongodb-driver-reactivestreams:${project.extra["mongoDriverVersion"]}")
   implementation("io.vertx:vertx-web-api-contract:${project.extra["vertxVersion"]}")

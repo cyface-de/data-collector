@@ -134,6 +134,45 @@ data class RequestMetaData(
         return ret
     }
 
+    fun toGeoJson(): JsonObject {
+        val feature = JsonObject()
+        val properties = JsonObject()
+        val geometry = JsonObject()
+
+        if (startLocation != null && endLocation != null) {
+            val startCoordinates = JsonArray(mutableListOf(startLocation.longitude, startLocation.latitude))
+            val endCoordinates = JsonArray(mutableListOf(endLocation.longitude, endLocation.latitude))
+            val coordinates = JsonArray(mutableListOf(startCoordinates, endCoordinates))
+            geometry
+                .put("type", "MultiPoint")
+                .put("coordinates", coordinates)
+        } else {
+            geometry
+                .put("type", "MultiPoint")
+                .put("coordinates", null)
+        }
+
+        properties.put(FormAttributes.DEVICE_ID.value, deviceIdentifier)
+        properties.put(FormAttributes.MEASUREMENT_ID.value, measurementIdentifier)
+        properties.put(FormAttributes.OS_VERSION.value, operatingSystemVersion)
+        properties.put(FormAttributes.DEVICE_TYPE.value, deviceType)
+        properties.put(FormAttributes.APPLICATION_VERSION.value, applicationVersion)
+        properties.put(FormAttributes.LENGTH.value, length)
+        properties.put(FormAttributes.LOCATION_COUNT.value, locationCount)
+        properties.put(FormAttributes.MODALITY.value, modality)
+        properties.put(FormAttributes.FORMAT_VERSION.value, formatVersion)
+
+        feature
+            .put("type", "Feature")
+            .put("geometry", geometry)
+            .put("properties", properties)
+
+        val ret = JsonObject()
+        ret.put("type", "FeatureCollection")
+        ret.put("features", JsonArray().add(feature))
+        return ret
+    }
+
     /**
      * This class represents a geolocation at the start or end of a track.
      *
