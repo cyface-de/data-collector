@@ -36,6 +36,10 @@ import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
+import java.io.IOException
+import java.nio.file.Files
+import java.nio.file.LinkOption
+import java.nio.file.Path
 import java.nio.file.Paths
 import java.util.UUID
 import kotlin.io.path.Path
@@ -62,12 +66,14 @@ class GridFSStorageIT {
     fun setUp(context: VertxTestContext) {
         mongoTest = MongoTest()
         mongoTest.setUpMongoDatabase(Network.freeServerPort(Network.getLocalHost()))
+        Files.createDirectory(uploadFolder)
         context.completeNow()
     }
 
     @AfterEach
     fun tearDown() {
         mongoTest.stopMongoDb()
+        deleteDirectoryRecursion(uploadFolder)
     }
 
     @Suppress("JUnitMalformedDeclaration")
@@ -139,4 +145,16 @@ class GridFSStorageIT {
                 formatVersion
             )
         }
+
+    @Throws(IOException::class)
+    fun deleteDirectoryRecursion(path: Path) {
+        if (Files.isDirectory(path, LinkOption.NOFOLLOW_LINKS)) {
+            Files.newDirectoryStream(path).use { entries ->
+                for (entry in entries) {
+                    deleteDirectoryRecursion(entry)
+                }
+            }
+        }
+        Files.delete(path)
+    }
 }
