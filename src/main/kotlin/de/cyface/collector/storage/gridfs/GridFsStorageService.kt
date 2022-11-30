@@ -39,7 +39,6 @@ import io.vertx.core.streams.Pipe
 import org.bson.types.ObjectId
 import org.slf4j.LoggerFactory
 import java.nio.file.Path
-import java.nio.file.Paths
 import java.util.Locale
 import java.util.UUID
 import kotlin.io.path.absolutePathString
@@ -133,7 +132,7 @@ class GridFsStorageService(
      * Finds the storage path on the local file system to the temporary data file, based on the `uploadIdentifier`.
      */
     private fun pathToTemporaryFile(uploadIdentifier: UUID): Path {
-        return Paths.get(uploadFolder.path, uploadIdentifier.toString())
+        return uploadFolder.resolve(uploadIdentifier.toString())
     }
 
     /**
@@ -235,11 +234,5 @@ class GridFsStorageService(
 
     companion object {
         private val LOGGER = LoggerFactory.getLogger(GridFsStorageService::class.java)
-
-        /**
-         * The folder to cache file uploads until they are persisted.
-         */
-        @JvmField
-        val FILE_UPLOADS_FOLDER: Path = Path.of("file-uploads/")
     }
 }
