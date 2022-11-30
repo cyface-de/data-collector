@@ -95,11 +95,11 @@ tasks.withType<KotlinCompile>().configureEach {
 }
 
 // If you increase this version, check in the next line if the manual mongo driver version is still necessary.
-extra["vertxVersion"] = "4.3.3"
+extra["vertxVersion"] = "4.3.5"
 // The following is only required since Vert.x GridFS Client is not working correctly in Version 4.3.3.
 // To check this run GridFSStorageIT
 // We reported the problem to Vertx Github. A fix is scheduled for Vertx 4.3.4
-extra["mongoDriverVersion"] = "4.7.1"
+extra["mongoDriverVersion"] = "4.8.0"
 extra["micrometerVersion"] = "1.7.2"
 extra["slf4jVersion"] = "1.7.29"
 extra["commonsLangVersion"] = "3.12.0"
@@ -114,10 +114,10 @@ extra["mockitoVersion"] = "4.7.0"
 // TODO: Remove the following. It belongs to java and should be replaced by hamKrest
 extra["hamcrestVersion"] = "2.2"
 extra["hamKrestVersion"] = "1.8.0.1"
-extra["flapdoodleVersion"] = "3.4.9"
+extra["flapdoodleVersion"] = "3.5.2"
 extra["mockitoKotlinVersion"] = "4.0.0"
 extra["dokkaVersion"] = "1.7.10"
-extra["detektVersion"] = "1.21.0"
+extra["detektVersion"] = "1.22.0"
 
 tasks.wrapper {
   gradleVersion = project.extra["gradleWrapperVersion"].toString()
