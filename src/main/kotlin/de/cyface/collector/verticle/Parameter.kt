@@ -173,19 +173,6 @@ enum class Parameter(private val key: String) {
         return ret
     }
 
-    /**
-     * Provides the JSON value of this parameter from the Vert.x configuration or the `null` if there was
-     * none.
-     *
-     * @param config The Vertx configuration to load the value from.
-     * @return Either the value of the parameter as a JSON object or `null` if it does not exist.
-     */
-    open fun jsonValue(config: JsonObject): JsonObject? {
-        val value = config.getJsonObject(key)
-        logger.info("Read json value {} for key: {}.", value, key)
-        return value
-    }
-
     override fun toString(): String {
         return key
     }

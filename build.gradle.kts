@@ -47,12 +47,11 @@ plugins {
   id("idea")
   //noinspection SpellCheckingInspection
   id("com.github.johnrengelman.shadow").version("7.0.0")
-  // TODO: Remove this as it only applies to Java
-  //id "com.github.spotbugs" version "4.7.1"
   // Plugin to display the Gradle task graph
   //noinspection SpellCheckingInspection
   id("org.barfuin.gradle.taskinfo").version("1.0.5")
 
+  @Suppress("ForbiddenComment")
   // TODO: Remoe this as it only applies to Java
   id("java")
   id("application")
@@ -76,8 +75,17 @@ val mainVerticleName = "de.cyface.collector.verticle.MainVerticle"
 val watchForChange = "src/**/*"
 val doOnChange = "./gradlew classes"
 
-tasks.run.get().args(listOf("run", mainVerticleName, "--redeploy=$watchForChange", "--launcher-class=${application.mainClass.get()}", "--on-redeploy=$doOnChange"))
+tasks.run.get().args(
+  listOf(
+    "run",
+    mainVerticleName,
+    "--redeploy=$watchForChange",
+    "--launcher-class=${application.mainClass.get()}",
+    "--on-redeploy=$doOnChange"
+  )
+)
 
+@Suppress("ForbiddenComment")
 // TODO: Remove this as it only applies to java
 java {
   sourceCompatibility = JavaVersion.VERSION_11
@@ -111,6 +119,7 @@ extra["gradleWrapperVersion"] = "7.5.1"
 // Versions of testing dependencies
 extra["junitVersion"] = "5.7.2"
 extra["mockitoVersion"] = "4.7.0"
+@Suppress("ForbiddenComment")
 // TODO: Remove the following. It belongs to java and should be replaced by hamKrest
 extra["hamcrestVersion"] = "2.2"
 extra["hamKrestVersion"] = "1.8.0.1"
@@ -277,7 +286,7 @@ publishing {
 detekt {
   buildUponDefaultConfig = true // preconfigure defaults
   allRules = false // activate all available (even unstable) rules.
-  config = files("$projectDir/config/detekt.yml") // point to your custom config defining rules to run, overwriting default behavior
+  config = files("$projectDir/config/detekt.yml") // point to custom config, overwriting default behavior
   //baseline = file("$projectDir/config/baseline.xml") // a way of suppressing issues before introducing detekt
 }
 
@@ -286,7 +295,7 @@ tasks.withType<Detekt>().configureEach {
     html.required.set(true) // observe findings in your browser with structure and code snippets
     // xml.required.set(true) // checkstyle like format mainly for integrations like Jenkins
     // txt.required.set(true) // similar to the console output, contains issue signature to manually edit baseline files
-    // sarif.required.set(true) // standardized SARIF format (https://sarifweb.azurewebsites.net/) to support integrations with Github Code Scanning
+    // sarif.required.set(true) // SARIF format (https://sarifweb.azurewebsites.net/) integrate with Github Code Scan
     // md.required.set(true) // simple Markdown format
   }
 }
