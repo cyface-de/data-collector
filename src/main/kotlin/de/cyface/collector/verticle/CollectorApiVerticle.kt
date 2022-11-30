@@ -18,11 +18,9 @@
  */
 package de.cyface.collector.verticle
 
-import de.cyface.api.Authenticator
 import de.cyface.api.FailureHandler
 import de.cyface.api.Hasher
 import de.cyface.api.HttpServer
-import de.cyface.api.Parameter
 import de.cyface.api.PauseAndResumeAfterBodyParsing
 import de.cyface.api.PauseAndResumeBeforeBodyParsing
 import de.cyface.collector.handler.AuthorizationHandler
@@ -30,8 +28,8 @@ import de.cyface.collector.handler.MeasurementHandler
 import de.cyface.collector.handler.PreRequestHandler
 import de.cyface.collector.handler.StatusHandler
 import de.cyface.collector.handler.UserCreationHandler
+import de.cyface.collector.handler.auth.Authenticator
 import de.cyface.collector.storage.DataStorageService
-import de.cyface.collector.storage.gridfs.GridFsStorageService
 import io.vertx.core.AbstractVerticle
 import io.vertx.core.AsyncResult
 import io.vertx.core.CompositeFuture
@@ -39,7 +37,6 @@ import io.vertx.core.Future
 import io.vertx.core.Promise
 import io.vertx.core.json.JsonObject
 import io.vertx.ext.auth.HashingStrategy
-import io.vertx.ext.mongo.IndexOptions
 import io.vertx.ext.mongo.MongoClient
 import io.vertx.ext.web.Router
 import io.vertx.ext.web.handler.BodyHandler
@@ -69,22 +66,7 @@ class CollectorApiVerticle(
 ) : AbstractVerticle() {
     @Throws(Exception::class)
     override fun start(startPromise: Promise<Void>) {
-        // Load configurations
-        val config = Config(vertx)
-
-        // Create indices
-        val unique = IndexOptions().unique(true)
-        val measurementIndex = JsonObject().put("metadata.deviceId", 1).put("metadata.measurementId", 1)
-        // While the db stills contains `v2` data we allow 2 entries per did/mid: fileType:ccyfe & ccyf [DAT-1427]
-        measurementIndex.put("metadata.fileType", 1)
-        val measurementIndexCreation = config.database.createIndexWithOptions(
-            "fs.files",
-            measurementIndex,
-            unique
-        )
-        val userIndex = JsonObject().put("username", 1)
-        val userIndexCreation = config.database.createIndexWithOptions("user", userIndex, unique)
-        val storageService = GridFsStorageService(config.database, vertx.fileSystem())
+        LOGGER.info("Starting collector API!")
 
         // Start http server
         val storageServiceBuilder = config.storageType
@@ -104,14 +86,10 @@ class CollectorApiVerticle(
         }
 
         // Insert default admin user
-        val adminUsername = Parameter.ADMIN_USER_NAME.stringValue(vertx, "admin")
-        val adminPassword = Parameter.ADMIN_PASSWORD.stringValue(vertx, "secret")
-        val userCreation = createDefaultUser(config.database, adminUsername, adminPassword)
-        storageService.startPeriodicCleaningOfTempData(config.uploadExpirationTime, vertx)
+        val userCreation = createDefaultUser(config.database, config.adminUserName, config.adminPassword)
+
         // Block until all futures completed
         val startUp = CompositeFuture.all(
-            userIndexCreation,
-            measurementIndexCreation,
             serverStartPromise.future(),
             userCreation
         )

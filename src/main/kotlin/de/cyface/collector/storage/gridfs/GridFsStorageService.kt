@@ -27,7 +27,6 @@ import de.cyface.collector.storage.DataStorageService
 import de.cyface.collector.storage.Status
 import de.cyface.collector.storage.StatusType
 import de.cyface.collector.storage.exception.ContentRangeNotMatchingFileSize
-import de.cyface.collector.storage.exception.DuplicatesInDatabase
 import io.vertx.core.Future
 import io.vertx.core.Promise
 import io.vertx.core.Vertx
@@ -36,22 +35,14 @@ import io.vertx.core.file.AsyncFile
 import io.vertx.core.file.FileProps
 import io.vertx.core.file.FileSystem
 import io.vertx.core.file.OpenOptions
-import io.vertx.core.json.JsonObject
 import io.vertx.core.streams.Pipe
-import io.vertx.ext.mongo.GridFsUploadOptions
-import io.vertx.ext.mongo.MongoClient
-import io.vertx.ext.mongo.MongoGridFsClient
-import org.apache.commons.lang3.Validate
 import org.bson.types.ObjectId
 import org.slf4j.LoggerFactory
-import java.io.File
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.util.Locale
 import java.util.UUID
 import kotlin.io.path.absolutePathString
-import kotlin.io.path.getLastModifiedTime
-import kotlin.io.path.isRegularFile
 import kotlin.io.path.name
 
 /**
