@@ -68,7 +68,7 @@ public class MainVerticleTest {
     @BeforeEach
     void setUp() throws IOException {
         mongoTest = new MongoTest();
-        mongoTest.setUpMongoDatabase(Network.getFreeServerPort());
+        mongoTest.setUpMongoDatabase(Network.freeServerPort(Network.getLocalHost()));
         oocut = new MainVerticle();
     }
 
@@ -98,7 +98,7 @@ public class MainVerticleTest {
                 .put("jwt.private", privateKey.getFile())
                 .put("http.host", "localhost")
                 .put("http.endpoint", "/api/v3/")
-                .put("http.port", Network.getFreeServerPort())
+                .put("http.port", Network.freeServerPort(Network.getLocalHost()))
                 .put("salt", "abcdefg")
                 .put("mongo.db", mongoTest.clientConfiguration());
     }
@@ -110,6 +110,7 @@ public class MainVerticleTest {
      * @param testContext The Vertx test context used to control test execution
      * @throws IOException If no free server port could be generated
      */
+    @SuppressWarnings("JUnitMalformedDeclaration")
     @Test
     @DisplayName("Fail startup if salt and salt.path are present!")
     void test(final Vertx vertx, final VertxTestContext testContext) throws Throwable {
@@ -129,6 +130,7 @@ public class MainVerticleTest {
      * @param testContext The Vertx test context used to control test execution
      * @throws IOException If no free server port could be generated
      */
+    @SuppressWarnings("JUnitMalformedDeclaration")
     @Test
     @DisplayName("Successful startup happy path!")
     void testHappyPath(final Vertx vertx, final VertxTestContext testContext) throws Throwable {

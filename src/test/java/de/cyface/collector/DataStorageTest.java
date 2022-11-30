@@ -100,7 +100,7 @@ public final class DataStorageTest {
     @BeforeEach
     void setUp() throws IOException {
         mongoTest = new MongoTest();
-        mongoTest.setUpMongoDatabase(Network.getFreeServerPort());
+        mongoTest.setUpMongoDatabase(Network.freeServerPort(Network.getLocalHost()));
     }
 
     /**

@@ -93,7 +93,7 @@ class FileUploadTooLargeTest {
         // FIXME: can we somehow overwrite the @setup method to reuse {@link FileUploadTest}?
         // Set maximal payload size to 1 KB (test upload is 130 KB)
         collectorClient = DataCollectorClient(Authenticator.BYTES_IN_ONE_KILOBYTE)
-        client = collectorClient.createWebClient(vertx, ctx, mongoTest.mongoPort)
+        client = collectorClient.createWebClient(vertx, ctx, mongoTest)
     }
 
     /**

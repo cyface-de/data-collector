@@ -44,7 +44,6 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
 import org.slf4j.LoggerFactory
 import java.io.IOException
-import java.net.InetAddress
 import java.util.Locale
 import java.util.UUID
 import kotlin.test.assertNotNull
@@ -92,7 +91,7 @@ class FileUploadTest {
     @Throws(IOException::class)
     private fun deployVerticle(vertx: Vertx, ctx: VertxTestContext) {
         collectorClient = DataCollectorClient()
-        client = collectorClient.createWebClient(vertx, ctx, mongoTest.mongoPort)
+        client = collectorClient.createWebClient(vertx, ctx, mongoTest)
     }
 
     /**
@@ -823,7 +822,7 @@ class FileUploadTest {
         @JvmStatic
         fun setUpMongoDatabase() {
             mongoTest = MongoTest()
-            mongoTest.setUpMongoDatabase(Network.freeServerPort(InetAddress.getLocalHost()))
+            mongoTest.setUpMongoDatabase(Network.freeServerPort(Network.getLocalHost()))
         }
 
         /**

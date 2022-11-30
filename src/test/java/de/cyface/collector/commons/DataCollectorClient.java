@@ -78,17 +78,15 @@ public final class DataCollectorClient {
      *
      * @param vertx The <code>Vertx</code> instance to start and access the server.
      * @param ctx The <code>TestContext</code> to create a new Server and <code>WebClient</code>.
-     * @param mongoPort The port to run the test Mongo database under.
+     * @param mongoClient A representation of the in-memory test database.
      * @return A completely configured <code>WebClient</code> capable of accessing the started Cyface Data Collector.
      * @throws IOException If the server port could not be opened.
      */
-    public WebClient createWebClient(final Vertx vertx, final VertxTestContext ctx, final int mongoPort)
+    public WebClient createWebClient(final Vertx vertx, final VertxTestContext ctx, final MongoTest mongoClient)
             throws IOException {
-        port = Network.getFreeServerPort();
+        port = Network.freeServerPort(Network.getLocalHost());
 
-        final var mongoDbConfig = new JsonObject()
-                .put("connection_string", "mongodb://localhost:" + mongoPort)
-                .put("db_name", "cyface");
+        final var mongoDbConfig = mongoClient.clientConfiguration();
 
         final var privateKey = this.getClass().getResource("/private_key.pem");
         final var publicKey = this.getClass().getResource("/public.pem");
