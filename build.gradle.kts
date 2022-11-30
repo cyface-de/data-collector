@@ -115,6 +115,7 @@ extra["logbackVersion"] = "1.2.5"
 extra["cyfaceApiVersion"] = "2.0.1"
 extra["cyfaceSerializationVersion"] = "2.2.1"
 extra["gradleWrapperVersion"] = "7.5.1"
+extra["googleCloudLibrariesVersion"] = "26.1.5"
 
 // Versions of testing dependencies
 extra["junitVersion"] = "5.7.2"
@@ -161,6 +162,10 @@ dependencies {
   // Logging
   implementation("ch.qos.logback:logback-classic:${project.extra["logbackVersion"]}")
   implementation("ch.qos.logback:logback-core:${project.extra["logbackVersion"]}")
+
+  // Google Cloud Storage
+  implementation(platform("com.google.cloud:libraries-bom:${project.extra["googleCloudLibrariesVersion"]}"))
+  implementation("com.google.cloud:google-cloud-storage")
 
   // Utility
   implementation("org.apache.commons:commons-lang3:${project.extra["commonsLangVersion"]}") // Using Validate
