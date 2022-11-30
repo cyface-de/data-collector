@@ -38,6 +38,7 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
 import java.nio.file.Paths
 import java.util.UUID
+import kotlin.io.path.Path
 import kotlin.io.path.absolutePathString
 import kotlin.test.assertNotNull
 
