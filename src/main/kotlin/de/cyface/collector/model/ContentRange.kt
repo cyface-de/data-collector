@@ -13,8 +13,7 @@ import java.util.Locale
  * @since 6.0.0
  * @property fromIndex The zero based byte index to start the content range at (including).
  * @property toIndex The zero based byte index to end the content range at (excluding).
- * @property totalBytes The total amount of bytes. On a properly formatted content range, this should be
- * `toIndex` - `fromIndex`.
+ * @property totalBytes The total amount of bytes of the document to upload.
  */
 data class ContentRange(val fromIndex: Long, val toIndex: Long, val totalBytes: Long) {
     companion object {
