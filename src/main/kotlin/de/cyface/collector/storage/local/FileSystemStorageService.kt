@@ -21,6 +21,7 @@ package de.cyface.collector.storage.local
 import de.cyface.api.model.User
 import de.cyface.collector.model.ContentRange
 import de.cyface.collector.model.RequestMetaData
+import de.cyface.collector.storage.CleanupOperation
 import de.cyface.collector.storage.DataStorageService
 import de.cyface.collector.storage.Status
 import io.vertx.core.Future
@@ -38,6 +39,7 @@ import java.util.UUID
  * @version 1.0.0
  * @property vertx The Vert.x instance used to access the data and the file system.
  */
+@Suppress("unused")
 class FileSystemStorageService(val vertx: Vertx) : DataStorageService {
 
     override fun store(
@@ -47,7 +49,7 @@ class FileSystemStorageService(val vertx: Vertx) : DataStorageService {
         uploadIdentifier: UUID,
         metaData: RequestMetaData
     ): Future<Status> {
-        @Suppress("UnusedPrivateMember")
+        @Suppress("UnusedPrivateMember", "UNUSED_VARIABLE")
         val vertxFileSystem = vertx.fileSystem()
         @Suppress("ForbiddenComment")
         // TODO: What is the difference between createFile and writeFile?
@@ -64,7 +66,11 @@ class FileSystemStorageService(val vertx: Vertx) : DataStorageService {
         TODO("Not yet implemented")
     }
 
-    override fun startPeriodicCleaningOfTempData(uploadExpirationTime: Long, vertx: Vertx) {
+    override fun startPeriodicCleaningOfTempData(
+        uploadExpirationTime: Long,
+        vertx: Vertx,
+        cleanupOperation: CleanupOperation
+    ) {
         TODO("Not yet implemented")
     }
 

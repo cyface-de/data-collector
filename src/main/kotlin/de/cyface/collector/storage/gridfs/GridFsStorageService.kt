@@ -22,6 +22,7 @@ import de.cyface.api.model.User
 import de.cyface.collector.model.ContentRange
 import de.cyface.collector.model.Measurement
 import de.cyface.collector.model.RequestMetaData
+import de.cyface.collector.storage.CleanupOperation
 import de.cyface.collector.storage.DataStorageService
 import de.cyface.collector.storage.Status
 import de.cyface.collector.storage.StatusType
@@ -169,24 +170,14 @@ class GridFsStorageService(private val mongoClient: MongoClient, val fs: FileSys
         return ret.future()
     }
 
-    override fun startPeriodicCleaningOfTempData(uploadExpirationTime: Long, vertx: Vertx) {
+    override fun startPeriodicCleaningOfTempData(
+        uploadExpirationTime: Long,
+        vertx: Vertx,
+        cleanupOperation: CleanupOperation
+    ) {
         // Schedule upload file cleaner task
         vertx.setPeriodic(uploadExpirationTime) {
-            // Remove deprecated temp files
-            // There is no way to look through all sessions to identify unreferenced files. Thus, we remove files which
-            // have not been changed for a long time. The MeasurementHandler handles sessions with "missing" files.
-            fs.readDir(FILE_UPLOADS_FOLDER.absolutePathString()).onSuccess { uploadFiles ->
-                uploadFiles.filter { pathname ->
-                    val path = Paths.get(pathname)
-                    val notModifiedFor = System.currentTimeMillis() - path.getLastModifiedTime().toMillis()
-                    path.isRegularFile() && notModifiedFor > uploadExpirationTime
-                }.forEach { pathname ->
-                    LOGGER.debug("Cleaning up temp file: {}", pathname)
-                    fs.delete(pathname).onFailure {
-                        LOGGER.warn("Failed to remove temp file: {}", pathname)
-                    }
-                }
-            }
+            cleanupOperation.clean(uploadExpirationTime)
         }
     }
 
