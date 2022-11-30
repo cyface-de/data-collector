@@ -18,11 +18,10 @@
  */
 package de.cyface.collector;
 
+import de.cyface.collector.verticle.Parameter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import de.cyface.api.InvalidConfiguration;
-import de.cyface.api.Parameter;
 import de.cyface.collector.verticle.MainVerticle;
 import io.vertx.core.Launcher;
 import io.vertx.core.VertxOptions;
@@ -76,11 +75,7 @@ public class Application extends Launcher {
     public final void afterConfigParsed(final JsonObject config) {
         super.afterConfigParsed(config);
 
-        checkValidConfiguration(config);
-
-        if (config.containsKey(Parameter.METRICS_ENABLED.key())) {
-            metricsEnabled = config.getBoolean(Parameter.METRICS_ENABLED.key());
-        }
+        metricsEnabled = Parameter.METRICS_ENABLED.boolValue(config, false);
     }
 
     @Override
@@ -94,18 +89,6 @@ public class Application extends Launcher {
                     .setEnabled(true));
         } else {
             LOGGER.info("Starting without capturing metrics");
-        }
-    }
-
-    /**
-     * Checks if the provided configuration is valid for a Cyface data collector.
-     *
-     * @param config The configuration to check.
-     */
-    private void checkValidConfiguration(final JsonObject config) {
-        if (config.getString(Parameter.HTTP_HOST.key()) == null
-                || config.getString(Parameter.HTTP_ENDPOINT.key()) == null) {
-            throw new InvalidConfiguration(config);
         }
     }
 }

@@ -56,6 +56,8 @@ class GridFSStorageIT {
      */
     private lateinit var mongoTest: MongoTest
 
+    private val uploadFolder = Path("upload-folder")
+
     @BeforeEach
     fun setUp(context: VertxTestContext) {
         mongoTest = MongoTest()
@@ -79,7 +81,7 @@ class GridFSStorageIT {
             .put("db_name", "cyface")
         val mongoClient = MongoClient.createShared(vertx, config)
         val fileSystem = vertx.fileSystem()
-        val oocut = GridFsStorageService(mongoClient, vertx.fileSystem())
+        val oocut = GridFsStorageService(GridFsDao(mongoClient), vertx.fileSystem(), uploadFolder)
 
         val testFileURI = GridFSStorageIT::class.java.getResource("/test.bin")?.toURI()?.let { Paths.get(it) }
         assertNotNull(testFileURI)
