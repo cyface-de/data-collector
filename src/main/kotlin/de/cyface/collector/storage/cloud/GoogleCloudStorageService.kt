@@ -21,6 +21,7 @@ package de.cyface.collector.storage.cloud
 import de.cyface.api.model.User
 import de.cyface.collector.model.ContentRange
 import de.cyface.collector.model.RequestMetaData
+import de.cyface.collector.storage.CleanupOperation
 import de.cyface.collector.storage.DataStorageService
 import de.cyface.collector.storage.Status
 import io.vertx.core.Future
@@ -54,8 +55,14 @@ class GoogleCloudStorageService : DataStorageService {
         TODO("Not yet implemented")
     }
 
-    override fun startPeriodicCleaningOfTempData(uploadExpirationTime: Long, vertx: Vertx) {
-        TODO("Not yet implemented")
+    override fun startPeriodicCleaningOfTempData(
+        uploadExpirationTime: Long,
+        vertx: Vertx,
+        cleanupOperation: CleanupOperation
+    ) {
+        vertx.setPeriodic(uploadExpirationTime) {
+            cleanupOperation.clean(uploadExpirationTime)
+        }
     }
 
     override fun isStored(deviceId: String, measurementId: Long): Future<Boolean> {
