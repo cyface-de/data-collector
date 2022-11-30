@@ -81,6 +81,7 @@ public class CollectorApiVerticleTest {
      * @param testContext A test context to handle Vertx asynchronicity
      * @throws IOException if no free port could be retrieved
      */
+    @SuppressWarnings("JUnitMalformedDeclaration")
     @Test
     @DisplayName("Happy Path test for starting the collector API.")
     void test(final Vertx vertx, final VertxTestContext testContext) throws Throwable {

@@ -289,7 +289,6 @@ class FileUploadTest {
                             "bytes */8",
                             context.succeeding { res: HttpResponse<Buffer?> ->
                                 context.verify {
-
                                     // The upload should be successful, expecting to return 200/201 here
                                     assertThat(
                                         "Wrong HTTP status code when asking for upload status!",
@@ -332,7 +331,8 @@ class FileUploadTest {
                 context.succeeding { ar: HttpResponse<Buffer?> ->
                     context.verify {
                         assertThat(
-                            "Wrong HTTP status code when uploading unparsable meta data!", ar.statusCode(),
+                            "Wrong HTTP status code when uploading unparsable meta data!",
+                            ar.statusCode(),
                             `is`(equalTo(201))
                         )
                         uploadStatus(
@@ -341,7 +341,6 @@ class FileUploadTest {
                             "bytes */4",
                             context.succeeding { res: HttpResponse<Buffer?> ->
                                 context.verify {
-
                                     // The upload should be successful, expecting to return 200/201 here
                                     assertThat(
                                         // "Wrong HTTP status code when asking for upload status!",
@@ -381,11 +380,13 @@ class FileUploadTest {
             context.succeeding { ar: HttpResponse<Buffer?> ->
                 context.verify {
                     assertThat(
-                        "Wrong HTTP status code when uploading with invalid session!", ar.statusCode(),
+                        "Wrong HTTP status code when uploading with invalid session!",
+                        ar.statusCode(),
                         `is`(equalTo(404))
                     )
                     assertThat(
-                        "Wrong HTTP status message when uploading with invalid session!", ar.statusMessage(),
+                        "Wrong HTTP status message when uploading with invalid session!",
+                        ar.statusMessage(),
                         `is`(equalTo("Not Found"))
                     )
                     context.completeNow()
@@ -469,7 +470,8 @@ class FileUploadTest {
                     context.verify {
                         assertThat(
                             "Wrong HTTP status code when uploading with a wrong device id!",
-                            ar.statusCode(), `is`(equalTo(422))
+                            ar.statusCode(),
+                            `is`(equalTo(422))
                         )
                         context.completeNow()
                     }
@@ -505,7 +507,8 @@ class FileUploadTest {
                         `is`(200)
                     )
                     assertThat(
-                        "Auth token was missing from authentication request!", authToken,
+                        "Auth token was missing from authentication request!",
+                        authToken,
                         `is`(notNullValue())
                     )
                 }
@@ -530,7 +533,8 @@ class FileUploadTest {
 
                 // Send Pre-Request
                 val builder = client.post(
-                    collectorClient.port, "localhost",
+                    collectorClient.port,
+                    "localhost",
                     "/api/v3/measurements?uploadType=resumable"
                 )
                 builder.putHeader("Authorization", "Bearer " + if (useInvalidToken) "invalidToken" else authToken)
@@ -666,7 +670,8 @@ class FileUploadTest {
                         `is`(200)
                     )
                     assertThat(
-                        "Auth token was missing from authentication request!", authToken,
+                        "Auth token was missing from authentication request!",
+                        authToken,
                         `is`(notNullValue())
                     )
                 }
@@ -729,7 +734,8 @@ class FileUploadTest {
                         `is`(200)
                     )
                     assertThat(
-                        "Auth token was missing from authentication request!", authToken,
+                        "Auth token was missing from authentication request!",
+                        authToken,
                         `is`(notNullValue())
                     )
                 }

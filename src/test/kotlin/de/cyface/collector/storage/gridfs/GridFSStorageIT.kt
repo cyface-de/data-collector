@@ -16,7 +16,7 @@
  * You should have received a copy of the GNU General Public License
  * along with the Cyface Data Collector. If not, see <http://www.gnu.org/licenses/>.
  */
-package de.cyface.collector.storage
+package de.cyface.collector.storage.gridfs
 
 import com.natpryce.hamkrest.assertion.assertThat
 import com.natpryce.hamkrest.equalTo
@@ -24,7 +24,7 @@ import de.cyface.api.model.User
 import de.cyface.collector.commons.MongoTest
 import de.cyface.collector.model.ContentRange
 import de.cyface.collector.model.RequestMetaData
-import de.cyface.collector.storage.gridfs.GridFsStorageService
+import de.cyface.collector.storage.StatusType
 import de.flapdoodle.embed.process.runtime.Network
 import io.vertx.core.Vertx
 import io.vertx.core.file.OpenOptions

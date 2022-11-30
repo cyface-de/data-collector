@@ -31,7 +31,7 @@ import de.cyface.collector.handler.PreRequestHandler
 import de.cyface.collector.handler.StatusHandler
 import de.cyface.collector.handler.UserCreationHandler
 import de.cyface.collector.storage.DataStorageService
-import de.cyface.collector.storage.GridFsStorageService
+import de.cyface.collector.storage.gridfs.GridFsStorageService
 import io.vertx.core.AbstractVerticle
 import io.vertx.core.AsyncResult
 import io.vertx.core.CompositeFuture
@@ -76,7 +76,8 @@ class CollectorApiVerticle(private val salt: String) : AbstractVerticle() {
         measurementIndex.put("metadata.fileType", 1)
         val measurementIndexCreation = config.database.createIndexWithOptions(
             "fs.files",
-            measurementIndex, unique
+            measurementIndex,
+            unique
         )
         val userIndex = JsonObject().put("username", 1)
         val userIndexCreation = config.database.createIndexWithOptions("user", userIndex, unique)
@@ -156,7 +157,6 @@ class CollectorApiVerticle(private val salt: String) : AbstractVerticle() {
      * @return the created main `Router`
      */
     private fun setupRoutes(config: Config, storageService: DataStorageService): Router {
-
         // Setup router
         val mainRouter = Router.router(vertx)
         val apiRouter = Router.router(vertx)
@@ -175,7 +175,6 @@ class CollectorApiVerticle(private val salt: String) : AbstractVerticle() {
      * @param config HTTP server configuration parameters required to set up the routes
      */
     private fun setupApiRouter(apiRouter: Router, config: Config, storageService: DataStorageService) {
-
         // Setup measurement routes
         val failureHandler = de.cyface.collector.handler.FailureHandler(vertx)
 
