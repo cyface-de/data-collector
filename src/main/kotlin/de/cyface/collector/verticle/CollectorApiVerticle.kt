@@ -63,7 +63,10 @@ import java.util.Locale
  * @since 2.0.0
  * @property salt The value to be used as encryption salt
  */
-class CollectorApiVerticle(private val salt: String) : AbstractVerticle() {
+class CollectorApiVerticle(
+    private val salt: String,
+    private val config: Config
+) : AbstractVerticle() {
     @Throws(Exception::class)
     override fun start(startPromise: Promise<Void>) {
         // Load configurations
@@ -84,10 +87,21 @@ class CollectorApiVerticle(private val salt: String) : AbstractVerticle() {
         val storageService = GridFsStorageService(config.database, vertx.fileSystem())
 
         // Start http server
-        val router = setupRoutes(config, storageService)
+        val storageServiceBuilder = config.storageType
+        val storageServiceBuilderCall = storageServiceBuilder.create()
         val serverStartPromise = Promise.promise<Void>()
-        val httpServer = HttpServer(config.httpPort)
-        httpServer.start(vertx, router, serverStartPromise)
+        storageServiceBuilderCall.onSuccess { storageService ->
+            LOGGER.info("Created storage service.")
+            val router = setupRoutes(config, storageService)
+            storageService.startPeriodicCleaningOfTempData(
+                config.uploadExpirationTime,
+                vertx,
+                storageServiceBuilder.createCleanupOperation()
+            )
+
+            val httpServer = HttpServer(config.httpPort)
+            httpServer.start(vertx, router, serverStartPromise)
+        }
 
         // Insert default admin user
         val adminUsername = Parameter.ADMIN_USER_NAME.stringValue(vertx, "admin")
