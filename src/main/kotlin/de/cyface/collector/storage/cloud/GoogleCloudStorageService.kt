@@ -36,6 +36,7 @@ import org.reactivestreams.Subscriber
 import org.reactivestreams.Subscription
 import java.util.UUID
 
+@Suppress("MaxLineLength")
 /**
  * A storage service to write data from a Vertx `Pipe` to a Google cloud store.
  *
@@ -44,6 +45,13 @@ import java.util.UUID
  *
  * @author Klemens Muthmann
  * @version 1.0.0
+ * @property dao The data access object to write an uploads metadata.
+ * @property vertx A Vertx instance of the current Vertx environment.
+ * @property credentials The Google Cloud [Credentials] used to authenticate with Google Cloud Storage.
+ * For information on how to acquire such an instance see the [Google Cloud documentation]
+ * (https://github.com/googleapis/google-auth-library-java/blob/040acefec507f419f6e4ec4eab9645a6e3888a15/samples/snippets/src/main/java/AuthenticateExplicit.java).
+ * @property projectIdentifier The Google Cloud project identifier used by this service.
+ * @property bucketName The Google Cloud Storage bucket name used to store data to.
  */
 class GoogleCloudStorageService(
     private val dao: Database,
@@ -126,16 +134,38 @@ class GoogleCloudStorageService(
         return dao.exists(deviceId, measurementId)
     }
 
+    /**
+     * Create the actual storage instance used to communicate with the Google Cloud.
+     */
     private fun createStorage(uploadIdentifier: UUID): GoogleCloudStorage {
         return GoogleCloudStorage(credentials, projectIdentifier, bucketName, uploadIdentifier)
     }
 }
 
+/**
+ * A Reactive Streams [Subscriber] to write a Vertx [Buffer] to a [CloudStorage].
+ *
+ * This must be a Reactive Streams implementation since that standard is currently the only way to stream data from a
+ * Vertx [Pipe] to some data storage outside of the control of Vertx. Google Cloud is such a storage outside of Vertx'
+ * control, since there is no implementation from Vertx directly.
+ *
+ * @author Klemens Muthmann
+ * @version 1.0.0
+ * @property cloudStorage The [CloudStorage] to communicate with the Cloud and write the received data.
+ */
 class CloudStorageSubscriber<in T : Buffer>(
     private val cloudStorage: CloudStorage
 ) : Subscriber<@UnsafeVariance T> {
 
+    /**
+     * The Reactive Streams subscription of this [Subscriber].
+     */
     private lateinit var subscription: Subscription
+
+    /**
+     * If an error occurred, this property provides further details.
+     * If no error occurred, this property remains `null``
+     */
     var error: Throwable? = null
     override fun onSubscribe(subscription: Subscription) {
         this.subscription = subscription

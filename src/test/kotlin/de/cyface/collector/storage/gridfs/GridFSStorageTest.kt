@@ -128,16 +128,19 @@ class GridFSStorageTest {
 
         // Assert
         argumentCaptor<Handler<AsyncFile>> {
+            // Temporary storage successfully opened?
             verify(fsOpenResult).onSuccess(capture())
 
             firstValue.handle(mockFile)
 
             argumentCaptor<Handler<Void>> {
+                // Data successfully written to temporary storage?
                 verify(pipeToResultMock).onSuccess(capture())
 
                 firstValue.handle(null)
 
                 argumentCaptor<Handler<FileProps>> {
+                    // Check on whether upload was complete or just a chunk.
                     verify(fsPropsResultMock).onSuccess(capture())
 
                     firstValue.handle(mockFsProps)
@@ -174,6 +177,9 @@ class GridFSStorageTest {
         }
     }
 
+    /**
+     * Test that data in multiple chunks is correctly written to temporary storage at first and to GridFS in the end.
+     */
     @Test
     fun `Upload file in multiple chunks`() {
         // Arrange

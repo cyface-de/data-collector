@@ -1,3 +1,21 @@
+/*
+ * Copyright 2022 Cyface GmbH
+ *
+ * This file is part of the Cyface Data Collector.
+ *
+ * The Cyface Data Collector is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * The Cyface Data Collector is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with the Cyface Data Collector. If not, see <http://www.gnu.org/licenses/>.
+ */
 package de.cyface.collector.storage.cloud
 
 import com.google.api.gax.paging.Page
@@ -113,6 +131,9 @@ class GoogleCloudStorageTest {
         verify(pipe).to(any<ReactiveWriteStream<Buffer>>())
     }
 
+    /**
+     * Check that [GoogleCloudCleanupOperation] cleans only old files.
+     */
     @Test
     fun `Periodic Data Cleaning should Delete Stale Files`() {
         // Arrange
@@ -167,6 +188,9 @@ class GoogleCloudStorageTest {
         verify(mockStorage).delete(testDataFile)
     }
 
+    /**
+     * Provide some example metadata usable by tests.
+     */
     private fun metadata(): RequestMetaData {
         return RequestMetaData(
             deviceIdentifier = "78370516-4f7e-11ed-bdc3-0242ac120002",

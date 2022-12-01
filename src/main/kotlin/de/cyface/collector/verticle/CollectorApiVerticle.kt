@@ -58,7 +58,8 @@ import java.util.Locale
  * @author Armin Schnabel
  * @version 2.1.0
  * @since 2.0.0
- * @property salt The value to be used as encryption salt
+ * @property salt The value to be used as encryption salt.
+ * @property config The configuration used for the verticle.
  */
 class CollectorApiVerticle(
     private val salt: String,

@@ -40,12 +40,13 @@ import java.nio.file.Path
 import kotlin.io.path.exists
 
 /**
- * Configuration parameters required to start the HTTP server which also handles routing.
+ * The configuration used by this application.
  *
  * @author Armin Schnabel
  * @version 1.0.0
  * @since 6.0.0
- * @property vertx The Vertx instance to get the parameters from
+ * @property vertx The Vertx instance to get the parameters from.
+ * @property config The Vertx configuration, that is parsed by this class.
  */
 class Config(private val vertx: Vertx, private val config: JsonObject) {
     /**
@@ -239,6 +240,9 @@ class Config(private val vertx: Vertx, private val config: JsonObject) {
             return uploadExpirationTimeValue
         }
 
+    /**
+     * A builder to create the proper [de.cyface.collector.storage.DataStorageService] for this application.
+     */
     val storageType: DataStorageServiceBuilder
         get() {
             val storageTypeConfig = config.getJsonObject("storage-type", JsonObject())
@@ -321,12 +325,24 @@ class Config(private val vertx: Vertx, private val config: JsonObject) {
          */
         private val HTTP_ENDPOINT = Parameter.HTTP_ENDPOINT
 
+        /**
+         * Default name for the Mongo data source to store metadata at.
+         */
         private const val DEFAULT_MONGO_DATA_SOURCE_NAME = "cyface"
 
+        /**
+         * The default HTTP port to use for this application.
+         */
         private const val DEFAULT_HTTP_PORT = 8080
 
+        /**
+         * The default number of seconds an authentication token is valid after successful authentication.
+         */
         private const val DEFAULT_TOKEN_VALIDATION_TIME = 600
 
+        /**
+         * The default paging size to use when querying the Google Cloud.
+         */
         private const val DEFAULT_GOOGLE_STORAGE_PAGING_SIZE = 100L
     }
 }
