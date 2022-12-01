@@ -134,9 +134,11 @@ tasks.wrapper {
 }
 
 dependencies {
+  // Internal Cyface Dependencies
   implementation("de.cyface:api:${project.extra["cyfaceApiVersion"]}")
   implementation("de.cyface:model:${project.extra["cyfaceSerializationVersion"]}")
 
+  // Vertx Framework
   implementation("io.vertx:vertx-web:${project.extra["vertxVersion"]}")
   implementation("io.vertx:vertx-mongo-client:${project.extra["vertxVersion"]}")
   implementation("io.vertx:vertx-reactive-streams:${project.extra["vertxVersion"]}")

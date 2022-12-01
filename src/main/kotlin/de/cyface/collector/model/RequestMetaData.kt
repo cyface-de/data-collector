@@ -114,6 +114,9 @@ data class RequestMetaData(
         )
     }
 
+    /**
+     * Transform this object into a generic JSON representation.
+     */
     fun toJson(): JsonObject {
         val ret = JsonObject()
         ret.put(FormAttributes.DEVICE_ID.value, deviceIdentifier)
@@ -134,6 +137,13 @@ data class RequestMetaData(
         return ret
     }
 
+    /**
+     * Transform this object into a valid Geo JSON representation.
+     * This consists of the start location and the end location as a Geo JSON `MultiPoint` feature and all the
+     * metadata as properties of that feature.
+     *
+     * See [GEO Json RFC 7946](https://www.rfc-editor.org/rfc/rfc7946) for additional detailed information.
+     */
     fun toGeoJson(): JsonObject {
         val feature = JsonObject()
         val properties = JsonObject()

@@ -1,3 +1,21 @@
+/*
+ * Copyright 2022 Cyface GmbH
+ *
+ * This file is part of the Serialization.
+ *
+ * The Serialization is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * The Serialization is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with the Serialization. If not, see <http://www.gnu.org/licenses/>.
+ */
 package de.cyface.collector.storage.cloud
 
 import com.google.auth.Credentials
@@ -8,6 +26,28 @@ import java.nio.ByteBuffer
 import java.nio.channels.WritableByteChannel
 import java.util.UUID
 
+@Suppress("MaxLineLength")
+/**
+ * A [CloudStorage] implementation for the Google Cloud.
+ *
+ * This class encapsulates all the infomration required to build the [Storage] instance for a single upload together
+ * with the necessary methods to work on that upload.
+ *
+ * Repeatable uploads on Google Cloud are little tricky.
+ * BLOBs on Cloud Storage are immutable.
+ * However, it is possible to concatenate two BLOBs into a new one.
+ * Therefore, this implementation stores new uploads into a temporary file.
+ * After a chunk was uploaded, the temporary data and the already present data are concatenated, overwriting the
+ * previously present data.
+ *
+ * @author Klemens Muthmann
+ * @version 1.0.0
+ * @property credentials A Google Cloud credentials instance. For information on how to acquire such an instance see
+ * the [Google Cloud documentation](https://github.com/googleapis/google-auth-library-java/blob/040acefec507f419f6e4ec4eab9645a6e3888a15/samples/snippets/src/main/java/AuthenticateExplicit.java).
+ * @property projectIdentifier The name of the Google Cloud project to upload the data to.
+ * @property bucketName The name of the Cloud Storage bucket to upload the data to.
+ * @property uploadIdentifier The identifier of the upload this storage is created for.
+ */
 class GoogleCloudStorage internal constructor(
     private val credentials: Credentials,
     private val projectIdentifier: String,
@@ -66,10 +106,17 @@ class GoogleCloudStorage internal constructor(
         val dataBlob = storage[bucketName, dataBlobName()]
         return dataBlob.size
     }
+
+    /**
+     * The name of the BLOB storing the temporary data before it is merged into permanent storage.
+     */
     private fun tmpBlobName(): String {
         return "$uploadIdentifier/tmp"
     }
 
+    /**
+     * The already permanently stored data BLOB.
+     */
     private fun dataBlobName(): String {
         return "$uploadIdentifier/data"
     }

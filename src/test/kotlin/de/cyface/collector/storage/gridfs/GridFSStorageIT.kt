@@ -146,6 +146,9 @@ class GridFSStorageIT {
             )
         }
 
+    /**
+     * Delete the provided directory and all files and subdirectories within.
+     */
     @Throws(IOException::class)
     fun deleteDirectoryRecursion(path: Path) {
         if (Files.isDirectory(path, LinkOption.NOFOLLOW_LINKS)) {

@@ -233,6 +233,9 @@ class GridFsStorageService(
     }
 
     companion object {
+        /**
+         * The logger used by objects of this class. Configure it using `src/main/resources/logback.xml`.
+         */
         private val LOGGER = LoggerFactory.getLogger(GridFsStorageService::class.java)
     }
 }
