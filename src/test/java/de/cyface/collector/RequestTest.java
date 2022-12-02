@@ -174,14 +174,19 @@ public final class RequestTest {
     @MethodSource("testParameters")
     @ParameterizedTest
     public void testLogin_HappyPath(final String apiEndpoint, final VertxTestContext context) {
-        client.post(collectorClient.getPort(), TEST_HOST, apiEndpoint + "login")
-                .sendJson(new JsonObject().put("username", "admin").put("password", "secret"),
-                        context.succeeding(result -> context.verify(() -> {
-                            assertThat("Invalid HTTP status code on login request!", result.statusCode(), is(200));
-                            assertThat("Login request contained no JWT token!",
-                                    result.headers().contains("Authorization"), is(true));
-                            context.completeNow();
-                        })));
+
+        var loginRequest = client.post(
+                collectorClient.getPort(),
+                TEST_HOST,
+                apiEndpoint + "login"
+        );
+        loginRequest.sendJson(new JsonObject().put("username", "admin").put("password", "secret"),
+                context.succeeding(result -> context.verify(() -> {
+                    assertThat("Invalid HTTP status code on login request!", result.statusCode(), is(200));
+                    assertThat("Login request contained no JWT token!",
+                            result.headers().contains("Authorization"), is(true));
+                    context.completeNow();
+                })));
     }
 
     /**
