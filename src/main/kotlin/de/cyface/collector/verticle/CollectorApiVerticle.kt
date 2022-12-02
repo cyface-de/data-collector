@@ -94,8 +94,14 @@ class CollectorApiVerticle(
             serverStartPromise.future(),
             userCreation
         )
-        startUp.onSuccess { startPromise.complete() }
-        startUp.onFailure { cause: Throwable? -> startPromise.fail(cause) }
+        startUp.onSuccess {
+            LOGGER.info("Successfully started collector API!")
+            startPromise.complete()
+        }
+        startUp.onFailure { cause: Throwable? ->
+            LOGGER.error("Failed to start collector API!", cause)
+            startPromise.fail(cause)
+        }
     }
 
     /**
@@ -110,12 +116,14 @@ class CollectorApiVerticle(
         adminUsername: String,
         adminPassword: String
     ): Future<Void> {
+        LOGGER.info("Creating default user $adminUsername.")
         val promise = Promise.promise<Void>()
         mongoClient.findOne(
             "user",
             JsonObject().put("username", adminUsername),
             null
         ) { result: AsyncResult<JsonObject?> ->
+            LOGGER.info("Finished searching for admin user $adminUsername.")
             if (result.failed()) {
                 promise.fail(result.cause())
                 return@findOne
@@ -153,7 +161,10 @@ class CollectorApiVerticle(
         // Setup router
         val mainRouter = Router.router(vertx)
         val apiRouter = Router.router(vertx)
-        mainRouter.route(config.endpoint).subRouter(apiRouter)
+        mainRouter
+            .route(config.endpoint)
+            .handler(LoggerHandler.create())
+            .subRouter(apiRouter)
         setupApiRouter(apiRouter, config, storageService)
 
         // Setup unknown-resource handler
