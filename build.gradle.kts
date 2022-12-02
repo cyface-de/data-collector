@@ -145,7 +145,6 @@ dependencies {
   // These two are required since Vert.x currently has a buggy version.
   implementation("org.mongodb:mongodb-driver-core:${project.extra["mongoDriverVersion"]}")
   implementation("org.mongodb:mongodb-driver-reactivestreams:${project.extra["mongoDriverVersion"]}")
-  implementation("io.vertx:vertx-web-api-contract:${project.extra["vertxVersion"]}")
 
   // Kotlin Support
   implementation("io.vertx:vertx-core:${project.extra["vertxVersion"]}")
