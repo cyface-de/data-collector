@@ -88,7 +88,7 @@ public final class RequestTest {
     @BeforeAll
     public static void setupMongoDatabase() throws IOException {
         mongoTest = new MongoTest();
-        mongoTest.setUpMongoDatabase(Network.getFreeServerPort());
+        mongoTest.setUpMongoDatabase(Network.freeServerPort(Network.getLocalHost()));
     }
 
     /**
@@ -98,10 +98,11 @@ public final class RequestTest {
      * @param ctx The test context used to control the test <code>Vertx</code>
      * @throws IOException Fails the test if anything unexpected goes wrong
      */
+    @SuppressWarnings("JUnitMalformedDeclaration")
     @BeforeEach
     public void deployVerticle(final Vertx vertx, final VertxTestContext ctx) throws IOException {
         collectorClient = new DataCollectorClient();
-        client = collectorClient.createWebClient(vertx, ctx, mongoTest.getMongoPort());
+        client = collectorClient.createWebClient(vertx, ctx, mongoTest);
     }
 
     /**

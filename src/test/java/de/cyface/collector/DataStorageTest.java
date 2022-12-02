@@ -100,7 +100,7 @@ public final class DataStorageTest {
     @BeforeEach
     void setUp() throws IOException {
         mongoTest = new MongoTest();
-        mongoTest.setUpMongoDatabase(Network.getFreeServerPort());
+        mongoTest.setUpMongoDatabase(Network.freeServerPort(Network.getLocalHost()));
     }
 
     /**
@@ -118,6 +118,7 @@ public final class DataStorageTest {
      * @param ctx The Vert.x context used for testing
      * @throws URISyntaxException If the test data location is invalid
      */
+    @SuppressWarnings("JUnitMalformedDeclaration")
     @Test
     @DisplayName("Test storing data on happy path")
     public void testPublishMeasurementWithNoGeoLocations_HappyPath(final Vertx vertx, final VertxTestContext ctx)
@@ -131,6 +132,7 @@ public final class DataStorageTest {
 
         gridFsBucketCreationFuture.onSuccess(gridFsClient -> {
             final var fileSystem = vertx.fileSystem();
+            //noinspection rawtypes
             final List<Future> fileUploadFutures = uploads.stream().map(fileUpload -> {
                 final var fileOpenFuture = fileSystem.open(fileUpload.toAbsolutePath().toString(),
                         new OpenOptions());

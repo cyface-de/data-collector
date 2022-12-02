@@ -16,12 +16,15 @@
  * You should have received a copy of the GNU General Public License
  * along with the Cyface Data Collector. If not, see <http://www.gnu.org/licenses/>.
  */
-package de.cyface.collector.storage
+package de.cyface.collector.storage.gridfs
 
 import de.cyface.api.model.User
 import de.cyface.collector.model.ContentRange
 import de.cyface.collector.model.Measurement
 import de.cyface.collector.model.RequestMetaData
+import de.cyface.collector.storage.DataStorageService
+import de.cyface.collector.storage.Status
+import de.cyface.collector.storage.StatusType
 import de.cyface.collector.storage.exception.ContentRangeNotMatchingFileSize
 import de.cyface.collector.storage.exception.DuplicatesInDatabase
 import io.vertx.core.Future
@@ -175,7 +178,8 @@ class GridFsStorageService(private val mongoClient: MongoClient, val fs: FileSys
             fs.readDir(FILE_UPLOADS_FOLDER.absolutePathString()).onSuccess { uploadFiles ->
                 uploadFiles.filter { pathname ->
                     val path = Paths.get(pathname)
-                    path.isRegularFile() && path.getLastModifiedTime().toMillis() > uploadExpirationTime
+                    val notModifiedFor = System.currentTimeMillis() - path.getLastModifiedTime().toMillis()
+                    path.isRegularFile() && notModifiedFor > uploadExpirationTime
                 }.forEach { pathname ->
                     LOGGER.debug("Cleaning up temp file: {}", pathname)
                     fs.delete(pathname).onFailure {
@@ -203,7 +207,8 @@ class GridFsStorageService(private val mongoClient: MongoClient, val fs: FileSys
     private fun storeToMongoDB(measurement: Measurement, temporaryStorage: Path): Future<ObjectId> {
         val promise = Promise.promise<ObjectId>()
         LOGGER.debug(
-            "Insert measurement with id {}:{}!", measurement.metaData.deviceIdentifier,
+            "Insert measurement with id {}:{}!",
+            measurement.metaData.deviceIdentifier,
             measurement.metaData.measurementIdentifier
         )
 
@@ -300,6 +305,7 @@ class GridFsStorageService(private val mongoClient: MongoClient, val fs: FileSys
 
     companion object {
         private val LOGGER = LoggerFactory.getLogger(GridFsStorageService::class.java)
+
         /**
          * The folder to cache file uploads until they are persisted.
          */

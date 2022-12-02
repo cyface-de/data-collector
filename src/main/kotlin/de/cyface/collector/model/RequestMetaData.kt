@@ -65,28 +65,34 @@ data class RequestMetaData(
         )
         Validate.isTrue(
             deviceType.isNotEmpty() && deviceType.length <= MAX_GENERIC_METADATA_FIELD_LENGTH,
-            "Field deviceType had an invalid length of %d!", deviceType.length.toLong()
+            "Field deviceType had an invalid length of %d!",
+            deviceType.length.toLong()
         )
         Validate.isTrue(
             measurementIdentifier.isNotEmpty() && measurementIdentifier.length <= MAX_MEASUREMENT_ID_LENGTH,
-            "Field measurementId had an invalid length of %d!", measurementIdentifier.length.toLong()
+            "Field measurementId had an invalid length of %d!",
+            measurementIdentifier.length.toLong()
         )
         Validate.isTrue(
             operatingSystemVersion.isNotEmpty() &&
                 operatingSystemVersion.length <= MAX_GENERIC_METADATA_FIELD_LENGTH,
-            "Field osVersion had an invalid length of %d!", operatingSystemVersion.length.toLong()
+            "Field osVersion had an invalid length of %d!",
+            operatingSystemVersion.length.toLong()
         )
         Validate.isTrue(
             applicationVersion.isNotEmpty() && applicationVersion.length <= MAX_GENERIC_METADATA_FIELD_LENGTH,
-            "Field applicationVersion had an invalid length of %d!", applicationVersion.length.toLong()
+            "Field applicationVersion had an invalid length of %d!",
+            applicationVersion.length.toLong()
         )
         Validate.isTrue(
             length >= MINIMUM_TRACK_LENGTH,
-            "Field length had an invalid value %d which is smaller then 0.0!", length
+            "Field length had an invalid value %d which is smaller then 0.0!",
+            length
         )
         Validate.isTrue(
             locationCount >= MINIMUM_LOCATION_COUNT,
-            "Field locationCount had an invalid value %d which is smaller then 0!", locationCount
+            "Field locationCount had an invalid value %d which is smaller then 0!",
+            locationCount
         )
         Validate.isTrue(
             locationCount == MINIMUM_LOCATION_COUNT || startLocation != null,
@@ -98,10 +104,12 @@ data class RequestMetaData(
         )
         Validate.isTrue(
             modality.isNotEmpty() && modality.length <= MAX_GENERIC_METADATA_FIELD_LENGTH,
-            "Field modality had an invalid length of %d!", modality.length.toLong()
+            "Field modality had an invalid length of %d!",
+            modality.length.toLong()
         )
         Validate.isTrue(
-            formatVersion == CURRENT_TRANSFER_FILE_FORMAT_VERSION, "Unsupported formatVersion: %d",
+            formatVersion == CURRENT_TRANSFER_FILE_FORMAT_VERSION,
+            "Unsupported formatVersion: %d",
             formatVersion.toLong()
         )
     }

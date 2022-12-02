@@ -32,9 +32,7 @@ import io.vertx.ext.web.client.HttpResponse
 import io.vertx.ext.web.client.WebClient
 import io.vertx.junit5.VertxExtension
 import io.vertx.junit5.VertxTestContext
-import org.hamcrest.MatcherAssert
 import org.hamcrest.MatcherAssert.assertThat
-import org.hamcrest.Matchers
 import org.hamcrest.Matchers.equalTo
 import org.hamcrest.Matchers.`is`
 import org.hamcrest.Matchers.matchesPattern
@@ -81,7 +79,7 @@ class FileUploadTooLargeTest {
     private lateinit var client: WebClient
 
     /**
-     * Deploys the [CollectorApiVerticle] in a test context.
+     * Deploys the [de.cyface.collector.verticle.CollectorApiVerticle] in a test context.
      *
      * @param vertx The `Vertx` instance to deploy the verticle to
      * @param ctx The test context used to control the test `Vertx`
@@ -93,7 +91,7 @@ class FileUploadTooLargeTest {
         // FIXME: can we somehow overwrite the @setup method to reuse {@link FileUploadTest}?
         // Set maximal payload size to 1 KB (test upload is 130 KB)
         collectorClient = DataCollectorClient(Authenticator.BYTES_IN_ONE_KILOBYTE)
-        client = collectorClient.createWebClient(vertx, ctx, mongoTest.mongoPort)
+        client = collectorClient.createWebClient(vertx, ctx, mongoTest)
     }
 
     /**
@@ -103,6 +101,7 @@ class FileUploadTooLargeTest {
      * @param context The context of the test Vert.x
      * @throws IOException Fails the test on unexpected exceptions
      */
+    @Suppress("JUnitMalformedDeclaration")
     @BeforeEach
     @Throws(IOException::class)
     fun setUp(vertx: Vertx, context: VertxTestContext) {
@@ -125,9 +124,10 @@ class FileUploadTooLargeTest {
             UPLOAD_SIZE.toLong(),
             context.succeeding { ar: HttpResponse<Buffer?> ->
                 context.verify {
-                    MatcherAssert.assertThat(
-                        "Wrong HTTP status code when uploading unparsable meta data!", ar.statusCode(),
-                        Matchers.`is`(Matchers.equalTo(422))
+                    assertThat(
+                        "Wrong HTTP status code when uploading unparsable meta data!",
+                        ar.statusCode(),
+                        `is`(equalTo(422))
                     )
                     context.completeNow()
                 }
@@ -141,10 +141,12 @@ class FileUploadTooLargeTest {
      * @param vertx The Vert.x instance used to run this test.
      * @param context The test context for running `Vertx` under test.
      */
+    @Suppress("JUnitMalformedDeclaration")
     @Test
     fun testUploadWithTooLargePayload_Returns422(vertx: Vertx, context: VertxTestContext) {
         preRequestAndReturnLocation(
-            context, 1000 /* fake a small upload to bypass pre-request size check */
+            context,
+            1000 /* fake a small upload to bypass pre-request size check */
         ) { uploadUri: String ->
             upload(
                 vertx,
@@ -160,9 +162,10 @@ class FileUploadTooLargeTest {
                 deviceIdentifier,
                 context.succeeding { ar: HttpResponse<Buffer?> ->
                     context.verify {
-                        MatcherAssert.assertThat(
-                            "Wrong HTTP status code when uploading too large payload!", ar.statusCode(),
-                            Matchers.`is`(Matchers.equalTo(422))
+                        assertThat(
+                            "Wrong HTTP status code when uploading too large payload!",
+                            ar.statusCode(),
+                            `is`(equalTo(422))
                         )
                         context.completeNow()
                     }
@@ -178,6 +181,7 @@ class FileUploadTooLargeTest {
      * @param context The test context to use.
      * @param preRequestResponseHandler The handler called if the client received a response.
      */
+    @Suppress("SameParameterValue")
     private fun preRequest(
         context: VertxTestContext,
         locationCount: Int,
@@ -199,7 +203,8 @@ class FileUploadTooLargeTest {
                         `is`(200)
                     )
                     assertThat(
-                        "Auth token was missing from authentication request!", authToken,
+                        "Auth token was missing from authentication request!",
+                        authToken,
                         `is`(notNullValue())
                     )
                 }
@@ -224,7 +229,8 @@ class FileUploadTooLargeTest {
 
                 // Send Pre-Request
                 val builder = client.post(
-                    collectorClient.port, "localhost",
+                    collectorClient.port,
+                    "localhost",
                     MEASUREMENTS_UPLOAD_ENDPOINT_PATH
                 )
                 builder.putHeader("Authorization", "Bearer " + if (useInvalidToken) "invalidToken" else authToken)
@@ -241,6 +247,7 @@ class FileUploadTooLargeTest {
         )
     }
 
+    @Suppress("SameParameterValue")
     private fun preRequestAndReturnLocation(
         context: VertxTestContext,
         uploadSize: Long,
@@ -294,6 +301,7 @@ class FileUploadTooLargeTest {
      * @param deviceId The worldwide unique device identifier of the uploading device. This is usually a UUID.
      * @param handler The handler called if the client received a response.
      */
+    @Suppress("SameParameterValue")
     private fun upload(
         vertx: Vertx,
         context: VertxTestContext,
@@ -322,7 +330,8 @@ class FileUploadTooLargeTest {
                         `is`(200)
                     )
                     assertThat(
-                        "Auth token was missing from authentication request!", authToken,
+                        "Auth token was missing from authentication request!",
+                        authToken,
                         `is`(notNullValue())
                     )
                 }

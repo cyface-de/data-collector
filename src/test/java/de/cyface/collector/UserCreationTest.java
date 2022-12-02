@@ -80,7 +80,7 @@ public final class UserCreationTest {
     @BeforeAll
     public static void setUpMongoDatabase() throws IOException {
         mongoTest = new MongoTest();
-        mongoTest.setUpMongoDatabase(Network.getFreeServerPort());
+        mongoTest.setUpMongoDatabase(Network.freeServerPort(Network.getLocalHost()));
     }
 
     /**
@@ -99,10 +99,11 @@ public final class UserCreationTest {
      * @param context The Vert.x test context used to control the test process
      * @throws IOException If unable to open a socket for the test HTTP server
      */
+    @SuppressWarnings("JUnitMalformedDeclaration")
     @BeforeEach
     public void setUp(final Vertx vertx, final VertxTestContext context) throws IOException {
 
-        port = Network.getFreeServerPort();
+        port = Network.freeServerPort(Network.getLocalHost());
 
         mongoDbConfiguration = new JsonObject()
                 .put("connection_string", "mongodb://localhost:" + mongoTest.getMongoPort())
@@ -124,6 +125,7 @@ public final class UserCreationTest {
      * @param vertx A <code>Vertx</code> instance injected for this test to use
      * @param context The Vert.x test context used to control the test process
      */
+    @SuppressWarnings("JUnitMalformedDeclaration")
     @AfterEach
     public void tearDown(final Vertx vertx, final VertxTestContext context) {
 
@@ -138,6 +140,7 @@ public final class UserCreationTest {
      * @param vertx A <code>Vertx</code> instance injected for this test to use
      * @param context The Vert.x test context used to control the test process
      */
+    @SuppressWarnings("JUnitMalformedDeclaration")
     @Test
     public void testCreateUser_HappyPath(final Vertx vertx, final VertxTestContext context) {
         // Arrange

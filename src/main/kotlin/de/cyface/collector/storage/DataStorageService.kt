@@ -1,3 +1,5 @@
+@file:Suppress("AnnotationSpacing")
+
 /*
  * Copyright 2022 Cyface GmbH
  *
@@ -37,7 +39,7 @@ import java.util.UUID
  * @author Klemens Muthmann
  * @version 1.0.0
  */
-sealed interface DataStorageService {
+interface DataStorageService {
     /**
      * Stores the data provided via the `pipe`.
      *

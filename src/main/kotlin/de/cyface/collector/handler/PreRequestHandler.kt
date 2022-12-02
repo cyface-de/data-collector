@@ -259,7 +259,8 @@ class PreRequestHandler(
                         String.format(
                             Locale.ENGLISH,
                             "Upload size in the pre-request (%d) is too large, limit is %d bytes.",
-                            uploadLength, measurementLimit
+                            uploadLength,
+                            measurementLimit
                         )
                     )
                 }

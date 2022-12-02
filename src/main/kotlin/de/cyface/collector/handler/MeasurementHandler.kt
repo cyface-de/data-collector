@@ -212,7 +212,6 @@ class MeasurementHandler(
                 metaData
             )
         } else {
-
             // Search for previous upload chunk
             storageService.bytesUploaded(uploadIdentifier).onSuccess { byteSize ->
                 // Wrong chunk uploaded
@@ -308,7 +307,8 @@ class MeasurementHandler(
             val endLocationLon = endLocationLonString.toDouble()
             val endLocationTs = endLocationTsString.toLong()
             val startLocation = RequestMetaData.GeoLocation(
-                startLocationTs, startLocationLat,
+                startLocationTs,
+                startLocationLat,
                 startLocationLon
             )
             val endLocation = RequestMetaData.GeoLocation(endLocationTs, endLocationLat, endLocationLon)
@@ -346,7 +346,6 @@ class MeasurementHandler(
      */
     @Throws(Unparsable::class)
     private fun contentRange(request: HttpServerRequest, bodySize: Long): ContentRange {
-
         // The client informs what data is attached: `bytes fromIndex-toIndex/totalBytes`
         val contentRangeString = request.getHeader("Content-Range")
         val contentRange = ContentRange.fromHTTPHeader(contentRangeString)
@@ -358,7 +357,8 @@ class MeasurementHandler(
                 String.format(
                     Locale.ENGLISH,
                     "Upload size (%d) does not match content rang of header (%s)!",
-                    bodySize, contentRange
+                    bodySize,
+                    contentRange
                 )
             )
         }
@@ -376,7 +376,6 @@ class MeasurementHandler(
      */
     @Throws(IllegalSession::class, SessionExpired::class)
     private fun checkSessionValidity(session: Session, metaData: RequestMetaData) {
-
         // Ensure this session was accepted by PreRequestHandler and bound to this measurement
         val sessionMeasurementId = session.get<String>(PreRequestHandler.MEASUREMENT_ID_FIELD)
         val sessionDeviceId = session.get<String>(PreRequestHandler.DEVICE_ID_FIELD)

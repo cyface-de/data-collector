@@ -53,7 +53,6 @@ public class CollectorApiVerticleTest {
      * Process providing a connection to the test Mongo database.
      */
     private transient MongoTest mongoTest;
-    private int mongoPort;
 
     /**
      * Starts a test in memory Mongo database.
@@ -63,7 +62,7 @@ public class CollectorApiVerticleTest {
     @BeforeEach
     void setUp() throws IOException {
         mongoTest = new MongoTest();
-        mongoPort = Network.getFreeServerPort();
+        int mongoPort = Network.freeServerPort(Network.getLocalHost());
         mongoTest.setUpMongoDatabase(mongoPort);
     }
 
@@ -82,6 +81,7 @@ public class CollectorApiVerticleTest {
      * @param testContext A test context to handle Vertx asynchronicity
      * @throws IOException if no free port could be retrieved
      */
+    @SuppressWarnings("JUnitMalformedDeclaration")
     @Test
     @DisplayName("Happy Path test for starting the collector API.")
     void test(final Vertx vertx, final VertxTestContext testContext) throws Throwable {
@@ -96,7 +96,7 @@ public class CollectorApiVerticleTest {
                 .put("jwt.public", publicKey.getFile())
                 .put("http.host", "localhost")
                 .put("http.endpoint", "/api/v3/")
-                .put("http.port", Network.getFreeServerPort())
+                .put("http.port", Network.freeServerPort(Network.getLocalHost()))
                 .put("mongo.db", mongoTest.clientConfiguration())
                 .put("mongo.userdb", mongoTest.clientConfiguration())
                 .put("jwt.expiration", 3600);
