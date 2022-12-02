@@ -121,21 +121,3 @@ class GoogleCloudStorage internal constructor(
         return "$uploadIdentifier/data"
     }
 }
-
-/*class GoogleCloudStorageBuilder(
-        private val credentials: Credentials,
-        private val projectIdentifier: String,
-        private val bucketName: String,
-        private val pagingSize: Long
-    ): CloudStorageBuilder {
-
-    override fun createCloudStorage(uploadIdentifier: UUID): CloudStorage {
-        return GoogleCloudStorage(credentials, projectIdentifier, bucketName, uploadIdentifier)
-    }
-
-    override fun createCleanupOperation(): CleanupOperation {
-        val storage = StorageOptions.newBuilder().setCredentials(credentials)
-            .setProjectId(projectIdentifier).build().service
-        return GoogleCloudCleanupOperation(storage, pagingSize)
-    }
-}*/
