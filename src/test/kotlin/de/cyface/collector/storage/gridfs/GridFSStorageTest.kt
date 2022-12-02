@@ -232,11 +232,28 @@ class GridFSStorageTest {
         val oocut = GridFsStorageService(mockDao, mockFileSystem, Path.of("upload-folder"))
 
         // Act
-        oocut.store(mockPipe, mockUser, contentRange01, uploadIdentifier, metaData)
-        oocut.store(mockPipe, mockUser, contentRange02, uploadIdentifier, metaData)
-        oocut.store(mockPipe, mockUser, contentRange03, uploadIdentifier, metaData)
+        val storeCall01 = oocut.store(mockPipe, mockUser, contentRange01, uploadIdentifier, metaData)
+        val storeCall02 = oocut.store(mockPipe, mockUser, contentRange02, uploadIdentifier, metaData)
+        val storeCall03 = oocut.store(mockPipe, mockUser, contentRange03, uploadIdentifier, metaData)
 
         // Assert
+        storeCall01.onSuccess { status ->
+            assertThat(status.type, `is`(StatusType.INCOMPLETE))
+            assertThat(status.uploadIdentifier, `is`(uploadIdentifier))
+            assertThat(status.byteSize, `is`(5L))
+        }
+        @Suppress("ForbiddenComment")
+        storeCall02.onSuccess { status ->
+            assertThat(status.type, `is`(StatusType.INCOMPLETE))
+            assertThat(status.uploadIdentifier, `is`(uploadIdentifier))
+            assertThat(status.byteSize, `is`(10L))
+        }
+        storeCall03.onSuccess { status ->
+            assertThat(status.type, `is`(StatusType.COMPLETE))
+            assertThat(status.uploadIdentifier, `is`(uploadIdentifier))
+            assertThat(status.byteSize, `is`(15L))
+        }
+
         // Handle first chunk
         argumentCaptor<Handler<AsyncFile>> {
             verify(mockTemporaryFileOpenCall01).onSuccess(capture())
