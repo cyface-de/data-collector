@@ -1,3 +1,5 @@
+@file:Suppress("AnnotationSpacing")
+
 /*
  * Copyright 2022 Cyface GmbH
  *
