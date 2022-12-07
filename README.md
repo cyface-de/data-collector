@@ -1,6 +1,6 @@
 # Module collector
 
-![https://vertx.io](https://img.shields.io/badge/vert.x-4.3.3-purple.svg)
+![https://vertx.io](https://img.shields.io/badge/vert.x-4.3.5-purple.svg)
 ![https://mongodb.com/](https://img.shields.io/badge/mongo-5.0.8-purple.svg)
 ![https://github.com/cyface-de/data-collector/actions](https://github.com/cyface-de/data-collector/workflows/Cyface%20Data%20Collector/badge.svg)
 
@@ -18,7 +18,7 @@ The project uses [Gradle](https://gradle.org/) as the build system.
 
 ## Overview
 
-* [Collector](##collector)
+* [Collector](#collector)
 
 .General information
 * [Release a new Version](#release-a-new-version)
