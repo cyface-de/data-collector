@@ -23,6 +23,7 @@ import static org.hamcrest.Matchers.is;
 
 import java.io.IOException;
 
+import de.cyface.collector.commons.ConfigurationFactory;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
@@ -31,11 +32,9 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
 import de.cyface.api.EndpointConfig;
-import de.cyface.api.Parameter;
 import de.cyface.collector.commons.MongoTest;
 import de.cyface.collector.verticle.ManagementApiVerticle;
 import de.flapdoodle.embed.process.runtime.Network;
-import io.vertx.core.DeploymentOptions;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.mongo.MongoClient;
@@ -67,10 +66,6 @@ public final class UserCreationTest {
      * The <code>WebClient</code> to simulate client requests.
      */
     private WebClient client;
-    /**
-     * The configuration for the simulated Mongo user database.
-     */
-    private JsonObject mongoDbConfiguration;
 
     /**
      * Boots the Mongo database before this test starts.
@@ -104,17 +99,13 @@ public final class UserCreationTest {
     public void setUp(final Vertx vertx, final VertxTestContext context) throws IOException {
 
         port = Network.freeServerPort(Network.getLocalHost());
+        final var configuration = ConfigurationFactory.INSTANCE.mockedConfiguration(
+                port,
+                mongoTest.clientConfiguration(),
+                null);
 
-        mongoDbConfiguration = new JsonObject()
-                .put("connection_string", "mongodb://localhost:" + mongoTest.getMongoPort())
-                .put("db_name", "cyface");
-
-        final var config = new JsonObject().put(Parameter.MANAGEMENT_HTTP_PORT.key(), port)
-                .put(Parameter.MONGO_DB.key(), mongoDbConfiguration);
-        final var options = new DeploymentOptions().setConfig(config);
-
-        final var managementApiVerticle = new ManagementApiVerticle("test-salt");
-        vertx.deployVerticle(managementApiVerticle, options, context.succeedingThenComplete());
+        final var managementApiVerticle = new ManagementApiVerticle(configuration);
+        vertx.deployVerticle(managementApiVerticle, context.succeedingThenComplete());
 
         client = WebClient.create(vertx);
     }
@@ -130,7 +121,7 @@ public final class UserCreationTest {
     public void tearDown(final Vertx vertx, final VertxTestContext context) {
 
         // Delete entries so that the next tests are independent
-        final MongoClient mongoClient = EndpointConfig.createSharedMongoClient(vertx, mongoDbConfiguration);
+        final MongoClient mongoClient = EndpointConfig.createSharedMongoClient(vertx, mongoTest.clientConfiguration());
         mongoClient.removeDocuments("user", new JsonObject(), context.succeedingThenComplete());
     }
 
@@ -147,7 +138,7 @@ public final class UserCreationTest {
         final var postUserCompleteCheckpoint = context.checkpoint();
         final var checkedIfUserIsInDataBase = context.checkpoint();
         final var checkedThatCorrectUserIsInDatabase = context.checkpoint();
-        final var mongoClient = EndpointConfig.createSharedMongoClient(vertx, mongoDbConfiguration);
+        final var mongoClient = EndpointConfig.createSharedMongoClient(vertx, mongoTest.clientConfiguration());
 
         // Act
         final var requestPostedFuture = client.post(port, "localhost", "/user").sendJsonObject(

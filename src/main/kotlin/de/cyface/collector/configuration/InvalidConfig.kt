@@ -16,7 +16,7 @@
  * You should have received a copy of the GNU General Public License
  * along with the Cyface Data Collector. If not, see <http://www.gnu.org/licenses/>.
  */
-package de.cyface.collector.verticle
+package de.cyface.collector.configuration
 
 /**
  * An exception thrown if an invalid configuration of this application has been encountered.
@@ -25,4 +25,7 @@ package de.cyface.collector.verticle
  * @version 1.0.0
  * @property message The message to display to the user.
  */
-class InvalidConfig(override val message: String) : Exception(message)
+class InvalidConfig(
+    override val message: String = "",
+    override val cause: Throwable? = null
+) : Exception(message, cause)

@@ -62,12 +62,14 @@ class GridFSStorageIT {
 
     private val uploadFolder = Path("upload-folder")
 
+    @Suppress("JUnitMalformedDeclaration")
     @BeforeEach
-    fun setUp(context: VertxTestContext) {
+    fun setUp(vertx: Vertx, context: VertxTestContext) {
         mongoTest = MongoTest()
         mongoTest.setUpMongoDatabase(Network.freeServerPort(Network.getLocalHost()))
-        Files.createDirectory(uploadFolder)
-        context.completeNow()
+        vertx.fileSystem().mkdir(uploadFolder.absolutePathString()).onComplete {
+            context.completeNow()
+        }
     }
 
     @AfterEach

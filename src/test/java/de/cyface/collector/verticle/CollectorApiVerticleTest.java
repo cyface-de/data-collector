@@ -21,10 +21,17 @@ package de.cyface.collector.verticle;
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import java.io.IOException;
+import java.net.URL;
+import java.nio.file.Path;
 import java.util.concurrent.TimeUnit;
 
+import de.cyface.collector.configuration.Configuration;
+import de.cyface.collector.configuration.GridFsStorageType;
+import de.cyface.collector.configuration.ValueSalt;
 import org.apache.commons.lang3.Validate;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -34,9 +41,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 
 import de.cyface.collector.commons.MongoTest;
 import de.flapdoodle.embed.process.runtime.Network;
-import io.vertx.core.DeploymentOptions;
 import io.vertx.core.Vertx;
-import io.vertx.core.json.JsonObject;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
 
@@ -86,32 +91,34 @@ public class CollectorApiVerticleTest {
     @DisplayName("Happy Path test for starting the collector API.")
     void test(final Vertx vertx, final VertxTestContext testContext) throws Throwable {
         // Arrange
-
+        final var port = Network.freeServerPort(Network.getLocalHost());
         final var privateKey = this.getClass().getResource("/private_key.pem");
         final var publicKey = this.getClass().getResource("/public.pem");
         Validate.notNull(privateKey);
         Validate.notNull(publicKey);
-        final var configuration = new JsonObject()
-                .put("jwt.private", privateKey.getFile())
-                .put("jwt.public", publicKey.getFile())
-                .put("http.host", "localhost")
-                .put("http.endpoint", "/api/v3/")
-                .put("http.port", Network.freeServerPort(Network.getLocalHost()))
-                .put("mongo.db", mongoTest.clientConfiguration())
-                .put("mongo.userdb", mongoTest.clientConfiguration())
-                .put("jwt.expiration", 3600);
-
-        final var deploymentOptions = new DeploymentOptions();
-        deploymentOptions.setConfig(configuration);
+        final var configuration = mock(Configuration.class);
+        when(configuration.getJwtPrivate()).thenReturn(Path.of(privateKey.getFile()));
+        when(configuration.getJwtPublic()).thenReturn(Path.of(publicKey.getFile()));
+        when(configuration.getServiceHttpAddress()).thenReturn(new URL(
+                "https",
+                        "localhost",
+                        port,
+                        "/api/v3/*"
+                ));
+        when(configuration.getMongoDb()).thenReturn(mongoTest.clientConfiguration());
+        when(configuration.getJwtExpiration()).thenReturn(3600);
+        when(configuration.getSalt()).thenReturn(new ValueSalt("cyface-salt"));
+        when(configuration.getStorageType()).thenReturn(new GridFsStorageType(Path.of("upload-folder")));
+        when(configuration.getUploadExpiration()).thenReturn(60_000L);
+        when(configuration.getMeasurementPayloadLimit()).thenReturn(100L);
+        when(configuration.getAdminUser()).thenReturn("admin");
+        when(configuration.getAdminPassword()).thenReturn("secret");
 
         // Act, Assert
-        vertx.deployVerticle(
-                new CollectorApiVerticle("cyface-salt", new Config(vertx, configuration)),
-                deploymentOptions,
-                testContext.succeedingThenComplete());
+        vertx.deployVerticle(new CollectorApiVerticle(configuration), testContext.succeedingThenComplete());
 
         // https://vertx.io/docs/vertx-junit5/java/#_a_test_context_for_asynchronous_executions
-        assertThat(testContext.awaitCompletion(5, TimeUnit.SECONDS), is(equalTo(true)));
+        assertThat(testContext.awaitCompletion(20, TimeUnit.SECONDS), is(equalTo(true)));
         if (testContext.failed()) {
             throw testContext.causeOfFailure();
         }

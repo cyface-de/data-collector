@@ -20,7 +20,6 @@ package de.cyface.collector.handler.auth
 
 import de.cyface.api.AuthenticationFailureHandler
 import de.cyface.collector.handler.HTTPStatus
-import de.cyface.collector.verticle.Config
 import io.vertx.core.Handler
 import io.vertx.core.json.DecodeException
 import io.vertx.core.json.JsonObject
@@ -155,7 +154,7 @@ class Authenticator private constructor(
         fun setupAuthentication(
             loginEndpoint: String,
             router: Router,
-            config: Config
+            config: AuthenticationConfiguration
         ) {
             val authenticator = Authenticator(
                 config.authProvider,

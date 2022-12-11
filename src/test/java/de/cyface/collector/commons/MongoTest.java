@@ -55,17 +55,13 @@ public final class MongoTest {
     private int mongoPort;
 
     /**
-     * @return The port to run the test Mongo database under.
-     */
-    public int getMongoPort() {
-        return mongoPort;
-    }
-
-    /**
      * @return The configuration required to configure a client to the test Mongo server
      */
     public JsonObject clientConfiguration() {
-        return new JsonObject().put("host", "localhost").put("port", mongoPort);
+        return new JsonObject()
+                .put("host", "localhost")
+                .put("port", mongoPort)
+                .put("data_source_name", "cyface-test");
     }
 
     /**

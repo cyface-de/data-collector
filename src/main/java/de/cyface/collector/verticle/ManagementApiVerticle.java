@@ -1,5 +1,5 @@
 /*
- * Copyright 2018 Cyface GmbH
+ * Copyright 2018-2022 Cyface GmbH
  *
  * This file is part of the Cyface Data Collector.
  *
@@ -18,17 +18,13 @@
  */
 package de.cyface.collector.verticle;
 
-import java.nio.charset.StandardCharsets;
-
+import de.cyface.collector.configuration.Configuration;
 import org.apache.commons.lang3.Validate;
 
-import de.cyface.api.EndpointConfig;
 import de.cyface.api.Hasher;
-import de.cyface.api.Parameter;
 import de.cyface.collector.handler.UserCreationHandler;
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.Promise;
-import io.vertx.core.json.JsonObject;
 import io.vertx.ext.auth.HashingStrategy;
 import io.vertx.ext.mongo.MongoClient;
 import io.vertx.ext.web.Router;
@@ -47,33 +43,41 @@ import io.vertx.ext.web.handler.StaticHandler;
 public final class ManagementApiVerticle extends AbstractVerticle {
 
     /**
-     * The salt used to encrypt user passwords on this server
+     * The application configuration to use for this verticle.
      */
-    private final String salt;
+    private final Configuration configuration;
 
     /**
      * Creates a new completely initialized object of this class.
      *
-     * @param salt The salt used to encrypt user passwords on this server
+     * @param configuration The application configuration to use for this verticle.
      */
-    public ManagementApiVerticle(final String salt) {
+    public ManagementApiVerticle(final Configuration configuration) {
         super();
-        this.salt = salt;
+        this.configuration = configuration;
     }
 
     @Override
     public void start(final Promise<Void> startFuture) throws Exception {
         Validate.notNull(startFuture);
 
-        final var databaseConfiguration = Parameter.MONGO_DB.jsonValue(getVertx(), new JsonObject());
+        final var databaseConfiguration = configuration.getMongoDb();
 
-        final var client = EndpointConfig.createSharedMongoClient(getVertx(), databaseConfiguration);
-        final var hasher = new Hasher(HashingStrategy.load(), salt.getBytes(StandardCharsets.UTF_8));
-        final var router = setupRouter(client, hasher);
+        final var client = MongoClient.createShared(
+                vertx,
+                databaseConfiguration,
+                databaseConfiguration.getString("data_source_name")
+        );
+        final var saltCall = configuration.getSalt().bytes(vertx);
+        saltCall.onSuccess(salt -> {
+            final var hasher = new Hasher(HashingStrategy.load(), salt);
+            final var router = setupRouter(client, hasher);
 
-        final var port = Parameter.MANAGEMENT_HTTP_PORT.intValue(getVertx(), 13_371);
-        final var httpServer = new de.cyface.api.HttpServer(port);
-        httpServer.start(vertx, router, startFuture);
+            final var port = configuration.getManagementHttpAddress().getPort();
+            final var httpServer = new de.cyface.api.HttpServer(port);
+            httpServer.start(vertx, router, startFuture);
+        });
+        saltCall.onFailure(startFuture::fail);
     }
 
     /**
