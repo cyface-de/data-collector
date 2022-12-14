@@ -20,6 +20,7 @@ package de.cyface.collector.commons;
 
 import java.io.IOException;
 
+import de.cyface.collector.verticle.Config;
 import org.apache.commons.lang3.Validate;
 
 import de.cyface.api.Parameter;
@@ -103,7 +104,7 @@ public final class DataCollectorClient {
         }
         final var options = new DeploymentOptions().setConfig(config);
 
-        final var collectorVerticle = new CollectorApiVerticle("test-salt");
+        final var collectorVerticle = new CollectorApiVerticle("test-salt", new Config(vertx, config));
         vertx.deployVerticle(collectorVerticle, options, ctx.succeedingThenComplete());
 
         return WebClient.create(vertx);

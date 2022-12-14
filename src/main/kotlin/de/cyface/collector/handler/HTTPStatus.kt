@@ -69,6 +69,11 @@ object HTTPStatus {
     const val HTTP_CONFLICT = 409
 
     /**
+     * This status code is returned if the user that tried to access the collector has not been activated yet.
+     */
+    const val PRECONDITION_REQUIRED = 428
+
+    /**
      * On any internal server error, where we do not want to provide additional information.
      * Details should be available via the server logs.
      */

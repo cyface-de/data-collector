@@ -29,6 +29,7 @@ import io.vertx.core.Handler
 import io.vertx.core.Promise
 import io.vertx.core.http.HttpServerRequest
 import io.vertx.core.json.JsonObject
+import io.vertx.ext.auth.authentication.UsernamePasswordCredentials
 import io.vertx.ext.auth.mongo.MongoAuthentication
 import io.vertx.ext.auth.mongo.MongoAuthorization
 import io.vertx.ext.mongo.MongoClient
@@ -62,8 +63,8 @@ class AuthorizationHandler(
             LOGGER.debug("Request headers: {}", headers)
 
             // Check authorization
-            val principal: JsonObject = context.user().principal()
-            val username = principal.getString(MongoAuthorization.DEFAULT_USERNAME_FIELD)
+            val principal = UsernamePasswordCredentials(context.user().principal())
+            val username = principal.username
 
             // Before async operations, pause request body parsing to not lose the body or protocol upgrades.
             strategy.pause(request)

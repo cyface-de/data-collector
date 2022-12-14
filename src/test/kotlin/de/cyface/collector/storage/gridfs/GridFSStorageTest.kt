@@ -45,6 +45,7 @@ import org.mockito.kotlin.argumentCaptor
 import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.verify
+import java.nio.file.Path
 import java.util.UUID
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
@@ -112,7 +113,7 @@ class GridFSStorageTest {
             modality,
             formatVersion
         )
-        val oocut = GridFsStorageService(mockMongoClient, fileSystem)
+        val oocut = GridFsStorageService(GridFsDao(mockMongoClient), fileSystem, Path.of("upload-folder"))
 
         // Act
         val countDownLatch = CountDownLatch(1)
@@ -127,29 +128,32 @@ class GridFSStorageTest {
 
         // Assert
         argumentCaptor<Handler<AsyncFile>> {
+            // Temporary storage successfully opened?
             verify(fsOpenResult).onSuccess(capture())
 
             firstValue.handle(mockFile)
 
             argumentCaptor<Handler<Void>> {
+                // Data successfully written to temporary storage?
                 verify(pipeToResultMock).onSuccess(capture())
 
                 firstValue.handle(null)
 
                 argumentCaptor<Handler<FileProps>> {
+                    // Check on whether upload was complete or just a chunk.
                     verify(fsPropsResultMock).onSuccess(capture())
 
                     firstValue.handle(mockFsProps)
 
-                    argumentCaptor<Handler<MongoGridFsClient>> {
-                        verify(mockMongoGridFSClientResult).onSuccess(capture())
+                    argumentCaptor<Handler<AsyncFile>> {
+                        verify(temporaryStorageOpenResult).onSuccess(capture())
 
-                        firstValue.handle(mockMongoGridFSClient)
+                        firstValue.handle(mockFile)
 
-                        argumentCaptor<Handler<AsyncFile>> {
-                            verify(temporaryStorageOpenResult).onSuccess(capture())
+                        argumentCaptor<Handler<MongoGridFsClient>> {
+                            verify(mockMongoGridFSClientResult).onSuccess(capture())
 
-                            firstValue.handle(mockFile)
+                            firstValue.handle(mockMongoGridFSClient)
 
                             argumentCaptor<Handler<String>> {
                                 verify(uploadFileResultMock).onSuccess(capture())
@@ -173,16 +177,20 @@ class GridFSStorageTest {
         }
     }
 
+    /**
+     * Test that data in multiple chunks is correctly written to temporary storage at first and to GridFS in the end.
+     */
     @Test
     fun `Upload file in multiple chunks`() {
         // Arrange
-        val mockGridFsClientCreationCall = mock<Future<MongoGridFsClient>> {}
-        val mockMongoClient = mock<MongoClient> {
-            on { createDefaultGridFsBucketService() } doReturn mockGridFsClientCreationCall
+        val storeCall = mock<Future<ObjectId>> {}
+        val mockDao = mock<GridFsDao> {
+            on { store(any(), anyString(), any()) } doReturn storeCall
         }
         val mockTemporaryFileOpenCall01 = mock<Future<AsyncFile>> {}
         val mockTemporaryFileOpenCall02 = mock<Future<AsyncFile>> {}
         val mockTemporaryFileOpenCall03 = mock<Future<AsyncFile>> {}
+        val mockFinalTemporaryFileOpenCall = mock<Future<AsyncFile>> {}
         val mockProps01 = mock<FileProps> {
             on { size() } doReturn 5
         }
@@ -200,6 +208,7 @@ class GridFSStorageTest {
                 .doReturn(mockTemporaryFileOpenCall01)
                 .doReturn(mockTemporaryFileOpenCall02)
                 .doReturn(mockTemporaryFileOpenCall03)
+                .doReturn(mockFinalTemporaryFileOpenCall)
             on { props(any()) } doReturn mockPropsCall01 doReturn mockPropsCall02 doReturn mockPropsCall03
         }
         val mockTemporaryFile = mock<AsyncFile> {}
@@ -220,14 +229,31 @@ class GridFSStorageTest {
         val contentRange01 = ContentRange(0L, 4L, 15L)
         val contentRange02 = ContentRange(5L, 9L, 15L)
         val contentRange03 = ContentRange(10L, 14L, 15L)
-        val oocut = GridFsStorageService(mockMongoClient, mockFileSystem)
+        val oocut = GridFsStorageService(mockDao, mockFileSystem, Path.of("upload-folder"))
 
         // Act
-        oocut.store(mockPipe, mockUser, contentRange01, uploadIdentifier, metaData)
-        oocut.store(mockPipe, mockUser, contentRange02, uploadIdentifier, metaData)
-        oocut.store(mockPipe, mockUser, contentRange03, uploadIdentifier, metaData)
+        val storeCall01 = oocut.store(mockPipe, mockUser, contentRange01, uploadIdentifier, metaData)
+        val storeCall02 = oocut.store(mockPipe, mockUser, contentRange02, uploadIdentifier, metaData)
+        val storeCall03 = oocut.store(mockPipe, mockUser, contentRange03, uploadIdentifier, metaData)
 
         // Assert
+        storeCall01.onSuccess { status ->
+            assertThat(status.type, `is`(StatusType.INCOMPLETE))
+            assertThat(status.uploadIdentifier, `is`(uploadIdentifier))
+            assertThat(status.byteSize, `is`(5L))
+        }
+        @Suppress("ForbiddenComment")
+        storeCall02.onSuccess { status ->
+            assertThat(status.type, `is`(StatusType.INCOMPLETE))
+            assertThat(status.uploadIdentifier, `is`(uploadIdentifier))
+            assertThat(status.byteSize, `is`(10L))
+        }
+        storeCall03.onSuccess { status ->
+            assertThat(status.type, `is`(StatusType.COMPLETE))
+            assertThat(status.uploadIdentifier, `is`(uploadIdentifier))
+            assertThat(status.byteSize, `is`(15L))
+        }
+
         // Handle first chunk
         argumentCaptor<Handler<AsyncFile>> {
             verify(mockTemporaryFileOpenCall01).onSuccess(capture())
@@ -272,12 +298,17 @@ class GridFSStorageTest {
                 argumentCaptor<Handler<FileProps>> {
                     verify(mockPropsCall03).onSuccess(capture())
                     firstValue.handle(mockProps03)
+
+                    argumentCaptor<Handler<AsyncFile>> {
+                        verify(mockFinalTemporaryFileOpenCall).onSuccess(capture())
+                        firstValue.handle(mockTemporaryFile)
+                    }
                 }
             }
         }
 
         // Verify that the file is actually stored at the end.
-        verify(mockMongoClient).createDefaultGridFsBucketService()
+        verify(mockDao).store(any(), anyString(), any())
     }
 
     private fun metadata(): RequestMetaData {

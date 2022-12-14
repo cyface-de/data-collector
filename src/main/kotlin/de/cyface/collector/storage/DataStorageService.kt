@@ -82,8 +82,9 @@ interface DataStorageService {
      *
      * @param uploadExpirationTime The time after which temporary data files are stale and eligible for cleaning.
      * @param vertx The `Vertx` instance to place the background process at.
+     * @param cleanupOperation An algorithm, that describes exactly how to clean up the data storage.
      */
-    fun startPeriodicCleaningOfTempData(uploadExpirationTime: Long, vertx: Vertx)
+    fun startPeriodicCleaningOfTempData(uploadExpirationTime: Long, vertx: Vertx, cleanupOperation: CleanupOperation)
 
     /**
      * Check the data storage on whether some measurement is already stored.

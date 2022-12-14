@@ -114,6 +114,9 @@ data class RequestMetaData(
         )
     }
 
+    /**
+     * Transform this object into a generic JSON representation.
+     */
     fun toJson(): JsonObject {
         val ret = JsonObject()
         ret.put(FormAttributes.DEVICE_ID.value, deviceIdentifier)
@@ -131,6 +134,52 @@ data class RequestMetaData(
         }
         ret.put(FormAttributes.MODALITY.value, modality)
         ret.put(FormAttributes.FORMAT_VERSION.value, formatVersion)
+        return ret
+    }
+
+    /**
+     * Transform this object into a valid Geo JSON representation.
+     * This consists of the start location and the end location as a Geo JSON `MultiPoint` feature and all the
+     * metadata as properties of that feature.
+     *
+     * See [GEO Json RFC 7946](https://www.rfc-editor.org/rfc/rfc7946) for additional detailed information.
+     */
+    fun toGeoJson(): JsonObject {
+        val feature = JsonObject()
+        val properties = JsonObject()
+        val geometry = JsonObject()
+
+        if (startLocation != null && endLocation != null) {
+            val startCoordinates = JsonArray(mutableListOf(startLocation.longitude, startLocation.latitude))
+            val endCoordinates = JsonArray(mutableListOf(endLocation.longitude, endLocation.latitude))
+            val coordinates = JsonArray(mutableListOf(startCoordinates, endCoordinates))
+            geometry
+                .put("type", "MultiPoint")
+                .put("coordinates", coordinates)
+        } else {
+            geometry
+                .put("type", "MultiPoint")
+                .put("coordinates", null)
+        }
+
+        properties.put(FormAttributes.DEVICE_ID.value, deviceIdentifier)
+        properties.put(FormAttributes.MEASUREMENT_ID.value, measurementIdentifier)
+        properties.put(FormAttributes.OS_VERSION.value, operatingSystemVersion)
+        properties.put(FormAttributes.DEVICE_TYPE.value, deviceType)
+        properties.put(FormAttributes.APPLICATION_VERSION.value, applicationVersion)
+        properties.put(FormAttributes.LENGTH.value, length)
+        properties.put(FormAttributes.LOCATION_COUNT.value, locationCount)
+        properties.put(FormAttributes.MODALITY.value, modality)
+        properties.put(FormAttributes.FORMAT_VERSION.value, formatVersion)
+
+        feature
+            .put("type", "Feature")
+            .put("geometry", geometry)
+            .put("properties", properties)
+
+        val ret = JsonObject()
+        ret.put("type", "FeatureCollection")
+        ret.put("features", JsonArray().add(feature))
         return ret
     }
 

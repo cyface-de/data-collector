@@ -105,7 +105,9 @@ public class CollectorApiVerticleTest {
         deploymentOptions.setConfig(configuration);
 
         // Act, Assert
-        vertx.deployVerticle(new CollectorApiVerticle("cyface-salt"), deploymentOptions,
+        vertx.deployVerticle(
+                new CollectorApiVerticle("cyface-salt", new Config(vertx, configuration)),
+                deploymentOptions,
                 testContext.succeedingThenComplete());
 
         // https://vertx.io/docs/vertx-junit5/java/#_a_test_context_for_asynchronous_executions
