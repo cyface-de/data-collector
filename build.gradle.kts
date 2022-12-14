@@ -103,7 +103,7 @@ tasks.withType<KotlinCompile>().configureEach {
 }
 
 // If you increase this version, check in the next line if the manual mongo driver version is still necessary.
-extra["vertxVersion"] = "4.3.5"
+extra["vertxVersion"] = "4.3.6"
 // The following is only required since Vert.x GridFS Client is not working correctly in Version 4.3.3.
 // To check this run GridFSStorageIT
 // We reported the problem to Vertx Github. A fix is scheduled for Vertx 4.3.4

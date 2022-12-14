@@ -1,3 +1,21 @@
+/*
+ * Copyright 2022 Cyface GmbH
+ *
+ * This file is part of the Cyface Data Collector.
+ *
+ * The Cyface Data Collector is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * The Cyface Data Collector is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with the Cyface Data Collector. If not, see <http://www.gnu.org/licenses/>.
+ */
 package de.cyface.collector.configuration
 
 import io.vertx.core.Future
@@ -14,6 +32,20 @@ import java.nio.file.Paths
  *
  * @author Klemens Muthmann
  * @version 1.0.0
+ * @property jwtPrivate The [Path] to the private key file used for JWT authentication.
+ * @property jwtPublic The [Path] to the public key file used for JWT authentication.
+ * @property serviceHttpAddress The [URL] hosting the collector service.
+ * @property mongoDb The Mongo database configuration as described in the Vert.x documentation.
+ * @property adminUser The name of the default admin user to create on startup if it does not exist yet.
+ * @property adminPassword The password for the default user to create if it does not exist. This should be changed in
+ * production.
+ * @property salt The salt to make breaking passwords harder.
+ * @property jwtExpiration The time a JWT token stays valid.
+ * @property uploadExpiration The time an upload session stays valid to be resumed in the future.
+ * @property measurementPayloadLimit The maximum size accepted for a single measurement.
+ * @property managementHttpAddress The endpoint address running the management functions for the collector service.
+ * @property metricsEnabled `true` if prometheus metrics should be collected; `false` otherwise.
+ * @property storageType The type of storage to use for storing the binary data blobs.
  */
 data class Configuration(
     val jwtPrivate: Path,
@@ -31,6 +63,9 @@ data class Configuration(
     val storageType: StorageType
 ) {
     companion object {
+        /**
+         * Deserialize a Vert.x JSON configuration into a `Configuration` instance.
+         */
         fun deserialize(json: JsonObject): Future<Configuration> {
             val result = Promise.promise<Configuration>()
 
@@ -85,6 +120,9 @@ data class Configuration(
             return result.future()
         }
 
+        /**
+         * Provide the authentication [Salt] configured for this application.
+         */
         private fun salt(json: JsonObject): Future<Salt> {
             val ret = Promise.promise<Salt>()
             if (json.containsKey("salt") && json.containsKey("salt.path")) {
@@ -106,6 +144,9 @@ data class Configuration(
             return ret.future()
         }
 
+        /**
+         * Provide the [StorageType] configured for this data collector.
+         */
         private fun storageType(storageTypeConfig: JsonObject): StorageType {
             when (val storageTypeString = storageTypeConfig.getString("type")) {
                 "gridfs" -> {
@@ -136,6 +177,13 @@ data class Configuration(
             }
         }
 
+        // TODO [2022-12-14] Klemens Muthmann: This code is ported from the previous implementation.
+        // Armin Schnabel has added the original code, but I do not really understand why it is necessary.
+        // The documentation should be improved when I understand why it is necessary to add a * at the end of the
+        // endpoint.
+        /**
+         * Provide the HTTP endpoint configured for this data collector.
+         */
         private fun httpEndpoint(endpoint: String): String {
             Validate.notEmpty(
                 endpoint,

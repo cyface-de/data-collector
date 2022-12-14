@@ -148,8 +148,8 @@ class Authenticator private constructor(
          *
          * @param loginEndpoint The endpoint to be used for login. This endpoint is added to the current path of the
          *            provided <code>router</code>
-         * @param router The router to set up authentication on
-         * @param config The HTTP server configuration parameters required
+         * @param router The router to set up authentication on.
+         * @param config The parameters required to configure authentication.
          */
         fun setupAuthentication(
             loginEndpoint: String,

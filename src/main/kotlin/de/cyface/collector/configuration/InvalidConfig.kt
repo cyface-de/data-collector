@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 Cyface GmbH
+ * Copyright 2021-2022 Cyface GmbH
  *
  * This file is part of the Cyface Data Collector.
  *
@@ -24,6 +24,7 @@ package de.cyface.collector.configuration
  * @author Klemens Muthmann
  * @version 1.0.0
  * @property message The message to display to the user.
+ * @property cause The optional cause for this [Exception].
  */
 class InvalidConfig(
     override val message: String = "",
