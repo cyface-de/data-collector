@@ -13,5 +13,13 @@
 	"http.port":8080,
 	"http.host":"localhost",
 	"http.endpoint":"/api/v3",
-	"http.port.management":13371
+	"http.port.management":13371,
+	"salt": "cyface_salt",
+	"upload.expiration": 600,
+	"measurement.payload.limit": 100,
+	"metrics.enabled": false,
+	"storage-type": {
+	  "type": "gridfs",
+	  "uploads-folder": "file-uploads"
+	}
 }
