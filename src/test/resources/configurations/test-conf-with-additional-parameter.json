@@ -1,0 +1,29 @@
+{
+  "bogus.parameter": "bogus.value",
+  "jwt.private": "executables/collector/src/test/resources/private_key.pem",
+  "jwt.public": "executables/collector/src/test/resources/public.pem",
+  "http.host": "localhost",
+  "http.endpoint": "/api/v3",
+  "http.port": 8080,
+  "mongo.db": {
+    "db_name": "cyface",
+    "connection_string": "mongodb+srv://user:password@mongodb.net/?retryWrites=true&w=majority",
+    "data_source_name": "cyface"
+  },
+  "admin.user": "admin",
+  "admin.password": "secret",
+  "salt": "cyface_salt",
+  "jwt.expiration": 60,
+  "upload.expiration": 60,
+  "measurement.payload.limit": 100,
+  "http.port.management": 13371,
+  "metrics.enabled": false,
+  "storage-type": {
+    "type": "google",
+    "collection-name": "cyface-data",
+    "project-identifier": "cyface-test",
+    "bucket-name": "cyface-bucket",
+    "credentials-file": "/path/to/credentials.json",
+    "paging-size": 60
+  }
+}
