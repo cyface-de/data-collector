@@ -174,6 +174,9 @@ dependencies {
   // Testing Dependencies
   testImplementation(platform("org.junit:junit-bom:${project.extra["junitVersion"]}"))
   testImplementation("org.junit.jupiter:junit-jupiter-params")  // Required for parameterized tests
+  testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine")
+  testImplementation("org.junit.jupiter:junit-jupiter:${project.extra["junitVersion"]}")
+  // Hamcrest and HamKrest for Kotlin
   testImplementation("org.hamcrest:hamcrest:${project.extra["hamcrestVersion"]}")
   testImplementation("com.natpryce:hamkrest:${project.extra["hamKrestVersion"]}")
   testImplementation(kotlin("reflect")) // Required by hamkrest
@@ -181,10 +184,8 @@ dependencies {
   testImplementation("org.mockito:mockito-core:${project.extra["mockitoVersion"]}")
   testImplementation("org.mockito:mockito-junit-jupiter:${project.extra["mockitoVersion"]}")
   testImplementation("org.mockito.kotlin:mockito-kotlin:${project.extra["mockitoKotlinVersion"]}")
-  testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine")
 
   testImplementation("io.vertx:vertx-junit5:${project.extra["vertxVersion"]}")
-  testImplementation("org.junit.jupiter:junit-jupiter:${project.extra["junitVersion"]}")
   testImplementation("io.vertx:vertx-web-client:${project.extra["vertxVersion"]}")
   // This is required to run an embedded Mongo instance for integration testing.
   testImplementation("de.flapdoodle.embed:de.flapdoodle.embed.mongo:${project.extra["flapdoodleVersion"]}")
