@@ -59,7 +59,7 @@ object ConfigurationFactory {
             on { adminUser } doReturn "admin"
             on { adminPassword } doReturn "secret"
             on { salt } doReturn ValueSalt("cyface-salt")
-            on { jwtExpiration } doReturn 10_000
+            on { jwtExpiration } doReturn 3600
             on { uploadExpiration } doReturn 60_000L
             on { managementHttpAddress } doReturn
                 URL(
@@ -73,7 +73,7 @@ object ConfigurationFactory {
             if (measurementLimit != null) {
                 on { measurementPayloadLimit } doReturn measurementLimit
             } else {
-                on { measurementPayloadLimit } doReturn 10_000L
+                on { measurementPayloadLimit } doReturn 104_857_600L
             }
         }
         return ret

@@ -104,7 +104,7 @@ public class MainVerticleTest {
                 .put("admin.user", "admin")
                 .put("admin.password", "secret")
                 .put("jwt.expiration", 60)
-                .put("upload.expiration", 60)
+                .put("upload.expiration", 60_000L)
                 .put("measurement.payload.limit", 100)
                 .put("http.port.management", 13371)
                 .put("metrics.enabled", false)
@@ -118,7 +118,6 @@ public class MainVerticleTest {
      * @param testContext The Vertx test context used to control test execution
      * @throws IOException If no free server port could be generated
      */
-    @SuppressWarnings("JUnitMalformedDeclaration")
     @Test
     @DisplayName("Fail startup if salt and salt.path are present!")
     void test(final Vertx vertx, final VertxTestContext testContext) throws Throwable {
@@ -138,7 +137,6 @@ public class MainVerticleTest {
      * @param testContext The Vertx test context used to control test execution
      * @throws IOException If no free server port could be generated
      */
-    @SuppressWarnings("JUnitMalformedDeclaration")
     @Test
     @DisplayName("Successful startup happy path!")
     void testHappyPath(final Vertx vertx, final VertxTestContext testContext) throws Throwable {

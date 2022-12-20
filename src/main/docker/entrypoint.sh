@@ -124,8 +124,8 @@ loadConfig() {
       \"admin.password\":\"$ADMIN_PASSWORD\",\
       \"metrics.enabled\":$METRICS_ENABLED,\
       \"salt\":\"cyface-salt\",\
-      \"upload.expiration\":60,\
-      \"measurement.payload.limit\":100,\
+      \"upload.expiration\":60000,\
+      \"measurement.payload.limit\":104857600,\
       \"metrics.enabled\": false,\
       \"storage-type\":{\
           \"type\":\"gridfs\",\

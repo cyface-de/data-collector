@@ -13,9 +13,9 @@
   "admin.password": "secret",
   "salt": "cyface_salt",
   "salt.path": "path/to/salt/file",
-  "jwt.expiration": 60,
-  "upload.expiration": 60,
-  "measurement.payload.limit": 100,
+  "jwt.expiration": 3600,
+  "upload.expiration": 60000,
+  "measurement.payload.limit": 104857600,
   "http.port.management": 13371,
   "metrics.enabled": false,
   "storage-type": {

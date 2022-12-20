@@ -71,7 +71,7 @@ class MetaDataStorageIT {
      */
     private fun configuration(): MongoClientSettings {
         val connString = ConnectionString(
-            "mongodb+srv://<username>:<password>@cyface.o1bn5yx.mongodb.net/?retryWrites=true&w=majority"
+            "mongodb+srv://<username>:<password>@mongodb.net"
         )
         return MongoClientSettings.builder()
             .applyConnectionString(connString)

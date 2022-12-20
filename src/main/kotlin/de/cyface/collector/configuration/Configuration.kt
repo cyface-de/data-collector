@@ -40,9 +40,9 @@ import java.nio.file.Paths
  * @property adminPassword The password for the default user to create if it does not exist. This should be changed in
  * production.
  * @property salt The salt to make breaking passwords harder.
- * @property jwtExpiration The time a JWT token stays valid.
- * @property uploadExpiration The time an upload session stays valid to be resumed in the future.
- * @property measurementPayloadLimit The maximum size accepted for a single measurement.
+ * @property jwtExpiration The time a JWT token stays valid in seconds.
+ * @property uploadExpiration The time an upload session stays valid to be resumed in the future, in milliseconds.
+ * @property measurementPayloadLimit The maximum size in bytes accepted for a single measurement.
  * @property managementHttpAddress The endpoint address running the management functions for the collector service.
  * @property metricsEnabled `true` if prometheus metrics should be collected; `false` otherwise.
  * @property storageType The type of storage to use for storing the binary data blobs.
@@ -74,7 +74,7 @@ data class Configuration(
                 val jwtPublic = Paths.get(json.get<String>("jwt.public"))
                 val httpHost = json.get<String>("http.host")
                 val httpPort = json.get<Int>("http.port")
-                val httpEndpoint = httpEndpoint(json["http.endpoint"])
+                val httpEndpoint = vertxEndpoint(json["http.endpoint"])
                 val serviceHttpAddress = URL("https", httpHost, httpPort, httpEndpoint)
                 val mongoDb = json.get<JsonObject>("mongo.db")
                 val adminUser = json.get<String>("admin.user")
@@ -109,7 +109,7 @@ data class Configuration(
                     )
                 }
                 saltCall.onFailure(result::fail)
-            } catch (e: NullPointerException) {
+            } catch (@Suppress("TooGenericExceptionCaught") e: NullPointerException) {
                 throw InvalidConfig(
                     "Unable to load configuration. Some parameters are missing. " +
                         "Please refer to the documentation or an example file.",
@@ -177,14 +177,15 @@ data class Configuration(
             }
         }
 
-        // TODO [2022-12-14] Klemens Muthmann: This code is ported from the previous implementation.
-        // Armin Schnabel has added the original code, but I do not really understand why it is necessary.
-        // The documentation should be improved when I understand why it is necessary to add a * at the end of the
-        // endpoint.
         /**
-         * Provide the HTTP endpoint configured for this data collector.
+         * Provide the HTTP endpoint configured for use with a Vertx router.
+         *
+         * This means a '*' is appended as the last path element to match all
+         * requests.
+         *
+         * @param endpoint The original endpoint provided by the configuration.
          */
-        private fun httpEndpoint(endpoint: String): String {
+        private fun vertxEndpoint(endpoint: String): String {
             Validate.notEmpty(
                 endpoint,
                 "Endpoint not found. Please use the parameter $endpoint."

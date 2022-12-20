@@ -86,7 +86,6 @@ public class CollectorApiVerticleTest {
      * @param testContext A test context to handle Vertx asynchronicity
      * @throws IOException if no free port could be retrieved
      */
-    @SuppressWarnings("JUnitMalformedDeclaration")
     @Test
     @DisplayName("Happy Path test for starting the collector API.")
     void test(final Vertx vertx, final VertxTestContext testContext) throws Throwable {
@@ -110,7 +109,7 @@ public class CollectorApiVerticleTest {
         when(configuration.getSalt()).thenReturn(new ValueSalt("cyface-salt"));
         when(configuration.getStorageType()).thenReturn(new GridFsStorageType(Path.of("upload-folder")));
         when(configuration.getUploadExpiration()).thenReturn(60_000L);
-        when(configuration.getMeasurementPayloadLimit()).thenReturn(100L);
+        when(configuration.getMeasurementPayloadLimit()).thenReturn(1_048_576L);
         when(configuration.getAdminUser()).thenReturn("admin");
         when(configuration.getAdminPassword()).thenReturn("secret");
 

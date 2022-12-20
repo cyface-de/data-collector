@@ -1,6 +1,6 @@
 # Module collector
 
-![https://vertx.io](https://img.shields.io/badge/vert.x-4.3.5-purple.svg)
+![https://vertx.io](https://img.shields.io/badge/vert.x-4.3.6-purple.svg)
 ![https://mongodb.com/](https://img.shields.io/badge/mongo-5.0.8-purple.svg)
 ![https://github.com/cyface-de/data-collector/actions](https://github.com/cyface-de/data-collector/workflows/Cyface%20Data%20Collector/badge.svg)
 
@@ -140,8 +140,9 @@ The following parameters are supported:
 * **salt:** A salt value that may be used instead of the salt from salt.path. You must make sure that either the salt or the salt.path parameter are used. If both are specified the application startup will fail.
 * **metrics.enabled:** Set to either `true` or `false`. If `true` the collector API publishes metrics using micrometer. These metrics are accessible by a [Prometheus](https://prometheus.io/) server (Which you need to set up yourself) at port `8081`.
 * **http.port.management:** The port running the management API responsible for creating user accounts.
-* **jwt.expiration**: The time it takes for a JWT token to expire in milliseconds. If a JWT token expires, clients need to acquire a new one via username and password authentication. Setting this time too short requires sending the username and password more often. This makes it easier for malicious parties to intercept and brute force usernames and passwords. However long time JWT tokens may be captured as well and used for malicious purposes.
+* **jwt.expiration**: The time it takes for a JWT token to expire in seconds. If a JWT token expires, clients need to acquire a new one via username and password authentication. Setting this time too short requires sending the username and password more often. This makes it easier for malicious parties to intercept and brute force usernames and passwords. However long time JWT tokens may be captured as well and used for malicious purposes.
 * **upload.expiration:** The time an interrupted upload is stored for continueation in the future in milliseconds. If this time expires, the upload must start from the beginning.
+* **measurement.payload.limit:** The size of a measurement in bytes up to which it is accepted as a single upload. Larger measurements are transmitted in chunks.
 * **storage-type:** The type of storage to use for the uploaded data. Currently either `gridfs` or `google` is supported. The following parameter are required:
   * **gridfs**
     * **type:** Must be `gridfs` in this case.
