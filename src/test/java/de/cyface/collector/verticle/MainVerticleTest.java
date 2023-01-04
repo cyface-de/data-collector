@@ -83,7 +83,7 @@ public class MainVerticleTest {
     /**
      * Creates a valid startup configuration to be used by tests.
      * 
-     * @return The pre filled startup configuration
+     * @return The pre-filled startup configuration
      * @throws IOException If no valid server port was available
      */
     private JsonObject config() throws IOException {
@@ -100,7 +100,15 @@ public class MainVerticleTest {
                 .put("http.endpoint", "/api/v3/")
                 .put("http.port", Network.freeServerPort(Network.getLocalHost()))
                 .put("salt", "abcdefg")
-                .put("mongo.db", mongoTest.clientConfiguration());
+                .put("mongo.db", mongoTest.clientConfiguration())
+                .put("admin.user", "admin")
+                .put("admin.password", "secret")
+                .put("jwt.expiration", 60)
+                .put("upload.expiration", 60_000L)
+                .put("measurement.payload.limit", 100)
+                .put("http.port.management", 13371)
+                .put("metrics.enabled", false)
+                .put("storage-type", JsonObject.of("type", "gridfs", "upload-path", "upload-folder"));
     }
 
     /**
@@ -110,7 +118,6 @@ public class MainVerticleTest {
      * @param testContext The Vertx test context used to control test execution
      * @throws IOException If no free server port could be generated
      */
-    @SuppressWarnings("JUnitMalformedDeclaration")
     @Test
     @DisplayName("Fail startup if salt and salt.path are present!")
     void test(final Vertx vertx, final VertxTestContext testContext) throws Throwable {
@@ -130,7 +137,6 @@ public class MainVerticleTest {
      * @param testContext The Vertx test context used to control test execution
      * @throws IOException If no free server port could be generated
      */
-    @SuppressWarnings("JUnitMalformedDeclaration")
     @Test
     @DisplayName("Successful startup happy path!")
     void testHappyPath(final Vertx vertx, final VertxTestContext testContext) throws Throwable {

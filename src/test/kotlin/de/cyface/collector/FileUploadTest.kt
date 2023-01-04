@@ -90,7 +90,7 @@ class FileUploadTest {
      */
     @Throws(IOException::class)
     private fun deployVerticle(vertx: Vertx, ctx: VertxTestContext) {
-        collectorClient = DataCollectorClient()
+        collectorClient = DataCollectorClient(140_000L)
         client = collectorClient.createWebClient(vertx, ctx, mongoTest)
     }
 

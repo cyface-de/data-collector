@@ -23,15 +23,16 @@ import de.cyface.api.Hasher
 import de.cyface.api.HttpServer
 import de.cyface.api.PauseAndResumeAfterBodyParsing
 import de.cyface.api.PauseAndResumeBeforeBodyParsing
+import de.cyface.collector.configuration.Configuration
 import de.cyface.collector.handler.AuthorizationHandler
 import de.cyface.collector.handler.MeasurementHandler
 import de.cyface.collector.handler.PreRequestHandler
 import de.cyface.collector.handler.StatusHandler
 import de.cyface.collector.handler.UserCreationHandler
+import de.cyface.collector.handler.auth.AuthenticationConfiguration
 import de.cyface.collector.handler.auth.Authenticator
 import de.cyface.collector.storage.DataStorageService
 import io.vertx.core.AbstractVerticle
-import io.vertx.core.AsyncResult
 import io.vertx.core.CompositeFuture
 import io.vertx.core.Future
 import io.vertx.core.Promise
@@ -47,7 +48,6 @@ import io.vertx.ext.web.handler.SessionHandler
 import io.vertx.ext.web.handler.StaticHandler
 import io.vertx.ext.web.sstore.LocalSessionStore
 import org.slf4j.LoggerFactory
-import java.nio.charset.StandardCharsets
 import java.util.Locale
 
 /**
@@ -58,36 +58,39 @@ import java.util.Locale
  * @author Armin Schnabel
  * @version 2.1.0
  * @since 2.0.0
- * @property salt The value to be used as encryption salt.
  * @property config The configuration used for the verticle.
  */
 class CollectorApiVerticle(
-    private val salt: String,
-    private val config: Config
+    private val config: Configuration,
 ) : AbstractVerticle() {
     @Throws(Exception::class)
     override fun start(startPromise: Promise<Void>) {
         LOGGER.info("Starting collector API!")
 
         // Start http server
-        val storageServiceBuilder = config.storageType
+
+        val mongoClient = MongoClient.createShared(
+            vertx,
+            config.mongoDb,
+            config.mongoDb.getString("data_source_name")
+        )
+        val storageServiceBuilder = config.storageType.dataStorageServiceBuilder(vertx, mongoClient)
         val storageServiceBuilderCall = storageServiceBuilder.create()
         val serverStartPromise = Promise.promise<Void>()
         storageServiceBuilderCall.onSuccess { storageService ->
             LOGGER.info("Created storage service.")
-            val router = setupRoutes(config, storageService)
-            storageService.startPeriodicCleaningOfTempData(
-                config.uploadExpirationTime,
-                vertx,
-                storageServiceBuilder.createCleanupOperation()
-            )
+            val uploadExpirationTime = config.uploadExpiration
+            LOGGER.info("Requests to the storage service expire after $uploadExpirationTime milliseconds.")
+            val cleanUpOperation = storageServiceBuilder.createCleanupOperation()
+            storageService.startPeriodicCleaningOfTempData(uploadExpirationTime, vertx, cleanUpOperation)
 
-            val httpServer = HttpServer(config.httpPort)
+            val router = setupRoutes(storageService, mongoClient)
+            val httpServer = HttpServer(config.serviceHttpAddress.port)
             httpServer.start(vertx, router, serverStartPromise)
         }
 
         // Insert default admin user
-        val userCreation = createDefaultUser(config.database, config.adminUserName, config.adminPassword)
+        val userCreation = createDefaultUser(mongoClient, config.adminUser, config.adminPassword)
 
         // Block until all futures completed
         val startUp = CompositeFuture.all(
@@ -118,21 +121,21 @@ class CollectorApiVerticle(
     ): Future<Void> {
         LOGGER.info("Creating default user $adminUsername.")
         val promise = Promise.promise<Void>()
-        mongoClient.findOne(
+
+        val findDefaultUserCall = mongoClient.findOne(
             "user",
             JsonObject().put("username", adminUsername),
             null
-        ) { result: AsyncResult<JsonObject?> ->
+        )
+        val loadSaltCall = config.salt.bytes(vertx)
+
+        val loadSaltAndfindDefaultUserCall = CompositeFuture.all(findDefaultUserCall, loadSaltCall)
+        loadSaltAndfindDefaultUserCall.onSuccess { result ->
             LOGGER.info("Finished searching for admin user $adminUsername.")
-            if (result.failed()) {
-                promise.fail(result.cause())
-                return@findOne
-            }
-            if (result.result() == null) {
-                val hasher = Hasher(
-                    HashingStrategy.load(),
-                    salt.toByteArray(StandardCharsets.UTF_8)
-                )
+            val foundUser = result.resultAt<JsonObject?>(0)
+            val salt = result.resultAt<ByteArray>(1)
+            if (foundUser == null) {
+                val hasher = Hasher(HashingStrategy.load(), salt)
                 val userCreationHandler = UserCreationHandler(mongoClient, "user", hasher)
                 val userCreation = userCreationHandler.createUser(adminUsername, adminPassword, ADMIN_ROLE)
                 userCreation.onSuccess { id: String? ->
@@ -147,25 +150,29 @@ class CollectorApiVerticle(
                 promise.complete()
             }
         }
+        loadSaltAndfindDefaultUserCall.onFailure(promise::fail)
         return promise.future()
     }
 
     /**
      * Initializes all the routes available via the Cyface Data Collector.
      *
-     * @param config HTTP server configuration parameters required to set up the routes for the collector API.
      * @param storageService The service used to store the received data.
+     * @param mongoClient The client for the Mongo database storing the user authentication and authorization
+     * information.
      * @return the created main `Router`
      */
-    private fun setupRoutes(config: Config, storageService: DataStorageService): Router {
+    private fun setupRoutes(storageService: DataStorageService, mongoClient: MongoClient): Router {
         // Setup router
         val mainRouter = Router.router(vertx)
         val apiRouter = Router.router(vertx)
+        val mainRoutePath = config.serviceHttpAddress.path
+        println("Starting Collector Server on: $mainRoutePath")
         mainRouter
-            .route(config.endpoint)
+            .route(mainRoutePath)
             .handler(LoggerHandler.create())
             .subRouter(apiRouter)
-        setupApiRouter(apiRouter, config, storageService)
+        setupApiRouter(apiRouter, storageService, mongoClient)
 
         // Setup unknown-resource handler
         mainRouter.route("/*").last().handler(FailureHandler())
@@ -176,14 +183,17 @@ class CollectorApiVerticle(
      * Sets up the routing for the Cyface collector API.
      *
      * @param apiRouter The sub-router to be used.
-     * @param config HTTP server configuration parameters required to set up the routes
+     * @param storageService The service used to store and retreive data. This is required by the handlers receiving
+     * data to store that data.
+     * @param mongoClient Provide access to the database storing authentication and authorization information.
      */
-    private fun setupApiRouter(apiRouter: Router, config: Config, storageService: DataStorageService) {
+    private fun setupApiRouter(apiRouter: Router, storageService: DataStorageService, mongoClient: MongoClient) {
         // Setup measurement routes
         val failureHandler = de.cyface.collector.handler.FailureHandler(vertx)
 
         // Setup authentication
-        Authenticator.setupAuthentication("/login", apiRouter, config)
+        val authenticationConfiguration = AuthenticationConfiguration(config, vertx, mongoClient)
+        Authenticator.setupAuthentication("/login", apiRouter, authenticationConfiguration)
 
         // Setup session-handler
         // - for all handlers but login and, thus, registering this *after* login
@@ -193,8 +203,33 @@ class CollectorApiVerticle(
         apiRouter.route().handler(sessionHandler)
 
         // Register handlers
-        registerPreRequestHandler(apiRouter, config, failureHandler, storageService)
-        registerMeasurementHandler(apiRouter, config, failureHandler, storageService)
+        val jwtAuth = authenticationConfiguration.jwtAuthProvider
+        val authProvider = authenticationConfiguration.authProvider
+        val jwtHandler = JWTAuthHandler.create(jwtAuth)
+        val preRequestHandlerAuthorizationhandler = AuthorizationHandler(
+            authProvider,
+            mongoClient,
+            PauseAndResumeAfterBodyParsing()
+        )
+        registerPreRequestHandler(
+            apiRouter,
+            jwtHandler,
+            preRequestHandlerAuthorizationhandler,
+            failureHandler,
+            storageService
+        )
+        val measurementRequestAuthorizationHandler = AuthorizationHandler(
+            authProvider,
+            mongoClient,
+            PauseAndResumeBeforeBodyParsing()
+        )
+        registerMeasurementHandler(
+            apiRouter,
+            jwtHandler,
+            measurementRequestAuthorizationHandler,
+            failureHandler,
+            storageService
+        )
 
         // Setup web-api route
         apiRouter.route().handler(StaticHandler.create("webroot/api"))
@@ -204,27 +239,27 @@ class CollectorApiVerticle(
      * Adds a handler for an endpoint and makes sure that handler is wrapped in the correct authentication handlers.
      *
      * @param router The `Router` to register the handler to.
-     * @param config The configuration parameters used to start the server.
+     * @param jwtAuthHandler The handler to authenticate the user using JWT tokens.
+     * @param authorizationHandler The handler used to authorize a user after successful authentication.
      * @param failureHandler The handler to add to handle failures.
      * @param storageService Service used to write the received data.
      */
     private fun registerPreRequestHandler(
         router: Router,
-        config: Config,
+        jwtAuthHandler: JWTAuthHandler,
+        authorizationHandler: AuthorizationHandler,
         failureHandler: ErrorHandler,
         storageService: DataStorageService
     ) {
-        val jwtAuth = config.jwtAuthProvider
-        val jwtHandler = JWTAuthHandler.create(jwtAuth)
         val preRequestBodyHandler = BodyHandler.create().setBodyLimit(BYTES_IN_ONE_KILOBYTE)
         router.post(MEASUREMENTS_ENDPOINT)
             .consumes("application/json; charset=UTF-8")
             .handler(LoggerHandler.create())
             // Read request body only once and before async calls or pause/resume must be used see [DAT-749]
             .handler(preRequestBodyHandler)
-            .handler(jwtHandler)
-            .handler(AuthorizationHandler(config.authProvider, config.database, PauseAndResumeAfterBodyParsing()))
-            .handler(PreRequestHandler(storageService, config.measurementLimit))
+            .handler(jwtAuthHandler)
+            .handler(authorizationHandler)
+            .handler(PreRequestHandler(storageService, config.measurementPayloadLimit))
             .failureHandler(failureHandler)
     }
 
@@ -232,32 +267,28 @@ class CollectorApiVerticle(
      * Adds a handler for an endpoint and makes sure that handler is wrapped in the correct authentication handlers.
      *
      * @param router The `Router` to register the handler to.
-     * @param config The configuration parameters used to start the server.
+     * @param jwtAuthHandler The handler to authenticate the user using JWT tokens.
+     * @param authorizationHandler The handler used to authorize a user after successful authentication.
      * @param failureHandler The handler to add to handle failures.
      * @param storageService Service used to write the received data.
      */
     private fun registerMeasurementHandler(
         router: Router,
-        config: Config,
+        jwtAuthHandler: JWTAuthHandler,
+        authorizationHandler: AuthorizationHandler,
         failureHandler: ErrorHandler,
         storageService: DataStorageService
     ) {
-        val jwtAuth = config.jwtAuthProvider
-        val jwtAuthHandler = JWTAuthHandler.create(jwtAuth)
         // The path pattern ../(sid)/.. was chosen because of the documentation of Vert.X SessionHandler
         // https://vertx.io/docs/vertx-web/java/#_handling_sessions
+        val measurementHandler = config.measurementPayloadLimit
         router.putWithRegex(String.format(Locale.ENGLISH, "\\%s\\/\\([a-z0-9]{32}\\)\\/", MEASUREMENTS_ENDPOINT))
             .consumes("application/octet-stream")
             // Not using BodyHandler as the `request.body()` can only be read once and the {@code #handler} does so.
             .handler(LoggerHandler.create())
             .handler(jwtAuthHandler)
-            .handler(AuthorizationHandler(config.authProvider, config.database, PauseAndResumeBeforeBodyParsing()))
-            .handler(
-                MeasurementHandler(
-                    storageService,
-                    config.measurementLimit
-                )
-            )
+            .handler(authorizationHandler)
+            .handler(MeasurementHandler(storageService, measurementHandler))
             .handler(StatusHandler(storageService))
             .failureHandler(failureHandler)
     }

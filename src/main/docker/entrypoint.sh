@@ -122,7 +122,15 @@ loadConfig() {
       \"http.port.management\":$CYFACE_MANAGEMENT_PORT,\
       \"admin.user\":\"$ADMIN_USER\",\
       \"admin.password\":\"$ADMIN_PASSWORD\",\
-      \"metrics.enabled\":$METRICS_ENABLED\
+      \"metrics.enabled\":$METRICS_ENABLED,\
+      \"salt\":\"cyface-salt\",\
+      \"upload.expiration\":60000,\
+      \"measurement.payload.limit\":104857600,\
+      \"metrics.enabled\": false,\
+      \"storage-type\":{\
+          \"type\":\"gridfs\",\
+	  \"uploads-folder\":\"file-uploads\"\
+      }
   }"
 }
 

@@ -1,5 +1,5 @@
 /*
- * Copyright 2018-2021 Cyface GmbH
+ * Copyright 2018-2022 Cyface GmbH
  *
  * This file is part of the Cyface Data Collector.
  *
@@ -20,15 +20,9 @@ package de.cyface.collector.commons;
 
 import java.io.IOException;
 
-import de.cyface.collector.verticle.Config;
-import org.apache.commons.lang3.Validate;
-
-import de.cyface.api.Parameter;
 import de.cyface.collector.verticle.CollectorApiVerticle;
 import de.flapdoodle.embed.process.runtime.Network;
-import io.vertx.core.DeploymentOptions;
 import io.vertx.core.Vertx;
-import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.client.WebClient;
 import io.vertx.junit5.VertxTestContext;
 
@@ -89,23 +83,13 @@ public final class DataCollectorClient {
 
         final var mongoDbConfig = mongoClient.clientConfiguration();
 
-        final var privateKey = this.getClass().getResource("/private_key.pem");
-        final var publicKey = this.getClass().getResource("/public.pem");
-        Validate.notNull(privateKey);
-        Validate.notNull(publicKey);
-        final var config = new JsonObject().put(Parameter.MONGO_DB.key(), mongoDbConfig)
-                .put(Parameter.HTTP_PORT.key(), port)
-                .put(Parameter.JWT_PRIVATE_KEY_FILE_PATH.key(), privateKey.getFile())
-                .put(Parameter.JWT_PUBLIC_KEY_FILE_PATH.key(), publicKey.getFile())
-                .put(Parameter.HTTP_HOST.key(), "localhost")
-                .put(Parameter.HTTP_ENDPOINT.key(), "/api/v3/");
-        if (measurementLimit != null) {
-            config.put(Parameter.MEASUREMENT_PAYLOAD_LIMIT.key(), measurementLimit);
-        }
-        final var options = new DeploymentOptions().setConfig(config);
+        final var config = ConfigurationFactory.INSTANCE.mockedConfiguration(
+                port,
+                mongoDbConfig,
+                measurementLimit);
 
-        final var collectorVerticle = new CollectorApiVerticle("test-salt", new Config(vertx, config));
-        vertx.deployVerticle(collectorVerticle, options, ctx.succeedingThenComplete());
+        final var collectorVerticle = new CollectorApiVerticle(config);
+        vertx.deployVerticle(collectorVerticle, ctx.succeedingThenComplete());
 
         return WebClient.create(vertx);
     }

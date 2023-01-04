@@ -18,7 +18,6 @@
  */
 package de.cyface.collector;
 
-import de.cyface.collector.verticle.Parameter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -75,7 +74,7 @@ public class Application extends Launcher {
     public final void afterConfigParsed(final JsonObject config) {
         super.afterConfigParsed(config);
 
-        metricsEnabled = Parameter.METRICS_ENABLED.boolValue(config, false);
+        metricsEnabled = config.getBoolean("metrics.enabled");
     }
 
     @Override

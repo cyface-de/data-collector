@@ -62,12 +62,17 @@ class GridFSStorageIT {
 
     private val uploadFolder = Path("upload-folder")
 
+    /**
+     * Start the in memory Mongo database and create the directory for temporary files used before storing uploads
+     * to GridFS.
+     */
     @BeforeEach
-    fun setUp(context: VertxTestContext) {
+    fun setUp(vertx: Vertx, context: VertxTestContext) {
         mongoTest = MongoTest()
         mongoTest.setUpMongoDatabase(Network.freeServerPort(Network.getLocalHost()))
-        Files.createDirectory(uploadFolder)
-        context.completeNow()
+        vertx.fileSystem().mkdir(uploadFolder.absolutePathString()).onComplete {
+            context.completeNow()
+        }
     }
 
     @AfterEach
@@ -76,7 +81,6 @@ class GridFSStorageIT {
         deleteDirectoryRecursion(uploadFolder)
     }
 
-    @Suppress("JUnitMalformedDeclaration")
     @Test
     fun `store a measurement results in a stored measurement`(vertx: Vertx, context: VertxTestContext) {
         val config = mongoTest.clientConfiguration()

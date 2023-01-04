@@ -54,7 +54,8 @@ class GridFsStorageServiceBuilder(
         val ret = Promise.promise<DataStorageService>()
 
         val indexCreationCall = dao.createIndices()
-        val uploadFolderExistsCall = fileSystem.exists(uploadFolder.absolutePathString())
+        val uploadFolderPath = uploadFolder.absolutePathString()
+        val uploadFolderExistsCall = fileSystem.exists(uploadFolderPath)
         val uploadFolderCreationCall = uploadFolderExistsCall.compose { exists ->
             onUploadFolderChecked(exists)
         }

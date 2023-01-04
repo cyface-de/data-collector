@@ -1,6 +1,6 @@
 # Module collector
 
-![https://vertx.io](https://img.shields.io/badge/vert.x-4.3.5-purple.svg)
+![https://vertx.io](https://img.shields.io/badge/vert.x-4.3.6-purple.svg)
 ![https://mongodb.com/](https://img.shields.io/badge/mongo-5.0.8-purple.svg)
 ![https://github.com/cyface-de/data-collector/actions](https://github.com/cyface-de/data-collector/workflows/Cyface%20Data%20Collector/badge.svg)
 
@@ -30,12 +30,18 @@ The project uses [Gradle](https://gradle.org/) as the build system.
 
 A program which provides the ability to collect data, as e.g. sent by the Cyface SDKs.
 
-The following sections start with an explanation on how to set up all the required certificates.
+The following sections explain how to run the Data Collector
+It starts with an explanation on how to set up all the required certificates.
 This is a necessary prerequisite for all the following steps.
 So **DO NOT** skip it.
 
+Thereafter follows an explanation on how to run the Data Collector using either Docker or an IDE like IntelliJ or Eclipse.
+
 ### Certificates
-The Cyface Data Collector provides keys you may use for testing and during development.
+The Cyface Data Collector authentication mechanism uses JSON Web Tokens (JWT). 
+This mechanism requires asynchronous keys.
+
+Keys you may use for testing and during development are provided.
 Those keys are located in `src/test/resources`.
 To use them outside of Unit tests you need to copy them to an appropriate location.
 **ATTENTION: DO NOT USE THOSE KEYS IN A PRODUCTION ENVIRONMENT.**
@@ -94,39 +100,60 @@ Use `docker-compose ps` to see which ports are mapped to which by Docker.
 For using such a setup in production, you may create your own Docker setup, based on our development one.
 
 #### Running without Docker
-Running the Cyface data collector without Docker, like for example from the terminal or from within your IDE is a little more complex.
+Running the Cyface Data Collector without Docker, like for example from the terminal or from within your IDE is a little more complex.
 It requires a few set up steps and command knowledge as explained in the following paragraphs.
 
 ##### Running a Mongo Database for Data and User Storage
 Before you can run the Cyface data collector you need to set up a Mongo database.
 
 If you use the Docker environment as explained above, this is done for you.
-If you run the Cyface data collector on your own, you are responsible for providing a valid environment, including Mongo.
+If you run the Cyface Data Collector on your own, you are responsible for providing a valid environment, including Mongo.
 
 The database is used to store the collected data and information about valid user accounts.
 For information on how to install and run a Mongo database on your machine please follow the [tutorial](https://docs.mongodb.com/manual/installation/#mongodb-community-edition).
 If you take the default installation, the default settings of the Cyface data collector should be sufficient to connect to that instance.
 **ATTENTION: However be aware this is not recommended as a production environment.**
 
+##### Running a Google Cloud Store for Data
+As an alternative for storing data to a Mongo GridFS database, the Cyface Data 
+Collector provides the possibility to use Google Cloud Storage for storing received data.
+
+You may configure this as explained in the section about valid arguments.
+Notice however that a Mongo database is still required to store user data for authentication and authorization as explained above.
+
 #### Data Collector Arguments
-The Cyface data collector supports a few parameters to fine tune the runtime.
-All of these parameters also provide reasonable defaults for a quick setup.
+The Cyface data collector requires a few parameters to fine tune the runtime.
 The parameters are provided using the typical [Vertx `-conf` parameter](https://vertx.io/docs/vertx-core/java/#_the_vertx_command_line) with a value in JSON notation.
 
 The following parameters are supported:
 
-* **jwt.private:** The path of the file containing the private key used to sign JWT keys. This defaults to `secrets/private_key.pem`, **which you should never use in production**.
-* **jwt.public:** The path of the file containing the public key used to sign JWT keys. This defaults to `secrets/public.pem`, **which you should never use in production**.
-* **http.port:** The port the API  is available at. This defaults to `8080`.
+* **jwt.private:** The path of the file containing the private key used to sign JWT keys.
+* **jwt.public:** The path of the file containing the public key used to sign JWT keys.
+* **http.port:** The port the API  is available at.
 * **http.host:** The hostname under which the Cyface Data Collector is running. This can be something like `localhost`.
-* **http.endpoint.v3:** The path to the endpoint the Cyface Data Collector is running. This can be something like `/api/v3`.
-* **http.endpoint.v2:** The path to the endpoint the Cyface Data Collector is running. This can be something like `/api/v2`.
-* **http.port.management:** The port the management API is available at. This defaults to `13371`.
+* **http.endpoint:** The path to the endpoint the Cyface Data Collector is running. This can be something like `/api/v3`.
+* **http.port.management:** The port the management API is available at.
 * **mongo.db:** Settings for a Mongo database storing information about all the users capable of logging into the system and all data uploaded via the Cyface data collector. This defaults to a Mongo database available at `mongodb://127.0.0.1:27017`. The value of this should be a JSON object configured as described [here](https://vertx.io/docs/vertx-mongo-client/java/#_configuring_the_client).
-* **admin.user:** The username of a default administration account which is created if it does not exist upon start up. This defaults to `admin`. **You must change this in a production environment**.
-* **admin.password:** The password for the default administration account. This defaults to `secret`. **You must change this in a production environment**.
-* **salt.path:** The path to a salt file used to encrypt passwords stored in the user database even stronger. This defaults to `secrets/salt`. If the file does not exist a default salt is used. **You should not do this in a production environment**.
+* **admin.user:** The username of a default administration account which is created if it does not exist upon start up.
+* **admin.password:** The password for the default administration account.
+* **salt.path:** The path to a salt file used to encrypt passwords stored in the user database even stronger.
+* **salt:** A salt value that may be used instead of the salt from salt.path. You must make sure that either the salt or the salt.path parameter are used. If both are specified the application startup will fail.
 * **metrics.enabled:** Set to either `true` or `false`. If `true` the collector API publishes metrics using micrometer. These metrics are accessible by a [Prometheus](https://prometheus.io/) server (Which you need to set up yourself) at port `8081`.
+* **http.port.management:** The port running the management API responsible for creating user accounts.
+* **jwt.expiration**: The time it takes for a JWT token to expire in seconds. If a JWT token expires, clients need to acquire a new one via username and password authentication. Setting this time too short requires sending the username and password more often. This makes it easier for malicious parties to intercept and brute force usernames and passwords. However long time JWT tokens may be captured as well and used for malicious purposes.
+* **upload.expiration:** The time an interrupted upload is stored for continueation in the future in milliseconds. If this time expires, the upload must start from the beginning.
+* **measurement.payload.limit:** The size of a measurement in bytes up to which it is accepted as a single upload. Larger measurements are transmitted in chunks.
+* **storage-type:** The type of storage to use for the uploaded data. Currently either `gridfs` or `google` is supported. The following parameter are required:
+  * **gridfs**
+    * **type:** Must be `gridfs` in this case.
+    * **uploads-folder:** The relative or absolute path to a folder, to store temporary not finished uploads on the local harddrive before upload of the complete data blob to GridFS upon completion.
+  * **google**
+    * **type:** Must be `google` in this case.
+    * **collection-name:** The name of a Mongo collection to store an uploads metadata.
+    * **project-identifier:** A Google Cloud Storage project identifier to where the upload bucket is located.
+    * **bucket-name:** The Google Cloud Storage bucket name to load the data into.
+    * **credentials-file:** A credentials file used to authenticate with the Google Cloud Storage account used to upload the data to the Cloud.
+    * **paging-size:** The number of buckets to load per request, when iterating through all the data uploaded. Large numbers require fewer requests but more memory.
 
 #### Running from Command Line
 
@@ -142,7 +169,7 @@ To package your application:
 ./gradlew clean assemble
 ```
 
-To run your application:
+To run your application with the settings from `conf.json`:
 
 ```
 ./gradlew run --args="run de.cyface.collector.verticle.MainVerticle -conf conf.json"
@@ -170,26 +197,18 @@ To load files from the Mongo GridFS file storage use the [Mongofiles](https://do
 To release a new version:
 
 1. *Create a new release branch* following the format `release-x.y.z`.
-a. `x.y.z` is the number of the new version following [Semantic Versioning](http://semver.org).
-b. *Hotfixes can be branched from the already existing release-branch*
-A. Merge the hotfix into the `main` and `release` branch, create pull requests and pass reviewing.
-B. No new features are allowed on a release-branch, only fixes and minor changes.
+ `x.y.z` is the number of the new version following [Semantic Versioning](http://semver.org).
 
-2. *Increase version numbers* in root `build.gradle`,
-a. and optional in any associated `docker-compose.yml` or OpenAPI documentation (usually located in `src/main/resources/webroot/openapi.yml`).
-b. If you need to version sub-projects differently, create a version attribute in the corresponding `build.gradle`.
+2. *Increase version numbers* in root `build.gradle`, and optionally in any associated `docker-compose.yml` or OpenAPI documentation (usually located in `src/main/resources/webroot/openapi.yml`).
 
 3. *Commit version bump and push branch* to GitHub.
 a. Wait until the continuous integration system passes.
 b. Create a Pull Request from your `release-x.y.z` branch to `release`.
-c. Get the Pull Request accepted and merge it.
+c. Get the Pull Request accepted and squash it.
 
-4. *Tag the new release on the release branch*.
-a. Ensure you are on the correct branch and commit.
-b. Follow the guidelines from ["Keep a Changelog"](https://keepachangelog.com) in your tag description.
+4. *Tag the new release on the main branch*. Follow the guidelines from ["Keep a Changelog"](https://keepachangelog.com) in your tag description.
 
-5. *Push the release tag to GitHub*.
-a. The docker image and GitHub packages are automatically published when a new version is tagged and pushed by our
+5. *Push the release tag to GitHub*. The docker image and GitHub packages are automatically published when a new version is tagged and pushed by our
    [GitHub Actions](https://github.com/cyface-de/data-collector/actions) to the
    [GitHub Registry](https://github.com/cyface-de/data-collector/packages).
 
@@ -236,7 +255,7 @@ along with the Cyface Data Collector.  If not, see http://www.gnu.org/licenses/.
 
 # Package de.cyface.collector.model
 
-Contains all the data model files required by the Cyface data collector.
+Contains all the data model files required by the Cyface Data Collector.
 
 # Package de.cyface.collector.storage
 

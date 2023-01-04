@@ -1,2 +1,4 @@
 gpr.user=<GITHUB_USERNAME>
 gpr.key=<GITHUB_ACCESS_TOKEN>
+# suppress inspection "UnusedProperty"
+org.gradle.caching=true

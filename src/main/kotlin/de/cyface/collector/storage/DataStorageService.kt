@@ -80,7 +80,8 @@ interface DataStorageService {
     /**
      * Start a background timer, which cleans all temporary files not associated with an active upload anymore.
      *
-     * @param uploadExpirationTime The time after which temporary data files are stale and eligible for cleaning.
+     * @param uploadExpirationTime The time after which temporary data files are stale and eligible for cleaning in
+     * milliseconds.
      * @param vertx The `Vertx` instance to place the background process at.
      * @param cleanupOperation An algorithm, that describes exactly how to clean up the data storage.
      */

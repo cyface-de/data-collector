@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 Cyface GmbH
+ * Copyright 2022 Cyface GmbH
  *
  * This file is part of the Cyface Data Collector.
  *
@@ -16,13 +16,21 @@
  * You should have received a copy of the GNU General Public License
  * along with the Cyface Data Collector. If not, see <http://www.gnu.org/licenses/>.
  */
-package de.cyface.collector.verticle
+package de.cyface.collector.configuration
+
+import de.cyface.collector.storage.DataStorageServiceBuilder
+import io.vertx.core.Vertx
+import io.vertx.ext.mongo.MongoClient
 
 /**
- * An exception thrown if an invalid configuration of this application has been encountered.
+ * A configuration for a [de.cyface.collector.storage.DataStorageService].
  *
  * @author Klemens Muthmann
  * @version 1.0.0
- * @property message The message to display to the user.
  */
-class InvalidConfig(override val message: String) : Exception(message)
+interface StorageType {
+    /**
+     * Create the [DataStorageServiceBuilder] from this storage configuration.
+     */
+    fun dataStorageServiceBuilder(vertx: Vertx, mongoClient: MongoClient): DataStorageServiceBuilder
+}
