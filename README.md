@@ -1,7 +1,7 @@
 # Module collector
 
 ![https://vertx.io](https://img.shields.io/badge/vert.x-4.3.6-purple.svg)
-![https://mongodb.com/](https://img.shields.io/badge/mongo-5.0.8-purple.svg)
+![https://mongodb.com/](https://img.shields.io/badge/mongo-5.0.16-purple.svg)
 ![https://github.com/cyface-de/data-collector/actions](https://github.com/cyface-de/data-collector/workflows/Cyface%20Data%20Collector/badge.svg)
 
 This application represents the [Cyface](https://cyface.de) data collector software.
