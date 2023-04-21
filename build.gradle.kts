@@ -69,7 +69,7 @@ application {
 }
 
 group = "de.cyface"
-version = "6.10.3"
+version = "0.0.0" // Automatically overwritten by CI
 
 val mainVerticleName = "de.cyface.collector.verticle.MainVerticle"
 val watchForChange = "src/**/*"
