@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2022 Cyface GmbH
+ * Copyright 2020-2023 Cyface GmbH
  *
  * This file is part of the Cyface Data Collector.
  *
@@ -28,7 +28,7 @@ import java.net.URL
  *
  * @author Klemens Muthmann
  * @author Armin Schnabel
- * @version 1.1.0
+ * @version 1.1.1
  * @since 1.0.0
  */
 buildscript {
@@ -46,10 +46,10 @@ plugins {
   id("eclipse")
   id("idea")
   //noinspection SpellCheckingInspection
-  id("com.github.johnrengelman.shadow").version("7.0.0")
+  id("com.github.johnrengelman.shadow").version("7.1.2")
   // Plugin to display the Gradle task graph
   //noinspection SpellCheckingInspection
-  id("org.barfuin.gradle.taskinfo").version("1.0.5")
+  id("org.barfuin.gradle.taskinfo").version("2.1.0")
 
   @Suppress("ForbiddenComment")
   // TODO: Remoe this as it only applies to Java
@@ -59,7 +59,7 @@ plugins {
   kotlin("jvm").version("1.7.10")
 
   // For static code checks
-  id("io.gitlab.arturbosch.detekt").version("1.21.0")
+  id("io.gitlab.arturbosch.detekt").version("1.22.0")
   // For Generation of Documentation
   id("org.jetbrains.dokka").version("1.7.10")
 }
