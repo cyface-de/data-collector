@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2022 Cyface GmbH
+ * Copyright 2020-2023 Cyface GmbH
  *
  * This file is part of the Cyface Data Collector.
  *
@@ -28,7 +28,7 @@ import java.net.URL
  *
  * @author Klemens Muthmann
  * @author Armin Schnabel
- * @version 1.1.0
+ * @version 1.1.1
  * @since 1.0.0
  */
 buildscript {
@@ -46,10 +46,10 @@ plugins {
   id("eclipse")
   id("idea")
   //noinspection SpellCheckingInspection
-  id("com.github.johnrengelman.shadow").version("7.0.0")
+  id("com.github.johnrengelman.shadow").version("7.1.2")
   // Plugin to display the Gradle task graph
   //noinspection SpellCheckingInspection
-  id("org.barfuin.gradle.taskinfo").version("1.0.5")
+  id("org.barfuin.gradle.taskinfo").version("2.1.0")
 
   @Suppress("ForbiddenComment")
   // TODO: Remoe this as it only applies to Java
@@ -59,7 +59,7 @@ plugins {
   kotlin("jvm").version("1.7.10")
 
   // For static code checks
-  id("io.gitlab.arturbosch.detekt").version("1.21.0")
+  id("io.gitlab.arturbosch.detekt").version("1.22.0")
   // For Generation of Documentation
   id("org.jetbrains.dokka").version("1.7.10")
 }
@@ -69,7 +69,7 @@ application {
 }
 
 group = "de.cyface"
-version = "6.10.3"
+version = "0.0.0" // Automatically overwritten by CI
 
 val mainVerticleName = "de.cyface.collector.verticle.MainVerticle"
 val watchForChange = "src/**/*"
@@ -106,26 +106,27 @@ tasks.withType<KotlinCompile>().configureEach {
 extra["vertxVersion"] = "4.3.6"
 // The following is only required since Vert.x GridFS Client is not working correctly in Version 4.3.3.
 // To check this run GridFSStorageIT
-// We reported the problem to Vertx Github. A fix is scheduled for Vertx 4.3.4
+// We reported the problem to Vertx Github. A fix is scheduled for Vertx 4.4.2
+// https://github.com/vert-x3/vertx-mongo-client/issues/291
 extra["mongoDriverVersion"] = "4.8.0"
-extra["micrometerVersion"] = "1.7.2"
-extra["slf4jVersion"] = "1.7.29"
+extra["micrometerVersion"] = "1.10.6"
+extra["slf4jVersion"] = "2.0.7"
 extra["commonsLangVersion"] = "3.12.0"
-extra["logbackVersion"] = "1.2.5"
-extra["cyfaceApiVersion"] = "2.0.1"
-extra["cyfaceSerializationVersion"] = "2.2.1"
-extra["gradleWrapperVersion"] = "7.5.1"
-extra["googleCloudLibrariesVersion"] = "26.1.5"
+extra["logbackVersion"] = "1.4.6"
+extra["cyfaceApiVersion"] = "2.1.2"
+extra["cyfaceSerializationVersion"] = "2.3.6"
+extra["gradleWrapperVersion"] = "7.6.1"
+extra["googleCloudLibrariesVersion"] = "26.12.0"
 
 // Versions of testing dependencies
-extra["junitVersion"] = "5.7.2"
-extra["mockitoVersion"] = "4.7.0"
+extra["junitVersion"] = "5.9.2"
+extra["mockitoVersion"] = "5.2.0"
 @Suppress("ForbiddenComment")
 // TODO: Remove the following. It belongs to java and should be replaced by hamKrest
 extra["hamcrestVersion"] = "2.2"
 extra["hamKrestVersion"] = "1.8.0.1"
-extra["flapdoodleVersion"] = "3.5.2"
-extra["mockitoKotlinVersion"] = "4.0.0"
+extra["flapdoodleVersion"] = "3.5.3" // major upgrade available
+extra["mockitoKotlinVersion"] = "4.1.0"
 extra["dokkaVersion"] = "1.7.10"
 extra["detektVersion"] = "1.22.0"
 

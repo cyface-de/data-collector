@@ -1,4 +1,4 @@
-# Copyright 2018-2022 Cyface GmbH
+# Copyright 2018-2023 Cyface GmbH
 #
 # This file is part of the Cyface Data Collector.
 #
@@ -23,7 +23,7 @@ services:
   # Mongo Database Container
   mongo:
     container_name: collector_mongo
-    image: mongo:5.0.8
+    image: mongo:5.0.16
     ports:
       - "127.0.0.1:27019:27017"
     volumes:

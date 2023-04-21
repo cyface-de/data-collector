@@ -1,8 +1,8 @@
 # Module collector
 
 ![https://vertx.io](https://img.shields.io/badge/vert.x-4.3.6-purple.svg)
-![https://mongodb.com/](https://img.shields.io/badge/mongo-5.0.8-purple.svg)
-![https://github.com/cyface-de/data-collector/actions](https://github.com/cyface-de/data-collector/workflows/Cyface%20Data%20Collector/badge.svg)
+![https://mongodb.com/](https://img.shields.io/badge/mongo-5.0.16-purple.svg)
+![https://github.com/cyface-de/data-collector/actions](https://github.com/cyface-de/data-collector/actions/workflows/gradle_build.yml/badge.svg)
 
 This application represents the [Cyface](https://cyface.de) data collector software.
 
@@ -196,23 +196,12 @@ To load files from the Mongo GridFS file storage use the [Mongofiles](https://do
 
 To release a new version:
 
-1. *Create a new release branch* following the format `release-x.y.z`.
- `x.y.z` is the number of the new version following [Semantic Versioning](http://semver.org).
-
-2. *Increase version numbers* in root `build.gradle`, and optionally in any associated `docker-compose.yml` or OpenAPI documentation (usually located in `src/main/resources/webroot/openapi.yml`).
-
-3. *Commit version bump and push branch* to GitHub.
-a. Wait until the continuous integration system passes.
-b. Create a Pull Request from your `release-x.y.z` branch to `release`.
-c. Get the Pull Request accepted and squash it.
-
-4. *Tag the new release on the main branch*. Follow the guidelines from ["Keep a Changelog"](https://keepachangelog.com) in your tag description.
-
-5. *Push the release tag to GitHub*. The docker image and GitHub packages are automatically published when a new version is tagged and pushed by our
-   [GitHub Actions](https://github.com/cyface-de/data-collector/actions) to the
-   [GitHub Registry](https://github.com/cyface-de/data-collector/packages).
-
-6. *Mark the released version as 'new Release' on [GitHub](https://github.com/cyface-de/data-collector/releases)*.
+* `version`s in root `build.gradle` and `src/main/resources/webroot/*/openapi.yml` are automatically set by the CI
+* Just tag the new release version on the `main` branch. Follow the guidelines from ["Keep a Changelog"](https://keepachangelog.com) in your tag description
+* Push the release tag to GitHub. The artifacts are automatically published when a new version is tagged and pushed by our
+  [GitHub Actions](https://github.com/cyface-de/data-collector/actions) to the
+  [GitHub Registry](https://github.com/cyface-de/data-collector/packages).
+* The CI workflow automatically marks the release on Github
 
 
 ## Publishing artifacts to GitHub Packages manually
@@ -223,7 +212,7 @@ How to obtain these credentials is described [here](https://help.github.com/en/g
 
 To publish a new version of an artifact you need to:
 
-1. Increase the version number of the sub-project within the `build.gradle` file
+1. Increase the version number of the subproject within the `build.gradle` file
 2. Call `./gradlew publish`
 
 This will upload a new artifact to GitHub packages with the new version.
@@ -236,7 +225,7 @@ This project uses [semantic versioning](https://semver.org/).
 	* MongoDb
 
 ## Licensing
-Copyright 2018-2022 Cyface GmbH
+Copyright 2018-2023 Cyface GmbH
 
 This file is part of the Cyface Data Collector.
 
