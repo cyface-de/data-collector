@@ -110,7 +110,6 @@ extra["vertxVersion"] = "4.3.6"
 // https://github.com/vert-x3/vertx-mongo-client/issues/291
 extra["mongoDriverVersion"] = "4.8.0"
 extra["micrometerVersion"] = "1.10.6"
-extra["slf4jVersion"] = "2.0.7"
 extra["commonsLangVersion"] = "3.12.0"
 extra["logbackVersion"] = "1.4.6"
 extra["cyfaceApiVersion"] = "2.1.2"

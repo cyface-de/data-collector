@@ -204,7 +204,7 @@ data class RequestMetaData(
          */
         fun geoJson(): JsonObject {
             val ret = JsonObject()
-            ret.put("timestamp", timestamp.toString())
+            ret.put("timestamp", timestamp)
             val geometry = JsonObject()
                 .put("type", "Point")
                 .put("coordinates", JsonArray().add(longitude).add(latitude))
