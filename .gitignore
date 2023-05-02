@@ -41,7 +41,7 @@ gradle.properties
 **/*.swp
 
 # Cyface Temporary Files
-**/file-uploads
+**/uploadFolder
 **/.vertx
 **/conf.json
 **/*.log

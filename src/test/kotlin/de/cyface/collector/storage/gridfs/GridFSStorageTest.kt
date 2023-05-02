@@ -174,6 +174,8 @@ class GridFSStorageTest {
             val metadata = firstValue.metadata
             assertThat(metadata.getString("deviceId"), equalTo(expectedMetaData.getString("deviceId")))
             assertThat(metadata.getString("measurementId"), equalTo(expectedMetaData.getString("measurementId")))
+            // Ensure timestamp is stored as long [RFR-430]
+            assertThat(metadata.getJsonObject("start").getLong("timestamp"), equalTo(startLocation.timestamp))
         }
     }
 
