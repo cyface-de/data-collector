@@ -132,7 +132,6 @@ The following parameters are supported:
 * **http.port:** The port the API  is available at.
 * **http.host:** The hostname under which the Cyface Data Collector is running. This can be something like `localhost`.
 * **http.endpoint:** The path to the endpoint the Cyface Data Collector is running. This can be something like `/api/v3`.
-* **http.port.management:** The port the management API is available at.
 * **mongo.db:** Settings for a Mongo database storing information about all the users capable of logging into the system and all data uploaded via the Cyface data collector. This defaults to a Mongo database available at `mongodb://127.0.0.1:27017`. The value of this should be a JSON object configured as described [here](https://vertx.io/docs/vertx-mongo-client/java/#_configuring_the_client).
 * **admin.user:** The username of a default administration account which is created if it does not exist upon start up.
 * **admin.password:** The password for the default administration account.

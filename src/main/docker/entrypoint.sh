@@ -126,10 +126,9 @@ loadConfig() {
       \"salt\":\"cyface-salt\",\
       \"upload.expiration\":60000,\
       \"measurement.payload.limit\":104857600,\
-      \"metrics.enabled\": false,\
       \"storage-type\":{\
           \"type\":\"gridfs\",\
-	  \"uploads-folder\":\"file-uploads\"\
+	        \"uploads-folder\":\"file-uploads\"\
       }
   }"
 }
