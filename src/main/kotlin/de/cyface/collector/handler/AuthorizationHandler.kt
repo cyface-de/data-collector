@@ -29,12 +29,16 @@ import io.vertx.core.Handler
 import io.vertx.core.Promise
 import io.vertx.core.http.HttpServerRequest
 import io.vertx.core.json.JsonObject
+import io.vertx.ext.auth.authentication.Credentials
 import io.vertx.ext.auth.authentication.UsernamePasswordCredentials
-import io.vertx.ext.auth.mongo.MongoAuthentication
 import io.vertx.ext.auth.mongo.MongoAuthorization
+import io.vertx.ext.auth.oauth2.OAuth2Auth
+import io.vertx.ext.auth.oauth2.Oauth2Credentials
 import io.vertx.ext.mongo.MongoClient
 import io.vertx.ext.web.RoutingContext
+import io.vertx.ext.web.handler.OAuth2AuthHandler
 import org.apache.commons.lang3.Validate
+import org.bson.types.ObjectId
 import org.slf4j.LoggerFactory
 import java.util.Locale
 import java.util.stream.Collectors
@@ -45,13 +49,13 @@ import java.util.stream.Collectors
  *
  * @author Klemens Muthmann
  * @version 1.0.0
- * @property authProvider An auth provider used by this server to authenticate against the Mongo user database.
+ * @property authProvider An auth provider used by this server to authenticate against an OAuth2 endpoint.
  * @property mongoDatabase The database to check which users a {@code manager} user has access to.
  * @property strategy The pause and resume strategy to be used which wraps async calls
  *                    in {@link #handle(RoutingContext)}.
  */
 class AuthorizationHandler(
-    private val authProvider: MongoAuthentication,
+    private val authProvider: OAuth2Auth,
     private val mongoDatabase: MongoClient,
     private val strategy: PauseAndResumeStrategy
 ) : Handler<RoutingContext> {
@@ -63,20 +67,26 @@ class AuthorizationHandler(
             LOGGER.debug("Request headers: {}", headers)
 
             // Check authorization
-            val principal = UsernamePasswordCredentials(context.user().principal())
-            val username = principal.username
+            //val principal = UsernamePasswordCredentials(context.user().principal())
+            val credentials = Oauth2Credentials(context.user().principal())
+            val username = credentials.username
 
             // Before async operations, pause request body parsing to not lose the body or protocol upgrades.
-            strategy.pause(request)
-            val authentication: Future<io.vertx.ext.auth.User> = authProvider.authenticate(principal)
-            authentication.onSuccess { user: io.vertx.ext.auth.User ->
-                try {
-                    strategy.resume(request)
+            //strategy.pause(request)
+            // FIXME: Instead of this duplicate call, we should see if the OAuth2Handler passed parameters
+            //val authentication: Future<io.vertx.ext.auth.User> = authProvider.authenticate(credentials)
+            // FIXME: double check only authenticated users arrive here
+            //authentication.onSuccess { user: io.vertx.ext.auth.User ->
+            //val user = context.user() as Oauth2Credentials// as OAuth2TokenImpl
+            //val username = user.username
+                //try {
+                    //strategy.resume(request)
 
                     // Before async operations, pause request body parsing to not lose the body or protocol upgrades.
-                    strategy.pause(request)
+                    //strategy.pause(request)
                     // Load principal from authentication result, so it also contains the roles
-                    val loadUsers: Future<Set<User>> =
+                    // FIXME: use OAuth2 roles to handle group permissions
+                    /*val loadUsers: Future<Set<User>> =
                         loadAccessibleUsers(user.principal())
                     loadUsers.onSuccess { accessibleUsers: Set<User> ->
                         try {
@@ -92,8 +102,11 @@ class AuthorizationHandler(
                             }.collect(Collectors.toList())
                             Validate.isTrue(matched.size == 1)
                             // Make sure it's the matched user
-                            context.put("logged-in-user", matched.stream().findFirst().get())
-                            context.put("accessible-users", accessibleUsers).next()
+                            context.put("logged-in-user", matched.stream().findFirst().get())*/
+                            context.put("logged-in-user", User(ObjectId(/*FIXME*/), username))
+                            //context.put("accessible-users", accessibleUsers)
+                            context.next()
+                            /*
                         } catch (e: RuntimeException) {
                             context.fail(e)
                         }
@@ -104,12 +117,12 @@ class AuthorizationHandler(
                     }
                 } catch (e: RuntimeException) {
                     context.fail(HTTPStatus.SERVER_ERROR, e)
-                }
-            }
-            authentication.onFailure { e: Throwable ->
+                }*/
+            //}
+            /*authentication.onFailure { e: Throwable ->
                 LOGGER.error("Authorization failed for user {}!", username)
                 context.fail(HTTPStatus.UNAUTHORIZED, e)
-            }
+            }*/
         } catch (e: NumberFormatException) {
             LOGGER.error("Data was not parsable!")
             context.fail(Authorizer.ENTITY_UNPARSABLE, e)

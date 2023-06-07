@@ -155,6 +155,7 @@ dependencies {
   implementation("io.vertx:vertx-auth-common:${project.extra["vertxVersion"]}")
   implementation("io.vertx:vertx-auth-mongo:${project.extra["vertxVersion"]}")
   implementation("io.vertx:vertx-auth-jwt:${project.extra["vertxVersion"]}")
+  implementation("io.vertx:vertx-auth-oauth2:${project.extra["vertxVersion"]}")
 
   // Monitoring + Metrics
   implementation("io.vertx:vertx-micrometer-metrics:${project.extra["vertxVersion"]}")

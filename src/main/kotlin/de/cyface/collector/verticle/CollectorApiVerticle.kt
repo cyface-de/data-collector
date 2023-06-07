@@ -38,12 +38,15 @@ import io.vertx.core.Future
 import io.vertx.core.Promise
 import io.vertx.core.json.JsonObject
 import io.vertx.ext.auth.HashingStrategy
+import io.vertx.ext.auth.oauth2.OAuth2Auth
+import io.vertx.ext.auth.oauth2.OAuth2Options
+import io.vertx.ext.auth.oauth2.providers.KeycloakAuth
 import io.vertx.ext.mongo.MongoClient
 import io.vertx.ext.web.Router
 import io.vertx.ext.web.handler.BodyHandler
 import io.vertx.ext.web.handler.ErrorHandler
-import io.vertx.ext.web.handler.JWTAuthHandler
 import io.vertx.ext.web.handler.LoggerHandler
+import io.vertx.ext.web.handler.OAuth2AuthHandler
 import io.vertx.ext.web.handler.SessionHandler
 import io.vertx.ext.web.handler.StaticHandler
 import io.vertx.ext.web.sstore.LocalSessionStore
@@ -84,9 +87,10 @@ class CollectorApiVerticle(
             val cleanUpOperation = storageServiceBuilder.createCleanupOperation()
             storageService.startPeriodicCleaningOfTempData(uploadExpirationTime, vertx, cleanUpOperation)
 
-            val router = setupRoutes(storageService, mongoClient)
+            val routerSetup = setupRoutes(storageService, mongoClient)
             val httpServer = HttpServer(config.serviceHttpAddress.port)
-            httpServer.start(vertx, router, serverStartPromise)
+            routerSetup.onSuccess {httpServer.start(vertx, it, serverStartPromise)}
+            //routerSetup.onFailure {} FIXME: see if we need to handle this explicitly
         }
 
         // Insert default admin user
@@ -162,7 +166,7 @@ class CollectorApiVerticle(
      * information.
      * @return the created main `Router`
      */
-    private fun setupRoutes(storageService: DataStorageService, mongoClient: MongoClient): Router {
+    private fun setupRoutes(storageService: DataStorageService, mongoClient: MongoClient): Future<Router> {
         // Setup router
         val mainRouter = Router.router(vertx)
         val apiRouter = Router.router(vertx)
@@ -172,11 +176,14 @@ class CollectorApiVerticle(
             .route(mainRoutePath)
             .handler(LoggerHandler.create())
             .subRouter(apiRouter)
-        setupApiRouter(apiRouter, storageService, mongoClient)
+        val promise = Promise.promise<Router>()
+        val setup = setupApiRouter(apiRouter, storageService, mongoClient)
+        setup.onSuccess { promise.complete(mainRouter) }
+        setup.onFailure { promise.fail(it) }
 
         // Setup unknown-resource handler
-        mainRouter.route("/*").last().handler(FailureHandler())
-        return mainRouter
+        mainRouter.route("/*").last().handler(FailureHandler()) // FIXME: race condition?
+        return promise.future()
     }
 
     /**
@@ -187,7 +194,7 @@ class CollectorApiVerticle(
      * data to store that data.
      * @param mongoClient Provide access to the database storing authentication and authorization information.
      */
-    private fun setupApiRouter(apiRouter: Router, storageService: DataStorageService, mongoClient: MongoClient) {
+    private fun setupApiRouter(apiRouter: Router, storageService: DataStorageService, mongoClient: MongoClient): Future<Void> {
         // Setup measurement routes
         val failureHandler = de.cyface.collector.handler.FailureHandler(vertx)
 
@@ -204,49 +211,85 @@ class CollectorApiVerticle(
 
         // Register handlers
         val jwtAuth = authenticationConfiguration.jwtAuthProvider
-        val authProvider = authenticationConfiguration.authProvider
-        val jwtHandler = JWTAuthHandler.create(jwtAuth)
-        val preRequestHandlerAuthorizationhandler = AuthorizationHandler(
-            authProvider,
-            mongoClient,
-            PauseAndResumeAfterBodyParsing()
+        //val authProvider = authenticationConfiguration.authProvider
+        //val jwtHandler = JWTAuthHandler.create(jwtAuth)
+
+        // Introspect token
+        val baseUrl = "http://localhost:8080"
+        val oauthCallbackPath = "/callback"
+        val promise = Promise.promise<Void>()
+        KeycloakAuth.discover(
+            vertx,
+            OAuth2Options()
+                .setClientId("collector-test")
+                .setClientSecret("REPLACE")
+                //.setSite("https://auth.cyface.de:8443/realms/vertx")
+                .setSite("https://auth.cyface.de:8443/realms/{tenant}")
+                //.setTenant("vertx")
+                .setTenant("rfr")
         )
-        registerPreRequestHandler(
-            apiRouter,
-            jwtHandler,
-            preRequestHandlerAuthorizationhandler,
-            failureHandler,
-            storageService
-        )
-        val measurementRequestAuthorizationHandler = AuthorizationHandler(
-            authProvider,
-            mongoClient,
-            PauseAndResumeBeforeBodyParsing()
-        )
-        registerMeasurementHandler(
-            apiRouter,
-            jwtHandler,
-            measurementRequestAuthorizationHandler,
-            failureHandler,
-            storageService
-        )
+            .onSuccess { oauth2: OAuth2Auth ->
+                println("success")
+
+                val callbackAddress = apiRouter.get(oauthCallbackPath)
+                val oauth2Handler = OAuth2AuthHandler.create(vertx, oauth2, baseUrl + oauthCallbackPath)
+                    .setupCallback(callbackAddress)
+                    //.withScope("openid")
+                // Additional scopes: openid for OpenID Connect
+                // .addAuthority("openid") // TODO: Find out what happened to this!!!
+
+                //apiRouter.route("/protected/*").handler(oauth2Handler)
+                val preRequestHandlerAuthorizationhandler = AuthorizationHandler(
+                    oauth2, // FIXME: duplicate authenticate call?
+                    mongoClient,
+                    PauseAndResumeAfterBodyParsing()
+                )
+                registerPreRequestHandler(
+                    apiRouter,
+                    oauth2Handler,
+                    preRequestHandlerAuthorizationhandler,
+                    failureHandler,
+                    storageService
+                )
+                val measurementRequestAuthorizationHandler = AuthorizationHandler(
+                    oauth2,
+                    mongoClient,
+                    PauseAndResumeBeforeBodyParsing()
+                )
+                registerMeasurementHandler(
+                    apiRouter,
+                    oauth2Handler,
+                    measurementRequestAuthorizationHandler,
+                    failureHandler,
+                    storageService
+                )
+
+                promise.complete()
+            }.onFailure {
+                println("Fehler: ${it.localizedMessage}")
+                promise.fail(it)
+            }.onComplete {
+                println("complete")
+            }
 
         // Setup web-api route
         apiRouter.route().handler(StaticHandler.create("webroot/api"))
+
+        return promise.future()
     }
 
     /**
      * Adds a handler for an endpoint and makes sure that handler is wrapped in the correct authentication handlers.
      *
      * @param router The `Router` to register the handler to.
-     * @param jwtAuthHandler The handler to authenticate the user using JWT tokens.
+     * @param oauth2Handler The handler to authenticate the user using an OAuth2 endpoint.
      * @param authorizationHandler The handler used to authorize a user after successful authentication.
      * @param failureHandler The handler to add to handle failures.
      * @param storageService Service used to write the received data.
      */
     private fun registerPreRequestHandler(
         router: Router,
-        jwtAuthHandler: JWTAuthHandler,
+        oauth2Handler: OAuth2AuthHandler,
         authorizationHandler: AuthorizationHandler,
         failureHandler: ErrorHandler,
         storageService: DataStorageService
@@ -257,7 +300,7 @@ class CollectorApiVerticle(
             .handler(LoggerHandler.create())
             // Read request body only once and before async calls or pause/resume must be used see [DAT-749]
             .handler(preRequestBodyHandler)
-            .handler(jwtAuthHandler)
+            .handler(oauth2Handler)
             .handler(authorizationHandler)
             .handler(PreRequestHandler(storageService, config.measurementPayloadLimit))
             .failureHandler(failureHandler)
@@ -267,14 +310,14 @@ class CollectorApiVerticle(
      * Adds a handler for an endpoint and makes sure that handler is wrapped in the correct authentication handlers.
      *
      * @param router The `Router` to register the handler to.
-     * @param jwtAuthHandler The handler to authenticate the user using JWT tokens.
+     * @param oauth2Handler The handler to authenticate the user using an OAuth2 endpoint.
      * @param authorizationHandler The handler used to authorize a user after successful authentication.
      * @param failureHandler The handler to add to handle failures.
      * @param storageService Service used to write the received data.
      */
     private fun registerMeasurementHandler(
         router: Router,
-        jwtAuthHandler: JWTAuthHandler,
+        oauth2Handler: OAuth2AuthHandler,
         authorizationHandler: AuthorizationHandler,
         failureHandler: ErrorHandler,
         storageService: DataStorageService
@@ -286,7 +329,7 @@ class CollectorApiVerticle(
             .consumes("application/octet-stream")
             // Not using BodyHandler as the `request.body()` can only be read once and the {@code #handler} does so.
             .handler(LoggerHandler.create())
-            .handler(jwtAuthHandler)
+            .handler(oauth2Handler)
             .handler(authorizationHandler)
             .handler(MeasurementHandler(storageService, measurementHandler))
             .handler(StatusHandler(storageService))
