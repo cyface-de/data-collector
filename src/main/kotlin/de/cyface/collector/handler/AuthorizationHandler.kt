@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Cyface GmbH
+ * Copyright 2022-2023 Cyface GmbH
  *
  * This file is part of the Cyface Data Collector.
  *
@@ -18,37 +18,25 @@
  */
 package de.cyface.collector.handler
 
-import de.cyface.api.Authorizer
-import de.cyface.api.DatabaseConstants
 import de.cyface.api.PauseAndResumeStrategy
-import de.cyface.api.UserRetriever
-import de.cyface.api.model.Role
 import de.cyface.api.model.User
-import io.vertx.core.Future
+import de.cyface.collector.handler.HTTPStatus.ENTITY_UNPARSABLE
 import io.vertx.core.Handler
-import io.vertx.core.Promise
 import io.vertx.core.http.HttpServerRequest
-import io.vertx.core.json.JsonObject
-import io.vertx.ext.auth.authentication.Credentials
-import io.vertx.ext.auth.authentication.UsernamePasswordCredentials
-import io.vertx.ext.auth.mongo.MongoAuthorization
 import io.vertx.ext.auth.oauth2.OAuth2Auth
 import io.vertx.ext.auth.oauth2.Oauth2Credentials
 import io.vertx.ext.mongo.MongoClient
 import io.vertx.ext.web.RoutingContext
-import io.vertx.ext.web.handler.OAuth2AuthHandler
-import org.apache.commons.lang3.Validate
-import org.bson.types.ObjectId
 import org.slf4j.LoggerFactory
-import java.util.Locale
-import java.util.stream.Collectors
+import java.util.UUID
 
 /**
  * A `RequestHandler` to ensure correct user authentication.
  * This should be one of the first handlers on each route requiring authorization.
  *
  * @author Klemens Muthmann
- * @version 1.0.0
+ * @author Armin Schnabel
+ * @version 2.0.0
  * @property authProvider An auth provider used by this server to authenticate against an OAuth2 endpoint.
  * @property mongoDatabase The database to check which users a {@code manager} user has access to.
  * @property strategy The pause and resume strategy to be used which wraps async calls
@@ -67,161 +55,22 @@ class AuthorizationHandler(
             LOGGER.debug("Request headers: {}", headers)
 
             // Check authorization
-            //val principal = UsernamePasswordCredentials(context.user().principal())
+            // FIXME: double check only authenticated users arrive here
+            // TODO: use OAuth2 roles to handle group permissions, but not required in collector
+
+            // Inform next handler which user is authenticated
             val credentials = Oauth2Credentials(context.user().principal())
             val username = credentials.username
+            // The "sub" is the subject claim which represents the unique id of the authenticated user.
+            val uuid = context.user().principal().getString("sub")
+            val user = User(UUID.fromString(uuid), username)
+            context.put("logged-in-user", user)
 
-            // Before async operations, pause request body parsing to not lose the body or protocol upgrades.
-            //strategy.pause(request)
-            // FIXME: Instead of this duplicate call, we should see if the OAuth2Handler passed parameters
-            //val authentication: Future<io.vertx.ext.auth.User> = authProvider.authenticate(credentials)
-            // FIXME: double check only authenticated users arrive here
-            //authentication.onSuccess { user: io.vertx.ext.auth.User ->
-            //val user = context.user() as Oauth2Credentials// as OAuth2TokenImpl
-            //val username = user.username
-                //try {
-                    //strategy.resume(request)
-
-                    // Before async operations, pause request body parsing to not lose the body or protocol upgrades.
-                    //strategy.pause(request)
-                    // Load principal from authentication result, so it also contains the roles
-                    // FIXME: use OAuth2 roles to handle group permissions
-                    /*val loadUsers: Future<Set<User>> =
-                        loadAccessibleUsers(user.principal())
-                    loadUsers.onSuccess { accessibleUsers: Set<User> ->
-                        try {
-                            strategy.resume(request)
-                            LOGGER.trace(
-                                "Request for {} authorized to access users {}",
-                                username,
-                                accessibleUsers
-                            )
-                            val matched = accessibleUsers.stream().filter {
-                                    u: User ->
-                                u.name == username
-                            }.collect(Collectors.toList())
-                            Validate.isTrue(matched.size == 1)
-                            // Make sure it's the matched user
-                            context.put("logged-in-user", matched.stream().findFirst().get())*/
-                            context.put("logged-in-user", User(ObjectId(/*FIXME*/), username))
-                            //context.put("accessible-users", accessibleUsers)
-                            context.next()
-                            /*
-                        } catch (e: RuntimeException) {
-                            context.fail(e)
-                        }
-                    }
-                    loadUsers.onFailure { e: Throwable ->
-                        LOGGER.error("Loading accessible users failed for user {}", username, e)
-                        context.fail(HTTPStatus.SERVER_ERROR, e)
-                    }
-                } catch (e: RuntimeException) {
-                    context.fail(HTTPStatus.SERVER_ERROR, e)
-                }*/
-            //}
-            /*authentication.onFailure { e: Throwable ->
-                LOGGER.error("Authorization failed for user {}!", username)
-                context.fail(HTTPStatus.UNAUTHORIZED, e)
-            }*/
+            context.next()
         } catch (e: NumberFormatException) {
             LOGGER.error("Data was not parsable!")
-            context.fail(Authorizer.ENTITY_UNPARSABLE, e)
+            context.fail(ENTITY_UNPARSABLE, e)
         }
-    }
-
-    /**
-     * Loads all users which the authenticated `User` can access.
-     *
-     * If the user is not a group manager, only the user itself is returned.
-     *
-     * If the user holds a [DatabaseConstants.GROUP_MANAGER_ROLE_SUFFIX] role, identifying it as the manager of
-     * that group, all users of that group are loaded from the user collection.
-     *
-     * @param principal The principal object of the authenticated `User` which requests user data
-     * @return The ids of the users which the `user` can access
-     */
-    private fun loadAccessibleUsers(principal: JsonObject): Future<Set<User>> {
-        val promise = Promise.promise<Set<User>>()
-
-        // Load id of authenticated user
-        val username = Validate.notEmpty(principal.getString(MongoAuthorization.DEFAULT_USERNAME_FIELD))
-        val loadUser = UserRetriever("user", username).load(mongoDatabase)
-        loadUser.onSuccess { users: List<User> ->
-            try {
-                Validate.isTrue(users.size == 1)
-                val user = users[0]
-
-                // Guest users and group users can only access their own account
-                val roles =
-                    principal.getJsonArray(MongoAuthorization.DEFAULT_ROLE_FIELD).stream().map { r: Any? ->
-                        Role(
-                            r as String?
-                        )
-                    }
-                        .collect(Collectors.toList())
-                val managerRoles = roles.stream()
-                    .filter { r: Role -> r.type == Role.Type.GROUP_MANAGER }
-                    .collect(Collectors.toList())
-                if (managerRoles.isEmpty()) {
-                    promise.complete(setOf(user))
-                } else if (managerRoles.size > 1) {
-                    promise.fail(
-                        IllegalArgumentException(
-                            String.format(
-                                Locale.ENGLISH,
-                                "User %s is manager of more than one group.",
-                                user
-                            )
-                        )
-                    )
-                } else {
-                    val groupManager = managerRoles[0]
-                    val loadUsers =
-                        loadAccessibleUsers(groupManager)
-                    loadUsers.onSuccess { groupUsers: List<User> ->
-                        try {
-                            val ret = HashSet(groupUsers)
-                            ret.add(user)
-                            promise.complete(ret)
-                        } catch (e: RuntimeException) {
-                            promise.fail(e)
-                        }
-                    }
-                    loadUsers.onFailure { cause: Throwable -> promise.fail(cause) }
-                }
-            } catch (e: RuntimeException) {
-                promise.fail(e)
-            }
-        }
-        loadUser.onFailure { cause: Throwable -> promise.fail(cause) }
-        return promise.future()
-    }
-
-    /**
-     * Loads all users a specific group manager can access.
-     *
-     * @param groupManager The `Role` group manager to load the users for
-     * @return The [User]s which the `groupManager` can access
-     */
-    private fun loadAccessibleUsers(groupManager: Role): Future<List<User>> {
-        Validate.isTrue(groupManager.type == Role.Type.GROUP_MANAGER)
-        Validate.notEmpty(groupManager.group)
-        val promise = Promise.promise<List<User>>()
-        val groupUsersRole = groupManager.group + DatabaseConstants.USER_GROUP_ROLE_SUFFIX
-        val query = JsonObject().put(MongoAuthorization.DEFAULT_ROLE_FIELD, groupUsersRole)
-        val loadUsers: Future<List<JsonObject>> = mongoDatabase.find(DatabaseConstants.COLLECTION_USER, query)
-        loadUsers.onSuccess { result: List<JsonObject> ->
-            val users =
-                result.parallelStream().map { databaseValue: JsonObject ->
-                    User(
-                        databaseValue
-                    )
-                }
-                    .collect(Collectors.toList())
-            promise.complete(users)
-        }
-        loadUsers.onFailure { cause: Throwable -> promise.fail(cause) }
-        return promise.future()
     }
 
     companion object {
@@ -229,6 +78,6 @@ class AuthorizationHandler(
          * The logger for objects of this class. You can change its configuration by adapting the values in
          * <code>src/main/resources/logback.xml</code>.
          */
-        private val LOGGER = LoggerFactory.getLogger(Authorizer::class.java)
+        private val LOGGER = LoggerFactory.getLogger(AuthorizationHandler::class.java)
     }
 }

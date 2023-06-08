@@ -1,5 +1,5 @@
 /*
- * Copyright 2018-2022 Cyface GmbH
+ * Copyright 2018-2023 Cyface GmbH
  *
  * This file is part of the Cyface Data Collector.
  *
@@ -59,7 +59,7 @@ import java.util.Locale
  *
  * @author Klemens Muthmann
  * @author Armin Schnabel
- * @version 2.1.0
+ * @version 2.2.0
  * @since 2.0.0
  * @property config The configuration used for the verticle.
  */
@@ -210,9 +210,6 @@ class CollectorApiVerticle(
         apiRouter.route().handler(sessionHandler)
 
         // Register handlers
-        val jwtAuth = authenticationConfiguration.jwtAuthProvider
-        //val authProvider = authenticationConfiguration.authProvider
-        //val jwtHandler = JWTAuthHandler.create(jwtAuth)
 
         // Introspect token
         val baseUrl = "http://localhost:8080"
@@ -225,7 +222,6 @@ class CollectorApiVerticle(
                 .setClientSecret("REPLACE")
                 //.setSite("https://auth.cyface.de:8443/realms/vertx")
                 .setSite("https://auth.cyface.de:8443/realms/{tenant}")
-                //.setTenant("vertx")
                 .setTenant("rfr")
         )
             .onSuccess { oauth2: OAuth2Auth ->

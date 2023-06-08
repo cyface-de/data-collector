@@ -100,7 +100,7 @@ class GridFSStorageIT {
             OpenOptions(),
             context.succeeding {
                 val pipe = it.pipe()
-                val user = User(ObjectId("622a1c7ab7e63734fc40cf49"), "test-user")
+                val user = User(UUID.fromString("622a1c7ab7e63734fc40cf49"), "test-user")
                 val uploadIdentifier = UUID.randomUUID()
                 val contentRange = ContentRange(0L, 3L, 4L)
                 oocut.store(

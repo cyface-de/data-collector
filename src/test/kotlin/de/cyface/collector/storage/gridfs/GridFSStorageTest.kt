@@ -86,7 +86,7 @@ class GridFSStorageTest {
         }
         val mockFile: AsyncFile = mock()
 
-        val user = User(ObjectId("622a1c7ab7e63734fc40cf49"), "testUser")
+        val user = User(UUID.fromString("622a1c7ab7e63734fc40cf49"), "testUser")
         val contentRange = ContentRange(0L, 4L, 5L)
         val uploadIdentifier = UUID.randomUUID()
         val deviceIdentifier = UUID.randomUUID()
