@@ -15,57 +15,6 @@ components:
       bearerFormat: JWT
       
 paths:
-  /login:
-    post:
-      summary: Login to retrieve a new valid JWT Auth Token
-      operationId: login
-      requestBody:
-        description: Valid credentials to log in to this Cyface Data Collector
-        required: true
-        content:
-          'application/json':
-            schema:
-              type: object
-              properties:
-                username:
-                  description: Name of a valid user within this instance of the Cyface data collector.
-                  type: string
-                password:
-                  description: Password belonging to the provided user used to identify the user with the system.
-                  type: string
-              required:
-                - username
-                - password
-            examples:
-              registered:
-                value:
-                  username: guest@example.com
-                  password: secret
-              generated:
-                value:
-                  username: guest
-                  password: secret
-      responses:
-        '200':
-          description: Your credentials were correct. The Authorization header contains a JWT key that is valid for 60 seconds to upload data.
-          headers:
-            Authorization:
-              description: The generated JWT token.
-              schema:
-                type: string
-                format: jwt
-            content-length:
-              description: The length of the generated JWT token in byte.
-              schema:
-                type: integer
-                minimum: 0
-        '401':
-          description: The provided credentials were not correct
-        '428':
-          description: The user account is not activated.
-        '429':
-          description: Too many requests in short succession
-            
   /measurements:
     post:
       summary: Pre-request to ask for an upload session id.
