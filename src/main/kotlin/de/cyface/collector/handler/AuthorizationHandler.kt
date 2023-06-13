@@ -44,8 +44,7 @@ class AuthorizationHandler : Handler<RoutingContext> {
             LOGGER.debug("Request headers: {}", headers)
 
             // Inform next handler which user is authenticated
-            val credentials = Oauth2Credentials(context.user().principal())
-            val username = credentials.username
+            val username = Oauth2Credentials(context.user().principal()).username
             // The "sub" is the subject claim which represents the unique id of the authenticated user.
             val uuid = context.user().principal().getString("sub")
             val user = User(UUID.fromString(uuid), username)

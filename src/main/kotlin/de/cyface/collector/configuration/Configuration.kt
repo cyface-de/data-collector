@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Cyface GmbH
+ * Copyright 2022-2023 Cyface GmbH
  *
  * This file is part of the Cyface Data Collector.
  *
@@ -31,7 +31,8 @@ import java.nio.file.Paths
  * A POJO representing the configuration provided to this application.
  *
  * @author Klemens Muthmann
- * @version 1.0.0
+ * @author Armin Schnabel
+ * @version 2.0.0
  * @property jwtPrivate The [Path] to the private key file used for JWT authentication.
  * @property jwtPublic The [Path] to the public key file used for JWT authentication.
  * @property serviceHttpAddress The [URL] hosting the collector service.
@@ -46,6 +47,11 @@ import java.nio.file.Paths
  * @property managementHttpAddress The endpoint address running the management functions for the collector service.
  * @property metricsEnabled `true` if prometheus metrics should be collected; `false` otherwise.
  * @property storageType The type of storage to use for storing the binary data blobs.
+ * @property keycloakCallback The callback URL you entered in your provider admin console.
+ * @property keycloakClient The name of the Keycloak client to contact.
+ * @property keycloakSecret The secret of the Keycloak client to contact.
+ * @property keycloakSite The Root URL for the provider without trailing slashes.
+ * @property keycloakTenant The name of the Keycloak real to contact.
  */
 data class Configuration(
     val jwtPrivate: Path,
@@ -60,7 +66,12 @@ data class Configuration(
     val measurementPayloadLimit: Long,
     val managementHttpAddress: URL,
     val metricsEnabled: Boolean,
-    val storageType: StorageType
+    val storageType: StorageType,
+    val keycloakCallback: URL,
+    val keycloakClient: String,
+    val keycloakSecret: String,
+    val keycloakSite: URL,
+    val keycloakTenant: String
 ) {
     companion object {
         /**
@@ -87,6 +98,11 @@ data class Configuration(
                 val metricsEnabled = json.get<Boolean>("metrics.enabled")
                 val storageTypeJson = json.get<JsonObject>("storage-type")
                 val storageType = storageType(storageTypeJson)
+                val keycloakCallback = URL(json.get<String>("keycloak.callback"))
+                val keycloakClient = json.get<String>("keycloak.client")
+                val keycloakSecret = json.get<String>("keycloak.secret")
+                val keycloakSite = URL(json.get<String>("keycloak.site"))
+                val keycloakTenant = json.get<String>("keycloak.tenant")
 
                 val saltCall = salt(json)
                 saltCall.onSuccess { salt ->
@@ -104,17 +120,18 @@ data class Configuration(
                             measurementPayloadLimit,
                             managementHttpAddress,
                             metricsEnabled,
-                            storageType
+                            storageType,
+                            keycloakCallback,
+                            keycloakClient,
+                            keycloakSecret,
+                            keycloakSite,
+                            keycloakTenant
                         )
                     )
                 }
                 saltCall.onFailure(result::fail)
             } catch (@Suppress("TooGenericExceptionCaught") e: NullPointerException) {
-                throw InvalidConfig(
-                    "Unable to load configuration. Some parameters are missing. " +
-                        "Please refer to the documentation or an example file.",
-                    e
-                )
+                throw InvalidConfig("Some parameters are missing. Refer to the documentation or an example file.", e)
             }
 
             return result.future()
@@ -168,6 +185,7 @@ data class Configuration(
                         pagingSize
                     )
                 }
+
                 null -> throw InvalidConfig(
                     "Storage type configuration missing. " +
                         "Please provide either a Google or GridFS Storage type."

@@ -24,6 +24,7 @@ SERVICE_NAME="Cyface Collector API"
 main() {
   loadJwtParameters
   loadSaltParameters
+  loadKeycloakParameters
   loadApiParameters
   loadCollectorParameters
   loadConfig
@@ -68,6 +69,33 @@ loadApiParameters() {
   if [ -z $CYFACE_API_ENDPOINT ]; then
     CYFACE_API_ENDPOINT="/api/v4/"
   fi
+}
+
+loadKeycloakParameters() {
+  if [ -z "$CYFACE_KEYCLOAK_CALLBACK" ]; then
+    # FIXME: only use http if this stays internal (localhost)
+    $CYFACE_KEYCLOAK_CALLBACK="http://localhost:8080/callback"
+  fi
+  if [ -z "$CYFACE_KEYCLOAK_CLIENT" ]; then
+    $CYFACE_KEYCLOAK_CLIENT="collector"
+  fi
+
+  if [ -z CYFACE_KEYCLOAK_SECRET ]; then
+      echo "Unable to find Keycloak client secret. Please set the environment variable CYFACE_KEYCLOAK_SECRET to an appropriate value! API will not start!"
+      exit 1
+  fi
+
+  if [ -z "$CYFACE_KEYCLOAK_SITE" ]; then
+    $CYFACE_KEYCLOAK_SITE="https://auth.cyface.de:8443/realms/{tenant}"
+  fi
+  if [ -z "$CYFACE_KEYCLOAK_TENANT" ]; then
+    $CYFACE_KEYCLOAK_TENANT="rfr"
+  fi
+
+  echo "Using keycloak callback $CYFACE_KEYCLOAK_CALLBACK"
+  echo "Using keycloak client $CYFACE_KEYCLOAK_CLIENT"
+  echo "Using keycloak site $CYFACE_KEYCLOAK_SITE"
+  echo "Using keycloak tenant $CYFACE_KEYCLOAK_TENANT"
 }
 
 loadCollectorParameters() {
@@ -129,7 +157,12 @@ loadConfig() {
       \"storage-type\":{\
           \"type\":\"gridfs\",\
 	        \"uploads-folder\":\"file-uploads\"\
-      }
+      },\
+      \"keycloak.callback\":\"$CYFACE_KEYCLOAK_CALLBACK\",\
+      \"keycloak.client\":\"$CYFACE_KEYCLOAK_CLIENT\",\
+      \"keycloak.secret\":\"$CYFACE_KEYCLOAK_SECRET\",\
+      \"keycloak.site\":\"$CYFACE_KEYCLOAK_SITE\",\
+      \"keycloak.tenant\":\"$CYFACE_KEYCLOAK_TENANT\"\
   }"
 }
 

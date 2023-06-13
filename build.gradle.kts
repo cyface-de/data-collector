@@ -112,7 +112,7 @@ extra["mongoDriverVersion"] = "4.8.0"
 extra["micrometerVersion"] = "1.10.6"
 extra["commonsLangVersion"] = "3.12.0"
 extra["logbackVersion"] = "1.4.6"
-extra["cyfaceApiVersion"] = "3.0.0-alpha1" // FIXME
+extra["cyfaceApiVersion"] = "3.0.0"
 extra["cyfaceSerializationVersion"] = "2.3.6"
 extra["gradleWrapperVersion"] = "7.6.1"
 extra["googleCloudLibrariesVersion"] = "26.12.0"
@@ -154,7 +154,7 @@ dependencies {
   // Authentication
   implementation("io.vertx:vertx-auth-common:${project.extra["vertxVersion"]}")
   implementation("io.vertx:vertx-auth-mongo:${project.extra["vertxVersion"]}")
-  implementation("io.vertx:vertx-auth-jwt:${project.extra["vertxVersion"]}")
+  implementation("io.vertx:vertx-auth-jwt:${project.extra["vertxVersion"]}") // Remove when dropping api/v3
   implementation("io.vertx:vertx-auth-oauth2:${project.extra["vertxVersion"]}")
 
   // Monitoring + Metrics

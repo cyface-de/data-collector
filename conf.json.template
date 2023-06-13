@@ -20,5 +20,10 @@
 	"storage-type": {
 	  "type": "gridfs",
 	  "uploads-folder": "file-uploads"
-	}
+	},
+	"keycloak.callback":"http://localhost:8080/callback",
+	"keycloak.client":"collector",
+	"keycloak.secret":"SECRET",
+	"keycloak.site":"https://auth.cyface.de:8443/realms/{tenant}",
+	"keycloak.tenant":"rfr"
 }

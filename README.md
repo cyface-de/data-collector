@@ -134,20 +134,25 @@ The following parameters are supported:
 * **salt:** A salt value that may be used instead of the salt from salt.path. You must make sure that either the salt or the salt.path parameter are used. If both are specified the application startup will fail.
 * **metrics.enabled:** Set to either `true` or `false`. If `true` the collector API publishes metrics using micrometer. These metrics are accessible by a [Prometheus](https://prometheus.io/) server (Which you need to set up yourself) at port `8081`.
 * **http.port.management:** The port running the management API responsible for creating user accounts.
-* **jwt.expiration**: The time it takes for a JWT token to expire in seconds. If a JWT token expires, clients need to acquire a new one via username and password authentication. Setting this time too short requires sending the username and password more often. This makes it easier for malicious parties to intercept and brute force usernames and passwords. However long time JWT tokens may be captured as well and used for malicious purposes.
-* **upload.expiration:** The time an interrupted upload is stored for continueation in the future in milliseconds. If this time expires, the upload must start from the beginning.
+* **jwt.expiration**: The time it takes for a JWT token to expire in seconds. If a JWT token expires, clients need to acquire a new one via username and password authentication. Setting this time too short requires sending the username and password more often. This makes it easier for malicious parties to intercept and brute force usernames and passwords. However, long time JWT tokens may be captured as well and used for malicious purposes.
+* **upload.expiration:** The time an interrupted upload is stored for continuation in the future in milliseconds. If this time expires, the upload must start from the beginning.
 * **measurement.payload.limit:** The size of a measurement in bytes up to which it is accepted as a single upload. Larger measurements are transmitted in chunks.
-* **storage-type:** The type of storage to use for the uploaded data. Currently either `gridfs` or `google` is supported. The following parameter are required:
+* **storage-type:** The type of storage to use for the uploaded data. Currently, either `gridfs` or `google` is supported. The following parameter are required:
   * **gridfs**
     * **type:** Must be `gridfs` in this case.
-    * **uploads-folder:** The relative or absolute path to a folder, to store temporary not finished uploads on the local harddrive before upload of the complete data blob to GridFS upon completion.
+    * **uploads-folder:** The relative or absolute path to a folder, to store temporary not finished uploads on the local hard drive before upload of the complete data blob to GridFS upon completion.
   * **google**
     * **type:** Must be `google` in this case.
-    * **collection-name:** The name of a Mongo collection to store an uploads metadata.
+    * **collection-name:** The name of a Mongo collection to store uploads' metadata into.
     * **project-identifier:** A Google Cloud Storage project identifier to where the upload bucket is located.
     * **bucket-name:** The Google Cloud Storage bucket name to load the data into.
     * **credentials-file:** A credentials file used to authenticate with the Google Cloud Storage account used to upload the data to the Cloud.
     * **paging-size:** The number of buckets to load per request, when iterating through all the data uploaded. Large numbers require fewer requests but more memory.
+* **keycloak.callback**: The callback URL you entered in your provider admin console. This defaults to `http://localhost:8080/callback`.
+* **keycloak.client**: The name of the Keycloak client to contact. This defaults to `collector`.
+* **keycloak.secret**: The secret of the Keycloak client to contact.
+* **keycloak.site**: The Root URL for the provider without trailing slashes. This defaults to `https://auth.cyface.de:8443/realms/{tenant}`.
+* **keycloak.tenant**: The name of the Keycloak real to contact. This defaults to `rfr`.
 
 #### Running from Command Line
 

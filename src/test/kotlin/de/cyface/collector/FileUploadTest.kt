@@ -56,7 +56,7 @@ import kotlin.test.assertNotNull
  * @version 4.0.0
  * @since 2.0.0
  */
-// This warning is supress since it is wrong for Vert.x Tests.
+// This warning is suppressed since it is wrong for Vert.x Tests.
 @Suppress("JUnitMalformedDeclaration")
 @ExtendWith(VertxExtension::class)
 class FileUploadTest {
@@ -313,7 +313,7 @@ class FileUploadTest {
     }
 
     @Test
-    fun `Test happy path for uploads retuns HTTP Status 200`(vertx: Vertx, context: VertxTestContext) {
+    fun `Test happy path for uploads returns HTTP Status 200`(vertx: Vertx, context: VertxTestContext) {
         // Create upload session
         preRequestAndReturnLocation(context) { uploadUri: String ->
             upload(

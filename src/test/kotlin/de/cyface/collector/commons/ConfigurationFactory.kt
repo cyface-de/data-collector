@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Cyface GmbH
+ * Copyright 2022-2023 Cyface GmbH
  *
  * This file is part of the Cyface Data Collector.
  *
@@ -32,7 +32,8 @@ import java.nio.file.Path
  * A factory for the creation of a test fixture [Configuration]
  *
  * @author Klemens Muthmann
- * @version 1.0.0
+ * @author Armin Schnabel
+ * @version 1.1.0
  */
 object ConfigurationFactory {
     /**
@@ -75,6 +76,11 @@ object ConfigurationFactory {
             } else {
                 on { measurementPayloadLimit } doReturn 104_857_600L
             }
+            on { keycloakCallback } doReturn URL("http://localhost:8080/callback")
+            on { keycloakClient } doReturn "collector-test"
+            on { keycloakSecret } doReturn "SECRET"
+            on { keycloakSite } doReturn URL("https://example.com:8443/realms/{tenant}")
+            on { keycloakTenant } doReturn "rfr"
         }
         return ret
     }

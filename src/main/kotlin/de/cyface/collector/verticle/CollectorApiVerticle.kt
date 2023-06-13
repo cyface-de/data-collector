@@ -173,6 +173,7 @@ class CollectorApiVerticle(
         val promise = Promise.promise<Router>()
 
         // API V3 - Sync (as to be executed before async V4 setup)
+        // (!) cleanup parameters, secrets (keys, salt) when removing `v3` (see Incentives API PR #2)
         val apiRouterV3 = Router.router(vertx)
         val mainRoutePathV3 = "/api/v3/*"
         println("Starting Collector V3 Server on: $mainRoutePathV3")
@@ -210,7 +211,7 @@ class CollectorApiVerticle(
         apiRouter: Router,
         storageService: DataStorageService
     ): Future<Void> {
-        // Setup measurement routes
+        val promise = Promise.promise<Void>()
         val failureHandler = de.cyface.collector.handler.FailureHandler(vertx)
 
         // Setup session-handler
@@ -220,33 +221,22 @@ class CollectorApiVerticle(
         val sessionHandler = SessionHandler.create(store).setCookieless(true)
         apiRouter.route().handler(sessionHandler)
 
-        // Register handlers
-
-        // Introspect token
-        val baseUrl = "http://localhost:8080"
-        val oauthCallbackPath = "/callback"
-        val promise = Promise.promise<Void>()
+        // Setup OAuth2 discovery and callback route for token introspection (authentication)
         KeycloakAuth.discover(
             vertx,
             OAuth2Options()
-                .setClientId("collector-test")
-                .setClientSecret("REPLACE")
-                //.setSite("https://auth.cyface.de:8443/realms/vertx")
-                .setSite("https://auth.cyface.de:8443/realms/{tenant}")
-                .setTenant("rfr")
+                .setClientId(config.keycloakClient)
+                .setClientSecret(config.keycloakSecret)
+                .setSite(config.keycloakSite.toString())
+                .setTenant(config.keycloakTenant)
         )
             .onSuccess { oauth2: OAuth2Auth ->
-                println("success")
-
-                val callbackAddress = apiRouter.get(oauthCallbackPath)
-                val oauth2Handler = OAuth2AuthHandler.create(vertx, oauth2, baseUrl + oauthCallbackPath)
+                val oauthCallback = config.keycloakCallback
+                val callbackAddress = apiRouter.get(oauthCallback.path)
+                val oauth2Handler = OAuth2AuthHandler.create(vertx, oauth2, oauthCallback.toURI().toString())
                     .setupCallback(callbackAddress)
-                // .withScope("openid")
-                // Additional scopes: openid for OpenID Connect
-                // .addAuthority("openid") // TODO: Find out what happened to this!!!
 
-                // apiRouter.route("/protected/*").handler(oauth2Handler)
-                // FIXME: duplicate authenticate call?
+                // Register handlers which require authentication
                 val preRequestHandlerAuthorizationHandler = AuthorizationHandler()
                 registerPreRequestHandler(
                     apiRouter,
@@ -265,12 +255,8 @@ class CollectorApiVerticle(
                 )
 
                 promise.complete()
-            }.onFailure {
-                println("Fehler: ${it.localizedMessage}")
-                promise.fail(it)
-            }.onComplete {
-                println("complete")
             }
+            .onFailure { promise.fail(it) }
 
         // Setup web-api route
         apiRouter.route().handler(StaticHandler.create("webroot/api"))

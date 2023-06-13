@@ -108,7 +108,12 @@ public class MainVerticleTest {
                 .put("measurement.payload.limit", 100)
                 .put("http.port.management", 13371)
                 .put("metrics.enabled", false)
-                .put("storage-type", JsonObject.of("type", "gridfs", "upload-path", "upload-folder"));
+                .put("storage-type", JsonObject.of("type", "gridfs", "upload-path", "upload-folder"))
+                .put("keycloak.callback", "http://localhost:8080/callback")
+                .put("keycloak.client", "collector-test")
+                .put("keycloak.secret", "SECRET")
+                .put("keycloak.site", "https://example.com:8443/realms/{tenant}")
+                .put("keycloak.tenant", "rfr");
     }
 
     /**

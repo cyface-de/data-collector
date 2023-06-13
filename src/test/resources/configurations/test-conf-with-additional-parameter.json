@@ -25,5 +25,10 @@
     "bucket-name": "cyface-bucket",
     "credentials-file": "/path/to/credentials.json",
     "paging-size": 60
-  }
+  },
+  "keycloak.callback":"http://localhost:8080/callback",
+  "keycloak.client":"collector-test",
+  "keycloak.secret":"SECRET",
+  "keycloak.site":"https://example.com:8443/realms/{tenant}",
+  "keycloak.tenant":"rfr"
 }
