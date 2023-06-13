@@ -271,7 +271,7 @@ class FileUploadTooLargeTest {
                         location,
                         notNullValue()
                     )
-                    val locationPattern = "http://10\\.0\\.2\\.2:8081/api/v3/measurements/\\([a-z0-9]{32}\\)/"
+                    val locationPattern = "http://10\\.0\\.2\\.2:8081/api/v4/measurements/\\([a-z0-9]{32}\\)/"
                     assertThat(
                         "Wrong HTTP Location header on pre-request!",
                         location,
@@ -409,7 +409,7 @@ class FileUploadTooLargeTest {
          * The endpoint to upload measurements to. The parameter `uploadType=resumable` is added automatically by the
          * Google API client library used on Android, so we make sure the endpoints can handle this.
          */
-        private const val MEASUREMENTS_UPLOAD_ENDPOINT_PATH = "/api/v3/measurements?uploadType=resumable"
+        private const val MEASUREMENTS_UPLOAD_ENDPOINT_PATH = "/api/v4/measurements?uploadType=resumable"
 
         /**
          * A Mongo database lifecycle handler. This provides the test with the capabilities to run and shutdown a Mongo

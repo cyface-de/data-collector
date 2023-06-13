@@ -54,7 +54,7 @@ object ConfigurationFactory {
                     "https",
                     "localhost",
                     port,
-                    "/api/v3/*"
+                    "/api/v4/*"
                 )
             on { adminUser } doReturn "admin"
             on { adminPassword } doReturn "secret"

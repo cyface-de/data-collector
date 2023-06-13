@@ -74,16 +74,11 @@ For these execution variants you need the parameters explained in the preceding 
 
 #### Running from Docker
 
-Make sure you read the "Certificates" section above. For development environment you can use the test certificates: `mkdir -p src/main/docker/secrets/jwt && cp src/test/resources/public.pem src/main/docker/secrets/ && cp src/test/resources/private_key.pem src/main/docker/secrets/`
-
 Configure logback or use the sample configuration: `cp src/main/docker/logback.xml.template src/main/docker/logback.xml`
 
 The app is executed by a non-privileged user inside the Docker container. To allow this user to
 write data to `logs` and `file-uploads` you need to create two folders and then set the permissions for both folders to `chmod o+w`, see [DAT-797]:
 `mkdir src/main/docker/logs src/main/docker/file-uploads && sudo chmod  o+w src/main/docker/file-uploads src/main/docker/logs`
-
-Finally, make the secrets accessible by the non-privileged user:
-- `sudo chown -R 9999:root src/main/docker/secrets/jwt`
 
 Now build the system as described in the "Building" section above:
 `./gradlew :clean :build :copyToDockerBuildFolder`
@@ -91,7 +86,7 @@ Now build the system as described in the "Building" section above:
 Then simply run `docker-compose up` inside `build/docker`:
 `cd build/docker/ && docker-compose up -d`
 
-This calls docker to bring up a Mongo-database container and a container running the Cyface data collector API. The Collector API is by default available via port 8080. This means if you boot up everything using the default settings, the Collector API is accessible via `http://localhost:8080/api/v3/`.
+This calls docker to bring up a Mongo-database container and a container running the Cyface data collector API. The Collector API is by default available via port 8080. This means if you boot up everything using the default settings, the Collector API is accessible via `http://localhost:8080/api/v4/`.
 
 **ATTENTION: The docker setup should only be used for development purposes.**
 It exposes the Cyface data collector as well as the ports of both Mongo database instances freely on the local network.

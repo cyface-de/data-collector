@@ -535,7 +535,7 @@ class FileUploadTest {
                 val builder = client.post(
                     collectorClient.port,
                     "localhost",
-                    "/api/v3/measurements?uploadType=resumable"
+                    "/api/v4/measurements?uploadType=resumable"
                 )
                 builder.putHeader("Authorization", "Bearer " + if (useInvalidToken) "invalidToken" else authToken)
                 builder.putHeader("Accept-Encoding", "gzip")
@@ -616,7 +616,7 @@ class FileUploadTest {
                         location,
                         notNullValue()
                     )
-                    val locationPattern = "http://10\\.0\\.2\\.2:8081/api/v3/measurements/\\([a-z0-9]{32}\\)/"
+                    val locationPattern = "http://10\\.0\\.2\\.2:8081/api/v4/measurements/\\([a-z0-9]{32}\\)/"
                     assertThat(
                         "Wrong HTTP Location header on pre-request!",
                         location,
@@ -810,7 +810,7 @@ class FileUploadTest {
          * The endpoint to upload measurements to. The parameter `uploadType=resumable` is added automatically by the
          * Google API client library used on Android, so we make sure the endpoints can handle this.
          */
-        private const val UPLOAD_PATH_WITH_INVALID_SESSION = "/api/v3/measurements/(random78901234567890123456789012)/"
+        private const val UPLOAD_PATH_WITH_INVALID_SESSION = "/api/v4/measurements/(random78901234567890123456789012)/"
 
         /**
          * A Mongo database lifecycle handler. This provides the test with the capabilities to run and shutdown a Mongo

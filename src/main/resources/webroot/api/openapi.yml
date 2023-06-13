@@ -116,7 +116,7 @@ paths:
             Location:
               schema:
                 type: string
-                example: https://example.com/api/v3/measurements/(e9076dbc2c8f15dd26aa76b4b5b49595)/
+                example: https://example.com/api/v4/measurements/(e9076dbc2c8f15dd26aa76b4b5b49595)/
               description: Endpoint to upload the measurement to.
             Content-Length:
               schema:

@@ -120,7 +120,7 @@ class PreRequestTest {
         @Suppress("UNCHECKED_CAST")
         whenever(mockStorageService.isStored(deviceId, 1L)).thenReturn(mockIsStoredResult as Future<Boolean>)
         val captor = ArgumentCaptor.forClass(Handler::class.java)
-        whenever(mockRequest.absoluteURI()).thenReturn("https://localhost:8080/api/v3/measurements/(some-uuid)")
+        whenever(mockRequest.absoluteURI()).thenReturn("https://localhost:8080/api/v4/measurements/(some-uuid)")
         whenever(mockSession.id()).thenReturn("mock-session")
 
         // Act

@@ -102,7 +102,7 @@ public class CollectorApiVerticleTest {
                 "https",
                         "localhost",
                         port,
-                        "/api/v3/*"
+                        "/api/v4/*"
                 ));
         when(configuration.getMongoDb()).thenReturn(mongoTest.clientConfiguration());
         when(configuration.getJwtExpiration()).thenReturn(3600);
