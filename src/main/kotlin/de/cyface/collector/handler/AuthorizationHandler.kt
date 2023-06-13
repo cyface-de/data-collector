@@ -18,14 +18,11 @@
  */
 package de.cyface.collector.handler
 
-import de.cyface.api.PauseAndResumeStrategy
 import de.cyface.api.model.User
 import de.cyface.collector.handler.HTTPStatus.ENTITY_UNPARSABLE
 import io.vertx.core.Handler
 import io.vertx.core.http.HttpServerRequest
-import io.vertx.ext.auth.oauth2.OAuth2Auth
 import io.vertx.ext.auth.oauth2.Oauth2Credentials
-import io.vertx.ext.mongo.MongoClient
 import io.vertx.ext.web.RoutingContext
 import org.slf4j.LoggerFactory
 import java.util.UUID
@@ -37,26 +34,14 @@ import java.util.UUID
  * @author Klemens Muthmann
  * @author Armin Schnabel
  * @version 2.0.0
- * @property authProvider An auth provider used by this server to authenticate against an OAuth2 endpoint.
- * @property mongoDatabase The database to check which users a {@code manager} user has access to.
- * @property strategy The pause and resume strategy to be used which wraps async calls
- *                    in {@link #handle(RoutingContext)}.
  */
-class AuthorizationHandler(
-    private val authProvider: OAuth2Auth,
-    private val mongoDatabase: MongoClient,
-    private val strategy: PauseAndResumeStrategy
-) : Handler<RoutingContext> {
+class AuthorizationHandler : Handler<RoutingContext> {
     override fun handle(context: RoutingContext) {
         try {
             LOGGER.info("Received new request.")
             val request: HttpServerRequest = context.request()
             val headers = request.headers()
             LOGGER.debug("Request headers: {}", headers)
-
-            // Check authorization
-            // FIXME: double check only authenticated users arrive here
-            // TODO: use OAuth2 roles to handle group permissions, but not required in collector
 
             // Inform next handler which user is authenticated
             val credentials = Oauth2Credentials(context.user().principal())

@@ -3,7 +3,7 @@
   "jwt.private": "executables/collector/src/test/resources/private_key.pem",
   "jwt.public": "executables/collector/src/test/resources/public.pem",
   "http.host": "localhost",
-  "http.endpoint": "/api/v3",
+  "http.endpoint": "/api/v4",
   "http.port": 8080,
   "mongo.db": {
     "db_name": "cyface",

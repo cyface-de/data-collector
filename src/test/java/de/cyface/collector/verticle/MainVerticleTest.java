@@ -97,7 +97,7 @@ public class MainVerticleTest {
                 .put("jwt.public", publicKey.getFile())
                 .put("jwt.private", privateKey.getFile())
                 .put("http.host", "localhost")
-                .put("http.endpoint", "/api/v3/")
+                .put("http.endpoint", "/api/v4/")
                 .put("http.port", Network.freeServerPort(Network.getLocalHost()))
                 .put("salt", "abcdefg")
                 .put("mongo.db", mongoTest.clientConfiguration())

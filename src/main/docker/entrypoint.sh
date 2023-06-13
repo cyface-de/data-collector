@@ -66,7 +66,7 @@ loadApiParameters() {
   fi
 
   if [ -z $CYFACE_API_ENDPOINT ]; then
-    CYFACE_API_ENDPOINT="/api/v3/"
+    CYFACE_API_ENDPOINT="/api/v4/"
   fi
 }
 
