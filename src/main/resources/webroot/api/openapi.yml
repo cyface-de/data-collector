@@ -125,8 +125,10 @@ paths:
               description: Only useful in when a resume position is returned by the server (not yet supported).
         '400':
           description: Unknown error for example if Web server reports status -1 or the client experienced a synchronisation error.
-        '401':
+        302':
           description: No Authorization information provided. This request requires a valid JWT token to continue.
+        '401':
+          description: Invalid authorization information provided. This request requires a valid JWT token to continue.
         '403':
           description: Authorization information was provided, but the authorized user has no permission to post measurements.
         '409':
@@ -276,8 +278,10 @@ paths:
           description: When the upload was successful.
         '400':
           description: Unknown error for example if Web server reports status -1 or the client experienced a synchronisation error.
-        '401':
+        '302':
           description: No Authorization information provided. This request requires a valid JWT token to continue.
+        '401':
+          description: Invalid authorization information provided. This request requires a valid JWT token to continue.
         '403':
           description: Authorization information was provided, but the authorized user has no permission to post measurements.
         '409':
