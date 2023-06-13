@@ -21,6 +21,7 @@
 	  "type": "gridfs",
 	  "uploads-folder": "file-uploads"
 	},
+	"auth-type": "keycloak",
 	"keycloak.callback":"http://localhost:8080/callback",
 	"keycloak.client":"collector",
 	"keycloak.secret":"SECRET",

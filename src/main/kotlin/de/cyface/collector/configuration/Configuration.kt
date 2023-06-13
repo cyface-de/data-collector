@@ -67,6 +67,7 @@ data class Configuration(
     val managementHttpAddress: URL,
     val metricsEnabled: Boolean,
     val storageType: StorageType,
+    val authType: AuthType,
     val keycloakCallback: URL,
     val keycloakClient: String,
     val keycloakSecret: String,
@@ -98,6 +99,7 @@ data class Configuration(
                 val metricsEnabled = json.get<Boolean>("metrics.enabled")
                 val storageTypeJson = json.get<JsonObject>("storage-type")
                 val storageType = storageType(storageTypeJson)
+                val authType = AuthType.valueOf(json.getString("auth-type").replaceFirstChar(Char::titlecase))
                 val keycloakCallback = URL(json.get<String>("keycloak.callback"))
                 val keycloakClient = json.get<String>("keycloak.client")
                 val keycloakSecret = json.get<String>("keycloak.secret")
@@ -121,6 +123,7 @@ data class Configuration(
                             managementHttpAddress,
                             metricsEnabled,
                             storageType,
+                            authType,
                             keycloakCallback,
                             keycloakClient,
                             keycloakSecret,

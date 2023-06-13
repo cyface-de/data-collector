@@ -25,6 +25,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import java.io.IOException;
 import java.util.concurrent.TimeUnit;
 
+import de.cyface.collector.configuration.AuthType;
 import org.apache.commons.lang3.Validate;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -109,6 +110,7 @@ public class MainVerticleTest {
                 .put("http.port.management", 13371)
                 .put("metrics.enabled", false)
                 .put("storage-type", JsonObject.of("type", "gridfs", "upload-path", "upload-folder"))
+                .put("auth-type", AuthType.Mocked)
                 .put("keycloak.callback", "http://localhost:8080/callback")
                 .put("keycloak.client", "collector-test")
                 .put("keycloak.secret", "SECRET")

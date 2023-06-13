@@ -23,6 +23,9 @@ import de.cyface.api.Hasher
 import de.cyface.api.HttpServer
 import de.cyface.api.PauseAndResumeAfterBodyParsing
 import de.cyface.api.PauseAndResumeBeforeBodyParsing
+import de.cyface.collector.auth.KeycloakHandlerBuilder
+import de.cyface.collector.auth.MockedHandlerBuilder
+import de.cyface.collector.configuration.AuthType
 import de.cyface.collector.configuration.Configuration
 import de.cyface.collector.handler.AuthorizationHandler
 import de.cyface.collector.handler.MeasurementHandler
@@ -38,9 +41,7 @@ import io.vertx.core.Future
 import io.vertx.core.Promise
 import io.vertx.core.json.JsonObject
 import io.vertx.ext.auth.HashingStrategy
-import io.vertx.ext.auth.oauth2.OAuth2Auth
 import io.vertx.ext.auth.oauth2.OAuth2Options
-import io.vertx.ext.auth.oauth2.providers.KeycloakAuth
 import io.vertx.ext.mongo.MongoClient
 import io.vertx.ext.web.Router
 import io.vertx.ext.web.handler.BodyHandler
@@ -222,25 +223,28 @@ class CollectorApiVerticle(
         apiRouter.route().handler(sessionHandler)
 
         // Setup OAuth2 discovery and callback route for token introspection (authentication)
-        KeycloakAuth.discover(
-            vertx,
-            OAuth2Options()
-                .setClientId(config.keycloakClient)
-                .setClientSecret(config.keycloakSecret)
-                .setSite(config.keycloakSite.toString())
-                .setTenant(config.keycloakTenant)
-        )
-            .onSuccess { oauth2: OAuth2Auth ->
-                val oauthCallback = config.keycloakCallback
-                val callbackAddress = apiRouter.get(oauthCallback.path)
-                val oauth2Handler = OAuth2AuthHandler.create(vertx, oauth2, oauthCallback.toURI().toString())
-                    .setupCallback(callbackAddress)
-
+        val options = OAuth2Options()
+            .setClientId(config.keycloakClient)
+            .setClientSecret(config.keycloakSecret)
+            .setSite(config.keycloakSite.toString())
+            .setTenant(config.keycloakTenant)
+        val authBuilder = if (config.authType == AuthType.Mocked) {
+            MockedHandlerBuilder()
+        } else {
+            KeycloakHandlerBuilder(
+                vertx,
+                apiRouter,
+                config.keycloakCallback,
+                options
+            )
+        }
+        authBuilder.create()
+            .onSuccess {
                 // Register handlers which require authentication
                 val preRequestHandlerAuthorizationHandler = AuthorizationHandler()
                 registerPreRequestHandler(
                     apiRouter,
-                    oauth2Handler,
+                    it,
                     preRequestHandlerAuthorizationHandler,
                     failureHandler,
                     storageService
@@ -248,7 +252,7 @@ class CollectorApiVerticle(
                 val measurementRequestAuthorizationHandler = AuthorizationHandler()
                 registerMeasurementHandler(
                     apiRouter,
-                    oauth2Handler,
+                    it,
                     measurementRequestAuthorizationHandler,
                     failureHandler,
                     storageService

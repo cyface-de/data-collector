@@ -18,6 +18,7 @@
  */
 package de.cyface.collector.commons
 
+import de.cyface.collector.configuration.AuthType
 import de.cyface.collector.configuration.Configuration
 import de.cyface.collector.configuration.GridFsStorageType
 import de.cyface.collector.configuration.ValueSalt
@@ -76,6 +77,7 @@ object ConfigurationFactory {
             } else {
                 on { measurementPayloadLimit } doReturn 104_857_600L
             }
+            on { authType } doReturn AuthType.Mocked
             on { keycloakCallback } doReturn URL("http://localhost:8080/callback")
             on { keycloakClient } doReturn "collector-test"
             on { keycloakSecret } doReturn "SECRET"

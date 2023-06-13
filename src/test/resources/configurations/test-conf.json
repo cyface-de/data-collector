@@ -25,6 +25,7 @@
     "credentials-file": "/path/to/credentials.json",
     "paging-size": 60
   },
+  "auth-type": "mocked",
   "keycloak.callback":"http://localhost:8080/callback",
   "keycloak.client":"collector-test",
   "keycloak.secret":"SECRET",

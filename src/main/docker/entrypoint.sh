@@ -158,6 +158,7 @@ loadConfig() {
           \"type\":\"gridfs\",\
 	        \"uploads-folder\":\"file-uploads\"\
       },\
+      \"auth-type\":\"$CYFACE_AUTH_TYPE\",
       \"keycloak.callback\":\"$CYFACE_KEYCLOAK_CALLBACK\",\
       \"keycloak.client\":\"$CYFACE_KEYCLOAK_CLIENT\",\
       \"keycloak.secret\":\"$CYFACE_KEYCLOAK_SECRET\",\
