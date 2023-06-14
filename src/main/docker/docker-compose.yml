@@ -70,6 +70,6 @@ networks:
         # Configure the IP Address range to not conflict with Deutsche Bahn Wi-Fi
         - subnet: 172.72.0.1/24
         - subnet: 2001:3984:3989::/64
-  # Shared docker network. Allows "exporter" docker container to access APIs without exposing them to the outside world
+  # Shared docker network. Allows "provider" docker container to access APIs without exposing them to the outside world
   database:
     name: cyface-collector_database

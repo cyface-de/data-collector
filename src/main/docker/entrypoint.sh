@@ -24,7 +24,7 @@ SERVICE_NAME="Cyface Collector API"
 main() {
   loadJwtParameters
   loadSaltParameters
-  loadOAuthParameters
+  loadAuthParameters
   loadApiParameters
   loadCollectorParameters
   loadConfig
@@ -71,13 +71,16 @@ loadApiParameters() {
   fi
 }
 
-loadOAuthParameters() {
+loadAuthParameters() {
+  if [ -z "$CYFACE_AUTH_TYPE" ]; then
+    CYFACE_AUTH_TYPE="oauth"
+  fi
   if [ -z "$CYFACE_OAUTH_CALLBACK" ]; then
     # FIXME: only use http if this stays internal (localhost)
-    $CYFACE_OAUTH_CALLBACK="http://localhost:8080/callback"
+    CYFACE_OAUTH_CALLBACK="http://localhost:8080/callback"
   fi
   if [ -z "$CYFACE_OAUTH_CLIENT" ]; then
-    $CYFACE_OAUTH_CLIENT="collector"
+    CYFACE_OAUTH_CLIENT="collector"
   fi
 
   if [ -z CYFACE_OAUTH_SECRET ]; then
@@ -86,12 +89,13 @@ loadOAuthParameters() {
   fi
 
   if [ -z "$CYFACE_OAUTH_SITE" ]; then
-    $CYFACE_OAUTH_SITE="https://auth.cyface.de:8443/realms/{tenant}"
+    CYFACE_OAUTH_SITE="https://auth.cyface.de:8443/realms/{tenant}"
   fi
   if [ -z "$CYFACE_OAUTH_TENANT" ]; then
-    $CYFACE_OAUTH_TENANT="rfr"
+    CYFACE_OAUTH_TENANT="rfr"
   fi
 
+  echo "Using Auth type: $CYFACE_AUTH_TYPE"
   echo "Using OAuth callback $CYFACE_OAUTH_CALLBACK"
   echo "Using OAuth client $CYFACE_OAUTH_CLIENT"
   echo "Using OAuth site $CYFACE_OAUTH_SITE"
