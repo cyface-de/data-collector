@@ -52,24 +52,24 @@ object ConfigurationFactory {
             on { jwtPublic } doReturn Path.of(publicKeyUri)
             on { mongoDb } doReturn mongoDbConfig
             on { serviceHttpAddress } doReturn
-                    URL(
-                        "https",
-                        "localhost",
-                        port,
-                        "/api/v4/*"
-                    )
+                URL(
+                    "https",
+                    "localhost",
+                    port,
+                    "/api/v4/*"
+                )
             on { adminUser } doReturn "admin"
             on { adminPassword } doReturn "secret"
             on { salt } doReturn ValueSalt("cyface-salt")
             on { jwtExpiration } doReturn 3600
             on { uploadExpiration } doReturn 60_000L
             on { managementHttpAddress } doReturn
-                    URL(
-                        "https",
-                        "localhost",
-                        port,
-                        "/"
-                    )
+                URL(
+                    "https",
+                    "localhost",
+                    port,
+                    "/"
+                )
             on { metricsEnabled } doReturn false
             on { storageType } doReturn GridFsStorageType(Path.of("uploadFolder"))
             if (measurementLimit != null) {

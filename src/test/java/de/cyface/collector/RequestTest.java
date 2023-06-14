@@ -1,5 +1,5 @@
 /*
- * Copyright 2018-2022 Cyface GmbH
+ * Copyright 2018-2023 Cyface GmbH
  *
  * This file is part of the Cyface Data Collector.
  *
@@ -39,7 +39,6 @@ import de.cyface.collector.commons.MongoTest;
 import de.cyface.collector.verticle.CollectorApiVerticle;
 import de.flapdoodle.embed.process.runtime.Network;
 import io.vertx.core.Vertx;
-import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.client.WebClient;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
@@ -49,7 +48,7 @@ import io.vertx.junit5.VertxTestContext;
  *
  * @author Klemens Muthmann
  * @author Armin Schnabel
- * @version 3.0.1
+ * @version 3.1.0
  * @since 1.0.0
  */
 @ExtendWith(VertxExtension.class)
@@ -146,46 +145,6 @@ public final class RequestTest {
                     assertThat("Invalid HTTP status code on requesting invalid resource!", response.statusCode(),
                             is(404));
                     ctx.completeNow();
-                })));
-    }
-
-    /**
-     * Tests that the UI returns 401 if a login is attempted with invalid credentials.
-     *
-     * @param context The test context for running <code>Vertx</code> under test
-     */
-    @MethodSource("testParameters")
-    @ParameterizedTest
-    public void testLoginWithWrongCredentials_Returns401(final String apiEndpoint, final VertxTestContext context) {
-        client.post(collectorClient.getPort(), TEST_HOST, apiEndpoint + "login")
-                .sendJson(new JsonObject().put("username", "unknown").put("password", "unknown"),
-                        context.succeeding(result -> context.verify(() -> {
-                            assertThat("Invalid HTTP status code on invalid login request!", result.statusCode(),
-                                    is(401));
-                            context.completeNow();
-                        })));
-    }
-
-    /**
-     * Tests that JWT token generation works as expected.
-     *
-     * @param context The test context for running <code>Vertx</code> under test
-     */
-    @MethodSource("testParameters")
-    @ParameterizedTest
-    public void testLogin_HappyPath(final String apiEndpoint, final VertxTestContext context) {
-
-        var loginRequest = client.post(
-                collectorClient.getPort(),
-                TEST_HOST,
-                apiEndpoint + "login"
-        );
-        loginRequest.sendJson(new JsonObject().put("username", "admin").put("password", "secret"),
-                context.succeeding(result -> context.verify(() -> {
-                    assertThat("Invalid HTTP status code on login request!", result.statusCode(), is(200));
-                    assertThat("Login request contained no JWT token!",
-                            result.headers().contains("Authorization"), is(true));
-                    context.completeNow();
                 })));
     }
 

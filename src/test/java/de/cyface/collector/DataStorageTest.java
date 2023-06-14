@@ -192,7 +192,7 @@ public final class DataStorageTest {
          * }
          */
         ret.put(FormAttributes.MODALITY.getValue(), "BICYCLE");
-        ret.put(USER_ID_FIELD, UUID.randomUUID());
+        ret.put(USER_ID_FIELD, UUID.randomUUID().toString());
 
         return ret;
     }

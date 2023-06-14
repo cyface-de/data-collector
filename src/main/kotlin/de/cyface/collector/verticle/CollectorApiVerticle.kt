@@ -23,8 +23,8 @@ import de.cyface.api.Hasher
 import de.cyface.api.HttpServer
 import de.cyface.api.PauseAndResumeAfterBodyParsing
 import de.cyface.api.PauseAndResumeBeforeBodyParsing
-import de.cyface.collector.auth.OAuth2HandlerBuilder
 import de.cyface.collector.auth.MockedHandlerBuilder
+import de.cyface.collector.auth.OAuth2HandlerBuilder
 import de.cyface.collector.configuration.AuthType
 import de.cyface.collector.configuration.Configuration
 import de.cyface.collector.handler.AuthorizationHandler
