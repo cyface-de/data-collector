@@ -18,7 +18,6 @@
  */
 package de.cyface.collector.auth
 
-import de.cyface.collector.handler.HTTPStatus
 import io.vertx.core.Future
 import io.vertx.core.json.JsonObject
 import io.vertx.ext.auth.impl.UserImpl
@@ -39,13 +38,6 @@ class MockedHandlerBuilder : OAuth2HandlerBuilder {
     override fun create(): Future<OAuth2AuthHandler> {
         val handler: OAuth2AuthHandler = object : OAuth2AuthHandler {
             override fun handle(event: RoutingContext) {
-                // FIXME: FileUploadTest ...withWrongCredentials expects this handler to return 401
-                // Testing the Mocked Auth Handler does not make much sense, so just remove the two tests (and this)?
-                val invalidCredentials = event.request().headers().get("Authorization").equals("Bearer invalidToken")
-                if (invalidCredentials) {
-                    event.fail(HTTPStatus.UNAUTHORIZED)
-                }
-
                 val principal = JsonObject()
                     .put("username", "test-user")
                     .put("sub", UUID.randomUUID()) // user id

@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 Cyface GmbH
+ * Copyright 2021-2023 Cyface GmbH
  *
  * This file is part of the Cyface Data Collector.
  *
@@ -52,7 +52,7 @@ import kotlin.test.assertNotNull
  * Tests that uploading measurements to the Cyface API works as expected.
  *
  * @author Armin Schnabel
- * @version 1.0.0
+ * @version 1.0.1
  * @since 6.0.0
  */
 @ExtendWith(VertxExtension::class)
@@ -120,7 +120,6 @@ class FileUploadTooLargeTest {
         preRequest(
             context,
             2,
-            false,
             UPLOAD_SIZE.toLong(),
             context.succeeding { ar: HttpResponse<Buffer?> ->
                 context.verify {
@@ -154,7 +153,6 @@ class FileUploadTooLargeTest {
                 "/iphone-neu.ccyf",
                 "0.0",
                 UPLOAD_SIZE,
-                false,
                 uploadUri,
                 0,
                 (UPLOAD_SIZE - 1).toLong(),
@@ -181,11 +179,9 @@ class FileUploadTooLargeTest {
      * @param context The test context to use.
      * @param preRequestResponseHandler The handler called if the client received a response.
      */
-    @Suppress("SameParameterValue")
     private fun preRequest(
         context: VertxTestContext,
-        locationCount: Int,
-        useInvalidToken: Boolean,
+        @Suppress("SameParameterValue") locationCount: Int,
         uploadSize: Long,
         preRequestResponseHandler: Handler<AsyncResult<HttpResponse<Buffer?>>>
     ) {
@@ -233,7 +229,7 @@ class FileUploadTooLargeTest {
                     "localhost",
                     MEASUREMENTS_UPLOAD_ENDPOINT_PATH
                 )
-                builder.putHeader("Authorization", "Bearer " + if (useInvalidToken) "invalidToken" else authToken)
+                builder.putHeader("Authorization", "Bearer $authToken")
                 builder.putHeader("Accept-Encoding", "gzip")
                 builder.putHeader("User-Agent", "Google-HTTP-Java-Client/1.39.2 (gzip)")
                 builder.putHeader("x-upload-content-type", "application/octet-stream")
@@ -247,16 +243,14 @@ class FileUploadTooLargeTest {
         )
     }
 
-    @Suppress("SameParameterValue")
     private fun preRequestAndReturnLocation(
         context: VertxTestContext,
-        uploadSize: Long,
+        @Suppress("SameParameterValue") uploadSize: Long,
         uploadUriHandler: Handler<String>
     ) {
         preRequest(
             context,
             2,
-            false,
             uploadSize,
             context.succeeding { res: HttpResponse<Buffer?> ->
                 context.verify {
@@ -292,8 +286,6 @@ class FileUploadTooLargeTest {
      * @param testFileResourceName The Java resource name of a file to upload.
      * @param length the meter-length of the track.
      * @param binarySize number of bytes in the binary to upload.
-     * @param useInvalidToken Whether to use a valid auth token on a full integration test or use an invalid test token
-     *  on a test without database access.
      * @param requestUri The URI to upload the data to.
      * @param from The zero based index of the first byte to send.
      * @param to The zero based index of the last byte to send.
@@ -301,18 +293,16 @@ class FileUploadTooLargeTest {
      * @param deviceId The worldwide unique device identifier of the uploading device. This is usually a UUID.
      * @param handler The handler called if the client received a response.
      */
-    @Suppress("SameParameterValue")
     private fun upload(
         vertx: Vertx,
         context: VertxTestContext,
-        testFileResourceName: String,
-        length: String,
-        binarySize: Int,
-        useInvalidToken: Boolean,
+        @Suppress("SameParameterValue") testFileResourceName: String,
+        @Suppress("SameParameterValue") length: String,
+        @Suppress("SameParameterValue") binarySize: Int,
         requestUri: String,
-        from: Long,
-        to: Long,
-        total: Long,
+        @Suppress("SameParameterValue") from: Long,
+        @Suppress("SameParameterValue") to: Long,
+        @Suppress("SameParameterValue") total: Long,
         deviceId: String,
         handler: Handler<AsyncResult<HttpResponse<Buffer?>>>
     ) {
@@ -341,7 +331,7 @@ class FileUploadTooLargeTest {
                 // Upload data (4 Bytes of data)
                 val path = requestUri.substring(requestUri.indexOf("/api"))
                 val builder = client.put(collectorClient.port, "localhost", path)
-                val jwtBearer = "Bearer ${if (useInvalidToken) "invalidToken" else authToken}"
+                val jwtBearer = "Bearer $authToken"
                 builder.putHeader("Authorization", jwtBearer)
                 builder.putHeader("Accept-Encoding", "gzip")
                 builder.putHeader("Content-Range", String.format(Locale.ENGLISH, "bytes %d-%d/%d", from, to, total))

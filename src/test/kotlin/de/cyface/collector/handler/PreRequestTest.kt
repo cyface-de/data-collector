@@ -89,7 +89,7 @@ class PreRequestTest {
     lateinit var mockSession: Session
 
     /**
-     * A device identifier from the simulated device sending requrests to the object under test.
+     * A device identifier from the simulated device sending requests to the object under test.
      */
     private lateinit var deviceId: String
 
