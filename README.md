@@ -153,12 +153,12 @@ The following parameters are supported:
     * **bucket-name:** The Google Cloud Storage bucket name to load the data into.
     * **credentials-file:** A credentials file used to authenticate with the Google Cloud Storage account used to upload the data to the Cloud.
     * **paging-size:** The number of buckets to load per request, when iterating through all the data uploaded. Large numbers require fewer requests but more memory.
-* **auth-type:** The type of authentication service to use. Currently, either `mocked` or `keycloak` is supported. Defaults to `keycloak`. Both require the following parameters:
-  * **keycloak.callback**: The callback URL you entered in your provider admin console. This defaults to `http://localhost:8080/callback`.
-  * **keycloak.client**: The name of the Keycloak client to contact. This defaults to `collector`.
-  * **keycloak.secret**: The secret of the Keycloak client to contact.
-  * **keycloak.site**: The Root URL for the provider without trailing slashes. This defaults to `https://auth.cyface.de:8443/realms/{tenant}`.
-  * **keycloak.tenant**: The name of the Keycloak real to contact. This defaults to `rfr`.
+* **auth-type:** The type of authentication service to use. Currently, either `mocked` or `oauth` is supported. Defaults to `oauth`. Both require the following parameters:
+  * **oauth.callback**: The callback URL you entered in your provider admin console. This defaults to `http://localhost:8080/callback`.
+  * **oauth.client**: The name of the oauth client to contact. This defaults to `collector`.
+  * **oauth.secret**: The secret of the oauth client to contact.
+  * **oauth.site**: The Root URL for the provider without trailing slashes. This defaults to `https://auth.cyface.de:8443/realms/{tenant}`.
+  * **oauth.tenant**: The name of the oauth realm to contact. This defaults to `rfr`.
 
 #### Running from Command Line
 

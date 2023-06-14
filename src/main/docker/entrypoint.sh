@@ -24,7 +24,7 @@ SERVICE_NAME="Cyface Collector API"
 main() {
   loadJwtParameters
   loadSaltParameters
-  loadKeycloakParameters
+  loadOAuthParameters
   loadApiParameters
   loadCollectorParameters
   loadConfig
@@ -71,31 +71,31 @@ loadApiParameters() {
   fi
 }
 
-loadKeycloakParameters() {
-  if [ -z "$CYFACE_KEYCLOAK_CALLBACK" ]; then
+loadOAuthParameters() {
+  if [ -z "$CYFACE_OAUTH_CALLBACK" ]; then
     # FIXME: only use http if this stays internal (localhost)
-    $CYFACE_KEYCLOAK_CALLBACK="http://localhost:8080/callback"
+    $CYFACE_OAUTH_CALLBACK="http://localhost:8080/callback"
   fi
-  if [ -z "$CYFACE_KEYCLOAK_CLIENT" ]; then
-    $CYFACE_KEYCLOAK_CLIENT="collector"
+  if [ -z "$CYFACE_OAUTH_CLIENT" ]; then
+    $CYFACE_OAUTH_CLIENT="collector"
   fi
 
-  if [ -z CYFACE_KEYCLOAK_SECRET ]; then
-      echo "Unable to find Keycloak client secret. Please set the environment variable CYFACE_KEYCLOAK_SECRET to an appropriate value! API will not start!"
+  if [ -z CYFACE_OAUTH_SECRET ]; then
+      echo "Unable to find OAuth client secret. Please set the environment variable CYFACE_OAUTH_SECRET to an appropriate value! API will not start!"
       exit 1
   fi
 
-  if [ -z "$CYFACE_KEYCLOAK_SITE" ]; then
-    $CYFACE_KEYCLOAK_SITE="https://auth.cyface.de:8443/realms/{tenant}"
+  if [ -z "$CYFACE_OAUTH_SITE" ]; then
+    $CYFACE_OAUTH_SITE="https://auth.cyface.de:8443/realms/{tenant}"
   fi
-  if [ -z "$CYFACE_KEYCLOAK_TENANT" ]; then
-    $CYFACE_KEYCLOAK_TENANT="rfr"
+  if [ -z "$CYFACE_OAUTH_TENANT" ]; then
+    $CYFACE_OAUTH_TENANT="rfr"
   fi
 
-  echo "Using keycloak callback $CYFACE_KEYCLOAK_CALLBACK"
-  echo "Using keycloak client $CYFACE_KEYCLOAK_CLIENT"
-  echo "Using keycloak site $CYFACE_KEYCLOAK_SITE"
-  echo "Using keycloak tenant $CYFACE_KEYCLOAK_TENANT"
+  echo "Using OAuth callback $CYFACE_OAUTH_CALLBACK"
+  echo "Using OAuth client $CYFACE_OAUTH_CLIENT"
+  echo "Using OAuth site $CYFACE_OAUTH_SITE"
+  echo "Using OAuth tenant $CYFACE_OAUTH_TENANT"
 }
 
 loadCollectorParameters() {
@@ -159,11 +159,11 @@ loadConfig() {
 	        \"uploads-folder\":\"file-uploads\"\
       },\
       \"auth-type\":\"$CYFACE_AUTH_TYPE\",
-      \"keycloak.callback\":\"$CYFACE_KEYCLOAK_CALLBACK\",\
-      \"keycloak.client\":\"$CYFACE_KEYCLOAK_CLIENT\",\
-      \"keycloak.secret\":\"$CYFACE_KEYCLOAK_SECRET\",\
-      \"keycloak.site\":\"$CYFACE_KEYCLOAK_SITE\",\
-      \"keycloak.tenant\":\"$CYFACE_KEYCLOAK_TENANT\"\
+      \"oauth.callback\":\"$CYFACE_OAUTH_CALLBACK\",\
+      \"oauth.client\":\"$CYFACE_OAUTH_CLIENT\",\
+      \"oauth.secret\":\"$CYFACE_OAUTH_SECRET\",\
+      \"oauth.site\":\"$CYFACE_OAUTH_SITE\",\
+      \"oauth.tenant\":\"$CYFACE_OAUTH_TENANT\"\
   }"
 }
 

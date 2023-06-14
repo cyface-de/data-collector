@@ -16,23 +16,23 @@
  * You should have received a copy of the GNU General Public License
  * along with the Cyface Data Collector. If not, see <http://www.gnu.org/licenses/>.
  */
-package de.cyface.collector.configuration
+package de.cyface.collector.auth
+
+import io.vertx.core.Future
+import io.vertx.ext.web.handler.OAuth2AuthHandler
 
 /**
- * A configuration for a [de.cyface.collector.auth.AuthHandlerBuilder].
+ * Interface for the builder which creates an [OAuth2AuthHandler] to allow mocking.
  *
  * @author Armin Schnabel
  * @version 1.0.0
  * @since 7.0.0
  */
-enum class AuthType {
-    /**
-     * Mocked authentication which grants all auth requests with a well-formed JWT token.
-     */
-    Mocked,
+interface AuthHandlerBuilder {
 
     /**
-     * Authentication which authenticates against an OAuth server.
+     * Start the creation process of a [AuthHandlerBuilder] and provide a [Future], that will be notified about
+     * successful or failed completion.
      */
-    Oauth
+    fun create(): Future<OAuth2AuthHandler>
 }

@@ -23,7 +23,7 @@ import de.cyface.api.Hasher
 import de.cyface.api.HttpServer
 import de.cyface.api.PauseAndResumeAfterBodyParsing
 import de.cyface.api.PauseAndResumeBeforeBodyParsing
-import de.cyface.collector.auth.KeycloakHandlerBuilder
+import de.cyface.collector.auth.OAuth2HandlerBuilder
 import de.cyface.collector.auth.MockedHandlerBuilder
 import de.cyface.collector.configuration.AuthType
 import de.cyface.collector.configuration.Configuration
@@ -224,17 +224,17 @@ class CollectorApiVerticle(
 
         // Setup OAuth2 discovery and callback route for token introspection (authentication)
         val options = OAuth2Options()
-            .setClientId(config.keycloakClient)
-            .setClientSecret(config.keycloakSecret)
-            .setSite(config.keycloakSite.toString())
-            .setTenant(config.keycloakTenant)
+            .setClientId(config.oauthClient)
+            .setClientSecret(config.oauthSecret)
+            .setSite(config.oauthSite.toString())
+            .setTenant(config.oauthTenant)
         val authBuilder = if (config.authType == AuthType.Mocked) {
             MockedHandlerBuilder()
         } else {
-            KeycloakHandlerBuilder(
+            OAuth2HandlerBuilder(
                 vertx,
                 apiRouter,
-                config.keycloakCallback,
+                config.oauthCallback,
                 options
             )
         }

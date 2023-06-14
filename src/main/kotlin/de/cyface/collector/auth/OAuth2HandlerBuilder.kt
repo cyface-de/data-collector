@@ -19,20 +19,44 @@
 package de.cyface.collector.auth
 
 import io.vertx.core.Future
+import io.vertx.core.Promise
+import io.vertx.core.Vertx
+import io.vertx.ext.auth.oauth2.OAuth2Options
+import io.vertx.ext.auth.oauth2.providers.KeycloakAuth
+import io.vertx.ext.web.Router
 import io.vertx.ext.web.handler.OAuth2AuthHandler
+import java.net.URL
 
 /**
- * Interface for the builder which creates an OAuth2 handler to allow mocking.
+ * Keycloak OAuth2 builder which creates an OAuth2 handler.
  *
  * @author Armin Schnabel
  * @version 1.0.0
  * @since 7.0.0
+ * @property vertx
+ * @property apiRouter
+ * @property callbackUrl The callback URL you entered in your provider admin console.
+ * @property options the oauth configuration.
  */
-interface OAuth2HandlerBuilder {
+class OAuth2HandlerBuilder(
+    private val vertx: Vertx,
+    private val apiRouter: Router,
+    private val callbackUrl: URL,
+    private val options: OAuth2Options,
+) : AuthHandlerBuilder {
 
-    /**
-     * Start the creation process of a [OAuth2HandlerBuilder] and provide a [Future], that will be notified about
-     * successful or failed completion.
-     */
-    fun create(): Future<OAuth2AuthHandler>
+    override fun create(): Future<OAuth2AuthHandler> {
+        val promise = Promise.promise<OAuth2AuthHandler>()
+
+        KeycloakAuth.discover(vertx, options)
+            .onSuccess {
+                val callbackAddress = apiRouter.get(callbackUrl.path)
+                val oauth2Handler = OAuth2AuthHandler.create(vertx, it, callbackUrl.toURI().toString())
+                    .setupCallback(callbackAddress)
+                promise.complete(oauth2Handler)
+            }
+            .onFailure { promise.fail(it) }
+
+        return promise.future()
+    }
 }

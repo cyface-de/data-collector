@@ -27,9 +27,9 @@
     "paging-size": 60
   },
   "auth-type": "mocked",
-  "keycloak.callback":"http://localhost:8080/callback",
-  "keycloak.client":"collector-test",
-  "keycloak.secret":"SECRET",
-  "keycloak.site":"https://example.com:8443/realms/{tenant}",
-  "keycloak.tenant":"rfr"
+  "oauth.callback":"http://localhost:8080/callback",
+  "oauth.client":"collector-test",
+  "oauth.secret":"SECRET",
+  "oauth.site":"https://example.com:8443/realms/{tenant}",
+  "oauth.tenant":"rfr"
 }

@@ -47,11 +47,11 @@ import java.nio.file.Paths
  * @property managementHttpAddress The endpoint address running the management functions for the collector service.
  * @property metricsEnabled `true` if prometheus metrics should be collected; `false` otherwise.
  * @property storageType The type of storage to use for storing the binary data blobs.
- * @property keycloakCallback The callback URL you entered in your provider admin console.
- * @property keycloakClient The name of the Keycloak client to contact.
- * @property keycloakSecret The secret of the Keycloak client to contact.
- * @property keycloakSite The Root URL for the provider without trailing slashes.
- * @property keycloakTenant The name of the Keycloak real to contact.
+ * @property oauthCallback The callback URL you entered in your provider admin console.
+ * @property oauthClient The name of the oauth client to contact.
+ * @property oauthSecret The secret of the oauth client to contact.
+ * @property oauthSite The Root URL for the provider without trailing slashes.
+ * @property oauthTenant The name of the oauth realm to contact.
  */
 data class Configuration(
     val jwtPrivate: Path,
@@ -68,11 +68,11 @@ data class Configuration(
     val metricsEnabled: Boolean,
     val storageType: StorageType,
     val authType: AuthType,
-    val keycloakCallback: URL,
-    val keycloakClient: String,
-    val keycloakSecret: String,
-    val keycloakSite: URL,
-    val keycloakTenant: String
+    val oauthCallback: URL,
+    val oauthClient: String,
+    val oauthSecret: String,
+    val oauthSite: URL,
+    val oauthTenant: String
 ) {
     companion object {
         /**
@@ -100,11 +100,11 @@ data class Configuration(
                 val storageTypeJson = json.get<JsonObject>("storage-type")
                 val storageType = storageType(storageTypeJson)
                 val authType = AuthType.valueOf(json.getString("auth-type").replaceFirstChar(Char::titlecase))
-                val keycloakCallback = URL(json.get<String>("keycloak.callback"))
-                val keycloakClient = json.get<String>("keycloak.client")
-                val keycloakSecret = json.get<String>("keycloak.secret")
-                val keycloakSite = URL(json.get<String>("keycloak.site"))
-                val keycloakTenant = json.get<String>("keycloak.tenant")
+                val oauthCallback = URL(json.get<String>("oauth.callback"))
+                val oauthClient = json.get<String>("oauth.client")
+                val oauthSecret = json.get<String>("oauth.secret")
+                val oauthSite = URL(json.get<String>("oauth.site"))
+                val oauthTenant = json.get<String>("oauth.tenant")
 
                 val saltCall = salt(json)
                 saltCall.onSuccess { salt ->
@@ -124,11 +124,11 @@ data class Configuration(
                             metricsEnabled,
                             storageType,
                             authType,
-                            keycloakCallback,
-                            keycloakClient,
-                            keycloakSecret,
-                            keycloakSite,
-                            keycloakTenant
+                            oauthCallback,
+                            oauthClient,
+                            oauthSecret,
+                            oauthSite,
+                            oauthTenant
                         )
                     )
                 }

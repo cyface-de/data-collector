@@ -33,7 +33,7 @@ import java.util.UUID
  * @version 1.0.0
  * @since 7.0.0
  */
-class MockedHandlerBuilder : OAuth2HandlerBuilder {
+class MockedHandlerBuilder : AuthHandlerBuilder {
 
     override fun create(): Future<OAuth2AuthHandler> {
         val handler: OAuth2AuthHandler = object : OAuth2AuthHandler {

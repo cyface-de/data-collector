@@ -52,24 +52,24 @@ object ConfigurationFactory {
             on { jwtPublic } doReturn Path.of(publicKeyUri)
             on { mongoDb } doReturn mongoDbConfig
             on { serviceHttpAddress } doReturn
-                URL(
-                    "https",
-                    "localhost",
-                    port,
-                    "/api/v4/*"
-                )
+                    URL(
+                        "https",
+                        "localhost",
+                        port,
+                        "/api/v4/*"
+                    )
             on { adminUser } doReturn "admin"
             on { adminPassword } doReturn "secret"
             on { salt } doReturn ValueSalt("cyface-salt")
             on { jwtExpiration } doReturn 3600
             on { uploadExpiration } doReturn 60_000L
             on { managementHttpAddress } doReturn
-                URL(
-                    "https",
-                    "localhost",
-                    port,
-                    "/"
-                )
+                    URL(
+                        "https",
+                        "localhost",
+                        port,
+                        "/"
+                    )
             on { metricsEnabled } doReturn false
             on { storageType } doReturn GridFsStorageType(Path.of("uploadFolder"))
             if (measurementLimit != null) {
@@ -78,11 +78,11 @@ object ConfigurationFactory {
                 on { measurementPayloadLimit } doReturn 104_857_600L
             }
             on { authType } doReturn AuthType.Mocked
-            on { keycloakCallback } doReturn URL("http://localhost:8080/callback")
-            on { keycloakClient } doReturn "collector-test"
-            on { keycloakSecret } doReturn "SECRET"
-            on { keycloakSite } doReturn URL("https://example.com:8443/realms/{tenant}")
-            on { keycloakTenant } doReturn "rfr"
+            on { oauthCallback } doReturn URL("http://localhost:8080/callback")
+            on { oauthClient } doReturn "collector-test"
+            on { oauthSecret } doReturn "SECRET"
+            on { oauthSite } doReturn URL("https://example.com:8443/realms/{tenant}")
+            on { oauthTenant } doReturn "rfr"
         }
         return ret
     }

@@ -111,11 +111,11 @@ public class MainVerticleTest {
                 .put("metrics.enabled", false)
                 .put("storage-type", JsonObject.of("type", "gridfs", "upload-path", "upload-folder"))
                 .put("auth-type", AuthType.Mocked)
-                .put("keycloak.callback", "http://localhost:8080/callback")
-                .put("keycloak.client", "collector-test")
-                .put("keycloak.secret", "SECRET")
-                .put("keycloak.site", "https://example.com:8443/realms/{tenant}")
-                .put("keycloak.tenant", "rfr");
+                .put("oauth.callback", "http://localhost:8080/callback")
+                .put("oauth.client", "collector-test")
+                .put("oauth.secret", "SECRET")
+                .put("oauth.site", "https://example.com:8443/realms/{tenant}")
+                .put("oauth.tenant", "rfr");
     }
 
     /**
