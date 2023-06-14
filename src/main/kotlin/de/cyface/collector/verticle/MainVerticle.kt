@@ -46,7 +46,7 @@ class MainVerticle : AbstractVerticle() {
         logger.info("Starting main verticle!")
         val configurationCreationCall = Configuration.deserialize(config())
         configurationCreationCall.onSuccess { configuration ->
-            logger.info("Loaded salt!")
+            logger.info("Loaded configuration!")
             try {
                 deploy(startFuture, configuration)
             } catch (e: IOException) {
@@ -56,7 +56,7 @@ class MainVerticle : AbstractVerticle() {
             }
         }
         configurationCreationCall.onFailure { cause: Throwable? ->
-            logger.error("Failed loading salt", cause)
+            logger.error("Failed loading configuration", cause)
             startFuture.fail(cause)
         }
     }

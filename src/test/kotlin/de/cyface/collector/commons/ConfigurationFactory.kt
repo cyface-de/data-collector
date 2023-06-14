@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Cyface GmbH
+ * Copyright 2022-2023 Cyface GmbH
  *
  * This file is part of the Cyface Data Collector.
  *
@@ -18,6 +18,7 @@
  */
 package de.cyface.collector.commons
 
+import de.cyface.collector.configuration.AuthType
 import de.cyface.collector.configuration.Configuration
 import de.cyface.collector.configuration.GridFsStorageType
 import de.cyface.collector.configuration.ValueSalt
@@ -32,7 +33,8 @@ import java.nio.file.Path
  * A factory for the creation of a test fixture [Configuration]
  *
  * @author Klemens Muthmann
- * @version 1.0.0
+ * @author Armin Schnabel
+ * @version 1.1.0
  */
 object ConfigurationFactory {
     /**
@@ -54,7 +56,7 @@ object ConfigurationFactory {
                     "https",
                     "localhost",
                     port,
-                    "/api/v3/*"
+                    "/api/v4/*"
                 )
             on { adminUser } doReturn "admin"
             on { adminPassword } doReturn "secret"
@@ -75,6 +77,12 @@ object ConfigurationFactory {
             } else {
                 on { measurementPayloadLimit } doReturn 104_857_600L
             }
+            on { authType } doReturn AuthType.Mocked
+            on { oauthCallback } doReturn URL("http://localhost:8080/callback")
+            on { oauthClient } doReturn "collector-test"
+            on { oauthSecret } doReturn "SECRET"
+            on { oauthSite } doReturn URL("https://example.com:8443/realms/{tenant}")
+            on { oauthTenant } doReturn "rfr"
         }
         return ret
     }

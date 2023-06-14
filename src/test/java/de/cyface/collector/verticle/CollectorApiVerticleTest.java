@@ -29,9 +29,6 @@ import java.net.URL;
 import java.nio.file.Path;
 import java.util.concurrent.TimeUnit;
 
-import de.cyface.collector.configuration.Configuration;
-import de.cyface.collector.configuration.GridFsStorageType;
-import de.cyface.collector.configuration.ValueSalt;
 import org.apache.commons.lang3.Validate;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -40,6 +37,10 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
 import de.cyface.collector.commons.MongoTest;
+import de.cyface.collector.configuration.AuthType;
+import de.cyface.collector.configuration.Configuration;
+import de.cyface.collector.configuration.GridFsStorageType;
+import de.cyface.collector.configuration.ValueSalt;
 import de.flapdoodle.embed.process.runtime.Network;
 import io.vertx.core.Vertx;
 import io.vertx.junit5.VertxExtension;
@@ -100,10 +101,9 @@ public class CollectorApiVerticleTest {
         when(configuration.getJwtPublic()).thenReturn(Path.of(publicKey.getFile()));
         when(configuration.getServiceHttpAddress()).thenReturn(new URL(
                 "https",
-                        "localhost",
-                        port,
-                        "/api/v3/*"
-                ));
+                "localhost",
+                port,
+                "/api/v4/*"));
         when(configuration.getMongoDb()).thenReturn(mongoTest.clientConfiguration());
         when(configuration.getJwtExpiration()).thenReturn(3600);
         when(configuration.getSalt()).thenReturn(new ValueSalt("cyface-salt"));
@@ -112,6 +112,12 @@ public class CollectorApiVerticleTest {
         when(configuration.getMeasurementPayloadLimit()).thenReturn(1_048_576L);
         when(configuration.getAdminUser()).thenReturn("admin");
         when(configuration.getAdminPassword()).thenReturn("secret");
+        when(configuration.getAuthType()).thenReturn(AuthType.Mocked);
+        when(configuration.getOauthCallback()).thenReturn(new URL("http://localhost:8080/callback"));
+        when(configuration.getOauthClient()).thenReturn("collector-test");
+        when(configuration.getOauthSecret()).thenReturn("SECRET");
+        when(configuration.getOauthSite()).thenReturn(new URL("https://example.com:8443/realms/{tenant}"));
+        when(configuration.getOauthTenant()).thenReturn("rfr");
 
         // Act, Assert
         vertx.deployVerticle(new CollectorApiVerticle(configuration), testContext.succeedingThenComplete());

@@ -1,7 +1,7 @@
 {
   "jwt.public": "executables/collector/src/test/resources/public.pem",
   "http.host": "localhost",
-  "http.endpoint": "/api/v3",
+  "http.endpoint": "/api/v4",
   "http.port": 8080,
   "mongo.db": {
     "db_name": "cyface",
@@ -23,5 +23,11 @@
     "bucket-name": "cyface-bucket",
     "credentials-file": "/path/to/credentials.json",
     "paging-size": 60
-  }
+  },
+  "auth-type": "mocked",
+  "oauth.callback":"http://localhost:8080/callback",
+  "oauth.client":"collector-test",
+  "oauth.secret":"SECRET",
+  "oauth.site":"https://example.com:8443/realms/{tenant}",
+  "oauth.tenant":"rfr"
 }

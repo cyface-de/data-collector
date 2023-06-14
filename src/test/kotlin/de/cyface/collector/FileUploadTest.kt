@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 Cyface GmbH
+ * Copyright 2021-2023 Cyface GmbH
  *
  * This file is part of the Cyface Data Collector.
  *
@@ -53,10 +53,10 @@ import kotlin.test.assertNotNull
  *
  * @author Klemens Muthmann
  * @author Armin Schnabel
- * @version 4.0.0
+ * @version 4.1.0
  * @since 2.0.0
  */
-// This warning is supress since it is wrong for Vert.x Tests.
+// This warning is suppressed since it is wrong for Vert.x Tests.
 @Suppress("JUnitMalformedDeclaration")
 @ExtendWith(VertxExtension::class)
 class FileUploadTest {
@@ -110,68 +110,6 @@ class FileUploadTest {
     }
 
     /**
-     * Tests that sending a pre-request using wrong credentials returns HTTP status code 401 as expected.
-     *
-     * @param context The test context for running `Vertx` under test.
-     */
-    @Test
-    fun preRequestWithWrongCredentials_Returns401(context: VertxTestContext) {
-        preRequest(
-            context,
-            2,
-            true,
-            context.succeeding { ar: HttpResponse<Buffer?> ->
-                context.verify {
-                    assertThat(
-                        "Wrong HTTP status code on invalid authentication!",
-                        ar.statusCode(),
-                        `is`(
-                            equalTo(401)
-                        )
-                    )
-                    context.completeNow()
-                }
-            }
-        )
-    }
-
-    /**
-     * Tests that trying to upload something using wrong credentials returns HTTP status code 401 as expected.
-     *
-     * @param vertx The `Vertx` instance used by this test.
-     * @param context The test context for running `Vertx` under test.
-     */
-    @Test
-    fun uploadWithWrongCredentials_Returns401(vertx: Vertx, context: VertxTestContext) {
-        val returnedRequestFuture = context.checkpoint()
-        upload(
-            vertx,
-            context,
-            "/test.bin",
-            "0.0",
-            4,
-            true,
-            UPLOAD_PATH_WITH_INVALID_SESSION,
-            0,
-            3,
-            4,
-            deviceIdentifier,
-            context.succeeding { ar: HttpResponse<Buffer?> ->
-                context.verify {
-                    assertThat(
-                        "Wrong HTTP status code on invalid authentication!",
-                        ar.statusCode(),
-                        `is`(
-                            equalTo(401)
-                        )
-                    )
-                    returnedRequestFuture.flag()
-                }
-            }
-        )
-    }
-
-    /**
      * Tests that sending a pre-request without locations returns HTTP status code 412 as expected.
      *
      * @param context The test context for running `Vertx` under test.
@@ -181,7 +119,6 @@ class FileUploadTest {
         preRequest(
             context,
             0,
-            false,
             context.succeeding { ar: HttpResponse<Buffer?> ->
                 context.verify {
                     assertThat(
@@ -215,7 +152,6 @@ class FileUploadTest {
                 "/test.bin",
                 "Sir! You are being hacked!",
                 4,
-                false,
                 uploadUri,
                 0,
                 3,
@@ -270,7 +206,6 @@ class FileUploadTest {
                 "/test.bin",
                 "0.0",
                 4,
-                false,
                 uploadUri,
                 0,
                 3,
@@ -313,7 +248,7 @@ class FileUploadTest {
     }
 
     @Test
-    fun `Test happy path for uploads retuns HTTP Status 200`(vertx: Vertx, context: VertxTestContext) {
+    fun `Test happy path for uploads returns HTTP Status 200`(vertx: Vertx, context: VertxTestContext) {
         // Create upload session
         preRequestAndReturnLocation(context) { uploadUri: String ->
             upload(
@@ -322,7 +257,6 @@ class FileUploadTest {
                 "/test.bin",
                 "0.0",
                 4,
-                false,
                 uploadUri,
                 0,
                 3,
@@ -371,7 +305,6 @@ class FileUploadTest {
             "/test.bin",
             "0.0",
             4,
-            false,
             UPLOAD_PATH_WITH_INVALID_SESSION,
             0,
             3,
@@ -405,7 +338,6 @@ class FileUploadTest {
         preRequest(
             context,
             2,
-            false,
             context.succeeding { ar: HttpResponse<Buffer?> ->
                 context.verify {
                     assertThat(
@@ -460,7 +392,6 @@ class FileUploadTest {
                 "/test.bin",
                 "0.0",
                 4,
-                false,
                 uploadUri,
                 0,
                 3,
@@ -490,7 +421,6 @@ class FileUploadTest {
     private fun preRequest(
         context: VertxTestContext,
         locationCount: Int,
-        useInvalidToken: Boolean,
         preRequestResponseHandler: Handler<AsyncResult<HttpResponse<Buffer?>>>
     ) {
         LOGGER.debug("Sending authentication request!")
@@ -535,9 +465,9 @@ class FileUploadTest {
                 val builder = client.post(
                     collectorClient.port,
                     "localhost",
-                    "/api/v3/measurements?uploadType=resumable"
+                    "/api/v4/measurements?uploadType=resumable"
                 )
-                builder.putHeader("Authorization", "Bearer " + if (useInvalidToken) "invalidToken" else authToken)
+                builder.putHeader("Authorization", "Bearer $authToken")
                 builder.putHeader("Accept-Encoding", "gzip")
                 builder.putHeader("User-Agent", "Google-HTTP-Java-Client/1.39.2 (gzip)")
                 builder.putHeader("x-upload-content-type", "application/octet-stream")
@@ -576,7 +506,6 @@ class FileUploadTest {
                 testFileResourceName,
                 "0.0",
                 binaryLength,
-                false,
                 uploadUri,
                 0,
                 (binaryLength - 1).toLong(),
@@ -600,7 +529,6 @@ class FileUploadTest {
         preRequest(
             context,
             2,
-            false,
             context.succeeding { res: HttpResponse<Buffer?> ->
                 context.verify {
                     assertThat(
@@ -616,7 +544,7 @@ class FileUploadTest {
                         location,
                         notNullValue()
                     )
-                    val locationPattern = "http://10\\.0\\.2\\.2:8081/api/v3/measurements/\\([a-z0-9]{32}\\)/"
+                    val locationPattern = "http://10\\.0\\.2\\.2:8081/api/v4/measurements/\\([a-z0-9]{32}\\)/"
                     assertThat(
                         "Wrong HTTP Location header on pre-request!",
                         location,
@@ -637,7 +565,6 @@ class FileUploadTest {
      * @param testFileResourceName The Java resource name of a file to upload.
      * @param length the meter-length of the track
      * @param binarySize number of bytes in the binary to upload
-     * @param useInvalidToken If `true` an invalid auth token is used. This is sufficient in local unit tests.
      * @param requestUri The URI to upload the data to.
      * @param
      * @param handler The handler called if the client received a response.
@@ -648,7 +575,6 @@ class FileUploadTest {
         testFileResourceName: String,
         length: String,
         binarySize: Int,
-        useInvalidToken: Boolean,
         requestUri: String,
         @Suppress("SameParameterValue") from: Long,
         to: Long,
@@ -681,7 +607,7 @@ class FileUploadTest {
                 // Upload data (4 Bytes of data)
                 val path = requestUri.substring(requestUri.indexOf("/api"))
                 val builder = client.put(collectorClient.port, "localhost", path)
-                val jwtBearer = "Bearer " + if (useInvalidToken) "invalidToken" else authToken
+                val jwtBearer = "Bearer $authToken"
                 builder.putHeader("Authorization", jwtBearer)
                 builder.putHeader("Accept-Encoding", "gzip")
                 builder.putHeader("Content-Range", String.format(Locale.ENGLISH, "bytes %d-%d/%d", from, to, total))
@@ -810,7 +736,7 @@ class FileUploadTest {
          * The endpoint to upload measurements to. The parameter `uploadType=resumable` is added automatically by the
          * Google API client library used on Android, so we make sure the endpoints can handle this.
          */
-        private const val UPLOAD_PATH_WITH_INVALID_SESSION = "/api/v3/measurements/(random78901234567890123456789012)/"
+        private const val UPLOAD_PATH_WITH_INVALID_SESSION = "/api/v4/measurements/(random78901234567890123456789012)/"
 
         /**
          * A Mongo database lifecycle handler. This provides the test with the capabilities to run and shutdown a Mongo

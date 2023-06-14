@@ -16,7 +16,7 @@
  * You should have received a copy of the GNU General Public License
  * along with the Cyface Data Collector. If not, see <http://www.gnu.org/licenses/>.
  */
-package de.cyface.collector.handler.auth
+package de.cyface.collector.v6.handler.auth
 
 import de.cyface.collector.configuration.Configuration
 import de.cyface.collector.configuration.InvalidConfig

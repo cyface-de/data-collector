@@ -24,6 +24,7 @@ SERVICE_NAME="Cyface Collector API"
 main() {
   loadJwtParameters
   loadSaltParameters
+  loadAuthParameters
   loadApiParameters
   loadCollectorParameters
   loadConfig
@@ -66,8 +67,39 @@ loadApiParameters() {
   fi
 
   if [ -z $CYFACE_API_ENDPOINT ]; then
-    CYFACE_API_ENDPOINT="/api/v3/"
+    CYFACE_API_ENDPOINT="/api/v4/"
   fi
+}
+
+loadAuthParameters() {
+  if [ -z "$CYFACE_AUTH_TYPE" ]; then
+    CYFACE_AUTH_TYPE="oauth"
+  fi
+  if [ -z "$CYFACE_OAUTH_CALLBACK" ]; then
+    # FIXME: only use http if this stays internal (localhost)
+    CYFACE_OAUTH_CALLBACK="http://localhost:8080/callback"
+  fi
+  if [ -z "$CYFACE_OAUTH_CLIENT" ]; then
+    CYFACE_OAUTH_CLIENT="collector"
+  fi
+
+  if [ -z CYFACE_OAUTH_SECRET ]; then
+      echo "Unable to find OAuth client secret. Please set the environment variable CYFACE_OAUTH_SECRET to an appropriate value! API will not start!"
+      exit 1
+  fi
+
+  if [ -z "$CYFACE_OAUTH_SITE" ]; then
+    CYFACE_OAUTH_SITE="https://auth.cyface.de:8443/realms/{tenant}"
+  fi
+  if [ -z "$CYFACE_OAUTH_TENANT" ]; then
+    CYFACE_OAUTH_TENANT="rfr"
+  fi
+
+  echo "Using Auth type: $CYFACE_AUTH_TYPE"
+  echo "Using OAuth callback $CYFACE_OAUTH_CALLBACK"
+  echo "Using OAuth client $CYFACE_OAUTH_CLIENT"
+  echo "Using OAuth site $CYFACE_OAUTH_SITE"
+  echo "Using OAuth tenant $CYFACE_OAUTH_TENANT"
 }
 
 loadCollectorParameters() {
@@ -126,11 +158,16 @@ loadConfig() {
       \"salt\":\"cyface-salt\",\
       \"upload.expiration\":60000,\
       \"measurement.payload.limit\":104857600,\
-      \"metrics.enabled\": false,\
       \"storage-type\":{\
           \"type\":\"gridfs\",\
-	  \"uploads-folder\":\"file-uploads\"\
-      }
+	        \"uploads-folder\":\"file-uploads\"\
+      },\
+      \"auth-type\":\"$CYFACE_AUTH_TYPE\",
+      \"oauth.callback\":\"$CYFACE_OAUTH_CALLBACK\",\
+      \"oauth.client\":\"$CYFACE_OAUTH_CLIENT\",\
+      \"oauth.secret\":\"$CYFACE_OAUTH_SECRET\",\
+      \"oauth.site\":\"$CYFACE_OAUTH_SITE\",\
+      \"oauth.tenant\":\"$CYFACE_OAUTH_TENANT\"\
   }"
 }
 

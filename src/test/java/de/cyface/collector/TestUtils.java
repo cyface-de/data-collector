@@ -47,7 +47,7 @@ public final class TestUtils {
      * @param client The client to use to access the server.
      * @param handler <code>Handler</code> called when the response has returned.
      * @param port The port running the test server on localhost to authenticate against.
-     * @param endpoint The API endpoint to authenticate against, e.g. `/api/v3/`
+     * @param endpoint The API endpoint to authenticate against, e.g. `/api/v4/`
      */
     public static void authenticate(final WebClient client, final int port, final String endpoint,
                                     final Handler<AsyncResult<HttpResponse<Buffer>>> handler) {

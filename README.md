@@ -91,7 +91,7 @@ Now build the system as described in the "Building" section above:
 Then simply run `docker-compose up` inside `build/docker`:
 `cd build/docker/ && docker-compose up -d`
 
-This calls docker to bring up a Mongo-database container and a container running the Cyface data collector API. The Collector API is by default available via port 8080. This means if you boot up everything using the default settings, the Collector API is accessible via `http://localhost:8080/api/v3/`.
+This calls docker to bring up a Mongo-database container and a container running the Cyface data collector API. The Collector API is by default available via port 8080. This means if you boot up everything using the default settings, the Collector API is accessible via `http://localhost:8080/api/v4/`.
 
 **ATTENTION: The docker setup should only be used for development purposes.**
 It exposes the Cyface data collector as well as the ports of both Mongo database instances freely on the local network.
@@ -131,8 +131,7 @@ The following parameters are supported:
 * **jwt.public:** The path of the file containing the public key used to sign JWT keys.
 * **http.port:** The port the API  is available at.
 * **http.host:** The hostname under which the Cyface Data Collector is running. This can be something like `localhost`.
-* **http.endpoint:** The path to the endpoint the Cyface Data Collector is running. This can be something like `/api/v3`.
-* **http.port.management:** The port the management API is available at.
+* **http.endpoint:** The path to the endpoint the Cyface Data Collector. This defaults to `/api/v4`.
 * **mongo.db:** Settings for a Mongo database storing information about all the users capable of logging into the system and all data uploaded via the Cyface data collector. This defaults to a Mongo database available at `mongodb://127.0.0.1:27017`. The value of this should be a JSON object configured as described [here](https://vertx.io/docs/vertx-mongo-client/java/#_configuring_the_client).
 * **admin.user:** The username of a default administration account which is created if it does not exist upon start up.
 * **admin.password:** The password for the default administration account.
@@ -140,20 +139,26 @@ The following parameters are supported:
 * **salt:** A salt value that may be used instead of the salt from salt.path. You must make sure that either the salt or the salt.path parameter are used. If both are specified the application startup will fail.
 * **metrics.enabled:** Set to either `true` or `false`. If `true` the collector API publishes metrics using micrometer. These metrics are accessible by a [Prometheus](https://prometheus.io/) server (Which you need to set up yourself) at port `8081`.
 * **http.port.management:** The port running the management API responsible for creating user accounts.
-* **jwt.expiration**: The time it takes for a JWT token to expire in seconds. If a JWT token expires, clients need to acquire a new one via username and password authentication. Setting this time too short requires sending the username and password more often. This makes it easier for malicious parties to intercept and brute force usernames and passwords. However long time JWT tokens may be captured as well and used for malicious purposes.
-* **upload.expiration:** The time an interrupted upload is stored for continueation in the future in milliseconds. If this time expires, the upload must start from the beginning.
+* **jwt.expiration**: The time it takes for a JWT token to expire in seconds. If a JWT token expires, clients need to acquire a new one via username and password authentication. Setting this time too short requires sending the username and password more often. This makes it easier for malicious parties to intercept and brute force usernames and passwords. However, long time JWT tokens may be captured as well and used for malicious purposes.
+* **upload.expiration:** The time an interrupted upload is stored for continuation in the future in milliseconds. If this time expires, the upload must start from the beginning.
 * **measurement.payload.limit:** The size of a measurement in bytes up to which it is accepted as a single upload. Larger measurements are transmitted in chunks.
-* **storage-type:** The type of storage to use for the uploaded data. Currently either `gridfs` or `google` is supported. The following parameter are required:
+* **storage-type:** The type of storage to use for the uploaded data. Currently, either `gridfs` or `google` is supported. The following parameter are required:
   * **gridfs**
     * **type:** Must be `gridfs` in this case.
-    * **uploads-folder:** The relative or absolute path to a folder, to store temporary not finished uploads on the local harddrive before upload of the complete data blob to GridFS upon completion.
+    * **uploads-folder:** The relative or absolute path to a folder, to store temporary not finished uploads on the local hard drive before upload of the complete data blob to GridFS upon completion.
   * **google**
     * **type:** Must be `google` in this case.
-    * **collection-name:** The name of a Mongo collection to store an uploads metadata.
+    * **collection-name:** The name of a Mongo collection to store uploads' metadata into.
     * **project-identifier:** A Google Cloud Storage project identifier to where the upload bucket is located.
     * **bucket-name:** The Google Cloud Storage bucket name to load the data into.
     * **credentials-file:** A credentials file used to authenticate with the Google Cloud Storage account used to upload the data to the Cloud.
     * **paging-size:** The number of buckets to load per request, when iterating through all the data uploaded. Large numbers require fewer requests but more memory.
+* **auth-type:** The type of authentication service to use. Currently, either `mocked` or `oauth` is supported. Defaults to `oauth`. Both require the following parameters:
+  * **oauth.callback**: The callback URL you entered in your provider admin console. This defaults to `http://localhost:8080/callback`.
+  * **oauth.client**: The name of the oauth client to contact. This defaults to `collector`.
+  * **oauth.secret**: The secret of the oauth client to contact.
+  * **oauth.site**: The Root URL for the provider without trailing slashes. This defaults to `https://auth.cyface.de:8443/realms/{tenant}`.
+  * **oauth.tenant**: The name of the oauth realm to contact. This defaults to `rfr`.
 
 #### Running from Command Line
 

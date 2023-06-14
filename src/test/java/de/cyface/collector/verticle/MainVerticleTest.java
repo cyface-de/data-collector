@@ -25,6 +25,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import java.io.IOException;
 import java.util.concurrent.TimeUnit;
 
+import de.cyface.collector.configuration.AuthType;
 import org.apache.commons.lang3.Validate;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -97,7 +98,7 @@ public class MainVerticleTest {
                 .put("jwt.public", publicKey.getFile())
                 .put("jwt.private", privateKey.getFile())
                 .put("http.host", "localhost")
-                .put("http.endpoint", "/api/v3/")
+                .put("http.endpoint", "/api/v4/")
                 .put("http.port", Network.freeServerPort(Network.getLocalHost()))
                 .put("salt", "abcdefg")
                 .put("mongo.db", mongoTest.clientConfiguration())
@@ -108,7 +109,13 @@ public class MainVerticleTest {
                 .put("measurement.payload.limit", 100)
                 .put("http.port.management", 13371)
                 .put("metrics.enabled", false)
-                .put("storage-type", JsonObject.of("type", "gridfs", "upload-path", "upload-folder"));
+                .put("storage-type", JsonObject.of("type", "gridfs", "upload-path", "upload-folder"))
+                .put("auth-type", AuthType.Mocked)
+                .put("oauth.callback", "http://localhost:8080/callback")
+                .put("oauth.client", "collector-test")
+                .put("oauth.secret", "SECRET")
+                .put("oauth.site", "https://example.com:8443/realms/{tenant}")
+                .put("oauth.tenant", "rfr");
     }
 
     /**

@@ -31,7 +31,6 @@ import io.vertx.core.file.OpenOptions
 import io.vertx.ext.mongo.MongoClient
 import io.vertx.junit5.VertxExtension
 import io.vertx.junit5.VertxTestContext
-import org.bson.types.ObjectId
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -100,7 +99,7 @@ class GridFSStorageIT {
             OpenOptions(),
             context.succeeding {
                 val pipe = it.pipe()
-                val user = User(ObjectId("622a1c7ab7e63734fc40cf49"), "test-user")
+                val user = User(UUID.randomUUID(), "test-user")
                 val uploadIdentifier = UUID.randomUUID()
                 val contentRange = ContentRange(0L, 3L, 4L)
                 oocut.store(

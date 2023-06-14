@@ -71,8 +71,8 @@ jobs:
           docker-compose up -d
           sleep 10
           # Grep exits with exit code 0 when the API is started and fails with exit code 1 otherwise
-          echo "Try to reach the Collector API at http://localhost:8080/api/v3/ ..."
-          curl -s http://localhost:8080/api/v3/ | grep -q "Cyface Data Collector" #; echo $?
+          echo "Try to reach the Collector API at http://localhost:8080/api/v4/ ..."
+          curl -s http://localhost:8080/api/v4/ | grep -q "Cyface Data Collector" #; echo $?
         env:
           USERNAME: ${{ github.actor }}
           PASSWORD: ${{ secrets.GITHUB_TOKEN }}
@@ -96,4 +96,4 @@ jobs:
           docker logs collector_api
           cat logs/collector.log
           cat logs/collector-out.log
-          curl http://localhost:8080/api/v3/
+          curl http://localhost:8080/api/v4/

@@ -12,7 +12,7 @@
 	"admin.password":"secret",
 	"http.port":8080,
 	"http.host":"localhost",
-	"http.endpoint":"/api/v3",
+	"http.endpoint":"/api/v4",
 	"http.port.management":13371,
 	"salt": "cyface_salt",
 	"upload.expiration": 60000,
@@ -20,5 +20,11 @@
 	"storage-type": {
 	  "type": "gridfs",
 	  "uploads-folder": "file-uploads"
-	}
+	},
+	"auth-type": "oauth",
+	"oauth.callback":"http://localhost:8080/callback",
+	"oauth.client":"collector",
+	"oauth.secret":"SECRET",
+	"oauth.site":"https://auth.cyface.de:8443/realms/{tenant}",
+	"oauth.tenant":"rfr"
 }
