@@ -53,7 +53,7 @@ import kotlin.test.assertNotNull
  *
  * @author Klemens Muthmann
  * @author Armin Schnabel
- * @version 4.1.0
+ * @version 4.1.1
  * @since 2.0.0
  */
 // This warning is suppressed since it is wrong for Vert.x Tests.
@@ -117,7 +117,6 @@ class FileUploadTest {
     @Test
     fun preRequestWithoutLocations_Returns412(context: VertxTestContext) {
         preRequest(
-            context,
             0,
             context.succeeding { ar: HttpResponse<Buffer?> ->
                 context.verify {
@@ -148,7 +147,6 @@ class FileUploadTest {
             // Set invalid value for a form attribute
             upload(
                 vertx,
-                context,
                 "/test.bin",
                 "Sir! You are being hacked!",
                 4,
@@ -176,7 +174,6 @@ class FileUploadTest {
         // Create upload session
         preRequestAndReturnLocation(context) { uploadUri: String ->
             uploadStatus(
-                context,
                 uploadUri,
                 "bytes */4",
                 context.succeeding { ar: HttpResponse<Buffer?> ->
@@ -202,7 +199,6 @@ class FileUploadTest {
         preRequestAndReturnLocation(context) { uploadUri: String ->
             upload(
                 vertx,
-                context,
                 "/test.bin",
                 "0.0",
                 4,
@@ -219,7 +215,6 @@ class FileUploadTest {
                             `is`(equalTo(308))
                         )
                         uploadStatus(
-                            context,
                             uploadUri,
                             "bytes */8",
                             context.succeeding { res: HttpResponse<Buffer?> ->
@@ -253,7 +248,6 @@ class FileUploadTest {
         preRequestAndReturnLocation(context) { uploadUri: String ->
             upload(
                 vertx,
-                context,
                 "/test.bin",
                 "0.0",
                 4,
@@ -270,7 +264,6 @@ class FileUploadTest {
                             `is`(equalTo(201))
                         )
                         uploadStatus(
-                            context,
                             uploadUri,
                             "bytes */4",
                             context.succeeding { res: HttpResponse<Buffer?> ->
@@ -301,7 +294,6 @@ class FileUploadTest {
     fun testUploadWithInvalidSession_returns404(vertx: Vertx, context: VertxTestContext) {
         upload(
             vertx,
-            context,
             "/test.bin",
             "0.0",
             4,
@@ -336,7 +328,6 @@ class FileUploadTest {
     @Test
     fun preRequest_happyPath(context: VertxTestContext) {
         preRequest(
-            context,
             2,
             context.succeeding { ar: HttpResponse<Buffer?> ->
                 context.verify {
@@ -388,7 +379,6 @@ class FileUploadTest {
         ) { uploadUri: String ->
             upload(
                 vertx,
-                context,
                 "/test.bin",
                 "0.0",
                 4,
@@ -415,70 +405,48 @@ class FileUploadTest {
      * Sends a pre-request for an upload using an authenticated request. You may listen to the completion of this
      * request using any of the provided handlers.
      *
-     * @param context The test context to use.
      * @param preRequestResponseHandler The handler called if the client received a response.
      */
     private fun preRequest(
-        context: VertxTestContext,
         locationCount: Int,
         preRequestResponseHandler: Handler<AsyncResult<HttpResponse<Buffer?>>>
     ) {
-        LOGGER.debug("Sending authentication request!")
-        TestUtils.authenticate(
-            client,
+        val authToken = "eyTestToken"
+
+        // Assemble payload (metaData)
+        val metaDataBody = JsonObject()
+        metaDataBody.put("deviceType", "testDeviceType")
+        metaDataBody.put("appVersion", "testAppVersion")
+        metaDataBody.put("startLocLat", TEST_MEASUREMENT_START_LOCATION_LAT)
+        metaDataBody.put("locationCount", locationCount)
+        metaDataBody.put("startLocLon", TEST_MEASUREMENT_START_LOCATION_LON)
+        metaDataBody.put("length", "0.0")
+        metaDataBody.put("endLocLon", TEST_MEASUREMENT_END_LOCATION_LON)
+        metaDataBody.put("deviceId", deviceIdentifier)
+        metaDataBody.put("endLocTS", "1503055141001")
+        metaDataBody.put("modality", "BICYCLE")
+        metaDataBody.put("startLocTS", "1503055141000")
+        metaDataBody.put("endLocLat", TEST_MEASUREMENT_END_LOCATION_LAT)
+        metaDataBody.put("osVersion", "testOsVersion")
+        metaDataBody.put("measurementId", measurementIdentifier)
+        metaDataBody.put("formatVersion", "3")
+
+        // Send Pre-Request
+        val builder = client.post(
             collectorClient.port,
-            LOGIN_UPLOAD_ENDPOINT_PATH,
-            context.succeeding { authResponse: HttpResponse<Buffer?> ->
-                val authToken = authResponse.getHeader("Authorization")
-                context.verify {
-                    assertThat(
-                        "Wrong HTTP status on authentication request!",
-                        authResponse.statusCode(),
-                        `is`(200)
-                    )
-                    assertThat(
-                        "Auth token was missing from authentication request!",
-                        authToken,
-                        `is`(notNullValue())
-                    )
-                }
-
-                // Assemble payload (metaData)
-                val metaDataBody = JsonObject()
-                metaDataBody.put("deviceType", "testDeviceType")
-                metaDataBody.put("appVersion", "testAppVersion")
-                metaDataBody.put("startLocLat", TEST_MEASUREMENT_START_LOCATION_LAT)
-                metaDataBody.put("locationCount", locationCount)
-                metaDataBody.put("startLocLon", TEST_MEASUREMENT_START_LOCATION_LON)
-                metaDataBody.put("length", "0.0")
-                metaDataBody.put("endLocLon", TEST_MEASUREMENT_END_LOCATION_LON)
-                metaDataBody.put("deviceId", deviceIdentifier)
-                metaDataBody.put("endLocTS", "1503055141001")
-                metaDataBody.put("modality", "BICYCLE")
-                metaDataBody.put("startLocTS", "1503055141000")
-                metaDataBody.put("endLocLat", TEST_MEASUREMENT_END_LOCATION_LAT)
-                metaDataBody.put("osVersion", "testOsVersion")
-                metaDataBody.put("measurementId", measurementIdentifier)
-                metaDataBody.put("formatVersion", "3")
-
-                // Send Pre-Request
-                val builder = client.post(
-                    collectorClient.port,
-                    "localhost",
-                    "/api/v4/measurements?uploadType=resumable"
-                )
-                builder.putHeader("Authorization", "Bearer $authToken")
-                builder.putHeader("Accept-Encoding", "gzip")
-                builder.putHeader("User-Agent", "Google-HTTP-Java-Client/1.39.2 (gzip)")
-                builder.putHeader("x-upload-content-type", "application/octet-stream")
-                builder.putHeader("x-upload-content-length", "9522")
-                builder.putHeader("Content-Type", "application/json; charset=UTF-8")
-                builder.putHeader("Host", "10.0.2.2:8081")
-                builder.putHeader("Connection", "Keep-Alive")
-                builder.putHeader("content-length", "406") // random value, must be correct for the upload
-                builder.sendJson(metaDataBody, preRequestResponseHandler)
-            }
+            "localhost",
+            "/api/v4/measurements?uploadType=resumable"
         )
+        builder.putHeader("Authorization", "Bearer $authToken")
+        builder.putHeader("Accept-Encoding", "gzip")
+        builder.putHeader("User-Agent", "Google-HTTP-Java-Client/1.39.2 (gzip)")
+        builder.putHeader("x-upload-content-type", "application/octet-stream")
+        builder.putHeader("x-upload-content-length", "9522")
+        builder.putHeader("Content-Type", "application/json; charset=UTF-8")
+        builder.putHeader("Host", "10.0.2.2:8081")
+        builder.putHeader("Connection", "Keep-Alive")
+        builder.putHeader("content-length", "406") // random value, must be correct for the upload
+        builder.sendJson(metaDataBody, preRequestResponseHandler)
     }
 
     /**
@@ -502,7 +470,6 @@ class FileUploadTest {
         ) { uploadUri: String ->
             upload(
                 vertx,
-                context,
                 testFileResourceName,
                 "0.0",
                 binaryLength,
@@ -527,7 +494,6 @@ class FileUploadTest {
 
     private fun preRequestAndReturnLocation(context: VertxTestContext, uploadUriHandler: Handler<String>) {
         preRequest(
-            context,
             2,
             context.succeeding { res: HttpResponse<Buffer?> ->
                 context.verify {
@@ -561,7 +527,6 @@ class FileUploadTest {
      * any of the provided handlers.
      *
      * @param vertx The Vertx instance used to access the local file system, to read the test data.
-     * @param context The test context to use.
      * @param testFileResourceName The Java resource name of a file to upload.
      * @param length the meter-length of the track
      * @param binarySize number of bytes in the binary to upload
@@ -571,7 +536,6 @@ class FileUploadTest {
      */
     private fun upload(
         vertx: Vertx,
-        context: VertxTestContext,
         testFileResourceName: String,
         length: String,
         binarySize: Int,
@@ -582,129 +546,90 @@ class FileUploadTest {
         deviceId: String,
         handler: Handler<AsyncResult<HttpResponse<Buffer?>>>
     ) {
-        LOGGER.debug("Sending authentication request!")
-        TestUtils.authenticate(
-            client,
-            collectorClient.port,
-            LOGIN_UPLOAD_ENDPOINT_PATH,
-            context.succeeding { authResponse: HttpResponse<Buffer?> ->
-                val authToken = authResponse.getHeader("Authorization")
-                context.verify {
-                    assertThat(
-                        "Wrong HTTP status on authentication request!",
-                        authResponse.statusCode(),
-                        `is`(200)
-                    )
-                    assertThat(
-                        "Auth token was missing from authentication request!",
-                        authToken,
-                        `is`(notNullValue())
-                    )
-                }
-                val testFileResource = this.javaClass.getResource(testFileResourceName)
-                assertNotNull(testFileResource)
+        val authToken = "eyTestToken"
 
-                // Upload data (4 Bytes of data)
-                val path = requestUri.substring(requestUri.indexOf("/api"))
-                val builder = client.put(collectorClient.port, "localhost", path)
-                val jwtBearer = "Bearer $authToken"
-                builder.putHeader("Authorization", jwtBearer)
-                builder.putHeader("Accept-Encoding", "gzip")
-                builder.putHeader("Content-Range", String.format(Locale.ENGLISH, "bytes %d-%d/%d", from, to, total))
-                builder.putHeader("User-Agent", "Google-HTTP-Java-Client/1.39.2 (gzip)")
-                builder.putHeader("Content-Type", "application/octet-stream")
-                builder.putHeader("Host", "localhost:" + collectorClient.port)
-                builder.putHeader("Connection", "Keep-Alive")
-                // If the binary length is not set correctly, the connection is closed and no handler called
-                // [DAT-735]
-                builder.putHeader("content-length", binarySize.toString())
-                // metaData
-                builder.putHeader("deviceType", "testDeviceType")
-                builder.putHeader("appVersion", "testAppVersion")
-                builder.putHeader("startLocLat", "50.2872300402633")
-                builder.putHeader("locationCount", "2")
-                builder.putHeader("startLocLon", "9.185135040263333")
-                builder.putHeader("length", length)
-                builder.putHeader("endLocLon", "9.492934709138925")
-                builder.putHeader("deviceId", deviceId)
-                builder.putHeader("endLocTS", "1503055141001")
-                builder.putHeader("modality", "BICYCLE")
-                builder.putHeader("startLocTS", "1503055141000")
-                builder.putHeader("endLocLat", "50.59502970913889")
-                builder.putHeader("osVersion", "testOsVersion")
-                builder.putHeader("measurementId", measurementIdentifier)
-                builder.putHeader("formatVersion", "3")
-                val file = vertx.fileSystem().openBlocking(testFileResource.file, OpenOptions())
-                builder.sendStream(file, handler)
-            }
-        )
+        val testFileResource = this.javaClass.getResource(testFileResourceName)
+        assertNotNull(testFileResource)
+
+        // Upload data (4 Bytes of data)
+        val path = requestUri.substring(requestUri.indexOf("/api"))
+        val builder = client.put(collectorClient.port, "localhost", path)
+        val jwtBearer = "Bearer $authToken"
+        builder.putHeader("Authorization", jwtBearer)
+        builder.putHeader("Accept-Encoding", "gzip")
+        builder.putHeader("Content-Range", String.format(Locale.ENGLISH, "bytes %d-%d/%d", from, to, total))
+        builder.putHeader("User-Agent", "Google-HTTP-Java-Client/1.39.2 (gzip)")
+        builder.putHeader("Content-Type", "application/octet-stream")
+        builder.putHeader("Host", "localhost:" + collectorClient.port)
+        builder.putHeader("Connection", "Keep-Alive")
+        // If the binary length is not set correctly, the connection is closed and no handler called
+        // [DAT-735]
+        builder.putHeader("content-length", binarySize.toString())
+        // metaData
+        builder.putHeader("deviceType", "testDeviceType")
+        builder.putHeader("appVersion", "testAppVersion")
+        builder.putHeader("startLocLat", "50.2872300402633")
+        builder.putHeader("locationCount", "2")
+        builder.putHeader("startLocLon", "9.185135040263333")
+        builder.putHeader("length", length)
+        builder.putHeader("endLocLon", "9.492934709138925")
+        builder.putHeader("deviceId", deviceId)
+        builder.putHeader("endLocTS", "1503055141001")
+        builder.putHeader("modality", "BICYCLE")
+        builder.putHeader("startLocTS", "1503055141000")
+        builder.putHeader("endLocLat", "50.59502970913889")
+        builder.putHeader("osVersion", "testOsVersion")
+        builder.putHeader("measurementId", measurementIdentifier)
+        builder.putHeader("formatVersion", "3")
+        val file = vertx.fileSystem().openBlocking(testFileResource.file, OpenOptions())
+        builder.sendStream(file, handler)
     }
 
     private fun uploadStatus(
-        context: VertxTestContext,
         requestUri: String,
         contentRange: String,
         handler: Handler<AsyncResult<HttpResponse<Buffer?>>>
     ) {
-        LOGGER.debug("Sending authentication request!")
-        TestUtils.authenticate(
-            client,
-            collectorClient.port,
-            LOGIN_UPLOAD_ENDPOINT_PATH,
-            context.succeeding { authResponse: HttpResponse<Buffer?> ->
-                val authToken = authResponse.getHeader("Authorization")
-                context.verify {
-                    assertThat(
-                        "Wrong HTTP status on authentication request!",
-                        authResponse.statusCode(),
-                        `is`(200)
-                    )
-                    assertThat(
-                        "Auth token was missing from authentication request!",
-                        authToken,
-                        `is`(notNullValue())
-                    )
-                }
+        val authToken = "eyTestToken"
 
-                // Send empty PUT request to ask where to continue the upload
-                val path = requestUri.substring(requestUri.indexOf("/api"))
-                val builder = client.put(collectorClient.port, "localhost", path)
-                val jwtBearer = "Bearer $authToken"
-                builder.putHeader("Authorization", jwtBearer)
-                builder.putHeader("Accept-Encoding", "gzip")
-                builder.putHeader("User-Agent", "Google-HTTP-Java-Client/1.39.2 (gzip)")
-                builder.putHeader("Content-Type", "application/octet-stream") // really?
-                builder.putHeader("Host", "localhost:" + collectorClient.port)
-                builder.putHeader("Connection", "Keep-Alive")
-                // empty body
-                builder.putHeader("content-length", "0")
-                // ask where to continue
-                builder.putHeader("Content-Range", contentRange)
-                // metaData
-                builder.putHeader("deviceType", "testDeviceType")
-                builder.putHeader("appVersion", "testAppVersion")
-                builder.putHeader("startLocLat", "50.2872300402633")
-                builder.putHeader("locationCount", "2")
-                builder.putHeader("startLocLon", "9.185135040263333")
-                builder.putHeader("length", "0.0")
-                builder.putHeader("endLocLon", "9.492934709138925")
-                builder.putHeader("deviceId", deviceIdentifier)
-                builder.putHeader("endLocTS", "1503055141001")
-                builder.putHeader("modality", "BICYCLE")
-                builder.putHeader("startLocTS", "1503055141000")
-                builder.putHeader("endLocLat", "50.59502970913889")
-                builder.putHeader("osVersion", "testOsVersion")
-                builder.putHeader("measurementId", measurementIdentifier)
-                builder.putHeader("formatVersion", "3")
-                builder.send(handler)
-            }
-        )
+        // Send empty PUT request to ask where to continue the upload
+        val path = requestUri.substring(requestUri.indexOf("/api"))
+        val builder = client.put(collectorClient.port, "localhost", path)
+        val jwtBearer = "Bearer $authToken"
+        builder.putHeader("Authorization", jwtBearer)
+        builder.putHeader("Accept-Encoding", "gzip")
+        builder.putHeader("User-Agent", "Google-HTTP-Java-Client/1.39.2 (gzip)")
+        builder.putHeader("Content-Type", "application/octet-stream") // really?
+        builder.putHeader("Host", "localhost:" + collectorClient.port)
+        builder.putHeader("Connection", "Keep-Alive")
+        // empty body
+        builder.putHeader("content-length", "0")
+        // ask where to continue
+        builder.putHeader("Content-Range", contentRange)
+        // metaData
+        builder.putHeader("deviceType", "testDeviceType")
+        builder.putHeader("appVersion", "testAppVersion")
+        builder.putHeader("startLocLat", "50.2872300402633")
+        builder.putHeader("locationCount", "2")
+        builder.putHeader("startLocLon", "9.185135040263333")
+        builder.putHeader("length", "0.0")
+        builder.putHeader("endLocLon", "9.492934709138925")
+        builder.putHeader("deviceId", deviceIdentifier)
+        builder.putHeader("endLocTS", "1503055141001")
+        builder.putHeader("modality", "BICYCLE")
+        builder.putHeader("startLocTS", "1503055141000")
+        builder.putHeader("endLocLat", "50.59502970913889")
+        builder.putHeader("osVersion", "testOsVersion")
+        builder.putHeader("measurementId", measurementIdentifier)
+        builder.putHeader("formatVersion", "3")
+        builder.send(handler)
     }
 
     companion object {
         /**
          * Logger used to log messages from this class. Configure it using <tt>src/test/resource/logback-test.xml</tt>.
          */
+        @Suppress("unused")
         private val LOGGER = LoggerFactory.getLogger(FileUploadTest::class.java)
 
         /**
@@ -726,11 +651,6 @@ class FileUploadTest {
          * The geographical longitude of the test measurement.
          */
         private const val TEST_MEASUREMENT_START_LOCATION_LON = "10.0"
-
-        /**
-         * The endpoint to authenticate against.
-         */
-        private const val LOGIN_UPLOAD_ENDPOINT_PATH = "/api/v3/login"
 
         /**
          * The endpoint to upload measurements to. The parameter `uploadType=resumable` is added automatically by the

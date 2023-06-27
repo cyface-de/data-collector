@@ -46,7 +46,6 @@ gradle.properties
 **/.vertx
 **/conf.json
 **/*.log
-**/secrets
 *.json
 
 # Temporary Git Files

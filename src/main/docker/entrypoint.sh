@@ -1,5 +1,5 @@
 #!/bin/bash
-# Copyright 2018-2022 Cyface GmbH
+# Copyright 2018-2023 Cyface GmbH
 # 
 # This file is part of the Cyface Data Collector.
 #
@@ -16,45 +16,24 @@
 #  You should have received a copy of the GNU General Public License
 #  along with the Cyface Data Collector.  If not, see <http://www.gnu.org/licenses/>.
 
+# Entrypoint script for the Docker container which starts the Collector API.
+#
+# author: Klemens Muthmann
+# author: Armin Schnabel
+# Version 1.0.0
+
 DEFAULT_API_PORT="8080"
 JAR_FILE="collector-all.jar"
 LOG_FILE="/app/logs/collector-out.log"
 SERVICE_NAME="Cyface Collector API"
 
 main() {
-  loadJwtParameters
-  loadSaltParameters
   loadAuthParameters
   loadApiParameters
   loadCollectorParameters
   loadConfig
   waitForDatabase "mongo"
   startApi
-}
-
-loadJwtParameters() {
-  if [ -z "$JWT_PRIVATE_KEY_FILE_PATH" ]; then
-      JWT_PRIVATE_KEY_FILE_PATH="/app/secrets/jwt/private_key.pem"
-  fi
-
-  if [  -z "$JWT_PUBLIC_KEY_FILE_PATH" ]; then
-      JWT_PUBLIC_KEY_FILE_PATH="/app/secrets/jwt/public.pem"
-  fi
-
-  echo "Loading private key for JWT from: $JWT_PRIVATE_KEY_FILE_PATH"
-  echo "Loading public key for JWT from: $JWT_PUBLIC_KEY_FILE_PATH"
-}
-
-loadSaltParameters() {
-  if [ -n "$SALT" ]; then
-    SALT_PARAMETER="\"salt\":\"$SALT\""
-  elif [ -f "$SALT_FILE" ]; then
-    SALT_PARAMETER="\"salt.path\":\"$SALT_FILE\""
-  else
-    SALT_PARAMETER="\"salt\":\"cyface-salt\""
-  fi
-
-  echo "Using global salt $SALT_PARAMETER"
 }
 
 loadApiParameters() {
@@ -76,7 +55,6 @@ loadAuthParameters() {
     CYFACE_AUTH_TYPE="oauth"
   fi
   if [ -z "$CYFACE_OAUTH_CALLBACK" ]; then
-    # FIXME: only use http if this stays internal (localhost)
     CYFACE_OAUTH_CALLBACK="http://localhost:8080/callback"
   fi
   if [ -z "$CYFACE_OAUTH_CLIENT" ]; then
@@ -103,31 +81,6 @@ loadAuthParameters() {
 }
 
 loadCollectorParameters() {
-  # JWT Expiration time
-  if [ -z $JWT_EXPIRATION_TIME_SECONDS ]; then
-    JWT_EXPIRATION_TIME_SECONDS="60"
-  fi
-
-  echo "Setting JWT token expiration time to $JWT_EXPIRATION_TIME_SECONDS seconds."
-
-  # Management API
-  if [ -z $CYFACE_MANAGEMENT_PORT ]; then
-    CYFACE_MANAGEMENT_PORT="13371"
-  fi
-
-  echo "Running Cyface Management API at $CYFACE_API_HOST:$CYFACE_MANAGEMENT_PORT"
-
-  # Database Admin
-  if [ -z $ADMIN_USER ]; then
-      echo "Unable to find admin user. Please set the environment variable ADMIN_USER to an appropriate value! API will not start!"
-      exit 1
-  fi
-
-  if [ -z $ADMIN_PASSWORD ]; then
-      echo "Unable to find admin password. Please set the environment variable ADMIN_PASSWORD to an appropriate value! API will not start!"
-      exit 1
-  fi
-
   # Monitoring
   if [ -z $METRICS_ENABLED ]; then
     METRICS_ENABLED="false"
@@ -139,8 +92,6 @@ loadCollectorParameters() {
 # Injects the database parameters for databases
 loadConfig() {
   CONFIG="{\
-      \"jwt.private\":\"$JWT_PRIVATE_KEY_FILE_PATH\",\
-      \"jwt.public\":\"$JWT_PUBLIC_KEY_FILE_PATH\",\
       \"mongo.db\":{\
           \"db_name\":\"cyface\",\
           \"connection_string\":\"mongodb://mongo:27017\",\
@@ -149,13 +100,7 @@ loadConfig() {
       \"http.port\":$CYFACE_API_PORT,\
       \"http.host\":\"$CYFACE_API_HOST\",\
       \"http.endpoint\":\"$CYFACE_API_ENDPOINT\",\
-      $SALT_PARAMETER,\
-      \"jwt.expiration\":$JWT_EXPIRATION_TIME_SECONDS,\
-      \"http.port.management\":$CYFACE_MANAGEMENT_PORT,\
-      \"admin.user\":\"$ADMIN_USER\",\
-      \"admin.password\":\"$ADMIN_PASSWORD\",\
       \"metrics.enabled\":$METRICS_ENABLED,\
-      \"salt\":\"cyface-salt\",\
       \"upload.expiration\":60000,\
       \"measurement.payload.limit\":104857600,\
       \"storage-type\":{\

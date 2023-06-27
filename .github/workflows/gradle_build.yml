@@ -58,13 +58,9 @@ jobs:
       - name: Test Docker dev environment setup
         run: |
           cd src
-          mkdir -p main/docker/secrets/jwt
-          cp test/resources/public.pem        main/docker/secrets/jwt/
-          cp test/resources/private_key.pem   main/docker/secrets/jwt/
           cp main/docker/logback.xml.template main/docker/logback.xml
           mkdir                               main/docker/logs main/docker/file-uploads
           sudo chmod o+w                      main/docker/logs main/docker/file-uploads
-          sudo chown -R 9999:root             main/docker/secrets/jwt
           cd ..
           ./gradlew :copyToDockerBuildFolder
           cd build/docker/
@@ -84,14 +80,11 @@ jobs:
           echo "main/docker ..."
           ls -alih
           ls -alih logs
-          ls -alih secrets
           cd ../build/docker/
           echo "build/docker ..."
           ls -alih
           echo "build/docker/logs ..."
           ls -alih logs
-          echo "build/docker/secrets ..."
-          ls -alih secrets
           docker ps
           docker logs collector_api
           cat logs/collector.log

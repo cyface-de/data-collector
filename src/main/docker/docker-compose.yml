@@ -15,7 +15,7 @@
 # You should have received a copy of the GNU General Public License
 # along with the Cyface Data Collector. If not, see <http://www.gnu.org/licenses/>.
 #
-# version 3.0.0
+# version 3.1.0
 
 version: "3.7"
 services:
@@ -47,16 +47,11 @@ services:
       - database
       - default
     volumes:
-      - ./secrets:/app/secrets:ro # read only
       - ./logs:/app/logs
       - ./logback.xml:/app/logback.xml:ro # read only
       - ./file-uploads:/app/file-uploads # for debugging
     depends_on:
       - mongo
-    environment:
-      - ADMIN_USER=admin
-      - ADMIN_PASSWORD=secret
-      - SALT_FILE=/app/secrets/salt
 
 volumes:
   collector_mongo-db:

@@ -31,32 +31,16 @@ The project uses [Gradle](https://gradle.org/) as the build system.
 A program which provides the ability to collect data, as e.g. sent by the Cyface SDKs.
 
 The following sections explain how to run the Data Collector
-It starts with an explanation on how to set up all the required certificates.
+It starts with an explanation on how to set up all the required steps.
 This is a necessary prerequisite for all the following steps.
 So **DO NOT** skip it.
 
-Thereafter follows an explanation on how to run the Data Collector using either Docker or an IDE like IntelliJ or Eclipse.
-
-### Certificates
-The Cyface Data Collector authentication mechanism uses JSON Web Tokens (JWT). 
-This mechanism requires asynchronous keys.
-
-Keys you may use for testing and during development are provided.
-Those keys are located in `src/test/resources`.
-To use them outside of Unit tests you need to copy them to an appropriate location.
-**ATTENTION: DO NOT USE THOSE KEYS IN A PRODUCTION ENVIRONMENT.**
-Since they are in our repository, they are openly available to everyone on the internet, so everyone can compromise security on your server if you use the default keys.
-
-The Cyface Data Collector requires two keys to issue and authenticate JWT tokens for users trying to communicate with the service.
-Just place the appropriate files as `private_key.pem` and `public.pem` in `secrets/jwt`, right next to the `docker-compose.yml` file, or in the "working directory" selected in your run configuration in your IDE (e.g. `data-collector/`).
-
-To generate new keys follow the instructions in the [Vert.x documentation](https://vertx.io/docs/vertx-auth-jwt/java/#_loading_keys) for *Using RSA keys*.
+Thereafter, follows an explanation on how to run the Data Collector using either Docker or an IDE like IntelliJ or Eclipse.
 
 ### Building
 
 To build the docker container running the API simply execute `./gradlew :clean :build :copyToDockerBuildFolder`.
 This builds the jar file which is then packed into the Docker container which is build afterwards.
-Please refer to the previous section about **Certificates** prior to building.
 
 When you updated the Swagger UI make sure to clear your browser cache or else it might not update.
 
@@ -74,16 +58,11 @@ For these execution variants you need the parameters explained in the preceding 
 
 #### Running from Docker
 
-Make sure you read the "Certificates" section above. For development environment you can use the test certificates: `mkdir -p src/main/docker/secrets/jwt && cp src/test/resources/public.pem src/main/docker/secrets/ && cp src/test/resources/private_key.pem src/main/docker/secrets/`
-
 Configure logback or use the sample configuration: `cp src/main/docker/logback.xml.template src/main/docker/logback.xml`
 
 The app is executed by a non-privileged user inside the Docker container. To allow this user to
 write data to `logs` and `file-uploads` you need to create two folders and then set the permissions for both folders to `chmod o+w`, see [DAT-797]:
 `mkdir src/main/docker/logs src/main/docker/file-uploads && sudo chmod  o+w src/main/docker/file-uploads src/main/docker/logs`
-
-Finally, make the secrets accessible by the non-privileged user:
-- `sudo chown -R 9999:root src/main/docker/secrets/jwt`
 
 Now build the system as described in the "Building" section above:
 `./gradlew :clean :build :copyToDockerBuildFolder`
@@ -127,19 +106,11 @@ The parameters are provided using the typical [Vertx `-conf` parameter](https://
 
 The following parameters are supported:
 
-* **jwt.private:** The path of the file containing the private key used to sign JWT keys.
-* **jwt.public:** The path of the file containing the public key used to sign JWT keys.
 * **http.port:** The port the API  is available at.
 * **http.host:** The hostname under which the Cyface Data Collector is running. This can be something like `localhost`.
 * **http.endpoint:** The path to the endpoint the Cyface Data Collector. This defaults to `/api/v4`.
 * **mongo.db:** Settings for a Mongo database storing information about all the users capable of logging into the system and all data uploaded via the Cyface data collector. This defaults to a Mongo database available at `mongodb://127.0.0.1:27017`. The value of this should be a JSON object configured as described [here](https://vertx.io/docs/vertx-mongo-client/java/#_configuring_the_client).
-* **admin.user:** The username of a default administration account which is created if it does not exist upon start up.
-* **admin.password:** The password for the default administration account.
-* **salt.path:** The path to a salt file used to encrypt passwords stored in the user database even stronger.
-* **salt:** A salt value that may be used instead of the salt from salt.path. You must make sure that either the salt or the salt.path parameter are used. If both are specified the application startup will fail.
 * **metrics.enabled:** Set to either `true` or `false`. If `true` the collector API publishes metrics using micrometer. These metrics are accessible by a [Prometheus](https://prometheus.io/) server (Which you need to set up yourself) at port `8081`.
-* **http.port.management:** The port running the management API responsible for creating user accounts.
-* **jwt.expiration**: The time it takes for a JWT token to expire in seconds. If a JWT token expires, clients need to acquire a new one via username and password authentication. Setting this time too short requires sending the username and password more often. This makes it easier for malicious parties to intercept and brute force usernames and passwords. However, long time JWT tokens may be captured as well and used for malicious purposes.
 * **upload.expiration:** The time an interrupted upload is stored for continuation in the future in milliseconds. If this time expires, the upload must start from the beginning.
 * **measurement.payload.limit:** The size of a measurement in bytes up to which it is accepted as a single upload. Larger measurements are transmitted in chunks.
 * **storage-type:** The type of storage to use for the uploaded data. Currently, either `gridfs` or `google` is supported. The following parameter are required:

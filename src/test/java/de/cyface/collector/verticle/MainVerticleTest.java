@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 Cyface GmbH
+ * Copyright 2021-2023 Cyface GmbH
  *
  * This file is part of the Cyface Data Collector.
  *
@@ -25,8 +25,6 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import java.io.IOException;
 import java.util.concurrent.TimeUnit;
 
-import de.cyface.collector.configuration.AuthType;
-import org.apache.commons.lang3.Validate;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -34,6 +32,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
 import de.cyface.collector.commons.MongoTest;
+import de.cyface.collector.configuration.AuthType;
 import de.flapdoodle.embed.process.runtime.Network;
 import io.vertx.core.DeploymentOptions;
 import io.vertx.core.Vertx;
@@ -45,7 +44,7 @@ import io.vertx.junit5.VertxTestContext;
  * Tests that starting the {@link MainVerticle} works as expected.
  *
  * @author Klemens Muthmann
- * @version 1.0.1
+ * @version 1.1.0
  * @since 5.2.1
  */
 @ExtendWith(VertxExtension.class)
@@ -89,25 +88,13 @@ public class MainVerticleTest {
      */
     private JsonObject config() throws IOException {
 
-        final var publicKey = this.getClass().getResource("/public.pem");
-        final var privateKey = this.getClass().getResource("/private_key.pem");
-        Validate.notNull(publicKey);
-        Validate.notNull(privateKey);
-        // noinspection SpellCheckingInspection
         return new JsonObject()
-                .put("jwt.public", publicKey.getFile())
-                .put("jwt.private", privateKey.getFile())
                 .put("http.host", "localhost")
                 .put("http.endpoint", "/api/v4/")
                 .put("http.port", Network.freeServerPort(Network.getLocalHost()))
-                .put("salt", "abcdefg")
                 .put("mongo.db", mongoTest.clientConfiguration())
-                .put("admin.user", "admin")
-                .put("admin.password", "secret")
-                .put("jwt.expiration", 60)
                 .put("upload.expiration", 60_000L)
                 .put("measurement.payload.limit", 100)
-                .put("http.port.management", 13371)
                 .put("metrics.enabled", false)
                 .put("storage-type", JsonObject.of("type", "gridfs", "upload-path", "upload-folder"))
                 .put("auth-type", AuthType.Mocked)
@@ -116,25 +103,6 @@ public class MainVerticleTest {
                 .put("oauth.secret", "SECRET")
                 .put("oauth.site", "https://example.com:8443/realms/{tenant}")
                 .put("oauth.tenant", "rfr");
-    }
-
-    /**
-     * Tests that the startup of the {@link MainVerticle} fails if both "salt" and "salt.path" parameters are supplied.
-     *
-     * @param vertx The Vertx instance used for testing
-     * @param testContext The Vertx test context used to control test execution
-     * @throws IOException If no free server port could be generated
-     */
-    @Test
-    @DisplayName("Fail startup if salt and salt.path are present!")
-    void test(final Vertx vertx, final VertxTestContext testContext) throws Throwable {
-        final var config = config();
-        final var saltResource = this.getClass().getResource("/salt.file");
-        Validate.notNull(saltResource);
-        config.put("salt", "cyface-salt");
-        config.put("salt.path", saltResource.getFile());
-        final var deploymentOptions = new DeploymentOptions().setConfig(config);
-        vertx.deployVerticle(oocut, deploymentOptions, testContext.failingThenComplete());
     }
 
     /**
