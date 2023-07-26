@@ -25,7 +25,7 @@ import static org.hamcrest.Matchers.is;
 import java.io.IOException;
 import java.util.stream.Stream;
 
-import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -80,17 +80,6 @@ public final class RequestTest {
     private WebClient client;
 
     /**
-     * Boots the Mongo database before this test starts.
-     *
-     * @throws IOException If no socket was available for the Mongo database
-     */
-    @BeforeAll
-    public static void setupMongoDatabase() throws IOException {
-        mongoTest = new MongoTest();
-        mongoTest.setUpMongoDatabase(Network.freeServerPort(Network.getLocalHost()));
-    }
-
-    /**
      * Deploys the {@link CollectorApiVerticle} in a test context.
      *
      * @param vertx A <code>Vertx</code> instance used for deploying the verticle
@@ -101,14 +90,16 @@ public final class RequestTest {
     @BeforeEach
     public void deployVerticle(final Vertx vertx, final VertxTestContext ctx) throws IOException {
         collectorClient = new DataCollectorClient();
+        mongoTest = new MongoTest();
+        mongoTest.setUpMongoDatabase(Network.freeServerPort(Network.getLocalHost()));
         client = collectorClient.createWebClient(vertx, ctx, mongoTest);
     }
 
     /**
      * Finishes the mongo database after this test has finished.
      */
-    @AfterAll
-    public static void stopMongoDatabase() {
+    @AfterEach // We need a new database for each test execution or else data remains in the database.
+    void shutdown() {
         mongoTest.stopMongoDb();
     }
 

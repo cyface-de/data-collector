@@ -37,8 +37,7 @@ import org.hamcrest.Matchers.equalTo
 import org.hamcrest.Matchers.`is`
 import org.hamcrest.Matchers.matchesPattern
 import org.hamcrest.Matchers.notNullValue
-import org.junit.jupiter.api.AfterAll
-import org.junit.jupiter.api.BeforeAll
+import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
@@ -91,6 +90,7 @@ class FileUploadTooLargeTest {
         // FIXME: can we somehow overwrite the @setup method to reuse {@link FileUploadTest}?
         // Set maximal payload size to 1 KB (test upload is 130 KB)
         collectorClient = DataCollectorClient(CollectorApiVerticle.BYTES_IN_ONE_KILOBYTE)
+        mongoTest.setUpMongoDatabase(Network.freeServerPort(Network.getLocalHost()))
         client = collectorClient.createWebClient(vertx, ctx, mongoTest)
     }
 
@@ -108,6 +108,14 @@ class FileUploadTooLargeTest {
         deployVerticle(vertx, context)
         deviceIdentifier = UUID.randomUUID().toString()
         measurementIdentifier = 1L.toString()
+    }
+
+    /**
+     * Finishes the mongo database after this test has finished.
+     */
+    @AfterEach // We need a new database for each test execution or else data remains in the database.
+    fun shutdown() {
+        mongoTest.stopMongoDb()
     }
 
     /**
@@ -361,26 +369,5 @@ class FileUploadTooLargeTest {
          * A very large payload size, used to test how the system reacts to large uploads.
          */
         private const val UPLOAD_SIZE = 134697
-
-        /**
-         * Boots the Mongo database before this test starts.
-         *
-         * @throws IOException If no socket was available for the Mongo database
-         */
-        @BeforeAll
-        @JvmStatic
-        @Throws(IOException::class)
-        fun setUpMongoDatabase() {
-            mongoTest.setUpMongoDatabase(Network.freeServerPort(Network.getLocalHost()))
-        }
-
-        /**
-         * Finishes the mongo database after this test has finished.
-         */
-        @AfterAll
-        @JvmStatic
-        fun stopMongoDatabase() {
-            mongoTest.stopMongoDb()
-        }
     }
 }

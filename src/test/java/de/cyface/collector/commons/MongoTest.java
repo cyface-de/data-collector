@@ -47,7 +47,6 @@ public final class MongoTest {
      * The executable running the <code>MongodProcess</code>. This must be shut down after finishing this Mongo database
      * run.
      */
-    @SuppressWarnings("SpellCheckingInspection")
     private MongodExecutable mongodExecutable;
     /**
      * The port to run the test Mongo database under.
@@ -72,7 +71,6 @@ public final class MongoTest {
      */
     public void setUpMongoDatabase(final int mongoPort) throws IOException {
         this.mongoPort = mongoPort;
-        // noinspection SpellCheckingInspection
         final var mongodConfig = MongodConfig
                 .builder()
                 .version(Version.Main.V4_4)

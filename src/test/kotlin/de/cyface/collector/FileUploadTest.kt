@@ -37,8 +37,7 @@ import org.hamcrest.Matchers.equalTo
 import org.hamcrest.Matchers.`is`
 import org.hamcrest.Matchers.matchesPattern
 import org.hamcrest.Matchers.notNullValue
-import org.junit.jupiter.api.AfterAll
-import org.junit.jupiter.api.BeforeAll
+import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
@@ -82,6 +81,12 @@ class FileUploadTest {
     private var measurementIdentifier = 1L.toString()
 
     /**
+     * A Mongo database lifecycle handler. This provides the test with the capabilities to run and shutdown a Mongo
+     * database for testing purposes.
+     */
+    private lateinit var mongoTest: MongoTest
+
+    /**
      * Deploys the [de.cyface.collector.verticle.CollectorApiVerticle] in a test context.
      *
      * @param vertx The `Vertx` instance to deploy the verticle to
@@ -91,6 +96,8 @@ class FileUploadTest {
     @Throws(IOException::class)
     private fun deployVerticle(vertx: Vertx, ctx: VertxTestContext) {
         collectorClient = DataCollectorClient(140_000L)
+        mongoTest = MongoTest()
+        mongoTest.setUpMongoDatabase(Network.freeServerPort(Network.getLocalHost()))
         client = collectorClient.createWebClient(vertx, ctx, mongoTest)
     }
 
@@ -107,6 +114,14 @@ class FileUploadTest {
         deployVerticle(vertx, context)
         deviceIdentifier = UUID.randomUUID().toString()
         measurementIdentifier = 1L.toString()
+    }
+
+    /**
+     * Finishes the mongo database after this test has finished.
+     */
+    @AfterEach // We need a new database for each test execution or else data remains in the database.
+    fun stopMongoDatabase() {
+        mongoTest.stopMongoDb()
     }
 
     /**
@@ -657,33 +672,5 @@ class FileUploadTest {
          * Google API client library used on Android, so we make sure the endpoints can handle this.
          */
         private const val UPLOAD_PATH_WITH_INVALID_SESSION = "/api/v4/measurements/(random78901234567890123456789012)/"
-
-        /**
-         * A Mongo database lifecycle handler. This provides the test with the capabilities to run and shutdown a Mongo
-         * database for testing purposes.
-         */
-        private lateinit var mongoTest: MongoTest
-
-        /**
-         * Boots the Mongo database before this test starts.
-         *
-         * @throws IOException If no socket was available for the Mongo database
-         */
-        @BeforeAll
-        @Throws(IOException::class)
-        @JvmStatic
-        fun setUpMongoDatabase() {
-            mongoTest = MongoTest()
-            mongoTest.setUpMongoDatabase(Network.freeServerPort(Network.getLocalHost()))
-        }
-
-        /**
-         * Finishes the mongo database after this test has finished.
-         */
-        @AfterAll
-        @JvmStatic
-        fun stopMongoDatabase() {
-            mongoTest.stopMongoDb()
-        }
     }
 }
