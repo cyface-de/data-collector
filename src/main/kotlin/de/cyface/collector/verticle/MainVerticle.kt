@@ -44,7 +44,10 @@ class MainVerticle : AbstractVerticle() {
     @Throws(Exception::class)
     override fun start(startFuture: Promise<Void>) {
         logger.info("Starting main verticle!")
-        val configuration = Configuration.deserialize(config())
+        val jsonConfiguration = config()
+        logger.debug("Active Configuration")
+        logger.debug("${jsonConfiguration.encodePrettily()}")
+        val configuration = Configuration.deserialize(jsonConfiguration)
         try {
             deploy(startFuture, configuration)
         } catch (e: IOException) {

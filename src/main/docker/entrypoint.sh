@@ -32,7 +32,8 @@ main() {
   loadApiParameters
   loadCollectorParameters
   loadConfig
-  waitForDatabase "mongo"
+  waitForDependency "mongo" 27017
+  waitForDependency "authentication" 8080
   startApi
 }
 
@@ -67,7 +68,7 @@ loadAuthParameters() {
   fi
 
   if [ -z "$CYFACE_OAUTH_SITE" ]; then
-    CYFACE_OAUTH_SITE="https://auth.cyface.de:8443/realms/{tenant}"
+    CYFACE_OAUTH_SITE="http://authentication:8080/realms/{tenant}"
   fi
   if [ -z "$CYFACE_OAUTH_TENANT" ]; then
     CYFACE_OAUTH_TENANT="rfr"
@@ -116,8 +117,9 @@ loadConfig() {
   }"
 }
 
-# Parameter 1: Name of the Docker Container which contains the Mongo Database to wait for
-waitForDatabase() {
+# Parameter 1: Name of the Docker Container of the dependency to wait for
+# Parameter 2: Port of the dependency to wait for
+waitForDependency() {
   echo "Waiting for Database $1 to start!"
 
   MONGO_STATUS="not running"
@@ -125,7 +127,7 @@ waitForDatabase() {
   while [ "$COUNTER" -lt 10 ] && [ "$MONGO_STATUS" = "not running" ]; do
     ((COUNTER++))
     echo "Try $COUNTER"
-    if nc -z "$1" 27017; then
+    if nc -z "$1" $2; then
       echo "Mongo Database is up!"
       MONGO_STATUS="running"
     else

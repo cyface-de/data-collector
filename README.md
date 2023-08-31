@@ -6,7 +6,7 @@
 
 This application represents the [Cyface](https://cyface.de) data collector software.
 
-It is used to collect traffic data from Cyface measurement devices, such as our sensor box or our smartphone application.
+It is used to collect traffic data from Cyface measurement devices, such as our smartphone application.
 
 Our smartphone SDK is available as GPL application for [Android](https://github.com/cyface-de/android-backend) and [iOS](https://github.com/cyface-de/ios-backend) (or as [Podspec](https://github.com/cyface-de/ios-podspecs)) as well.
 
@@ -70,10 +70,12 @@ Now build the system as described in the "Building" section above:
 Then simply run `docker-compose up` inside `build/docker`:
 `cd build/docker/ && docker-compose up -d`
 
-This calls docker to bring up a Mongo-database container and a container running the Cyface data collector API. The Collector API is by default available via port 8080. This means if you boot up everything using the default settings, the Collector API is accessible via `http://localhost:8080/api/v4/`.
+This calls docker to bring up a Mongo-database container and a container running the Cyface data collector API. 
+The Collector API is by default available via port 8080. 
+This means if you boot up everything using the default settings, the Collector API is accessible via `http://localhost:8080/api/v4/`.
 
 **ATTENTION: The docker setup should only be used for development purposes.**
-It exposes the Cyface data collector as well as the ports of both Mongo database instances freely on the local network.
+It exposes the Cyface data collector as well as the ports of the Mongo database instance freely on the local network.
 
 Use `docker-compose ps` to see which ports are mapped to which by Docker.
 For using such a setup in production, you may create your own Docker setup, based on our development one.
@@ -167,6 +169,39 @@ To load files from the Mongo GridFS file storage use the [Mongofiles](https://do
 * Downloading files: `mongofiles --port 27019 -d cyface get f5823cbc-b8f5-4c80-a4b1-7bf28a3c7944`
 * Unzipping files: `printf "\x78\x9c" | cat - f5823cbc-b8f5-4c80-a4b1-7bf28a3c7944 | zlib-flate -uncompress > test2`
 
+## Using the Cyface Data Collector
+
+To provide data to the Cyface Data Collector, call the apropriate endpoints of the Data Collector REST API.
+The available endpoints are documented as OpenAPI.
+The OpenAPI documentation is available under 'http://localhost:8080/api/v4/` if the collector runs under `localhost`.
+The protocol for uploading data follows the [Google data protocol](https://developers.google.com/gdata/docs/resumable_upload).
+
+### Accessing the Docker Development Environment
+Running the Docker development environment means, that all the containers communicate via internal Docker networks.
+This causes the problem, that a token issued to a client outside this network will be invalid inside.
+The reason for this are invalid issuer values as part of the issued JWT token.
+To get a proper authentication token, you must connect to the docker network via an additional docker container and request a valid token directly from the internal auth server.
+Such a call could look like:
+```
+$ docker run --network cyface-collector_authentication mycurl:latest curl -d 'client_id=ios-app' -d 'username=test@cyface.de' -d 'password=test' -d 'grant_type=password' 'http://authentication:8080/realms/rfr/protocol/openid-connect/token'
+```
+The docker image `mycurl:latest` could be any image providing the curl tool.
+You can create it for example using a dockerfile similar to:
+```
+from ubuntu:latest
+
+RUN apt-get -y update; apt-get -y install curl
+```
+ATTENTION: This means that currently it is not possible to connect to this setup using one of the Cyface mobile applications.
+Future versions of this application are going to remedy that situation.
+
+The output will look similar to this:
+```
+  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
+                                 Dload  Upload   Total   Spent    Left  Speed
+  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0{"access_token":"eyJhbGciOiJSUzI1NiIsInR5cCIgOiAiSldUIiwia2lkIiA6ICJDSnNhZ0ZnbGNGRnpDWTU1Z3ZYb2xhMnRMWFlDMzNDQmtUU05tMU1DbkdnIn0.eyJleHAiOjE2OTMzOTc2MTcsImlhdCI6MTY5MzM5NzMxNywianRpIjoiYzQ3ZTUzYzktOTA0ZC00MDIyLWE5MWEtZTcwOGNlZGQ0NWUxIiwiaXNzIjoiaHR0cDovL2F1dGhlbnRpY2F0aW9uOjgwODAvcmVhbG1zL3JmciIsImF1ZCI6ImFjY291bnQiLCJzdWIiOiIyYzAyZjI4ZS0wMGI4LTQyMWEtOTIxZi1iZTY3MGI5ZDkzMzAiLCJ0eXAiOiJCZWFyZXIiLCJhenAiOiJpb3MtYXBwIiwic2Vzc2lvbl9zdGF0ZSI6ImE1ZmU2YTJjLWE0MDItNGFlMy1hZDUxLWMzNTlkOTExZTdkYSIsImFjciI6IjEiLCJyZWFsbV9hY2Nlc3MiOnsicm9sZXMiOlsib2ZmbGluZV9hY2Nlc3MiLCJkZWZhdWx0LXJvbGVzLXJmciIsInVtYV9hdXRob3JpemF0aW9uIl19LCJyZXNvdXJjZV9hY2Nlc3MiOnsiYWNjb3VudCI6eyJyb2xlcyI6WyJtYW5hZ2UtYWNjb3VudCIsIm1hbmFnZS1hY2NvdW50LWxpbmtzIiwidmlldy1wcm9maWxlIl19fSwic2NvcGUiOiJwcm9maWxlIGVtYWlsIiwic2lkIjoiYTVmZTZhMmMtYTQwMi00YWUzLWFkNTEtYzM1OWQ5MTFlN2RhIiwiZW1haWxfdmVyaWZpZWQiOnRydWUsIm5hbWUiOiJUZXN0IFRlc3RlciIsInByZWZlcnJlZF91c2VybmFtZSI6InRlc3RAY3lmYWNlLmRlIiwiZ2l2ZW5fbmFtZSI6IlRlc3QiLCJmYW1pbHlfbmFtZSI6IlRlc3RlciIsImVtYWlsIjoidGVzdEBjeWZhY2UuZGUifQ.jhppkwSJCwYlbje_jU-7SQXJPrUYyjiXp29xoh2Vg6lga_hWtPOttF95D96z6IbNPFc42GyjRq_PFRqtt5M2K0yPYL36HeAHLpIYCV6SJEA4do10P90o07tFKkJReWGEgswSsA6x-79Y3sVjhADEJCJozXWZ-Wb7tUtWdCvqUZecmLaVquDPcRdDXfo98K4qQe2p65_QPR2lMzz86EIp2a3-xUwLWmc62_mZfZ1wUtvHFty1IXLZC_L1pD9p99DdLy7Rb8UKpMBH0a646jBs9CPOY481_sOMOSnbyrughRrlJiV7oRl7rZxZhP0djMRj29nB8L_Z5NWc21XJcWp9VA","expires_in":300,"refresh_expires_in":86313600,"refresh_token":"eyJhbGciOiJIUzI1NiIsInR5cCIgOiAiSldUIiwia2lkIiA6ICJlMDEwYzQ2NS04YTRjLTQ3NzItODY2MS01NThkNWZhNGZmYTEifQ.eyJleHAiOjE3Nzk3MTA5MTcsImlhdCI6MTY5MzM5NzMxNywianRpIjoiMGY0NTBkMzQtMjk3Zi00NjJiLWJmY2MtMTFlNmM2MWUxMGI3IiwiaXNzIjoiaHR0cDovL2F1dGhlbnRpY2F0aW9uOjgwODAvcmVhbG1zL3JmciIsImF1ZCI6Imh0dHA6Ly9hdXRoZW50aWNhdGlvbjo4MDgwL3JlYWxtcy9yZnIiLCJzdWIiOiIyYzAyZjI4ZS0wMGI4LTQyMWEtOTIxZi1iZTY3MGI5ZDkzMzAiLCJ0eXAiOiJSZWZyZXNoIiwiYXpwIjoiaW9zLWFwcCIsInNlc3Npb25fc3RhdGUiOiJhNWZlNmEyYy1hNDAyLTRhZTMtYWQ1MS1jMzU5ZDkxMWU3ZGEiLCJzY29wZSI6InByb2ZpbGUgZW1haWwiLCJzaWQiOiJhNWZlNmEyYy1hNDAyLTRhZTMtYWQ1MS1jMzU5ZDkxMWU3ZGEifQ.Bp7f5ycWPC0bgHx4_gBBMOM1uKJLqLD3100  2293  100  2218  100    75   8837    298 --:--:-- --:--:-- --:--:--  91356a2c-a402-4ae3-ad51-c359d911e7da","scope":"profile email"}
+```
+From this it is possible to copy the access token and start the upload process.
 
 ## Release a new Version
 

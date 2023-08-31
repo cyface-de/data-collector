@@ -46,7 +46,7 @@ gradle.properties
 **/.vertx
 **/conf.json
 **/*.log
-*.json
+./cyface-test*.json
 
 # Temporary Git Files
 **/*.orig
@@ -60,3 +60,8 @@ gradle.properties
 
 # Mac temporary Files
 .DS_Store
+
+# Temporary files created by the Docker Setup
+src/main/docker/keycloak/data/h2
+src/main/docker/keycloak/data/tmp
+/cyface-test-9807604229c0.json
