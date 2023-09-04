@@ -2639,7 +2639,7 @@
     "oauth2DeviceCodeLifespan" : "600",
     "parRequestUriLifespan" : "60",
     "clientSessionMaxLifespan" : "0",
-    "frontendUrl" : "",
+    "frontendUrl": "http://authentication:8080",
     "acr.loa.map" : "{}",
     "adminEventsExpiration" : "864000"
   },

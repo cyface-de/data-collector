@@ -171,29 +171,25 @@ To load files from the Mongo GridFS file storage use the [Mongofiles](https://do
 
 ## Using the Cyface Data Collector
 
-To provide data to the Cyface Data Collector, call the apropriate endpoints of the Data Collector REST API.
+To provide data to the Cyface Data Collector, call the appropriate endpoints of the Data Collector REST API.
+
 The available endpoints are documented as OpenAPI.
 The OpenAPI documentation is available under 'http://localhost:8080/api/v4/` if the collector runs under `localhost`.
+
 The protocol for uploading data follows the [Google data protocol](https://developers.google.com/gdata/docs/resumable_upload).
 
 ### Accessing the Docker Development Environment
-Running the Docker development environment means, that all the containers communicate via internal Docker networks.
-This causes the problem, that a token issued to a client outside this network will be invalid inside.
-The reason for this are invalid issuer values as part of the issued JWT token.
-To get a proper authentication token, you must connect to the docker network via an additional docker container and request a valid token directly from the internal auth server.
-Such a call could look like:
-```
-$ docker run --network cyface-collector_authentication mycurl:latest curl -d 'client_id=ios-app' -d 'username=test@cyface.de' -d 'password=test' -d 'grant_type=password' 'http://authentication:8080/realms/rfr/protocol/openid-connect/token'
-```
-The docker image `mycurl:latest` could be any image providing the curl tool.
-You can create it for example using a dockerfile similar to:
-```
-from ubuntu:latest
+In the Docker development environment, all containers communicate through the internal Docker networks.
 
-RUN apt-get -y update; apt-get -y install curl
+Tokens issued to a client outside this network won't be valid within the network due to a mismatch in the issuer encoded into the token.
+For instance, it might use "localhost:8081" instead of the expected "authentication:8080" when requesting a token from outside.
+The `rfr` realm, which is initialized in this setup from `./src/main/docker/keycloak/data/import/rfr-realm.json`, addresses
+this problem by setting the "frontendUrl" to "http://authentication:8080". If you add more realms, ensure you do the same. 
+
+To obtain an authentication token from outside the Docker network, you can use the following command:
 ```
-ATTENTION: This means that currently it is not possible to connect to this setup using one of the Cyface mobile applications.
-Future versions of this application are going to remedy that situation.
+$ curl -d 'client_id=ios-app' -d 'username=test@cyface.de' -d 'password=test' -d 'grant_type=password' 'http://localhost:8081/realms/rfr/protocol/openid-connect/token'
+```
 
 The output will look similar to this:
 ```
