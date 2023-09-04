@@ -52,6 +52,7 @@ services:
       - ./file-uploads:/app/file-uploads # for debugging
     depends_on:
       - mongo
+      - authentication
     environment:
       - CYFACE_OAUTH_SECRET=**********
       - CYFACE_OAUTH_SITE=http://authentication:8080/realms/{tenant}
@@ -60,7 +61,7 @@ services:
 
   # Keycloak Authentication Server
   authentication:
-    container_name: collector_keycloak
+    container_name: collector_authentication
     image: quay.io/keycloak/keycloak:22.0.1
     # For the issuer of the auth token to be correct, Frontend-URL needs to be set to authentication:8080 [RFR-774]
     # This is pre-configured in `/keycloak/data/import/rfr-realm.json`: `"frontendUrl": "http://authentication:8080",`
