@@ -1,5 +1,5 @@
 #!/bin/bash
-# Copyright 2018-2022 Cyface GmbH
+# Copyright 2018-2023 Cyface GmbH
 # 
 # This file is part of the Cyface Data Collector.
 #
@@ -16,45 +16,25 @@
 #  You should have received a copy of the GNU General Public License
 #  along with the Cyface Data Collector.  If not, see <http://www.gnu.org/licenses/>.
 
+# Entrypoint script for the Docker container which starts the Collector API.
+#
+# author: Klemens Muthmann
+# author: Armin Schnabel
+# Version 1.0.0
+
 DEFAULT_API_PORT="8080"
 JAR_FILE="collector-all.jar"
 LOG_FILE="/app/logs/collector-out.log"
 SERVICE_NAME="Cyface Collector API"
 
 main() {
-  loadJwtParameters
-  loadSaltParameters
   loadAuthParameters
   loadApiParameters
   loadCollectorParameters
   loadConfig
-  waitForDatabase "mongo"
+  waitForDependency "mongo" 27017
+  waitForDependency "authentication" 8080
   startApi
-}
-
-loadJwtParameters() {
-  if [ -z "$JWT_PRIVATE_KEY_FILE_PATH" ]; then
-      JWT_PRIVATE_KEY_FILE_PATH="/app/secrets/jwt/private_key.pem"
-  fi
-
-  if [  -z "$JWT_PUBLIC_KEY_FILE_PATH" ]; then
-      JWT_PUBLIC_KEY_FILE_PATH="/app/secrets/jwt/public.pem"
-  fi
-
-  echo "Loading private key for JWT from: $JWT_PRIVATE_KEY_FILE_PATH"
-  echo "Loading public key for JWT from: $JWT_PUBLIC_KEY_FILE_PATH"
-}
-
-loadSaltParameters() {
-  if [ -n "$SALT" ]; then
-    SALT_PARAMETER="\"salt\":\"$SALT\""
-  elif [ -f "$SALT_FILE" ]; then
-    SALT_PARAMETER="\"salt.path\":\"$SALT_FILE\""
-  else
-    SALT_PARAMETER="\"salt\":\"cyface-salt\""
-  fi
-
-  echo "Using global salt $SALT_PARAMETER"
 }
 
 loadApiParameters() {
@@ -76,7 +56,6 @@ loadAuthParameters() {
     CYFACE_AUTH_TYPE="oauth"
   fi
   if [ -z "$CYFACE_OAUTH_CALLBACK" ]; then
-    # FIXME: only use http if this stays internal (localhost)
     CYFACE_OAUTH_CALLBACK="http://localhost:8080/callback"
   fi
   if [ -z "$CYFACE_OAUTH_CLIENT" ]; then
@@ -89,7 +68,7 @@ loadAuthParameters() {
   fi
 
   if [ -z "$CYFACE_OAUTH_SITE" ]; then
-    CYFACE_OAUTH_SITE="https://auth.cyface.de:8443/realms/{tenant}"
+    CYFACE_OAUTH_SITE="http://authentication:8080/realms/{tenant}"
   fi
   if [ -z "$CYFACE_OAUTH_TENANT" ]; then
     CYFACE_OAUTH_TENANT="rfr"
@@ -103,31 +82,6 @@ loadAuthParameters() {
 }
 
 loadCollectorParameters() {
-  # JWT Expiration time
-  if [ -z $JWT_EXPIRATION_TIME_SECONDS ]; then
-    JWT_EXPIRATION_TIME_SECONDS="60"
-  fi
-
-  echo "Setting JWT token expiration time to $JWT_EXPIRATION_TIME_SECONDS seconds."
-
-  # Management API
-  if [ -z $CYFACE_MANAGEMENT_PORT ]; then
-    CYFACE_MANAGEMENT_PORT="13371"
-  fi
-
-  echo "Running Cyface Management API at $CYFACE_API_HOST:$CYFACE_MANAGEMENT_PORT"
-
-  # Database Admin
-  if [ -z $ADMIN_USER ]; then
-      echo "Unable to find admin user. Please set the environment variable ADMIN_USER to an appropriate value! API will not start!"
-      exit 1
-  fi
-
-  if [ -z $ADMIN_PASSWORD ]; then
-      echo "Unable to find admin password. Please set the environment variable ADMIN_PASSWORD to an appropriate value! API will not start!"
-      exit 1
-  fi
-
   # Monitoring
   if [ -z $METRICS_ENABLED ]; then
     METRICS_ENABLED="false"
@@ -139,8 +93,6 @@ loadCollectorParameters() {
 # Injects the database parameters for databases
 loadConfig() {
   CONFIG="{\
-      \"jwt.private\":\"$JWT_PRIVATE_KEY_FILE_PATH\",\
-      \"jwt.public\":\"$JWT_PUBLIC_KEY_FILE_PATH\",\
       \"mongo.db\":{\
           \"db_name\":\"cyface\",\
           \"connection_string\":\"mongodb://mongo:27017\",\
@@ -149,13 +101,7 @@ loadConfig() {
       \"http.port\":$CYFACE_API_PORT,\
       \"http.host\":\"$CYFACE_API_HOST\",\
       \"http.endpoint\":\"$CYFACE_API_ENDPOINT\",\
-      $SALT_PARAMETER,\
-      \"jwt.expiration\":$JWT_EXPIRATION_TIME_SECONDS,\
-      \"http.port.management\":$CYFACE_MANAGEMENT_PORT,\
-      \"admin.user\":\"$ADMIN_USER\",\
-      \"admin.password\":\"$ADMIN_PASSWORD\",\
       \"metrics.enabled\":$METRICS_ENABLED,\
-      \"salt\":\"cyface-salt\",\
       \"upload.expiration\":60000,\
       \"measurement.payload.limit\":104857600,\
       \"storage-type\":{\
@@ -171,35 +117,49 @@ loadConfig() {
   }"
 }
 
-# Parameter 1: Name of the Docker Container which contains the Mongo Database to wait for
-waitForDatabase() {
-  echo "Waiting for Database $1 to start!"
+# Parameter 1: Name of the Docker Container of the dependency to wait for
+# Parameter 2: Internal Docker port of the dependency to wait for
+waitForDependency() {
+  local service="$1"
+  local port="$2"
 
-  MONGO_STATUS="not running"
-  COUNTER=0
-  while [ "$COUNTER" -lt 10 ] && [ "$MONGO_STATUS" = "not running" ]; do
-    ((COUNTER++))
-    echo "Try $COUNTER"
-    if nc -z "$1" 27017; then
-      echo "Mongo Database is up!"
-      MONGO_STATUS="running"
+  echo
+  echo "Waiting for $service:$port to start..."
+
+  local attempts=0
+  local max_attempts=10
+  local sleep_duration=5s
+  
+  while [ "$attempts" -lt "$max_attempts" ]; do
+    # Increment attempts counter
+    ((attempts++))
+    
+    echo "Attempt $attempts"
+
+    # Check if the service is up using nc
+    if nc -z "$service" "$port" > /dev/null 2>&1; then
+      echo "$service is up!"
+      return 0
     else
-      sleep 5s
+      sleep "$sleep_duration"
     fi
   done
-  if [ "$COUNTER" -ge 10 ]; then
-      echo "Unable to find $1 Database! API will not start."
-      exit 1
-  fi
+
+
+  # If the function reaches here, it means the service didn't start within the max attempts
+  echo "Unable to find $service:$port after $max_attempts attempts! API will not start."
+  exit 1
 }
 
 startApi() {
+  echo
   echo "Starting $SERVICE_NAME at $CYFACE_API_HOST:$CYFACE_API_PORT$CYFACE_API_ENDPOINT"
   java -Dvertx.cacheDirBase=/tmp/vertx-cache \
       -Dlogback.configurationFile=/app/logback.xml \
       -jar $JAR_FILE \
       -conf "$CONFIG" \
       &> $LOG_FILE
+  echo "API started or failed. Checking logs might give more insights."
 }
 
 main "$@" # $@ allows u to access the command-line arguments withing the main function

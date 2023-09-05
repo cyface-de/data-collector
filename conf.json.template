@@ -1,20 +1,13 @@
 {
-	"jwt.public":"src/test/resources/public.pem",
-	"jwt.private":"src/test/resources/private_key.pem",
-	"jwt.expiration":3600,
 	"metrics.enabled":false,
 	"mongo.db":{
 	    "db_name":"cyface",
 	    "connection_string":"mongodb://localhost:27019",
 	    "data_source_name":"cyface"
 	},
-	"admin.user":"admin",
-	"admin.password":"secret",
 	"http.port":8080,
 	"http.host":"localhost",
 	"http.endpoint":"/api/v4",
-	"http.port.management":13371,
-	"salt": "cyface_salt",
 	"upload.expiration": 60000,
 	"measurement.payload.limit": 104857600,
 	"storage-type": {

@@ -15,7 +15,7 @@
 # You should have received a copy of the GNU General Public License
 # along with the Cyface Data Collector. If not, see <http://www.gnu.org/licenses/>.
 #
-# version 3.0.0
+# version 3.1.0
 
 version: "3.7"
 services:
@@ -42,21 +42,40 @@ services:
     image: data-collector:0.0.0
     ports:
       - "127.0.0.1:8080:8080"
-      - "127.0.0.1:13371:13371"
     networks:
       - database
+      - authentication
       - default
     volumes:
-      - ./secrets:/app/secrets:ro # read only
       - ./logs:/app/logs
       - ./logback.xml:/app/logback.xml:ro # read only
       - ./file-uploads:/app/file-uploads # for debugging
     depends_on:
       - mongo
+      - authentication
     environment:
-      - ADMIN_USER=admin
-      - ADMIN_PASSWORD=secret
-      - SALT_FILE=/app/secrets/salt
+      - CYFACE_OAUTH_SECRET=**********
+      - CYFACE_OAUTH_SITE=http://authentication:8080/realms/{tenant}
+      - CYFACE_OAUTH_CALLBACK=http://api:8080/callback
+
+
+  # Keycloak Authentication Server
+  authentication:
+    container_name: collector_authentication
+    image: quay.io/keycloak/keycloak:22.0.1
+    # For the issuer of the auth token to be correct, Frontend-URL needs to be set to authentication:8080 [RFR-774]
+    # This is pre-configured in `/keycloak/data/import/rfr-realm.json`: `"frontendUrl": "http://authentication:8080",`
+    ports:
+      - "127.0.0.1:8081:8080"
+    networks:
+      - authentication
+    environment:
+      - KEYCLOAK_ADMIN=admin 
+      - KEYCLOAK_ADMIN_PASSWORD=admin
+    command: start-dev --import-realm
+    volumes:
+      - ./keycloak/providers:/opt/keycloak/providers
+      - ./keycloak/data:/opt/keycloak/data
 
 volumes:
   collector_mongo-db:
@@ -73,3 +92,5 @@ networks:
   # Shared docker network. Allows "provider" docker container to access APIs without exposing them to the outside world
   database:
     name: cyface-collector_database
+  authentication:
+    name: cyface-collector_authentication

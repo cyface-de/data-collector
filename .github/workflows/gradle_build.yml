@@ -1,7 +1,7 @@
 # This workflow ensures the building step works
 #
 # @author Armin Schnabel
-# @since 1.0.0
+# @since 1.1.0
 name: Gradle Build
 
 on:
@@ -30,7 +30,7 @@ jobs:
         uses: gradle/gradle-build-action@v2
 
       - name: Build with Gradle
-        run: ./gradlew build
+        run: ./gradlew build # append `-x test` to skip tests
         env:
           USERNAME: ${{ github.actor }}
           PASSWORD: ${{ secrets.GITHUB_TOKEN }}
@@ -55,45 +55,79 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./doc/
 
-      - name: Test Docker dev environment setup
+      - name: Build and start Docker dev environment
         run: |
-          cd src
-          mkdir -p main/docker/secrets/jwt
-          cp test/resources/public.pem        main/docker/secrets/jwt/
-          cp test/resources/private_key.pem   main/docker/secrets/jwt/
-          cp main/docker/logback.xml.template main/docker/logback.xml
-          mkdir                               main/docker/logs main/docker/file-uploads
-          sudo chmod o+w                      main/docker/logs main/docker/file-uploads
-          sudo chown -R 9999:root             main/docker/secrets/jwt
-          cd ..
+          cd src/main/docker
+          cp              logback.xml.template logback.xml
+          mkdir           logs file-uploads keycloak/providers keycloak/data/h2
+          sudo chmod o+w  logs file-uploads keycloak keycloak/data keycloak/data/h2 keycloak/providers
+          cd ../../../
           ./gradlew :copyToDockerBuildFolder
           cd build/docker/
           docker-compose up -d
-          sleep 10
+        env:        # required for ./gradlew :copyToDockerBuildFolder
+          USERNAME: ${{ github.actor }}
+          PASSWORD: ${{ secrets.GITHUB_TOKEN }}
+
+      # To ensure we don't kill the entrypoint.sh's attempt to wait for dependencies we wait
+      # until the dependencies are up, and the API to started [RFR-566]
+      - name: Wait for API to be online (log file created)
+        run: |
+          FILE_PATH="build/docker/logs/collector.log"
+          MAX_TIMEOUT=90 # 1.5 minutes
+          SLEEP_INTERVAL=5 # Check every 5 seconds
+
+          elapsed_time=0
+          while [ ! -f "$FILE_PATH" ]; do
+            echo "Waiting for API and its dependencies to start ... ($elapsed_time/~30 s)"
+            sleep "$SLEEP_INTERVAL"
+            elapsed_time=$((elapsed_time + SLEEP_INTERVAL))
+
+            if [ "$elapsed_time" -ge "$MAX_TIMEOUT" ]; then
+              echo "Timeout exceeded while waiting for $FILE_PATH"
+              exit 1
+            fi
+          done
+
+          echo "$FILE_PATH found."
+
+      - name: Test Docker dev environment (reach OpenAPI page)
+        run: |
+          sleep 5
+          docker ps
+          # Grep exits with exit code 0 when the API is started and fails with exit code 1 otherwise
+          echo "Try to reach Keycloak at http://localhost:8081/ ..."
+          curl -s http://localhost:8081/ | grep -q "Keycloak" #; echo $?
           # Grep exits with exit code 0 when the API is started and fails with exit code 1 otherwise
           echo "Try to reach the Collector API at http://localhost:8080/api/v4/ ..."
           curl -s http://localhost:8080/api/v4/ | grep -q "Cyface Data Collector" #; echo $?
-        env:
-          USERNAME: ${{ github.actor }}
-          PASSWORD: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Debugging output (if last step failed)
         if: failure()
         run: |
-          cd src/main/docker/
-          echo "main/docker ..."
-          ls -alih
-          ls -alih logs
-          ls -alih secrets
-          cd ../build/docker/
-          echo "build/docker ..."
-          ls -alih
-          echo "build/docker/logs ..."
-          ls -alih logs
-          echo "build/docker/secrets ..."
-          ls -alih secrets
+          cd src/main/docker
+          echo "----- src/main/docker ..." && ls -alih ./
+          echo "----- logs ..." && ls -alih logs/
+          cd keycloak
+          echo "----- keycloak ..." && ls -alih ./
+          [ -d "providers/" ] && echo "----- providers ..." && ls -alih providers/
+          [ -d "data/" ] && echo "----- data ..." && ls -alih data/
+          [ -d "data/h2/" ] && echo "----- data/h2 ..." && ls -alih data/h2/
+          [ -d "data/import/" ] && echo "----- data/import ..." && ls -alih data/import/
+          cd ../../../../
+          cd build/docker
+          echo "----- build/docker ..." && ls -alih ./
+          [ -d "logs/" ] && echo "----- logs ..." && ls -alih logs/
+          [ -d "keycloak/" ] && echo "----- keycloak ..." && ls -alih keycloak/
+          [ -d "keycloak/data" ] && echo "----- keycloak/data ..." && ls -alih keycloak/data
+          [ -d "keycloak/data/h2" ] && echo "----- keycloak/data/h2 ..." && ls -alih keycloak/data/h2
+          cd ../../
+          echo "----- docker ps"
           docker ps
+          echo "----- docker logs collactor_api"
           docker logs collector_api
-          cat logs/collector.log
-          cat logs/collector-out.log
+          echo
+          [ -f build/docker/logs/collector.log ] && echo "----- collector.log -----" && cat build/docker/logs/collector.log
+          [ -f build/docker/logs/collector-out.log ] && echo "----- collector-out.log -----" && cat build/docker/logs/collector-out.log
+          echo && echo "----- curl ***/api/v4"
           curl http://localhost:8080/api/v4/

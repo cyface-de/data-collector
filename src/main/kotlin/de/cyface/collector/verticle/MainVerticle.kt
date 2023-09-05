@@ -1,5 +1,5 @@
 /*
- * Copyright 2018-2022 Cyface GmbH
+ * Copyright 2018-2023 Cyface GmbH
  *
  * This file is part of the Cyface Data Collector.
  *
@@ -20,9 +20,9 @@ package de.cyface.collector.verticle
 
 import de.cyface.collector.configuration.Configuration
 import io.vertx.core.AbstractVerticle
-import io.vertx.core.CompositeFuture
 import io.vertx.core.DeploymentOptions
 import io.vertx.core.Promise
+import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.io.IOException
 
@@ -31,7 +31,7 @@ import java.io.IOException
  *
  * @author Klemens Muthmann
  * @author Armin Schnabel
- * @version 2.1.1
+ * @version 2.2.0
  * @since 2.0.0
  */
 class MainVerticle : AbstractVerticle() {
@@ -39,25 +39,21 @@ class MainVerticle : AbstractVerticle() {
     /**
      * Logger used by objects of this class. Configure it using "src/main/resources/logback.xml".
      */
-    val logger = LoggerFactory.getLogger(MainVerticle::class.java)
+    val logger: Logger = LoggerFactory.getLogger(MainVerticle::class.java)
 
     @Throws(Exception::class)
     override fun start(startFuture: Promise<Void>) {
         logger.info("Starting main verticle!")
-        val configurationCreationCall = Configuration.deserialize(config())
-        configurationCreationCall.onSuccess { configuration ->
-            logger.info("Loaded configuration!")
-            try {
-                deploy(startFuture, configuration)
-            } catch (e: IOException) {
-                startFuture.fail(e)
-            } catch (e: RuntimeException) {
-                startFuture.fail(e)
-            }
-        }
-        configurationCreationCall.onFailure { cause: Throwable? ->
-            logger.error("Failed loading configuration", cause)
-            startFuture.fail(cause)
+        val jsonConfiguration = config()
+        logger.debug("Active Configuration")
+        logger.debug("${jsonConfiguration.encodePrettily()}")
+        val configuration = Configuration.deserialize(jsonConfiguration)
+        try {
+            deploy(startFuture, configuration)
+        } catch (e: IOException) {
+            startFuture.fail(e)
+        } catch (e: RuntimeException) {
+            startFuture.fail(e)
         }
     }
 
@@ -75,21 +71,16 @@ class MainVerticle : AbstractVerticle() {
         val verticleConfig = DeploymentOptions().setConfig(config())
 
         val collectorApiVerticle = CollectorApiVerticle(config)
-        val managementApiVerticle = ManagementApiVerticle(config)
 
         // Start the collector API as first verticle.
         val collectorDeployment = vertx.deployVerticle(collectorApiVerticle, verticleConfig)
 
-        // Start the management API as second verticle.
-        val managementDeployment = vertx.deployVerticle(managementApiVerticle, verticleConfig)
-
-        // As soon as both futures have a succeeded or one failed, finish the startup process.
-        val startUp = CompositeFuture.all(collectorDeployment, managementDeployment)
-        startUp.onSuccess {
+        // As soon the future has succeeded or one failed, finish the startup process.
+        collectorDeployment.onSuccess {
             logger.info("Successfully deployed main Verticle!")
             startFuture.complete()
         }
-        startUp.onFailure { cause: Throwable ->
+        collectorDeployment.onFailure { cause: Throwable ->
             logger.error("Failed deploying main Verticle!", cause)
             startFuture.fail(cause)
         }

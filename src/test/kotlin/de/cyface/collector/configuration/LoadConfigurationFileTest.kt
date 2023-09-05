@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Cyface GmbH
+ * Copyright 2022-2023 Cyface GmbH
  *
  * This file is part of the Cyface Data Collector.
  *
@@ -19,24 +19,19 @@
 package de.cyface.collector.configuration
 
 import com.natpryce.hamkrest.assertion.assertThat
-import com.natpryce.hamkrest.equalTo
 import com.natpryce.hamkrest.isA
 import io.vertx.core.json.JsonObject
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import java.nio.file.Files
 import java.nio.file.Path
-import java.util.concurrent.CountDownLatch
-import java.util.concurrent.TimeUnit
-import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
-import kotlin.test.assertTrue
 
 /**
  * A test for parsing Vertx configuration files.
  *
  * @author Klemens Muthmann
- * @version 1.0.0
+ * @version 1.1.0
  */
 class LoadConfigurationFileTest {
 
@@ -46,17 +41,12 @@ class LoadConfigurationFileTest {
     @Test
     fun `Loading a Configuration File Happy Path`() {
         // Arrange
-        val countDownLatch = CountDownLatch(1)
 
         // Act
         val jsonConfiguration = loadConf("test-conf.json")
-        val decodedConfiguration = Configuration.deserialize(jsonConfiguration)
-        decodedConfiguration.onComplete { countDownLatch.countDown() }
+        val result = Configuration.deserialize(jsonConfiguration)
 
         // Assert
-        countDownLatch.await(1, TimeUnit.SECONDS)
-        val result = decodedConfiguration.result()
-        assertThat(result.adminPassword, equalTo("secret"))
         assertThat(result.storageType, isA<GoogleCloudStorageType>())
     }
 
@@ -79,34 +69,15 @@ class LoadConfigurationFileTest {
      * complete.
      */
     @Test
-    fun `Unkown additional Parameters should be ignored`() {
+    fun `Unknown additional Parameters should be ignored`() {
         // Arrange
         val jsonConfiguration = loadConf("test-conf-with-additional-parameter.json")
-        val countDownLatch = CountDownLatch(1)
 
         // Act
-        val decodedConfigurationCall = Configuration.deserialize(jsonConfiguration)
+        val result = Configuration.deserialize(jsonConfiguration)
 
         // Assert
-        decodedConfigurationCall.onComplete { countDownLatch.countDown() }
-        countDownLatch.await(1L, TimeUnit.SECONDS)
-        assertFalse(decodedConfigurationCall.failed())
-        assertTrue(decodedConfigurationCall.succeeded())
-    }
-
-    /**
-     * Ensure that a config that contains the salt and the salt.path configuration key,
-     * throws an exception. These two should be mutual exclusive.
-     */
-    @Test
-    fun `Config contains salt and salt path which should throw an Exception`() {
-        // Arrange
-        val jsonConfiguration = loadConf("test-conf-with-salt-and-saltpath.json")
-
-        // Act / Assert
-        assertThrows<InvalidConfig> {
-            Configuration.deserialize(jsonConfiguration)
-        }
+        assertNotNull(result)
     }
 
     /**

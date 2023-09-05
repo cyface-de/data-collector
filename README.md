@@ -6,7 +6,7 @@
 
 This application represents the [Cyface](https://cyface.de) data collector software.
 
-It is used to collect traffic data from Cyface measurement devices, such as our sensor box or our smartphone application.
+It is used to collect traffic data from Cyface measurement devices, such as our smartphone application.
 
 Our smartphone SDK is available as GPL application for [Android](https://github.com/cyface-de/android-backend) and [iOS](https://github.com/cyface-de/ios-backend) (or as [Podspec](https://github.com/cyface-de/ios-podspecs)) as well.
 
@@ -31,32 +31,16 @@ The project uses [Gradle](https://gradle.org/) as the build system.
 A program which provides the ability to collect data, as e.g. sent by the Cyface SDKs.
 
 The following sections explain how to run the Data Collector
-It starts with an explanation on how to set up all the required certificates.
+It starts with an explanation on how to set up all the required steps.
 This is a necessary prerequisite for all the following steps.
 So **DO NOT** skip it.
 
-Thereafter follows an explanation on how to run the Data Collector using either Docker or an IDE like IntelliJ or Eclipse.
-
-### Certificates
-The Cyface Data Collector authentication mechanism uses JSON Web Tokens (JWT). 
-This mechanism requires asynchronous keys.
-
-Keys you may use for testing and during development are provided.
-Those keys are located in `src/test/resources`.
-To use them outside of Unit tests you need to copy them to an appropriate location.
-**ATTENTION: DO NOT USE THOSE KEYS IN A PRODUCTION ENVIRONMENT.**
-Since they are in our repository, they are openly available to everyone on the internet, so everyone can compromise security on your server if you use the default keys.
-
-The Cyface Data Collector requires two keys to issue and authenticate JWT tokens for users trying to communicate with the service.
-Just place the appropriate files as `private_key.pem` and `public.pem` in `secrets/jwt`, right next to the `docker-compose.yml` file, or in the "working directory" selected in your run configuration in your IDE (e.g. `data-collector/`).
-
-To generate new keys follow the instructions in the [Vert.x documentation](https://vertx.io/docs/vertx-auth-jwt/java/#_loading_keys) for *Using RSA keys*.
+Thereafter, follows an explanation on how to run the Data Collector using either Docker or an IDE like IntelliJ or Eclipse.
 
 ### Building
 
 To build the docker container running the API simply execute `./gradlew :clean :build :copyToDockerBuildFolder`.
 This builds the jar file which is then packed into the Docker container which is build afterwards.
-Please refer to the previous section about **Certificates** prior to building.
 
 When you updated the Swagger UI make sure to clear your browser cache or else it might not update.
 
@@ -74,16 +58,11 @@ For these execution variants you need the parameters explained in the preceding 
 
 #### Running from Docker
 
-Make sure you read the "Certificates" section above. For development environment you can use the test certificates: `mkdir -p src/main/docker/secrets/jwt && cp src/test/resources/public.pem src/main/docker/secrets/ && cp src/test/resources/private_key.pem src/main/docker/secrets/`
-
 Configure logback or use the sample configuration: `cp src/main/docker/logback.xml.template src/main/docker/logback.xml`
 
 The app is executed by a non-privileged user inside the Docker container. To allow this user to
 write data to `logs` and `file-uploads` you need to create two folders and then set the permissions for both folders to `chmod o+w`, see [DAT-797]:
 `mkdir src/main/docker/logs src/main/docker/file-uploads && sudo chmod  o+w src/main/docker/file-uploads src/main/docker/logs`
-
-Finally, make the secrets accessible by the non-privileged user:
-- `sudo chown -R 9999:root src/main/docker/secrets/jwt`
 
 Now build the system as described in the "Building" section above:
 `./gradlew :clean :build :copyToDockerBuildFolder`
@@ -91,10 +70,12 @@ Now build the system as described in the "Building" section above:
 Then simply run `docker-compose up` inside `build/docker`:
 `cd build/docker/ && docker-compose up -d`
 
-This calls docker to bring up a Mongo-database container and a container running the Cyface data collector API. The Collector API is by default available via port 8080. This means if you boot up everything using the default settings, the Collector API is accessible via `http://localhost:8080/api/v4/`.
+This calls docker to bring up a Mongo-database container and a container running the Cyface data collector API. 
+The Collector API is by default available via port 8080. 
+This means if you boot up everything using the default settings, the Collector API is accessible via `http://localhost:8080/api/v4/`.
 
 **ATTENTION: The docker setup should only be used for development purposes.**
-It exposes the Cyface data collector as well as the ports of both Mongo database instances freely on the local network.
+It exposes the Cyface data collector as well as the ports of the Mongo database instance freely on the local network.
 
 Use `docker-compose ps` to see which ports are mapped to which by Docker.
 For using such a setup in production, you may create your own Docker setup, based on our development one.
@@ -127,19 +108,11 @@ The parameters are provided using the typical [Vertx `-conf` parameter](https://
 
 The following parameters are supported:
 
-* **jwt.private:** The path of the file containing the private key used to sign JWT keys.
-* **jwt.public:** The path of the file containing the public key used to sign JWT keys.
 * **http.port:** The port the API  is available at.
 * **http.host:** The hostname under which the Cyface Data Collector is running. This can be something like `localhost`.
 * **http.endpoint:** The path to the endpoint the Cyface Data Collector. This defaults to `/api/v4`.
 * **mongo.db:** Settings for a Mongo database storing information about all the users capable of logging into the system and all data uploaded via the Cyface data collector. This defaults to a Mongo database available at `mongodb://127.0.0.1:27017`. The value of this should be a JSON object configured as described [here](https://vertx.io/docs/vertx-mongo-client/java/#_configuring_the_client).
-* **admin.user:** The username of a default administration account which is created if it does not exist upon start up.
-* **admin.password:** The password for the default administration account.
-* **salt.path:** The path to a salt file used to encrypt passwords stored in the user database even stronger.
-* **salt:** A salt value that may be used instead of the salt from salt.path. You must make sure that either the salt or the salt.path parameter are used. If both are specified the application startup will fail.
 * **metrics.enabled:** Set to either `true` or `false`. If `true` the collector API publishes metrics using micrometer. These metrics are accessible by a [Prometheus](https://prometheus.io/) server (Which you need to set up yourself) at port `8081`.
-* **http.port.management:** The port running the management API responsible for creating user accounts.
-* **jwt.expiration**: The time it takes for a JWT token to expire in seconds. If a JWT token expires, clients need to acquire a new one via username and password authentication. Setting this time too short requires sending the username and password more often. This makes it easier for malicious parties to intercept and brute force usernames and passwords. However, long time JWT tokens may be captured as well and used for malicious purposes.
 * **upload.expiration:** The time an interrupted upload is stored for continuation in the future in milliseconds. If this time expires, the upload must start from the beginning.
 * **measurement.payload.limit:** The size of a measurement in bytes up to which it is accepted as a single upload. Larger measurements are transmitted in chunks.
 * **storage-type:** The type of storage to use for the uploaded data. Currently, either `gridfs` or `google` is supported. The following parameter are required:
@@ -196,6 +169,35 @@ To load files from the Mongo GridFS file storage use the [Mongofiles](https://do
 * Downloading files: `mongofiles --port 27019 -d cyface get f5823cbc-b8f5-4c80-a4b1-7bf28a3c7944`
 * Unzipping files: `printf "\x78\x9c" | cat - f5823cbc-b8f5-4c80-a4b1-7bf28a3c7944 | zlib-flate -uncompress > test2`
 
+## Using the Cyface Data Collector
+
+To provide data to the Cyface Data Collector, call the appropriate endpoints of the Data Collector REST API.
+
+The available endpoints are documented as OpenAPI.
+The OpenAPI documentation is available under 'http://localhost:8080/api/v4/` if the collector runs under `localhost`.
+
+The protocol for uploading data follows the [Google data protocol](https://developers.google.com/gdata/docs/resumable_upload).
+
+### Accessing the Docker Development Environment
+In the Docker development environment, all containers communicate through the internal Docker networks.
+
+Tokens issued to a client outside this network won't be valid within the network due to a mismatch in the issuer encoded into the token.
+For instance, it might use "localhost:8081" instead of the expected "authentication:8080" when requesting a token from outside.
+The `rfr` realm, which is initialized in this setup from `./src/main/docker/keycloak/data/import/rfr-realm.json`, addresses
+this problem by setting the "frontendUrl" to "http://authentication:8080". If you add more realms, ensure you do the same. 
+
+To obtain an authentication token from outside the Docker network, you can use the following command:
+```
+$ curl -d 'client_id=ios-app' -d 'username=test@cyface.de' -d 'password=test' -d 'grant_type=password' 'http://localhost:8081/realms/rfr/protocol/openid-connect/token'
+```
+
+The output will look similar to this:
+```
+  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
+                                 Dload  Upload   Total   Spent    Left  Speed
+  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0{"access_token":"eyJhbGciOiJSUzI1NiIsInR5cCIgOiAiSldUIiwia2lkIiA6ICJDSnNhZ0ZnbGNGRnpDWTU1Z3ZYb2xhMnRMWFlDMzNDQmtUU05tMU1DbkdnIn0.eyJleHAiOjE2OTMzOTc2MTcsImlhdCI6MTY5MzM5NzMxNywianRpIjoiYzQ3ZTUzYzktOTA0ZC00MDIyLWE5MWEtZTcwOGNlZGQ0NWUxIiwiaXNzIjoiaHR0cDovL2F1dGhlbnRpY2F0aW9uOjgwODAvcmVhbG1zL3JmciIsImF1ZCI6ImFjY291bnQiLCJzdWIiOiIyYzAyZjI4ZS0wMGI4LTQyMWEtOTIxZi1iZTY3MGI5ZDkzMzAiLCJ0eXAiOiJCZWFyZXIiLCJhenAiOiJpb3MtYXBwIiwic2Vzc2lvbl9zdGF0ZSI6ImE1ZmU2YTJjLWE0MDItNGFlMy1hZDUxLWMzNTlkOTExZTdkYSIsImFjciI6IjEiLCJyZWFsbV9hY2Nlc3MiOnsicm9sZXMiOlsib2ZmbGluZV9hY2Nlc3MiLCJkZWZhdWx0LXJvbGVzLXJmciIsInVtYV9hdXRob3JpemF0aW9uIl19LCJyZXNvdXJjZV9hY2Nlc3MiOnsiYWNjb3VudCI6eyJyb2xlcyI6WyJtYW5hZ2UtYWNjb3VudCIsIm1hbmFnZS1hY2NvdW50LWxpbmtzIiwidmlldy1wcm9maWxlIl19fSwic2NvcGUiOiJwcm9maWxlIGVtYWlsIiwic2lkIjoiYTVmZTZhMmMtYTQwMi00YWUzLWFkNTEtYzM1OWQ5MTFlN2RhIiwiZW1haWxfdmVyaWZpZWQiOnRydWUsIm5hbWUiOiJUZXN0IFRlc3RlciIsInByZWZlcnJlZF91c2VybmFtZSI6InRlc3RAY3lmYWNlLmRlIiwiZ2l2ZW5fbmFtZSI6IlRlc3QiLCJmYW1pbHlfbmFtZSI6IlRlc3RlciIsImVtYWlsIjoidGVzdEBjeWZhY2UuZGUifQ.jhppkwSJCwYlbje_jU-7SQXJPrUYyjiXp29xoh2Vg6lga_hWtPOttF95D96z6IbNPFc42GyjRq_PFRqtt5M2K0yPYL36HeAHLpIYCV6SJEA4do10P90o07tFKkJReWGEgswSsA6x-79Y3sVjhADEJCJozXWZ-Wb7tUtWdCvqUZecmLaVquDPcRdDXfo98K4qQe2p65_QPR2lMzz86EIp2a3-xUwLWmc62_mZfZ1wUtvHFty1IXLZC_L1pD9p99DdLy7Rb8UKpMBH0a646jBs9CPOY481_sOMOSnbyrughRrlJiV7oRl7rZxZhP0djMRj29nB8L_Z5NWc21XJcWp9VA","expires_in":300,"refresh_expires_in":86313600,"refresh_token":"eyJhbGciOiJIUzI1NiIsInR5cCIgOiAiSldUIiwia2lkIiA6ICJlMDEwYzQ2NS04YTRjLTQ3NzItODY2MS01NThkNWZhNGZmYTEifQ.eyJleHAiOjE3Nzk3MTA5MTcsImlhdCI6MTY5MzM5NzMxNywianRpIjoiMGY0NTBkMzQtMjk3Zi00NjJiLWJmY2MtMTFlNmM2MWUxMGI3IiwiaXNzIjoiaHR0cDovL2F1dGhlbnRpY2F0aW9uOjgwODAvcmVhbG1zL3JmciIsImF1ZCI6Imh0dHA6Ly9hdXRoZW50aWNhdGlvbjo4MDgwL3JlYWxtcy9yZnIiLCJzdWIiOiIyYzAyZjI4ZS0wMGI4LTQyMWEtOTIxZi1iZTY3MGI5ZDkzMzAiLCJ0eXAiOiJSZWZyZXNoIiwiYXpwIjoiaW9zLWFwcCIsInNlc3Npb25fc3RhdGUiOiJhNWZlNmEyYy1hNDAyLTRhZTMtYWQ1MS1jMzU5ZDkxMWU3ZGEiLCJzY29wZSI6InByb2ZpbGUgZW1haWwiLCJzaWQiOiJhNWZlNmEyYy1hNDAyLTRhZTMtYWQ1MS1jMzU5ZDkxMWU3ZGEifQ.Bp7f5ycWPC0bgHx4_gBBMOM1uKJLqLD3100  2293  100  2218  100    75   8837    298 --:--:-- --:--:-- --:--:--  91356a2c-a402-4ae3-ad51-c359d911e7da","scope":"profile email"}
+```
+From this it is possible to copy the access token and start the upload process.
 
 ## Release a new Version
 

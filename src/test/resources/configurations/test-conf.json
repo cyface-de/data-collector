@@ -1,6 +1,4 @@
 {
-  "jwt.private": "executables/collector/src/test/resources/private_key.pem",
-  "jwt.public": "executables/collector/src/test/resources/public.pem",
   "http.host": "localhost",
   "http.endpoint": "/api/v4",
   "http.port": 8080,
@@ -9,13 +7,8 @@
     "connection_string": "mongodb+srv://user:password@mongodb.net/?retryWrites=true&w=majority",
     "data_source_name": "cyface"
   },
-  "admin.user": "admin",
-  "admin.password": "secret",
-  "salt": "cyface_salt",
-  "jwt.expiration": 3600,
   "upload.expiration": 60000,
   "measurement.payload.limit": 104857600,
-  "http.port.management": 13371,
   "metrics.enabled": false,
   "storage-type": {
     "type": "google",

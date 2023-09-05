@@ -125,18 +125,20 @@ paths:
               description: Only useful in when a resume position is returned by the server (not yet supported).
         '400':
           description: Unknown error for example if Web server reports status -1 or the client experienced a synchronisation error.
-        302':
-          description: No Authorization information provided. This request requires a valid JWT token to continue.
+        '302':
+          description: No Authorization information provided.
         '401':
-          description: Invalid authorization information provided. This request requires a valid JWT token to continue.
+          description: Invalid authorization information provided.
         '403':
           description: Authorization information was provided, but the authorized user has no permission to post measurements.
+        '405':
+          description: If a wrong request type was used. Also happens if the auth server is not reachable
         '409':
           description: The measurement from the device already exists on the server.
         '412':
           description: The server is not interested in the data, e.g. upload file too large or data from a location of no interest.
         '422':
-          description: The request is erroneous. There for example is for example a syntax error.
+          description: The request is erroneous. There is for example a syntax error.
         '429':
           description: Too many requests in too short succession.
         '500':

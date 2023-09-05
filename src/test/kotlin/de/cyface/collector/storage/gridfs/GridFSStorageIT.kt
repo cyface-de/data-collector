@@ -87,7 +87,7 @@ class GridFSStorageIT {
             .put("socketTimeoutMS", 3000)
             .put("waitQueueTimeoutMS", 3000)
             .put("serverSelectionTimeoutMS", 1000)
-            .put("db_name", "cyface")
+        // .put("db_name", "cyface") // Attention: in data-provider adding this makes the fixture data "disappear"
         val mongoClient = MongoClient.createShared(vertx, config)
         val fileSystem = vertx.fileSystem()
         val oocut = GridFsStorageService(GridFsDao(mongoClient), vertx.fileSystem(), uploadFolder)
