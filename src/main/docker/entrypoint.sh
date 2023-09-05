@@ -82,6 +82,34 @@ loadAuthParameters() {
 }
 
 loadCollectorParameters() {
+  # Upload Expiration time
+  if [ -z $UPLOAD_EXPIRATION_TIME_MILLIS ]; then
+    UPLOAD_EXPIRATION_TIME_MILLIS="60000"
+  fi
+
+  echo "Setting Upload expiration time to $UPLOAD_EXPIRATION_TIME_MILLIS ms."
+
+  # Measurement payload limit
+  if [ -z $MEASUREMENT_PAYLOAD_LIMIT_BYTES ]; then
+    MEASUREMENT_PAYLOAD_LIMIT_BYTES="104857600"
+  fi
+
+  echo "Setting Measurement payload limit to $MEASUREMENT_PAYLOAD_LIMIT_BYTES Bytes."
+
+  # Storage type
+  if [ -z $STORAGE_TYPE ]; then
+    STORAGE_TYPE="gridfs"
+  fi
+
+  echo "Setting storage type to $STORAGE_TYPE"
+
+  # Storage uploads folder
+  if [ -z $STORAGE_UPLOADS_FOLDER ]; then
+    STORAGE_UPLOADS_FOLDER="file-uploads"
+  fi
+
+  echo "Setting storage uploads-folder to $STORAGE_UPLOADS_FOLDER"
+
   # Monitoring
   if [ -z $METRICS_ENABLED ]; then
     METRICS_ENABLED="false"
@@ -102,11 +130,11 @@ loadConfig() {
       \"http.host\":\"$CYFACE_API_HOST\",\
       \"http.endpoint\":\"$CYFACE_API_ENDPOINT\",\
       \"metrics.enabled\":$METRICS_ENABLED,\
-      \"upload.expiration\":60000,\
-      \"measurement.payload.limit\":104857600,\
+	    \"upload.expiration\":$UPLOAD_EXPIRATION_TIME_MILLIS,\
+	    \"measurement.payload.limit\":$MEASUREMENT_PAYLOAD_LIMIT_BYTES,\
       \"storage-type\":{\
-          \"type\":\"gridfs\",\
-	        \"uploads-folder\":\"file-uploads\"\
+          \"type\":\"$STORAGE_TYPE\",\
+          \"uploads-folder\":\"$STORAGE_UPLOADS_FOLDER\"\
       },\
       \"auth-type\":\"$CYFACE_AUTH_TYPE\",
       \"oauth.callback\":\"$CYFACE_OAUTH_CALLBACK\",\
@@ -122,21 +150,16 @@ loadConfig() {
 waitForDependency() {
   local service="$1"
   local port="$2"
-
-  echo
-  echo "Waiting for $service:$port to start..."
+  echo && echo "Waiting for $service:$port to start..."
 
   local attempts=0
   local max_attempts=10
   local sleep_duration=5s
-  
+
   while [ "$attempts" -lt "$max_attempts" ]; do
-    # Increment attempts counter
     ((attempts++))
-    
     echo "Attempt $attempts"
 
-    # Check if the service is up using nc
     if nc -z "$service" "$port" > /dev/null 2>&1; then
       echo "$service is up!"
       return 0
@@ -145,8 +168,6 @@ waitForDependency() {
     fi
   done
 
-
-  # If the function reaches here, it means the service didn't start within the max attempts
   echo "Unable to find $service:$port after $max_attempts attempts! API will not start."
   exit 1
 }
