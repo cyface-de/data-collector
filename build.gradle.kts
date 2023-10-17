@@ -113,7 +113,6 @@ extra["micrometerVersion"] = "1.10.6"
 extra["commonsLangVersion"] = "3.12.0"
 extra["logbackVersion"] = "1.4.6"
 extra["cyfaceApiVersion"] = "3.3.0"
-extra["cyfaceSerializationVersion"] = "2.3.6"
 extra["gradleWrapperVersion"] = "7.6.1"
 extra["googleCloudLibrariesVersion"] = "26.12.0"
 
@@ -136,7 +135,6 @@ tasks.wrapper {
 dependencies {
   // Internal Cyface Dependencies
   implementation("de.cyface:api:${project.extra["cyfaceApiVersion"]}")
-  implementation("de.cyface:model:${project.extra["cyfaceSerializationVersion"]}")
 
   // Vertx Framework
   implementation("io.vertx:vertx-web:${project.extra["vertxVersion"]}")
