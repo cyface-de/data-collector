@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Cyface GmbH
+ * Copyright 2022-2023 Cyface GmbH
  *
  * This file is part of the Cyface Data Collector.
  *
@@ -20,10 +20,10 @@ package de.cyface.collector.storage.gridfs
 
 import com.natpryce.hamkrest.assertion.assertThat
 import com.natpryce.hamkrest.equalTo
-import de.cyface.api.model.User
 import de.cyface.collector.commons.MongoTest
 import de.cyface.collector.model.ContentRange
 import de.cyface.collector.model.RequestMetaData
+import de.cyface.collector.model.User
 import de.cyface.collector.storage.StatusType
 import de.flapdoodle.embed.process.runtime.Network
 import io.vertx.core.Vertx
@@ -49,7 +49,7 @@ import kotlin.test.assertNotNull
  * An integration test to check whether storing data to an embedded GridFS works as expected.
  *
  * @author Klemens Muthmann
- * @version 1.0.0
+ * @version 1.0.1
  */
 @ExtendWith(VertxExtension::class)
 class GridFSStorageIT {

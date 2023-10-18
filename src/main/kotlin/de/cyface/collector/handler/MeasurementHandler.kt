@@ -1,5 +1,5 @@
 /*
- * Copyright 2021-2022 Cyface GmbH
+ * Copyright 2021-2023 Cyface GmbH
  *
  * This file is part of the Cyface Data Collector.
  *
@@ -18,7 +18,6 @@
  */
 package de.cyface.collector.handler
 
-import de.cyface.api.model.User
 import de.cyface.collector.handler.HTTPStatus.ENTITY_UNPARSABLE
 import de.cyface.collector.handler.HTTPStatus.NOT_FOUND
 import de.cyface.collector.handler.HTTPStatus.PRECONDITION_FAILED
@@ -33,6 +32,7 @@ import de.cyface.collector.handler.exception.UnexpectedContentRange
 import de.cyface.collector.handler.exception.Unparsable
 import de.cyface.collector.model.ContentRange
 import de.cyface.collector.model.RequestMetaData
+import de.cyface.collector.model.User
 import de.cyface.collector.storage.DataStorageService
 import de.cyface.collector.storage.Status
 import de.cyface.collector.storage.StatusType
@@ -60,7 +60,7 @@ import java.util.UUID
  *
  * @author Armin Schnabel
  * @author Klemens Muthmann
- * @version 1.0.0
+ * @version 1.0.1
  * @since 6.0.0
  */
 class MeasurementHandler(

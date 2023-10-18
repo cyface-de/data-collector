@@ -1,7 +1,7 @@
 @file:Suppress("AnnotationSpacing")
 
 /*
- * Copyright 2022 Cyface GmbH
+ * Copyright 2022-2023 Cyface GmbH
  *
  * This file is part of the Cyface Data Collector.
  *
@@ -20,9 +20,9 @@
  */
 package de.cyface.collector.storage
 
-import de.cyface.api.model.User
 import de.cyface.collector.model.ContentRange
 import de.cyface.collector.model.RequestMetaData
+import de.cyface.collector.model.User
 import io.vertx.core.Future
 import io.vertx.core.Vertx
 import io.vertx.core.buffer.Buffer
@@ -37,7 +37,7 @@ import java.util.UUID
  * and to ask for status information. After an upload is complete, the `uploadIdentifier` becomes invalid.
  *
  * @author Klemens Muthmann
- * @version 1.0.0
+ * @version 1.0.1
  */
 interface DataStorageService {
     /**
@@ -90,7 +90,7 @@ interface DataStorageService {
     /**
      * Check the data storage on whether some measurement is already stored.
      *
-     * @param deviceId The world wide unique device identifier of the measurement to check.
+     * @param deviceId The worldwide unique device identifier of the measurement to check.
      * @param measurementId The device wide unique identifier of the measurement to check.
      * @return A `Future` telling the caller asynchronously whether the measurement is already stored or not. If it is
      * the result will be `true` and `false` otherwise.

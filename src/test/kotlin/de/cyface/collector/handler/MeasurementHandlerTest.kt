@@ -1,7 +1,25 @@
+/*
+ * Copyright 2022-2023 Cyface GmbH
+ *
+ * This file is part of the Cyface Data Collector.
+ *
+ * The Cyface Data Collector is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * The Cyface Data Collector is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with the Cyface Data Collector. If not, see <http://www.gnu.org/licenses/>.
+ */
 package de.cyface.collector.handler
 
-import de.cyface.api.model.User
 import de.cyface.collector.model.ContentRange
+import de.cyface.collector.model.User
 import de.cyface.collector.storage.DataStorageService
 import de.cyface.collector.storage.Status
 import io.vertx.core.Future
@@ -153,7 +171,11 @@ class MeasurementHandlerTest {
         verify(mockStorageService).store(eq(mockPipe), eq(mockUser), eq(ContentRange(0L, 9L, 10L)), any(), any())
     }
 
-    fun metadata(requestHeaders: MultiMap, deviceIdentifier: UUID, measurementIdentifier: Long) {
+    private fun metadata(
+        requestHeaders: MultiMap,
+        deviceIdentifier: UUID,
+        @Suppress("SameParameterValue") measurementIdentifier: Long
+    ) {
         requestHeaders.add("deviceType", "testDeviceType")
         requestHeaders.add("appVersion", "testAppVersion")
         requestHeaders.add("startLocLat", "50.2872300402633")
