@@ -21,9 +21,9 @@
 package de.cyface.collector.storage.cloud
 
 import com.google.auth.Credentials
-import de.cyface.api.model.User
 import de.cyface.collector.model.ContentRange
 import de.cyface.collector.model.RequestMetaData
+import de.cyface.collector.model.User
 import de.cyface.collector.storage.CleanupOperation
 import de.cyface.collector.storage.DataStorageService
 import de.cyface.collector.storage.Status
@@ -46,8 +46,8 @@ import java.util.UUID
  * [here](https://cloud.google.com/docs/authentication/application-default-credentials).
  *
  * @author Klemens Muthmann
- * @version 1.0.0
- * @property dao The data access object to write an uploads metadata.
+ * @version 1.0.1
+ * @property dao The data access object to write an uploads' metadata.
  * @property vertx A Vertx instance of the current Vertx environment.
  * @property credentials The Google Cloud [Credentials] used to authenticate with Google Cloud Storage.
  * For information on how to acquire such an instance see the [Google Cloud documentation]
@@ -148,8 +148,8 @@ class GoogleCloudStorageService(
  * A Reactive Streams [Subscriber] to write a Vertx [Buffer] to a [CloudStorage].
  *
  * This must be a Reactive Streams implementation since that standard is currently the only way to stream data from a
- * Vertx [Pipe] to some data storage outside of the control of Vertx. Google Cloud is such a storage outside of Vertx'
- * control, since there is no implementation from Vertx directly.
+ * Vertx [Pipe] to some data storage outside the control of Vertx. Google Cloud is such a storage outside the control of
+ * Vertx, since there is no implementation from Vertx directly.
  *
  * @author Klemens Muthmann
  * @version 1.0.0

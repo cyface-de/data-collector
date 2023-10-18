@@ -18,13 +18,12 @@
  */
 package de.cyface.collector.verticle
 
-import de.cyface.api.FailureHandler
-import de.cyface.api.HttpServer
 import de.cyface.collector.auth.MockedHandlerBuilder
 import de.cyface.collector.auth.OAuth2HandlerBuilder
 import de.cyface.collector.configuration.AuthType
 import de.cyface.collector.configuration.Configuration
 import de.cyface.collector.handler.AuthorizationHandler
+import de.cyface.collector.handler.FailureHandler
 import de.cyface.collector.handler.MeasurementHandler
 import de.cyface.collector.handler.PreRequestHandler
 import de.cyface.collector.handler.StatusHandler
@@ -120,7 +119,7 @@ class CollectorApiVerticle(
             .onFailure { promise.fail(it) }
 
         // Setup unknown-resource handler
-        mainRouter.route("/*").last().handler(FailureHandler())
+        mainRouter.route("/*").last().handler(FailureHandler(vertx))
         return promise.future()
     }
 
@@ -136,7 +135,7 @@ class CollectorApiVerticle(
         storageService: DataStorageService
     ): Future<Void> {
         val promise = Promise.promise<Void>()
-        val failureHandler = de.cyface.collector.handler.FailureHandler(vertx)
+        val failureHandler = FailureHandler(vertx)
 
         // Setup session-handler
         // - using `cookieless` as our clients pass the session-ID via URI

@@ -18,10 +18,10 @@
  */
 package de.cyface.collector.storage.gridfs
 
-import de.cyface.api.model.User
 import de.cyface.collector.model.ContentRange
 import de.cyface.collector.model.RequestMetaData
 import de.cyface.collector.model.RequestMetaData.GeoLocation
+import de.cyface.collector.model.User
 import de.cyface.collector.storage.StatusType
 import io.vertx.core.Future
 import io.vertx.core.Handler
@@ -58,7 +58,7 @@ import java.util.concurrent.TimeUnit
  */
 class GridFSStorageTest {
     // Explicit Type Arguments are required by Mockito.
-    @Suppress("RemoveExplicitTypeArguments")
+    @Suppress("RemoveExplicitTypeArguments", "RedundantSuppression")
     @Test
     fun `Happy path for storing a file to GridFS`() {
         // Arrange
@@ -223,6 +223,8 @@ class GridFSStorageTest {
                 .doReturn(mockStorePipeCall02)
                 .doReturn(mockStorePipeCall03)
         }
+
+        @Suppress("SpellCheckingInspection")
         val mockUser = mock<User> {
             on { idString } doReturn "testuser"
         }

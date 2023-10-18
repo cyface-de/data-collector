@@ -20,9 +20,9 @@
  */
 package de.cyface.collector.storage
 
-import de.cyface.api.model.User
 import de.cyface.collector.model.ContentRange
 import de.cyface.collector.model.RequestMetaData
+import de.cyface.collector.model.User
 import io.vertx.core.Future
 import io.vertx.core.Vertx
 import io.vertx.core.buffer.Buffer
@@ -90,7 +90,7 @@ interface DataStorageService {
     /**
      * Check the data storage on whether some measurement is already stored.
      *
-     * @param deviceId The world wide unique device identifier of the measurement to check.
+     * @param deviceId The worldwide unique device identifier of the measurement to check.
      * @param measurementId The device wide unique identifier of the measurement to check.
      * @return A `Future` telling the caller asynchronously whether the measurement is already stored or not. If it is
      * the result will be `true` and `false` otherwise.

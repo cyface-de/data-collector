@@ -18,8 +18,8 @@
  */
 package de.cyface.collector.handler
 
-import de.cyface.api.model.User
 import de.cyface.collector.handler.HTTPStatus.ENTITY_UNPARSABLE
+import de.cyface.collector.model.User
 import io.vertx.core.Handler
 import io.vertx.core.http.HttpServerRequest
 import io.vertx.ext.auth.oauth2.Oauth2Credentials

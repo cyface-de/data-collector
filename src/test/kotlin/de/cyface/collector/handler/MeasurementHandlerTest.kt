@@ -1,7 +1,7 @@
 package de.cyface.collector.handler
 
-import de.cyface.api.model.User
 import de.cyface.collector.model.ContentRange
+import de.cyface.collector.model.User
 import de.cyface.collector.storage.DataStorageService
 import de.cyface.collector.storage.Status
 import io.vertx.core.Future
@@ -153,7 +153,11 @@ class MeasurementHandlerTest {
         verify(mockStorageService).store(eq(mockPipe), eq(mockUser), eq(ContentRange(0L, 9L, 10L)), any(), any())
     }
 
-    fun metadata(requestHeaders: MultiMap, deviceIdentifier: UUID, measurementIdentifier: Long) {
+    private fun metadata(
+        requestHeaders: MultiMap,
+        deviceIdentifier: UUID,
+        @Suppress("SameParameterValue") measurementIdentifier: Long
+    ) {
         requestHeaders.add("deviceType", "testDeviceType")
         requestHeaders.add("appVersion", "testAppVersion")
         requestHeaders.add("startLocLat", "50.2872300402633")

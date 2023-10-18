@@ -23,9 +23,9 @@ import com.google.auth.Credentials
 import com.google.cloud.storage.Bucket
 import com.google.cloud.storage.Storage
 import com.google.cloud.storage.Storage.BucketListOption
-import de.cyface.api.model.User
 import de.cyface.collector.model.ContentRange
 import de.cyface.collector.model.RequestMetaData
+import de.cyface.collector.model.User
 import io.vertx.core.Promise
 import io.vertx.core.Vertx
 import io.vertx.core.buffer.Buffer
@@ -56,7 +56,7 @@ import kotlin.test.Test
 class GoogleCloudStorageTest {
 
     /**
-     * This test simulates what a Vert.x `Pipe` does with a regular `SubmissionPublihser`.
+     * This test simulates what a Vert.x `Pipe` does with a regular `SubmissionPublisher`.
      * It sends two data packages via the publisher and checks that both packages are processed
      * properly by the `CloudStorageSubscriber`.
      */
