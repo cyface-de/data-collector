@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Cyface GmbH
+ * Copyright 2022-2023 Cyface GmbH
  *
  * This file is part of the Cyface Data Collector.
  *
@@ -54,7 +54,7 @@ import java.util.concurrent.TimeUnit
  * Tests that storing data to Mongo Grid FS works as expected.
  *
  * @author Klemens Muthmann
- * @version 1.0.0
+ * @version 1.0.1
  */
 class GridFSStorageTest {
     // Explicit Type Arguments are required by Mockito.

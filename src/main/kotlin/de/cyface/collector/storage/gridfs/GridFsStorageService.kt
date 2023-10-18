@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Cyface GmbH
+ * Copyright 2022-2023 Cyface GmbH
  *
  * This file is part of the Cyface Data Collector.
  *
@@ -48,7 +48,7 @@ import kotlin.io.path.name
  * A storage service to write the data to Mongo database Grid FS.
  *
  * @author Klemens Muthmann
- * @version 1.0.0
+ * @version 1.0.1
  * @property dao A data access object to communicate with GridFs.
  * @property fs The Vert.x file system, used to read the temporarily stored data, from the local disk.
  * @property uploadFolder Local folder to store temporary files,

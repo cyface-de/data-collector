@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Cyface GmbH
+ * Copyright 2022-2023 Cyface GmbH
  *
  * This file is part of the Cyface Data Collector.
  *
@@ -49,7 +49,7 @@ import kotlin.test.assertNotNull
  * An integration test to check whether storing data to an embedded GridFS works as expected.
  *
  * @author Klemens Muthmann
- * @version 1.0.0
+ * @version 1.0.1
  */
 @ExtendWith(VertxExtension::class)
 class GridFSStorageIT {

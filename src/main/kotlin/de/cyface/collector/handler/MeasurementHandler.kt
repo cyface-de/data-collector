@@ -1,5 +1,5 @@
 /*
- * Copyright 2021-2022 Cyface GmbH
+ * Copyright 2021-2023 Cyface GmbH
  *
  * This file is part of the Cyface Data Collector.
  *
@@ -60,7 +60,7 @@ import java.util.UUID
  *
  * @author Armin Schnabel
  * @author Klemens Muthmann
- * @version 1.0.0
+ * @version 1.0.1
  * @since 6.0.0
  */
 class MeasurementHandler(

@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Cyface GmbH
+ * Copyright 2022-2023 Cyface GmbH
  *
  * This file is part of the Cyface Data Collector.
  *
@@ -36,7 +36,7 @@ import java.util.UUID
  * On clustered Vert.x repeating uploads is not going to work.
  *
  * @author Klemens Muthmann
- * @version 1.0.0
+ * @version 1.0.1
  * @property vertx The Vert.x instance used to access the data and the file system.
  */
 @Suppress("unused")

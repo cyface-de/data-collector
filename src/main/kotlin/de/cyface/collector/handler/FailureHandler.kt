@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Cyface GmbH
+ * Copyright 2022-2023 Cyface GmbH
  *
  * This file is part of the Cyface Data Collector.
  *
@@ -30,7 +30,7 @@ import io.vertx.ext.web.handler.impl.ErrorHandlerImpl
  * We cannot use `ErrorHandler.create(vertx, true)` as this prints stacktrace in the http response not the console.
  *
  * @author Armin Schnabel
- * @version 1.0.0
+ * @version 1.0.1
  * @since 6.10.1
  * @param vertx The context required to read the `errorTemplateName` from the file system.
  */

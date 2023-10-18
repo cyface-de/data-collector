@@ -1,20 +1,20 @@
 /*
- * Copyright 2020-2022 Cyface GmbH
+ * Copyright 2020-2023 Cyface GmbH
  *
- * This file is part of the Cyface API Library.
+ * This file is part of the Cyface Data Collector.
  *
- * The Cyface API Library is free software: you can redistribute it and/or modify
+ * The Cyface Data Collector is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
  *
- * The Cyface API Library is distributed in the hope that it will be useful,
+ * The Cyface Data Collector is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with the Cyface API Library. If not, see <http://www.gnu.org/licenses/>.
+ * along with the Cyface Data Collector. If not, see <http://www.gnu.org/licenses/>.
  */
 package de.cyface.collector.verticle
 
@@ -30,7 +30,7 @@ import org.slf4j.LoggerFactory
  * A wrapper which starts the `HttpServer` for [CollectorApiVerticle].
  *
  * @author Armin Schnabel
- * @version 1.0.2
+ * @version 1.0.3
  * @since 7.1.0
  * @property port The port on which the HTTP server should listen
  */
