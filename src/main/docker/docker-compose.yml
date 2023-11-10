@@ -33,8 +33,15 @@ services:
         target: /data/db
     networks:
       - database
+        # ATTENTION: Never, and I mean NEVER use something like the following on a production setup!!!!!!!!!!!!!
+    healthcheck:
+      test: |
+        test $$(mongosh --quiet --eval "try { rs.initiate({ _id: 'cyface', members: [{ _id: 0, host: 'mongo:27017' }] }).ok } catch (_) { rs.status().ok }") -eq 1
+        interval: 10s
+        start_period: 30s
     environment:
       - MONGO_INITDB_DATABASE=cyface
+    command: [ "--replSet", "cyface", "--bind_ip", "localhost,mongo"]
 
   # The Cyface Collector API Container
   api:
