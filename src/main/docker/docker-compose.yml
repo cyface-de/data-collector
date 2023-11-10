@@ -84,6 +84,7 @@ services:
     volumes:
       - ./keycloak/providers:/opt/keycloak/providers
       - ./keycloak/data:/opt/keycloak/data
+      - ./keycloak/themes:/opt/keycloak/themes
 
 volumes:
   collector_mongo-db:
