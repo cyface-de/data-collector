@@ -64,7 +64,7 @@ jobs:
           cd ../../../
           ./gradlew :copyToDockerBuildFolder
           cd build/docker/
-          docker-compose up -d
+          docker compose up -d
         env:        # required for ./gradlew :copyToDockerBuildFolder
           USERNAME: ${{ github.actor }}
           PASSWORD: ${{ secrets.GITHUB_TOKEN }}
