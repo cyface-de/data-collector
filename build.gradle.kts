@@ -16,19 +16,18 @@
  *  You should have received a copy of the GNU General Public License
  *  along with the Cyface Data Collector.  If not, see <http://www.gnu.org/licenses/>.
  */
-import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 import io.gitlab.arturbosch.detekt.Detekt
-import io.gitlab.arturbosch.detekt.DetektCreateBaselineTask
-import org.jetbrains.dokka.gradle.DokkaTask
 import org.jetbrains.dokka.base.DokkaBase
 import org.jetbrains.dokka.base.DokkaBaseConfiguration
+import org.jetbrains.dokka.gradle.DokkaTask
 import java.net.URL
+
 /**
  * The build gradle file for the Cyface Data Collector.
  *
  * @author Klemens Muthmann
  * @author Armin Schnabel
- * @version 1.3.0
+ * @version 2.0.0
  * @since 1.0.0
  */
 buildscript {
@@ -38,12 +37,11 @@ buildscript {
   dependencies {
     // This is required to configure the dokka base plugin to include images.
     // classpath("<plugin coordinates>:<plugin version>")
-    classpath("org.jetbrains.dokka:dokka-base:1.7.10")
+    classpath("org.jetbrains.dokka:dokka-base:1.9.10")
   }
 }
 
 plugins {
-  id("eclipse")
   id("idea")
   //noinspection SpellCheckingInspection
   id("com.github.johnrengelman.shadow").version("7.1.2")
@@ -51,21 +49,18 @@ plugins {
   //noinspection SpellCheckingInspection
   id("org.barfuin.gradle.taskinfo").version("2.1.0")
 
-  @Suppress("ForbiddenComment")
-  // TODO: Remove this as it only applies to Java
-  id("java")
   id("application")
   id("maven-publish")
-  kotlin("jvm").version("1.7.10")
+  kotlin("jvm").version("1.9.21")
 
   // For static code checks
-  id("io.gitlab.arturbosch.detekt").version("1.22.0")
+  id("io.gitlab.arturbosch.detekt").version("1.23.0")
   // For Generation of Documentation
-  id("org.jetbrains.dokka").version("1.7.10")
+  id("org.jetbrains.dokka").version("1.9.10")
 }
 // Vert.x Gradle redeploy on file changes, see https://github.com/vert-x3/vertx-examples/tree/master/gradle-redeploy
 application {
-  mainClass.set("de.cyface.collector.Application")
+  mainClass.set("de.cyface.collector.ApplicationKt")
 }
 
 group = "de.cyface"
@@ -79,31 +74,19 @@ tasks.run.get().args(
   listOf(
     "run",
     mainVerticleName,
+    "--conf=conf.json",
     "--redeploy=$watchForChange",
     "--launcher-class=${application.mainClass.get()}",
     "--on-redeploy=$doOnChange"
   )
 )
 
-@Suppress("ForbiddenComment")
-// TODO: Remove this as it only applies to java
-java {
-  sourceCompatibility = JavaVersion.VERSION_11
-  targetCompatibility = JavaVersion.VERSION_11
-}
-
-tasks.withType<JavaCompile>() {
-  options.encoding = "UTF-8"
-}
-
-tasks.withType<KotlinCompile>().configureEach {
-  kotlinOptions {
-    jvmTarget = "11"
-  }
+kotlin {
+  jvmToolchain(17)
 }
 
 // If you increase this version, check in the next line if the manual mongo driver version is still necessary.
-extra["vertxVersion"] = "4.3.6"
+extra["vertxVersion"] = "4.5.0"
 // The following is only required since Vert.x GridFS Client is not working correctly in Version 4.3.3.
 // To check this run GridFSStorageIT
 // We reported the problem to Vertx Github. A fix is scheduled for Vertx 4.4.2
@@ -124,8 +107,8 @@ extra["hamcrestVersion"] = "2.2"
 extra["hamKrestVersion"] = "1.8.0.1"
 extra["flapdoodleVersion"] = "3.5.3" // major upgrade available
 extra["mockitoKotlinVersion"] = "4.1.0"
-extra["dokkaVersion"] = "1.7.10"
-extra["detektVersion"] = "1.22.0"
+extra["dokkaVersion"] = "1.9.10"
+extra["detektVersion"] = "1.23.1"
 
 tasks.wrapper {
   gradleVersion = project.extra["gradleWrapperVersion"].toString()
@@ -190,6 +173,7 @@ dependencies {
 
   // Required for Linting
   detektPlugins("io.gitlab.arturbosch.detekt:detekt-formatting:${project.extra["detektVersion"]}")
+  detektPlugins("io.gitlab.arturbosch.detekt:detekt-rules-libraries:${project.extra["detektVersion"]}")
 }
 
 tasks.test {
@@ -287,8 +271,8 @@ publishing {
 detekt {
   buildUponDefaultConfig = true // preconfigure defaults
   allRules = false // activate all available (even unstable) rules.
-  config = files("$projectDir/config/detekt.yml") // point to custom config, overwriting default behavior
-  //baseline = file("$projectDir/config/baseline.xml") // a way of suppressing issues before introducing detekt
+  config.from(files("$projectDir/config/detekt.yml")) // point to custom config, overwriting default behavior
+  baseline = file("$projectDir/config/baseline.xml") // a way of suppressing issues before introducing detekt
 }
 
 tasks.withType<Detekt>().configureEach {
@@ -299,13 +283,6 @@ tasks.withType<Detekt>().configureEach {
     // sarif.required.set(true) // SARIF format (https://sarifweb.azurewebsites.net/) integrate with Github Code Scan
     // md.required.set(true) // simple Markdown format
   }
-}
-
-tasks.withType<Detekt>().configureEach {
-  jvmTarget = "11"
-}
-tasks.withType<DetektCreateBaselineTask>().configureEach {
-  jvmTarget = "11"
 }
 
 // End detekt configuration

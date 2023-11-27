@@ -249,6 +249,12 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with the Cyface Data Collector.  If not, see http://www.gnu.org/licenses/.
 
+# Package de.cyface.collector.handler
+
+This package contains the Vert.x handler classes used to handle various
+* events during the runtime of the application. Usually those handlers react to
+* events triggered by clients calling API endpoints.
+
 # Package de.cyface.collector.model
 
 Contains all the data model files required by the Cyface Data Collector.
@@ -261,4 +267,10 @@ Those implementations provide support for storing data in GridFS, on the local f
 
 The following image shows an overview of the interface and how it is embedded in the Cyface data collector.
 
-<img src="../../images/storage-service.png" alt="Test" width="1128px" height="292px">
+<img src="images/storage-service.png" alt="Test" width="1128px" height="292px">
+
+# Package de.cyface.collector
+
+This package contains the top level classes used by the Cyface Data Collector. Most important is the class
+* [de.cyface.collector.Application], which starts the whole application and the
+* [de.cyface.collector.verticle.CollectorApiVerticle] that initializes the server.

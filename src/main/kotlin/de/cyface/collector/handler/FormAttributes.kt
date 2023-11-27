@@ -1,5 +1,5 @@
 /*
- * Copyright 2018-2022 Cyface GmbH
+ * Copyright 2018-2023 Cyface GmbH
  *
  * This file is part of the Cyface Data Collector.
  *
@@ -16,108 +16,102 @@
  * You should have received a copy of the GNU General Public License
  * along with the Cyface Data Collector. If not, see <http://www.gnu.org/licenses/>.
  */
-package de.cyface.collector.handler;
+package de.cyface.collector.handler
 
 /**
  * Attributes supported by the APIs upload endpoint.
- * 
+ *
  * @author Klemens Muthmann
  * @author Armin Schnabel
  * @version 3.3.0
  * @since 2.0.0
+ * @property value The value identifying the attribute in the multipart form request.
  */
-public enum FormAttributes {
+enum class FormAttributes(val value: String) {
     /**
      * The worldwide unique identifier of the device uploading the data.
      */
     DEVICE_ID("deviceId"),
+
     /**
      * The device wide unique identifier of the uploaded measurement.
      */
     MEASUREMENT_ID("measurementId"),
+
     /**
      * The type of device uploading the data, such as Pixel 3 or iPhone 6 Plus.
      */
     DEVICE_TYPE("deviceType"),
+
     /**
      * The operating system version, such as Android 9.0.0 or iOS 11.2.
      */
     OS_VERSION("osVersion"),
+
     /**
      * The version of the app that transmitted the measurement.
      */
     APPLICATION_VERSION("appVersion"),
+
     /**
      * The length of the measurement in meters.
      */
     LENGTH("length"),
+
     /**
      * The count of geographical locations in the transmitted measurement.
      */
     LOCATION_COUNT("locationCount"),
+
     /**
      * The latitude of the geolocation at the beginning of the track represented by the transmitted measurement. This
      * value is optional and may not be available for measurements without locations. For measurements with one location
-     * this equals the {@link #END_LOCATION_LAT}.
+     * this equals the [.END_LOCATION_LAT].
      */
     START_LOCATION_LAT("startLocLat"),
+
     /**
      * The longitude of the geolocation at the beginning of the track represented by the transmitted measurement. This
      * value is optional and may not be available for measurements without locations. For measurements with one location
-     * this equals the {@link #END_LOCATION_LON}.
+     * this equals the [.END_LOCATION_LON].
      */
     START_LOCATION_LON("startLocLon"),
+
     /**
      * The timestamp in milliseconds of the geolocation at the beginning of the track represented by the transmitted
      * measurement. This value is optional and may not be available for measurements without locations. For measurements
-     * with one location this equals the {@link #END_LOCATION_TS}.
+     * with one location this equals the [.END_LOCATION_TS].
      */
     START_LOCATION_TS("startLocTS"),
+
     /**
-     * The latitude of the geographical location at the end of the track represented by the transmitted measurement. This value
-     * is optional and may not be available for measurements without locations. For measurements
-     * with one location this equals the {@link #START_LOCATION_LAT}.
+     * The latitude of the geographical location at the end of the track represented by the transmitted measurement.
+     * This value is optional and may not be available for measurements without locations. For measurements
+     * with one location this equals the [.START_LOCATION_LAT].
      */
     END_LOCATION_LAT("endLocLat"),
+
     /**
-     * The longitude of the geographical location at the end of the track represented by the transmitted measurement. This value
-     * is optional and may not be available for measurements without locations. For measurements
-     * with one location this equals the {@link #START_LOCATION_LON}.
+     * The longitude of the geographical location at the end of the track represented by the transmitted measurement.
+     * This value is optional and may not be available for measurements without locations. For measurements
+     * with one location this equals the [.START_LOCATION_LON].
      */
     END_LOCATION_LON("endLocLon"),
+
     /**
      * The timestamp in milliseconds of the geolocation at the end of the track represented by the transmitted
      * measurement. This value is optional and may not be available for measurements without locations. For measurements
-     * with one location this equals the {@link #START_LOCATION_TS}.
+     * with one location this equals the [.START_LOCATION_TS].
      */
     END_LOCATION_TS("endLocTS"),
+
     /**
      * The modality type used to capture the measurement.
      */
     MODALITY("modality"),
+
     /**
      * The format version of the transfer file.
      */
-    FORMAT_VERSION("formatVersion");
-
-    /**
-     * The value identifying the attribute in the multipart form request.
-     */
-    private final String value;
-
-    /**
-     * Creates a new completely initialized multipart form attribute.
-     * 
-     * @param value The value identifying the attribute in the multipart form request.
-     */
-    FormAttributes(final String value) {
-        this.value = value;
-    }
-
-    /**
-     * @return The value identifying the attribute in the multipart form request.
-     */
-    public String getValue() {
-        return value;
-    }
+    FORMAT_VERSION("formatVersion")
 }
