@@ -21,7 +21,6 @@ package de.cyface.collector.storage.gridfs
 import de.cyface.collector.storage.CleanupOperation
 import de.cyface.collector.storage.DataStorageService
 import de.cyface.collector.storage.DataStorageServiceBuilder
-import io.vertx.core.CompositeFuture
 import io.vertx.core.Future
 import io.vertx.core.Promise
 import io.vertx.core.file.FileSystem
