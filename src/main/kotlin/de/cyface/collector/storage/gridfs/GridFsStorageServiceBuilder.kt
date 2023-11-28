@@ -60,7 +60,7 @@ class GridFsStorageServiceBuilder(
             onUploadFolderChecked(exists)
         }
 
-        val initialSetup = CompositeFuture.all(uploadFolderCreationCall, indexCreationCall)
+        val initialSetup = Future.all(uploadFolderCreationCall, indexCreationCall)
         initialSetup.onSuccess {
             logger.info("Successfully connected to data storage!")
             ret.complete(GridFsStorageService(dao, fileSystem, uploadFolder))

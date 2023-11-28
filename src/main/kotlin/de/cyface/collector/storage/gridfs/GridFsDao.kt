@@ -71,7 +71,7 @@ open class GridFsDao(private val mongoClient: MongoClient) {
         val userIndex = JsonObject().put("username", 1)
         val userIndexCreation = mongoClient.createIndexWithOptions("user", userIndex, unique)
 
-        CompositeFuture.all(measurementIndexCreation, userIndexCreation).onComplete {
+        Future.all(measurementIndexCreation, userIndexCreation).onComplete {
             ret.complete(it.result())
         }
         return ret.future()
