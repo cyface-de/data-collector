@@ -22,6 +22,7 @@ rootProject.name = "collector"
 plugins {
     // Required to publish Gradle Build Scans from Github Workflow
     id("com.gradle.enterprise") version("3.9")
+    id("org.gradle.toolchains.foojay-resolver-convention") version("0.7.0")
 }
 
 gradleEnterprise {
