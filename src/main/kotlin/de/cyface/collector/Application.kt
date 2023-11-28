@@ -102,7 +102,5 @@ class Application : Launcher() {
          * Port used by Prometheus to request logging information from this server.
          */
         private const val PROMETHEUS_SERVER_PORT = 8081
-
-
     }
 }

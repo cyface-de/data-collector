@@ -103,18 +103,22 @@ class GoogleCloudStorageService(
     }
 
     override fun bytesUploaded(uploadIdentifier: UUID): Future<Long> {
-        return vertx.executeBlocking(Callable {
-            val cloud = createStorage(uploadIdentifier)
-            cloud.bytesUploaded()
-        })
+        return vertx.executeBlocking(
+            Callable {
+                val cloud = createStorage(uploadIdentifier)
+                cloud.bytesUploaded()
+            }
+        )
     }
 
     override fun clean(uploadIdentifier: UUID): Future<Void> {
-        return vertx.executeBlocking(Callable {
+        return vertx.executeBlocking(
+            Callable {
                 val cloud = createStorage(uploadIdentifier)
                 cloud.delete()
                 return@Callable null
-            })
+            }
+        )
     }
 
     override fun startPeriodicCleaningOfTempData(
