@@ -27,7 +27,7 @@ import java.net.URL
  *
  * @author Klemens Muthmann
  * @author Armin Schnabel
- * @version 2.0.0
+ * @version 2.0.1
  * @since 1.0.0
  */
 buildscript {
@@ -85,13 +85,7 @@ kotlin {
   jvmToolchain(17)
 }
 
-// If you increase this version, check in the next line if the manual mongo driver version is still necessary.
 extra["vertxVersion"] = "4.5.0"
-// The following is only required since Vert.x GridFS Client is not working correctly in Version 4.3.3.
-// To check this run GridFSStorageIT
-// We reported the problem to Vertx Github. A fix is scheduled for Vertx 4.4.2
-// https://github.com/vert-x3/vertx-mongo-client/issues/291
-extra["mongoDriverVersion"] = "4.8.0"
 extra["micrometerVersion"] = "1.10.6"
 extra["commonsLangVersion"] = "3.12.0"
 extra["logbackVersion"] = "1.4.6"
@@ -119,9 +113,6 @@ dependencies {
   implementation("io.vertx:vertx-web:${project.extra["vertxVersion"]}")
   implementation("io.vertx:vertx-mongo-client:${project.extra["vertxVersion"]}")
   implementation("io.vertx:vertx-reactive-streams:${project.extra["vertxVersion"]}")
-  // These two are required since Vert.x currently has a buggy version.
-  implementation("org.mongodb:mongodb-driver-core:${project.extra["mongoDriverVersion"]}")
-  implementation("org.mongodb:mongodb-driver-reactivestreams:${project.extra["mongoDriverVersion"]}")
 
   // Kotlin Support
   implementation("io.vertx:vertx-core:${project.extra["vertxVersion"]}")
