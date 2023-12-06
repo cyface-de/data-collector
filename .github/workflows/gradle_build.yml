@@ -58,7 +58,6 @@ jobs:
       - name: Build and start Docker dev environment
         run: |
           cd src/main/docker
-          cp              logback.xml.template logback.xml
           mkdir           logs file-uploads keycloak/providers keycloak/data/h2
           sudo chmod o+w  logs file-uploads keycloak keycloak/data keycloak/data/h2 keycloak/providers
           cd ../../../
