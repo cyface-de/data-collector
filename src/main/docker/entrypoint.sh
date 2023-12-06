@@ -46,7 +46,7 @@ loadApiParameters() {
     CYFACE_API_HOST="localhost"
   fi
 
-  if [ -z $CYFACE_API_ENDPOINT ]; then
+  if [ -z "$CYFACE_API_ENDPOINT" ]; then
     CYFACE_API_ENDPOINT="/api/v4/"
   fi
 }
@@ -62,7 +62,7 @@ loadAuthParameters() {
     CYFACE_OAUTH_CLIENT="collector"
   fi
 
-  if [ -z CYFACE_OAUTH_SECRET ]; then
+  if [ -z "$CYFACE_OAUTH_SECRET" ]; then
       echo "Unable to find OAuth client secret. Please set the environment variable CYFACE_OAUTH_SECRET to an appropriate value! API will not start!"
       exit 1
   fi
@@ -83,35 +83,35 @@ loadAuthParameters() {
 
 loadCollectorParameters() {
   # Upload Expiration time
-  if [ -z $UPLOAD_EXPIRATION_TIME_MILLIS ]; then
+  if [ -z "$UPLOAD_EXPIRATION_TIME_MILLIS" ]; then
     UPLOAD_EXPIRATION_TIME_MILLIS="60000"
   fi
 
   echo "Setting Upload expiration time to $UPLOAD_EXPIRATION_TIME_MILLIS ms."
 
   # Measurement payload limit
-  if [ -z $MEASUREMENT_PAYLOAD_LIMIT_BYTES ]; then
+  if [ -z "$MEASUREMENT_PAYLOAD_LIMIT_BYTES" ]; then
     MEASUREMENT_PAYLOAD_LIMIT_BYTES="104857600"
   fi
 
   echo "Setting Measurement payload limit to $MEASUREMENT_PAYLOAD_LIMIT_BYTES Bytes."
 
   # Storage type
-  if [ -z $STORAGE_TYPE ]; then
+  if [ -z "$STORAGE_TYPE" ]; then
     STORAGE_TYPE="gridfs"
   fi
 
   echo "Setting storage type to $STORAGE_TYPE"
 
   # Storage uploads folder
-  if [ -z $STORAGE_UPLOADS_FOLDER ]; then
+  if [ -z "$STORAGE_UPLOADS_FOLDER" ]; then
     STORAGE_UPLOADS_FOLDER="file-uploads"
   fi
 
   echo "Setting storage uploads-folder to $STORAGE_UPLOADS_FOLDER"
 
   # Monitoring
-  if [ -z $METRICS_ENABLED ]; then
+  if [ -z "$METRICS_ENABLED" ]; then
     METRICS_ENABLED="false"
   fi
 
