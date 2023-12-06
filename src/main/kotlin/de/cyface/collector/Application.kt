@@ -28,20 +28,6 @@ import io.vertx.micrometer.VertxPrometheusOptions
 import org.slf4j.LoggerFactory
 
 /**
- * Starts the application.
- *
- * @param args See README.adoc and documentation of the Vert.x `Launcher` class, for further details
- * about supported arguments.
- */
-fun main(args: Array<String>) {
-    System.setProperty(
-        "vertx.logger-delegate-factory-class-name",
-        SLF4JLogDelegateFactory::class.java.getName()
-    )
-    Application().dispatch(args)
-}
-
-/**
  * An object of this class forms the entry point to the Cyface data collector application. It contains the
  * `main` method, which you can start to run everything. However, you need to provide the
  * [de.cyface.collector.verticle.MainVerticle]
@@ -102,5 +88,19 @@ class Application : Launcher() {
          * Port used by Prometheus to request logging information from this server.
          */
         private const val PROMETHEUS_SERVER_PORT = 8081
+
+        /**
+         * Starts the application.
+         *
+         * @param args See README.adoc and documentation of the Vert.x `Launcher` class, for further details
+         * about supported arguments.
+         */
+        fun main(args: Array<String>) {
+            System.setProperty(
+                "vertx.logger-delegate-factory-class-name",
+                SLF4JLogDelegateFactory::class.java.getName()
+            )
+            Application().dispatch(args)
+        }
     }
 }

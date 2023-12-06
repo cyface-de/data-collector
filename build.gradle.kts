@@ -16,6 +16,7 @@
  *  You should have received a copy of the GNU General Public License
  *  along with the Cyface Data Collector.  If not, see <http://www.gnu.org/licenses/>.
  */
+import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
 import io.gitlab.arturbosch.detekt.Detekt
 import org.jetbrains.dokka.base.DokkaBase
 import org.jetbrains.dokka.base.DokkaBaseConfiguration
@@ -60,7 +61,7 @@ plugins {
 }
 // Vert.x Gradle redeploy on file changes, see https://github.com/vert-x3/vertx-examples/tree/master/gradle-redeploy
 application {
-  mainClass.set("de.cyface.collector.ApplicationKt")
+  mainClass.set("de.cyface.collector.Application")
 }
 
 group = "de.cyface"
@@ -69,12 +70,13 @@ version = "0.0.0" // Automatically overwritten by CI
 val mainVerticleName = "de.cyface.collector.verticle.MainVerticle"
 val watchForChange = "src/**/*"
 val doOnChange = "./gradlew classes"
+val conf = "conf.json"
 
 tasks.run.get().args(
   listOf(
     "run",
     mainVerticleName,
-    "--conf=conf.json",
+    "--conf=$conf",
     "--redeploy=$watchForChange",
     "--launcher-class=${application.mainClass.get()}",
     "--on-redeploy=$doOnChange"
@@ -167,6 +169,17 @@ dependencies {
   detektPlugins("io.gitlab.arturbosch.detekt:detekt-rules-libraries:${project.extra["detektVersion"]}")
 }
 
+tasks.withType<ShadowJar> {
+  archiveClassifier.set("all")
+  manifest {
+    attributes(mapOf(
+      "Main-Verticle" to mainVerticleName,
+      "Main-Command" to "run",
+    ))
+  }
+  mergeServiceFiles()
+}
+
 tasks.test {
   useJUnitPlatform()
   testLogging {
@@ -225,7 +238,7 @@ repositories {
   }
 }
 
-tasks.shadowJar {
+/*tasks.shadowJar {
 
   manifest {
     attributes(mapOf("Main-Verticle" to mainVerticleName))
@@ -233,7 +246,7 @@ tasks.shadowJar {
   mergeServiceFiles {
     include("META-INF/services/io.vertx.core.spi.VerticleFactory")
   }
-}
+}*/
 
 /**
  * This is only used in dev environment.
