@@ -31,7 +31,7 @@ import java.net.URL
  * Keycloak OAuth2 builder which creates an OAuth2 handler.
  *
  * @author Armin Schnabel
- * @version 1.0.0
+ * @version 1.0.1
  * @since 7.0.0
  * @property vertx
  * @property apiRouter
@@ -55,8 +55,18 @@ class OAuth2HandlerBuilder(
                     .setupCallback(callbackAddress)
                 promise.complete(oauth2Handler)
             }
-            .onFailure { promise.fail(it) }
+            .onFailure {
+                promise.fail(DiscoveryFailed("Unable to discover Identity Provider from $options", it))
+            }
 
         return promise.future()
     }
 }
+
+/**
+ * Thrown if discovery of the identity server fails for some reason.
+ *
+ * @author Klemens Muthmann
+ * @version 1.0.0
+ */
+class DiscoveryFailed(message: String? = null, cause: Throwable? = null) : Exception(message, cause)
