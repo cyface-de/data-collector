@@ -72,7 +72,7 @@ jobs:
       # until the dependencies are up, and the API to started [RFR-566]
       - name: Wait for API to be online (log file created)
         run: |
-          FILE_PATH="build/docker/logs/collector.log"
+          FILE_PATH="build/docker/app/logs/collector.log"
           MAX_TIMEOUT=90 # 1.5 minutes
           SLEEP_INTERVAL=5 # Check every 5 seconds
 

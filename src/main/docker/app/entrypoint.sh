@@ -24,7 +24,6 @@
 
 DEFAULT_API_PORT="8080"
 JAR_FILE="collector-all.jar"
-LOG_FILE="/app/logs/collector-out.log"
 SERVICE_NAME="Cyface Collector API"
 
 main() {
@@ -178,8 +177,7 @@ startApi() {
   java -Dvertx.cacheDirBase=/tmp/vertx-cache \
       -Dlogback.configurationFile=/app/logback.xml \
       -jar $JAR_FILE \
-      -conf "$CONFIG" \
-      &> $LOG_FILE
+      -conf "$CONFIG"
   echo "API started or failed. Checking logs might give more insights."
 }
 

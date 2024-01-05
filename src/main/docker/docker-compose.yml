@@ -56,9 +56,9 @@ services:
       - authentication
       - default
     volumes:
-      - ./logs:/app/logs
-      - ./logback.xml:/app/logback.xml:ro # read only
-      - ./file-uploads:/app/file-uploads # for debugging
+      - ./app/logs:/app/logs
+      - ./app/logback.xml:/app/logback.xml:ro # read only
+      - ./app/file-uploads:/app/file-uploads # for debugging
     depends_on:
       - mongo
       - authentication
