@@ -238,15 +238,6 @@ repositories {
   }
 }
 
-/*tasks.shadowJar {
-
-  manifest {
-    attributes(mapOf("Main-Verticle" to mainVerticleName))
-  }
-  mergeServiceFiles {
-    include("META-INF/services/io.vertx.core.spi.VerticleFactory")
-  }
-}*/
 tasks.register<Copy>("copyFatJar") {
   dependsOn(tasks.shadowJar)
   from(tasks.shadowJar.get().outputs)
