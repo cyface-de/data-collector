@@ -238,16 +238,6 @@ repositories {
   }
 }
 
-/*tasks.shadowJar {
-
-  manifest {
-    attributes(mapOf("Main-Verticle" to mainVerticleName))
-  }
-  mergeServiceFiles {
-    include("META-INF/services/io.vertx.core.spi.VerticleFactory")
-  }
-}*/
-
 /**
  * This is only used in dev environment.
  * <p>
