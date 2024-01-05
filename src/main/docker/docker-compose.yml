@@ -46,7 +46,8 @@ services:
   # The Cyface Collector API Container
   api:
     container_name: collector_api
-    build: .
+    build:
+      context: ./app
     image: data-collector:0.0.0
     ports:
       - "127.0.0.1:8080:8080"

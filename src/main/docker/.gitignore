@@ -2,6 +2,6 @@
 # Unauthorized copying of this file, via any medium is strictly prohibited
 # Proprietary and confidential.
 
-file-uploads
-logs
-/logback.xml
+app/file-uploads
+app/logs
+/app/logback.xml
