@@ -10,6 +10,6 @@
             <br/>
             <a href="${url.loginAction}">${msg("doClickHere")}</a> ${msg("emailVerifyInstruction3")}
         </p>
-	<a href="de.cyface.app.r4r:/registered" class="${properties.kcButtonClass!} ${properties.kcButtonPrimaryClass!} ${properties.kcButtonBlockClass!} ${properties.kcButtonLargeClass!}">Anmelden</a>
+	<a href="de.cyface.app.r4r:/registered" class="${properties.kcButtonClass!} ${properties.kcButtonPrimaryClass!} ${properties.kcButtonBlockClass!} ${properties.kcButtonLargeClass!}">${msg("backToLoginScreen")}</a>
     </#if>
 </@layout.registrationLayout>
