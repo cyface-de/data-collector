@@ -247,18 +247,21 @@ repositories {
     include("META-INF/services/io.vertx.core.spi.VerticleFactory")
   }
 }*/
-
+tasks.register<Copy>("copyFatJar") {
+  dependsOn(tasks.shadowJar)
+  from(tasks.shadowJar.get().outputs)
+  into("./build/docker/app")
+  rename("collector-(.*)-all.jar","collector-all.jar")
+}
 /**
  * This is only used in dev environment.
  * <p>
  * This avoids copying a JAR into `src`.
  */
 tasks.register<Copy>("copyToDockerBuildFolder") {
-  dependsOn(tasks.shadowJar)
+  dependsOn("copyFatJar")
   into("./build/docker/")
   from("./src/main/docker/")
-  from(tasks.shadowJar.get().outputs)
-  rename("collector-(.*)-all.jar","collector-all.jar")
 }
 
 publishing {
