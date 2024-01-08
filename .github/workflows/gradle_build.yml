@@ -71,6 +71,14 @@ jobs:
           USERNAME: ${{ github.actor }}
           PASSWORD: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Wait for Mongo to become PRIMARY node in Replica Set
+        run: |
+          echo "Waiting for Mongo Database to become primary node in Replica Set!"
+          
+          attempts=0
+          ((attempts++))
+          echo "Attempt $attempts"
+
       # To ensure we don't kill the entrypoint.sh's attempt to wait for dependencies we wait
       # until the dependencies are up, and the API to started [RFR-566]
       - name: Wait for API to be online (log file created)
@@ -107,6 +115,8 @@ jobs:
       - name: Debugging output (if last step failed)
         if: failure()
         run: |
+          echo "File Structure"
+          echo "##############"
           cd src/main/docker
           echo "----- src/main/docker ..." && ls -alih ./
           cd keycloak
@@ -123,11 +133,20 @@ jobs:
           [ -d "keycloak/data" ] && echo "----- keycloak/data ..." && ls -alih keycloak/data
           [ -d "keycloak/data/h2" ] && echo "----- keycloak/data/h2 ..." && ls -alih keycloak/data/h2
           cd ../../
+          echo "State of Services"
+          echo "#################"
           echo "----- docker ps"
           docker ps
+          echo "----- Mongo Replica Set State"
+          docker exec -i collector_mongo mongo --eval 'db.adminCommand( { replSetGetStatus: 1 } )'
+          echo "########"
+          echo "# Logs #"
+          echo "########"
           echo "----- docker logs collector_api"
           docker logs collector_api
           echo
           [ -f build/docker/app/logs/collector.log ] && echo "----- collector.log -----" && cat build/docker/app/logs/collector.log
+          echo "----- docker logs collector_mongo"
+          docker logs collector_mongo
           echo && echo "----- curl ***/api/v4"
           curl http://localhost:8080/api/v4/
