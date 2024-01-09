@@ -73,10 +73,22 @@ jobs:
 
       - name: Wait for Mongo to become PRIMARY node in Replica Set
         run: |
-          echo "Waiting for Mongo Database to become primary node in Replica Set!"
+          while [ "$attempts" -lt "$max_attempts" ]; do
+            attempts=$((attempts + 1))
+            echo "Attempt $attempts"
+            MONGO_REPLICA_STATE=`docker exec -i collector_mongo mongo --eval 'db.isMaster()'`
+            if [[ $MONGO_REPLICA_STATE != *"\"ismaster\" : true"* ]]; then
+              echo "Mongo Database has become primary node!"
+              break
+            else
+              sleep "$sleep_duration"
+            fi
+          done
           
-          attempts=0
-          echo "Attempt $attempts"
+          if [ "$attempts" -ge "$max_attempts" ]; then
+            echo "Mongo Database not setup correctly in time!"
+            exit 1
+          fi
 
       # To ensure we don't kill the entrypoint.sh's attempt to wait for dependencies we wait
       # until the dependencies are up, and the API to started [RFR-566]
