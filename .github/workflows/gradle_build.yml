@@ -76,7 +76,6 @@ jobs:
           echo "Waiting for Mongo Database to become primary node in Replica Set!"
           
           attempts=0
-          ((attempts++))
           echo "Attempt $attempts"
 
       # To ensure we don't kill the entrypoint.sh's attempt to wait for dependencies we wait
