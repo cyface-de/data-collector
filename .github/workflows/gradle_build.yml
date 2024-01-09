@@ -66,13 +66,18 @@ jobs:
           cd ../../../../
           ./gradlew :copyToDockerBuildFolder
           cd build/docker/
-          docker compose up -d
+          docker compose up -d mongo authentication
         env:        # required for ./gradlew :copyToDockerBuildFolder
           USERNAME: ${{ github.actor }}
           PASSWORD: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Wait for Mongo to become PRIMARY node in Replica Set
         run: |
+          sleep 15 # Giving the Docker Containers a little time to start up
+          attempts=0
+          max_attempts=10
+          sleep_duration=5
+          
           while [ "$attempts" -lt "$max_attempts" ]; do
             attempts=$((attempts + 1))
             echo "Attempt $attempts"
@@ -81,6 +86,7 @@ jobs:
               echo "Mongo Database has become primary node!"
               break
             else
+              echo "Sleeping"
               sleep "$sleep_duration"
             fi
           done
@@ -89,6 +95,12 @@ jobs:
             echo "Mongo Database not setup correctly in time!"
             exit 1
           fi
+
+      - name: Start API
+        run: |
+          echo $(pwd)
+          docker compose up -d api
+        working-directory: ./build/docker
 
       # To ensure we don't kill the entrypoint.sh's attempt to wait for dependencies we wait
       # until the dependencies are up, and the API to started [RFR-566]

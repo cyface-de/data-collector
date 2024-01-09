@@ -34,7 +34,7 @@ services:
     networks:
       - database
         # ATTENTION: Never, and I mean NEVER use something like the following on a production setup!!!!!!!!!!!!!
-    healthcheck:
+    healthcheck: # This initializes the Mongo Single Node Replica set
       test: |
         test $$(mongosh --quiet --eval "try { rs.initiate({ _id: 'cyface', members: [{ _id: 0, host: 'mongo:27017' }] }).ok } catch (_) { rs.status().ok }") -eq 1
         interval: 10s
