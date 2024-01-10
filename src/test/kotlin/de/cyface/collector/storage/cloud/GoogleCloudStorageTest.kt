@@ -44,7 +44,6 @@ import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Flow
 import java.util.concurrent.SubmissionPublisher
 import java.util.concurrent.TimeUnit
-import kotlin.test.Ignore
 import kotlin.test.Test
 
 /**
@@ -54,7 +53,6 @@ import kotlin.test.Test
  * @author Klemens Muthmann
  * @version 1.0.1
  */
-@Ignore
 class GoogleCloudStorageTest {
 
     /**
