@@ -16,7 +16,7 @@
 # along with the Cyface Data Collector. If not, see <http://www.gnu.org/licenses/>.
 
 # Use the official JDK Repo for version 11 as target (use slim version to remove all UI stuff, and since we do only need to run software, we just use the JRE).
-FROM openjdk:11-jre-slim
+FROM eclipse-temurin:17-jre
 MAINTAINER Cyface GmbH <mail@cyface.de>
 
 # Create user. Unproblematic default id (wikipedia.org/wiki/User_identifier)

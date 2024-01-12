@@ -56,7 +56,6 @@ import kotlin.test.assertNotNull
  * @since 2.0.0
  */
 // This warning is suppressed since it is wrong for Vert.x Tests.
-@Suppress("JUnitMalformedDeclaration")
 @ExtendWith(VertxExtension::class)
 class FileUploadTest {
     /**
@@ -220,7 +219,7 @@ class FileUploadTest {
                 uploadUri,
                 0,
                 3,
-                8 /* partial */,
+                8, // partial
                 deviceIdentifier,
                 context.succeeding { ar: HttpResponse<Buffer?> ->
                     context.verify {

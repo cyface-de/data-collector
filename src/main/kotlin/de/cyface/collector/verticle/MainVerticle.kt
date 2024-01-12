@@ -46,7 +46,7 @@ class MainVerticle : AbstractVerticle() {
         logger.info("Starting main verticle!")
         val jsonConfiguration = config()
         logger.debug("Active Configuration")
-        logger.debug("${jsonConfiguration.encodePrettily()}")
+        logger.debug(jsonConfiguration.encodePrettily())
         val configuration = Configuration.deserialize(jsonConfiguration)
         try {
             deploy(startFuture, configuration)

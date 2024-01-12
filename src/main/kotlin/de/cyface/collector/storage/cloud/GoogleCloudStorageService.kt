@@ -1,7 +1,5 @@
-@file:Suppress("AnnotationSpacing")
-
 /*
- * Copyright 2022 Cyface GmbH
+ * Copyright 2022-2023 Cyface GmbH
  *
  * This file is part of the Cyface Data Collector.
  *
@@ -18,6 +16,8 @@
  * You should have received a copy of the GNU General Public License
  * along with the Cyface Data Collector. If not, see <http://www.gnu.org/licenses/>.
  */
+@file:Suppress("AnnotationSpacing")
+
 package de.cyface.collector.storage.cloud
 
 import com.google.auth.Credentials
@@ -37,6 +37,7 @@ import io.vertx.ext.reactivestreams.ReactiveWriteStream
 import org.reactivestreams.Subscriber
 import org.reactivestreams.Subscription
 import java.util.UUID
+import java.util.concurrent.Callable
 
 @Suppress("MaxLineLength")
 /**
@@ -102,18 +103,22 @@ class GoogleCloudStorageService(
     }
 
     override fun bytesUploaded(uploadIdentifier: UUID): Future<Long> {
-        return vertx.executeBlocking {
-            val cloud = createStorage(uploadIdentifier)
-            it.complete(cloud.bytesUploaded())
-        }
+        return vertx.executeBlocking(
+            Callable {
+                val cloud = createStorage(uploadIdentifier)
+                cloud.bytesUploaded()
+            }
+        )
     }
 
     override fun clean(uploadIdentifier: UUID): Future<Void> {
-        return vertx.executeBlocking {
-            val cloud = createStorage(uploadIdentifier)
-            cloud.delete()
-            it.complete()
-        }
+        return vertx.executeBlocking(
+            Callable {
+                val cloud = createStorage(uploadIdentifier)
+                cloud.delete()
+                return@Callable null
+            }
+        )
     }
 
     override fun startPeriodicCleaningOfTempData(

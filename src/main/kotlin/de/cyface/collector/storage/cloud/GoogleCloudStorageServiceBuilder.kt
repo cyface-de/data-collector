@@ -1,5 +1,3 @@
-@file:Suppress("AnnotationSpacing")
-
 /*
  * Copyright 2022 Cyface GmbH
  *
@@ -18,6 +16,8 @@
  * You should have received a copy of the GNU General Public License
  * along with the Serialization. If not, see <http://www.gnu.org/licenses/>.
  */
+@file:Suppress("AnnotationSpacing")
+
 package de.cyface.collector.storage.cloud
 
 import com.google.auth.Credentials

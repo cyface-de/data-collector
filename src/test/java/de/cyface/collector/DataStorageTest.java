@@ -1,5 +1,5 @@
 /*
- * Copyright 2018-2022 Cyface GmbH
+ * Copyright 2018-2023 Cyface GmbH
  *
  * This file is part of the Cyface Data Collector.
  *
@@ -18,19 +18,17 @@
  */
 package de.cyface.collector;
 
-import static de.cyface.collector.model.Measurement.USER_ID_FIELD;
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.equalTo;
-import static org.hamcrest.Matchers.greaterThan;
-import static org.hamcrest.Matchers.is;
-
-import java.io.IOException;
-import java.net.URISyntaxException;
-import java.nio.file.Path;
-import java.util.List;
-import java.util.UUID;
-import java.util.stream.Collectors;
-
+import de.cyface.collector.commons.MongoTest;
+import de.cyface.collector.handler.FormAttributes;
+import de.flapdoodle.embed.process.runtime.Network;
+import io.vertx.core.Future;
+import io.vertx.core.Vertx;
+import io.vertx.core.file.OpenOptions;
+import io.vertx.core.json.JsonObject;
+import io.vertx.ext.mongo.GridFsUploadOptions;
+import io.vertx.ext.mongo.MongoClient;
+import io.vertx.junit5.VertxExtension;
+import io.vertx.junit5.VertxTestContext;
 import org.apache.commons.lang3.Validate;
 import org.bson.types.ObjectId;
 import org.junit.jupiter.api.AfterEach;
@@ -41,24 +39,24 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import de.cyface.collector.commons.MongoTest;
-import de.cyface.collector.handler.FormAttributes;
-import de.flapdoodle.embed.process.runtime.Network;
-import io.vertx.core.CompositeFuture;
-import io.vertx.core.Future;
-import io.vertx.core.Vertx;
-import io.vertx.core.file.OpenOptions;
-import io.vertx.core.json.JsonObject;
-import io.vertx.ext.mongo.GridFsUploadOptions;
-import io.vertx.ext.mongo.MongoClient;
-import io.vertx.junit5.VertxExtension;
-import io.vertx.junit5.VertxTestContext;
+import java.io.IOException;
+import java.net.URISyntaxException;
+import java.nio.file.Path;
+import java.util.List;
+import java.util.UUID;
+import java.util.stream.Collectors;
+
+import static de.cyface.collector.model.Measurement.USER_ID_FIELD;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.greaterThan;
+import static org.hamcrest.Matchers.is;
 
 /**
  * Tests that storing data to an underlying Mongo database works.
  *
  * @author Klemens Muthmann
- * @version 1.1.4
+ * @version 1.1.5
  * @since 2.0.0
  */
 @ExtendWith(VertxExtension.class)
@@ -118,7 +116,6 @@ public final class DataStorageTest {
      * @param ctx The Vert.x context used for testing
      * @throws URISyntaxException If the test data location is invalid
      */
-    @SuppressWarnings("JUnitMalformedDeclaration")
     @Test
     @DisplayName("Test storing data on happy path")
     public void testPublishMeasurementWithNoGeoLocations_HappyPath(final Vertx vertx, final VertxTestContext ctx)
@@ -132,8 +129,7 @@ public final class DataStorageTest {
 
         gridFsBucketCreationFuture.onSuccess(gridFsClient -> {
             final var fileSystem = vertx.fileSystem();
-            //noinspection rawtypes
-            final List<Future> fileUploadFutures = uploads.stream().map(fileUpload -> {
+            final List<Future<String>> fileUploadFutures = uploads.stream().map(fileUpload -> {
                 final var fileOpenFuture = fileSystem.open(fileUpload.toAbsolutePath().toString(),
                         new OpenOptions());
                 return fileOpenFuture.compose(asyncFile -> {
@@ -147,10 +143,10 @@ public final class DataStorageTest {
             }).collect(Collectors.toList());
 
             fileUploadFutures.add(fileSystem.createTempFile("de.cyface.collector", "test"));
-            CompositeFuture.all(fileUploadFutures).compose(result -> {
+            Future.all(fileUploadFutures).compose(result -> {
                 final var uploadedFileId = (String)result.resultAt(0);
                 final var tempFileName = (String)result.list().get(result.list().size() - 1);
-                return CompositeFuture.all(gridFsClient.downloadFileByID(uploadedFileId, tempFileName),
+                return Future.all(gridFsClient.downloadFileByID(uploadedFileId, tempFileName),
                         client.find("fs.files", new JsonObject().put("_id",
                                 new JsonObject().put("$oid", new ObjectId(uploadedFileId).toHexString()))));
             }).onComplete(ctx.succeeding(loadedData -> {

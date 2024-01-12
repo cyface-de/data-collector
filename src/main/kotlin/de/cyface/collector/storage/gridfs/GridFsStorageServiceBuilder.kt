@@ -21,7 +21,6 @@ package de.cyface.collector.storage.gridfs
 import de.cyface.collector.storage.CleanupOperation
 import de.cyface.collector.storage.DataStorageService
 import de.cyface.collector.storage.DataStorageServiceBuilder
-import io.vertx.core.CompositeFuture
 import io.vertx.core.Future
 import io.vertx.core.Promise
 import io.vertx.core.file.FileSystem
@@ -60,7 +59,7 @@ class GridFsStorageServiceBuilder(
             onUploadFolderChecked(exists)
         }
 
-        val initialSetup = CompositeFuture.all(uploadFolderCreationCall, indexCreationCall)
+        val initialSetup = Future.all(uploadFolderCreationCall, indexCreationCall)
         initialSetup.onSuccess {
             logger.info("Successfully connected to data storage!")
             ret.complete(GridFsStorageService(dao, fileSystem, uploadFolder))

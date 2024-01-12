@@ -37,7 +37,7 @@ Version 1.0.0 -->
       </encoder>
     </appender-->
 
-  <root level="INFO">
+  <root level="DEBUG">
     <appender-ref ref="FILE" />
   </root>
 

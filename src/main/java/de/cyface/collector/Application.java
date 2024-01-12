@@ -30,6 +30,7 @@ import io.vertx.core.logging.SLF4JLogDelegateFactory;
 import io.vertx.micrometer.MicrometerMetricsOptions;
 import io.vertx.micrometer.VertxPrometheusOptions;
 
+// ATTENTION: This class must not be converted to Kotlin. As a Kotlin class it does not call the correct main method.
 /**
  * An object of this class forms the entry point to the Cyface data collector application. It contains the
  * <code>main</code> method, which you can start to run everything. However, you need to provide the
@@ -52,6 +53,10 @@ public class Application extends Launcher {
      * <code>src/main/resources/logback.xml</code>.
      */
     private static final Logger LOGGER = LoggerFactory.getLogger(Application.class);
+    /**
+     * Port used by Prometheus to request logging information from this server.
+     */
+    private static final int PROMETHEUS_SERVER_PORT = 8081;
     /**
      * The flag specifying whether metrics measurement is enabled or not.
      */
@@ -83,7 +88,7 @@ public class Application extends Launcher {
             LOGGER.info("Enabling metrics capturing to prometheus!");
             options.setMetricsOptions(new MicrometerMetricsOptions()
                     .setPrometheusOptions(new VertxPrometheusOptions().setEnabled(true).setStartEmbeddedServer(true)
-                            .setEmbeddedServerOptions(new HttpServerOptions().setPort(8081))
+                            .setEmbeddedServerOptions(new HttpServerOptions().setPort(PROMETHEUS_SERVER_PORT))
                             .setEmbeddedServerEndpoint("/metrics"))
                     .setEnabled(true));
         } else {

@@ -101,7 +101,6 @@ class FileUploadTooLargeTest {
      * @param context The context of the test Vert.x
      * @throws IOException Fails the test on unexpected exceptions
      */
-    @Suppress("JUnitMalformedDeclaration")
     @BeforeEach
     @Throws(IOException::class)
     fun setUp(vertx: Vertx, context: VertxTestContext) {
@@ -147,12 +146,11 @@ class FileUploadTooLargeTest {
      * @param vertx The Vert.x instance used to run this test.
      * @param context The test context for running `Vertx` under test.
      */
-    @Suppress("JUnitMalformedDeclaration")
     @Test
     fun testUploadWithTooLargePayload_Returns422(vertx: Vertx, context: VertxTestContext) {
         preRequestAndReturnLocation(
             context,
-            1000 /* fake a small upload to bypass pre-request size check */
+            1000 // fake a small upload to bypass pre-request size check
         ) { uploadUri: String ->
             upload(
                 vertx,
