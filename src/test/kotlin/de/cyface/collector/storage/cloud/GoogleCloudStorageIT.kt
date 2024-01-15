@@ -40,14 +40,18 @@ import kotlin.test.fail
 class GoogleCloudStorageIT {
 
     lateinit var storage: GoogleCloudStorage
-    // You must set this before running this test.
-    // @See https://cloud.google.com/storage/docs/reference/libraries#client-libraries-install-java
+
+    /**
+     * You must set this before running this test.
+     *
+     * See https://cloud.google.com/storage/docs/reference/libraries#client-libraries-install-java
+     */
     val credentialsFileLocation: String? = null
 
     @BeforeEach
     fun setUp() {
         // Authentication can be achieved following the Google Documentation: https://cloud.google.com/storage/docs/reference/libraries#client-libraries-install-java
-        if(credentialsFileLocation.isNullOrEmpty()) {
+        if (credentialsFileLocation.isNullOrEmpty()) {
             fail("Please set CREDENTIALS_FILE_LOCATION before running this test!")
         }
         val credentials = FileInputStream(credentialsFileLocation).use { stream ->
