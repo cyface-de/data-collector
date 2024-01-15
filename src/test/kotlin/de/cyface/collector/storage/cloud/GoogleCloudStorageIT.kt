@@ -42,22 +42,21 @@ class GoogleCloudStorageIT {
 
     @BeforeEach
     fun setUp() {
+        // Authentication can be achieved following the Google Documentation: https://cloud.google.com/storage/docs/reference/libraries#client-libraries-install-java
         val credentialsFile = "/Users/muthmann/.config/gcloud/application_default_credentials.json"
         val credentials = FileInputStream(credentialsFile).use { stream ->
             GoogleCredentials.fromStream(stream)
         }
-        storage = GoogleCloudStorage(credentials, "cyface-test", "cyface-bucket", UUID.randomUUID() )
+        storage = GoogleCloudStorage(credentials, "cyface-test", "cyface-bucket", UUID.randomUUID())
     }
 
     @AfterEach
     fun tearDown() {
-       storage.delete()
+        storage.delete()
     }
+
     @Test
     fun `Check that data is uploaded to Google Cloud Object Storage and Deleted after Completion`() {
-        // Authentication can be achieved following the Google Documentation: https://cloud.google.com/storage/docs/reference/libraries#client-libraries-install-java
-
-
         // Act
         storage.write(byteArrayOf(0x01, 0x02, 0x03, 0x04, 0x05))
         storage.write(byteArrayOf(0x06, 0x07, 0x08))
@@ -66,7 +65,6 @@ class GoogleCloudStorageIT {
         assertEquals(8L, storage.bytesUploaded())
 
         val download = storage.download().use { stream -> stream.toByteArray() }
-
 
         assertEquals(0x01, download[0])
         assertEquals(0x02, download[1])
