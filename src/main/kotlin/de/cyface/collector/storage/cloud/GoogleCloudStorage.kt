@@ -95,7 +95,7 @@ class GoogleCloudStorage internal constructor(
         // This is no show stopper as new data just overwrites the old, but it is odd and can increase our storage
         // requirements significantly.
         // Should be fixed prior to putting this into production.
-        tmpBlob.delete()
+        storage.delete(bucketName, tmpBlobName())
     }
 
     /**
