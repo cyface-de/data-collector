@@ -26,6 +26,7 @@ import java.util.UUID
 import kotlin.test.Ignore
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.fail
 
 /**
  * Check that the `GoogleCloudStorage` works with the true service and not only with mocks.
@@ -39,12 +40,17 @@ import kotlin.test.assertEquals
 class GoogleCloudStorageIT {
 
     lateinit var storage: GoogleCloudStorage
+    // You must set this before running this test.
+    // @See https://cloud.google.com/storage/docs/reference/libraries#client-libraries-install-java
+    val credentialsFileLocation: String? = null
 
     @BeforeEach
     fun setUp() {
         // Authentication can be achieved following the Google Documentation: https://cloud.google.com/storage/docs/reference/libraries#client-libraries-install-java
-        val credentialsFile = "/Users/muthmann/.config/gcloud/application_default_credentials.json"
-        val credentials = FileInputStream(credentialsFile).use { stream ->
+        if(credentialsFileLocation.isNullOrEmpty()) {
+            fail("Please set CREDENTIALS_FILE_LOCATION before running this test!")
+        }
+        val credentials = FileInputStream(credentialsFileLocation).use { stream ->
             GoogleCredentials.fromStream(stream)
         }
         storage = GoogleCloudStorage(credentials, "cyface-test", "cyface-bucket", UUID.randomUUID())
