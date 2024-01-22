@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2023 Cyface GmbH
+ * Copyright 2020-2024 Cyface GmbH
  *
  * This file is part of the Cyface Data Collector.
  *
@@ -28,7 +28,7 @@ import java.net.URL
  *
  * @author Klemens Muthmann
  * @author Armin Schnabel
- * @version 2.0.1
+ * @version 2.0.2
  * @since 1.0.0
  */
 buildscript {
@@ -92,7 +92,7 @@ val micrometerVersion = "1.10.6"
 val commonsLangVersion = "3.12.0"
 val logbackVersion = "1.4.6"
 val gradleWrapperVersion = "7.6.1"
-val googleCloudLibrariesVersion = "26.12.0"
+val googleCloudLibrariesVersion = "26.29.0"
 
 // Versions of testing dependencies
 val junitVersion = "5.9.2"

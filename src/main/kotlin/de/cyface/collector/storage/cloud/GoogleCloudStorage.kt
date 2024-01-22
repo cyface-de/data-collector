@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Cyface GmbH
+ * Copyright 2022-2024 Cyface GmbH
  *
  * This file is part of the Serialization.
  *
@@ -24,6 +24,7 @@ import com.google.auth.Credentials
 import com.google.cloud.storage.BlobInfo
 import com.google.cloud.storage.Storage
 import com.google.cloud.storage.StorageOptions
+import java.io.ByteArrayOutputStream
 import java.nio.ByteBuffer
 import java.nio.channels.WritableByteChannel
 import java.util.UUID
@@ -43,7 +44,7 @@ import java.util.UUID
  * previously present data.
  *
  * @author Klemens Muthmann
- * @version 1.0.0
+ * @version 1.1.0
  * @property credentials A Google Cloud credentials instance. For information on how to acquire such an instance see
  * the [Google Cloud documentation](https://github.com/googleapis/google-auth-library-java/blob/040acefec507f419f6e4ec4eab9645a6e3888a15/samples/snippets/src/main/java/AuthenticateExplicit.java).
  * @property projectIdentifier The name of the Google Cloud project to upload the data to.
@@ -94,7 +95,7 @@ class GoogleCloudStorage internal constructor(
         // This is no show stopper as new data just overwrites the old, but it is odd and can increase our storage
         // requirements significantly.
         // Should be fixed prior to putting this into production.
-        tmpBlob.delete()
+        storage.delete(bucketName, tmpBlobName())
     }
 
     /**
@@ -107,6 +108,15 @@ class GoogleCloudStorage internal constructor(
     override fun bytesUploaded(): Long {
         val dataBlob = storage[bucketName, dataBlobName()]
         return dataBlob.size
+    }
+
+    fun download(): ByteArrayOutputStream {
+        val dataMetaInformation = BlobInfo.newBuilder(bucketName, dataBlobName()).build()
+
+        val output = ByteArrayOutputStream()
+        storage.downloadTo(dataMetaInformation.blobId, output)
+
+        return output
     }
 
     /**
