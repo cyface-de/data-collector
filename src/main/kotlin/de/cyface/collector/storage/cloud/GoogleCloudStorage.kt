@@ -85,7 +85,7 @@ class GoogleCloudStorage internal constructor(
         storage.compose(
             Storage.ComposeRequest.of(
                 bucketName,
-                listOf(tmpBlobName(), dataBlobName()),
+                listOf(dataBlobName(), tmpBlobName()),
                 dataBlobName()
             )
         )
