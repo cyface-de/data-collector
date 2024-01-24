@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Cyface GmbH
+ * Copyright 2022-2024 Cyface GmbH
  *
  * This file is part of the Cyface Data Collector.
  *
@@ -30,7 +30,7 @@ import java.io.FileInputStream
  * The configuration required to create a [de.cyface.collector.storage.DataStorageService] for Google Cloud Storage.
  *
  * @author Klemens Muthmann
- * @version 1.0.0
+ * @version 1.0.1
  * @property collectionName The name of a Mongo database collection to store file metadata.
  * @property projectIdentifier The identifier of the Google Cloud project containing the bucket to store the data.
  * @property bucketName The Google Cloud storage bucket to store the data in.
@@ -46,7 +46,7 @@ data class GoogleCloudStorageType(
     val pagingSize: Long
 ) : StorageType {
     override fun dataStorageServiceBuilder(vertx: Vertx, mongoClient: MongoClient): DataStorageServiceBuilder {
-        val credentials = GoogleCredentials.fromStream(FileInputStream(credentialsFile))
+        val credentials = FileInputStream(credentialsFile).use { stream -> GoogleCredentials.fromStream(stream) }
         val dao = MongoDatabase(mongoClient, collectionName)
         return GoogleCloudStorageServiceBuilder(
             credentials,
