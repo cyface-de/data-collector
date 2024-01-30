@@ -178,7 +178,7 @@ class GoogleCloudStorageTest {
                 }
             }
         }
-        val oocut = GoogleCloudCleanupOperation(mockStorage, 100L)
+        val oocut = GoogleCloudCleanupOperation(mockStorage, 100L, bucketName)
 
         // Act
         oocut.clean(fileExpirationTime)

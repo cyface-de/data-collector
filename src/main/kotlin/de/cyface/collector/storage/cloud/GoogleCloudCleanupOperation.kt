@@ -44,10 +44,12 @@ import java.time.temporal.ChronoUnit
  * Higher numbers increase the possibility of failure, since requests and responses get larger, but also decrease the
  * number of requests necessary to carry out operations on the Cloud. On stable connections try high numbers on instable
  * ones try lower numbers.
+ * @property bucketName The Google Cloud Storage bucket name used to store data to.
  */
 class GoogleCloudCleanupOperation(
     private val storage: Storage,
-    private val pagingSize: Long
+    private val pagingSize: Long,
+    private val bucketName: String
 ) : CleanupOperation {
 
     /**
@@ -57,29 +59,34 @@ class GoogleCloudCleanupOperation(
 
     override fun clean(fileExpirationTime: Long) {
         val currentTime = OffsetDateTime.now()
-        val storedFiles = storage.list(Storage.BucketListOption.pageSize(pagingSize))
+        // Even when we assign a custom Role with `storage.buckets.list` to the service account, we get the error:
+        // `does not have storage.buckets.list access` (even with all storage permission)
+        // Thus, we only clean up the bucket with the name injected, and add a custom role with `storage.buckets.get`.
+        // It anyway makes more sense to only clean up the bucket used by this collector, not all buckets.
+        //val storedFiles = storage.list(Storage.BucketListOption.pageSize(pagingSize))
+        //storedFiles.iterateAll().forEach { bucket ->
+
+        val bucket = storage.get(bucketName)
         val expirationTime = fileExpirationTime * NANO_SECONDS_IN_A_MILLISECOND
-        storedFiles.iterateAll().forEach { bucket ->
 
-            val updateTime = bucket.updateTimeOffsetDateTime
-            val expiredTimeSinceLastUpdate = currentTime.minus(
-                updateTime.toEpochSecond() * MILLI_SECONDS_IN_A_SECOND,
-                ChronoUnit.MILLIS
-            )
-            val expiredTimeInNanos = expiredTimeSinceLastUpdate.nano
+        val updateTime = bucket.updateTimeOffsetDateTime
+        val expiredTimeSinceLastUpdate = currentTime.minus(
+            updateTime.toEpochSecond() * MILLI_SECONDS_IN_A_SECOND,
+            ChronoUnit.MILLIS
+        )
+        val expiredTimeInNanos = expiredTimeSinceLastUpdate.nano
 
-            if (expiredTimeInNanos < expirationTime) {
-                return@forEach
-            }
+        if (expiredTimeInNanos < expirationTime) {
+            return
+        }
 
-            if (bucket.name.endsWith(".tmp")) {
-                val uploadIdentifier = nameExtraction.matchEntire(bucket.name)?.groups?.get(1)?.value ?: return@forEach
+        if (bucket.name.endsWith(".tmp")) {
+            val uploadIdentifier = nameExtraction.matchEntire(bucket.name)?.groups?.get(1)?.value ?: return
 
-                val dataName = "$uploadIdentifier.data"
+            val dataName = "$uploadIdentifier.data"
 
-                storage.delete(bucket.name)
-                storage.delete(dataName)
-            }
+            storage.delete(bucket.name)
+            storage.delete(dataName)
         }
     }
 

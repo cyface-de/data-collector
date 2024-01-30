@@ -66,6 +66,6 @@ class GoogleCloudStorageServiceBuilder(
     override fun createCleanupOperation(): CleanupOperation {
         val storage = StorageOptions.newBuilder().setCredentials(credentials)
             .setProjectId(projectIdentifier).build().service
-        return GoogleCloudCleanupOperation(storage, pagingSize)
+        return GoogleCloudCleanupOperation(storage, pagingSize, bucketName)
     }
 }
