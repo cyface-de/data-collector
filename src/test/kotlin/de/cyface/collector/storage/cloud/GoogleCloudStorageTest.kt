@@ -153,6 +153,7 @@ class GoogleCloudStorageTest {
             on { name } doReturn testDataFile
         }
         val mockStorage: Storage = mock {
+            on { get(any<String>()) } doReturn mockBucket01
             on { list(any<BucketListOption>()) } doReturn object : Page<Bucket> {
 
                 private val data = mutableListOf(mockBucket01, mockBucket02)
@@ -178,7 +179,7 @@ class GoogleCloudStorageTest {
                 }
             }
         }
-        val oocut = GoogleCloudCleanupOperation(mockStorage, 100L, bucketName)
+        val oocut = GoogleCloudCleanupOperation(mockStorage, "test")
 
         // Act
         oocut.clean(fileExpirationTime)

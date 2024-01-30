@@ -46,7 +46,7 @@ class GoogleCloudStorageIT {
      *
      * See Readme > Running a Google Cloud Store for Data.
      */
-    // Set absolute path of the json file containing the credentials of:
+    // Set absolute path of the json file containing the credentials of
     // - your Google Cloud Admin Account (Development Environment)
     // - or the file with the private key of the Service Account (Production Environment)
     private val credentialsFileLocation: String? = null
@@ -55,7 +55,8 @@ class GoogleCloudStorageIT {
 
     @BeforeEach
     fun setUp() {
-        // Authentication can be achieved following the Google Documentation: https://cloud.google.com/storage/docs/reference/libraries#client-libraries-install-java
+        // Authentication can be achieved following the Google Documentation:
+        // https://cloud.google.com/storage/docs/reference/libraries#client-libraries-install-java
         if (credentialsFileLocation.isNullOrEmpty()) {
             fail("Please set CREDENTIALS_FILE_LOCATION before running this test!")
         }

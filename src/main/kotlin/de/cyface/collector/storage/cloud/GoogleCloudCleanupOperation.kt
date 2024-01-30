@@ -32,7 +32,7 @@ import java.time.temporal.ChronoUnit
  * it deletes such files if it finds and if their update time exceeds `fileExpirationTime`. It also deletes the
  * data file belonging to the temporary file, since that file will only contain partially completed data.
  *
- * It is pretty save to assume, that stale uploads are not going to continue. If the deletion was wrong, the client,
+ * It is pretty safe to assume, that stale uploads are not going to continue. If the deletion was wrong, the client,
  * can restart with a fresh upload and try to finish sooner this time.
  * To make this work it is important to set `fileExpirationTime` high enough, so that all clients are capable of
  * finishing within that timeframe.
@@ -40,15 +40,10 @@ import java.time.temporal.ChronoUnit
  * @author Klemens Muthmann
  * @version 1.0.0
  * @property storage The [Storage] to access the Google Cloud.
- * @property pagingSize A parameter used by Google Cloud for the amount of buckets returned per single request.
- * Higher numbers increase the possibility of failure, since requests and responses get larger, but also decrease the
- * number of requests necessary to carry out operations on the Cloud. On stable connections try high numbers on instable
- * ones try lower numbers.
  * @property bucketName The Google Cloud Storage bucket name used to store data to.
  */
 class GoogleCloudCleanupOperation(
     private val storage: Storage,
-    private val pagingSize: Long,
     private val bucketName: String
 ) : CleanupOperation {
 
@@ -63,8 +58,8 @@ class GoogleCloudCleanupOperation(
         // `does not have storage.buckets.list access` (even with all storage permission)
         // Thus, we only clean up the bucket with the name injected, and add a custom role with `storage.buckets.get`.
         // It anyway makes more sense to only clean up the bucket used by this collector, not all buckets.
-        //val storedFiles = storage.list(Storage.BucketListOption.pageSize(pagingSize))
-        //storedFiles.iterateAll().forEach { bucket ->
+        // val storedFiles = storage.list(Storage.BucketListOption.pageSize(pagingSize))
+        // storedFiles.iterateAll().forEach { bucket ->
 
         val bucket = storage.get(bucketName)
         val expirationTime = fileExpirationTime * NANO_SECONDS_IN_A_MILLISECOND
