@@ -62,6 +62,7 @@ class GoogleCloudCleanupOperation(
         // storedFiles.iterateAll().forEach { bucket ->
 
         val bucket = storage.get(bucketName)
+        require(bucket != null) { String.format("Bucket with name %s not found", bucketName) }
         val expirationTime = fileExpirationTime * NANO_SECONDS_IN_A_MILLISECOND
 
         val updateTime = bucket.updateTimeOffsetDateTime
