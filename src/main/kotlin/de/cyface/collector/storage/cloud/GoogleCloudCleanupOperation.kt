@@ -22,6 +22,7 @@ import com.google.cloud.storage.Storage
 import de.cyface.collector.storage.CleanupOperation
 import java.time.OffsetDateTime
 import java.time.temporal.ChronoUnit
+import java.util.Locale
 
 /**
  * A [CleanupOperation] for the Google Cloud Store.
@@ -62,7 +63,7 @@ class GoogleCloudCleanupOperation(
         // storedFiles.iterateAll().forEach { bucket ->
 
         val bucket = storage.get(bucketName)
-        require(bucket != null) { String.format("Bucket with name %s not found", bucketName) }
+        require(bucket != null) { String.format(Locale.getDefault(), "Bucket with name %s not found", bucketName) }
         val expirationTime = fileExpirationTime * NANO_SECONDS_IN_A_MILLISECOND
 
         val updateTime = bucket.updateTimeOffsetDateTime
