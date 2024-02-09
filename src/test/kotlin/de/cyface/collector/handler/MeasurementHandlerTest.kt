@@ -1,5 +1,5 @@
 /*
- * Copyright 2022-2023 Cyface GmbH
+ * Copyright 2022-2024 Cyface GmbH
  *
  * This file is part of the Cyface Data Collector.
  *
@@ -48,6 +48,12 @@ import org.mockito.kotlin.whenever
 import java.util.UUID
 import kotlin.test.assertEquals
 
+/**
+ * Run tests on the [MeasurementHandler] directly without a Vert.x environment.
+ *
+ * @author Klemens Muthmann
+ * @version 1.0.0
+ */
 @ExtendWith(MockitoExtension::class)
 class MeasurementHandlerTest {
 

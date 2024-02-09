@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Cyface GmbH
+ * Copyright 2022-2024 Cyface GmbH
  *
  * This file is part of the Cyface Data Collector.
  *
@@ -23,7 +23,7 @@ package de.cyface.collector.storage.exception
  * provided via the HTTP header.
  *
  * @author Klemens Muthmann
- * @version 1.0.0
+ * @version 1.0.1
  * @constructor Provide an explanation for the error via the `format` parameter.
  */
 class ContentRangeNotMatchingFileSize(format: String) : Exception(format)

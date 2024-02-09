@@ -1,5 +1,5 @@
 /*
- * Copyright 2022-2023 Cyface GmbH
+ * Copyright 2022-2024 Cyface GmbH
  *
  * This file is part of the Cyface Data Collector.
  *
@@ -45,7 +45,7 @@ import java.util.concurrent.Callable
  * [here](https://cloud.google.com/docs/authentication/application-default-credentials).
  *
  * @author Klemens Muthmann
- * @version 1.0.1
+ * @version 2.0.0
  * @property dao The data access object to write an uploads' metadata.
  * @property vertx A Vertx instance of the current Vertx environment.
  *
