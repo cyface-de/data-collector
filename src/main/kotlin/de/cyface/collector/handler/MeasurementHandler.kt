@@ -36,6 +36,7 @@ import de.cyface.collector.model.User
 import de.cyface.collector.storage.DataStorageService
 import de.cyface.collector.storage.Status
 import de.cyface.collector.storage.StatusType
+import de.cyface.collector.storage.UploadMetaData
 import io.vertx.core.Future
 import io.vertx.core.Handler
 import io.vertx.core.Promise
@@ -221,7 +222,8 @@ class MeasurementHandler(
                     LOGGER.debug("Response: 308, Range {} (partial data)", range)
                     ret.complete(Status(uploadIdentifier, StatusType.INCOMPLETE, byteSize))
                 } else {
-                    val acceptUploadResult = storageService.store(pipe, user, contentRange, uploadIdentifier, metaData)
+                    val uploadMetaData = UploadMetaData(user, contentRange, uploadIdentifier, metaData)
+                    val acceptUploadResult = storageService.store(pipe, uploadMetaData)
                     acceptUploadResult.onSuccess { result -> ret.complete(result) }
                     acceptUploadResult.onFailure { cause -> ret.fail(cause) }
                 }
@@ -255,7 +257,8 @@ class MeasurementHandler(
 
         // Bind session to this measurement and mark as "pre-request accepted"
         session.put(UPLOAD_PATH_FIELD, newUploadIdentifier)
-        val acceptUpload = storageService.store(pipe, user, contentRange, newUploadIdentifier, metaData)
+        val uploadMetaData = UploadMetaData(user, contentRange, newUploadIdentifier, metaData)
+        val acceptUpload = storageService.store(pipe, uploadMetaData)
         acceptUpload.onSuccess { result -> uploadAccepted.complete(result) }
         acceptUpload.onFailure { cause -> uploadAccepted.fail(cause) }
     }

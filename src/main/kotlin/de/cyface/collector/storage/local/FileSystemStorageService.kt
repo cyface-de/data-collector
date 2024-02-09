@@ -18,12 +18,10 @@
  */
 package de.cyface.collector.storage.local
 
-import de.cyface.collector.model.ContentRange
-import de.cyface.collector.model.RequestMetaData
-import de.cyface.collector.model.User
 import de.cyface.collector.storage.CleanupOperation
 import de.cyface.collector.storage.DataStorageService
 import de.cyface.collector.storage.Status
+import de.cyface.collector.storage.UploadMetaData
 import io.vertx.core.Future
 import io.vertx.core.Vertx
 import io.vertx.core.buffer.Buffer
@@ -44,10 +42,7 @@ class FileSystemStorageService(val vertx: Vertx) : DataStorageService {
 
     override fun store(
         pipe: Pipe<Buffer>,
-        user: User,
-        contentRange: ContentRange,
-        uploadIdentifier: UUID,
-        metaData: RequestMetaData
+        uploadMetaData: UploadMetaData
     ): Future<Status> {
         @Suppress("UnusedPrivateMember", "UNUSED_VARIABLE")
         val vertxFileSystem = vertx.fileSystem()

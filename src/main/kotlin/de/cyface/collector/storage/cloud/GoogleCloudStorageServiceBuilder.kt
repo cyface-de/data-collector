@@ -58,7 +58,8 @@ class GoogleCloudStorageServiceBuilder(
     override fun create(): Future<DataStorageService> {
         val ret = Promise.promise<DataStorageService>()
         vertx.runOnContext {
-            ret.complete(GoogleCloudStorageService(dao, vertx, credentials, projectIdentifier, bucketName))
+            val cloudStorageFactory = GoogleCloudStorageFactory(credentials, projectIdentifier, bucketName)
+            ret.complete(GoogleCloudStorageService(dao, vertx, cloudStorageFactory))
         }
         return ret.future()
     }

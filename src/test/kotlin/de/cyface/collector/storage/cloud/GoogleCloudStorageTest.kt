@@ -19,20 +19,22 @@
 package de.cyface.collector.storage.cloud
 
 import com.google.api.gax.paging.Page
-import com.google.auth.Credentials
 import com.google.cloud.storage.Bucket
 import com.google.cloud.storage.Storage
 import com.google.cloud.storage.Storage.BucketListOption
 import de.cyface.collector.model.ContentRange
 import de.cyface.collector.model.RequestMetaData
 import de.cyface.collector.model.User
-import io.vertx.core.Promise
+import de.cyface.collector.storage.StatusType
+import de.cyface.collector.storage.UploadMetaData
+import io.vertx.core.Future
+import io.vertx.core.Handler
 import io.vertx.core.Vertx
 import io.vertx.core.buffer.Buffer
 import io.vertx.core.streams.Pipe
-import io.vertx.ext.mongo.MongoClient
 import io.vertx.ext.reactivestreams.ReactiveWriteStream
 import org.mockito.kotlin.any
+import org.mockito.kotlin.argumentCaptor
 import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.verify
@@ -45,6 +47,8 @@ import java.util.concurrent.Flow
 import java.util.concurrent.SubmissionPublisher
 import java.util.concurrent.TimeUnit
 import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
 /**
  * Tests for the code writing data to and reading data from Google Cloud Storage.
@@ -107,28 +111,45 @@ class GoogleCloudStorageTest {
     @Test
     fun `Happy Path Test for Storing some Data`() {
         // Arrange
-        val mockMongoClient: MongoClient = mock()
-        val mockCredentials: Credentials = mock()
+        val mockDatabase: MongoDatabase = mock()
+        val cloudStorage: CloudStorage = mock {
+            on { bytesUploaded() } doReturn 10L
+        }
+        val mockCloudStorageFactory = CloudStorageFactory { cloudStorage }
         val oocut = GoogleCloudStorageService(
-            MongoDatabase(mockMongoClient, "cyface-data"),
+            mockDatabase,
             Vertx.vertx(),
-            mockCredentials,
-            "test-project",
-            "test-bucket"
+            mockCloudStorageFactory
         )
+        val resultFutureMock: Future<Void> = mock()
+        val toFuture: Future<Void> = mock {
+            on { onSuccess(any()) } doReturn resultFutureMock
+        }
         val pipe: Pipe<Buffer> = mock {
-            on { to(any()) } doReturn Promise.promise<Void>().future()
+            on { to(any()) } doReturn toFuture
         }
         val user: User = mock()
-        val contentRange = ContentRange(0L, 10L, 10L)
+        val contentRange = ContentRange(0L, 9L, 10L)
         val uploadIdentifier = UUID.randomUUID()
         val metaData: RequestMetaData = metadata()
+        val uploadMetaData = UploadMetaData(user, contentRange, uploadIdentifier, metaData)
 
         // Act
-        oocut.store(pipe, user, contentRange, uploadIdentifier, metaData)
+        val ret = oocut.store(pipe, uploadMetaData)
 
         // Assert
         verify(pipe).to(any<ReactiveWriteStream<Buffer>>())
+        argumentCaptor<Handler<Void>> {
+            verify(toFuture).onSuccess(capture())
+
+            firstValue.handle(null)
+        }
+
+        assertTrue(ret.isComplete)
+        assertTrue(ret.succeeded())
+        assertEquals(10L, ret.result().byteSize)
+        assertEquals(StatusType.COMPLETE, ret.result().type)
+        assertEquals(uploadIdentifier, ret.result().uploadIdentifier)
     }
 
     /**

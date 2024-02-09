@@ -20,14 +20,12 @@
 
 package de.cyface.collector.storage.cloud
 
-import com.google.auth.Credentials
-import de.cyface.collector.model.ContentRange
-import de.cyface.collector.model.RequestMetaData
-import de.cyface.collector.model.User
 import de.cyface.collector.storage.CleanupOperation
 import de.cyface.collector.storage.DataStorageService
 import de.cyface.collector.storage.Status
 import de.cyface.collector.storage.StatusType
+import de.cyface.collector.storage.UploadMetaData
+import de.cyface.collector.storage.exception.ContentRangeNotMatchingFileSize
 import io.vertx.core.Future
 import io.vertx.core.Promise
 import io.vertx.core.Vertx
@@ -36,10 +34,10 @@ import io.vertx.core.streams.Pipe
 import io.vertx.ext.reactivestreams.ReactiveWriteStream
 import org.reactivestreams.Subscriber
 import org.reactivestreams.Subscription
+import java.util.Locale
 import java.util.UUID
 import java.util.concurrent.Callable
 
-@Suppress("MaxLineLength")
 /**
  * A storage service to write data from a Vertx `Pipe` to a Google cloud store.
  *
@@ -50,50 +48,55 @@ import java.util.concurrent.Callable
  * @version 1.0.1
  * @property dao The data access object to write an uploads' metadata.
  * @property vertx A Vertx instance of the current Vertx environment.
- * @property credentials The Google Cloud [Credentials] used to authenticate with Google Cloud Storage.
- * For information on how to acquire such an instance see the [Google Cloud documentation]
- * (https://github.com/googleapis/google-auth-library-java/blob/040acefec507f419f6e4ec4eab9645a6e3888a15/samples/snippets/src/main/java/AuthenticateExplicit.java).
- * @property projectIdentifier The Google Cloud project identifier used by this service.
- * @property bucketName The Google Cloud Storage bucket name used to store data to.
+ *
  */
 class GoogleCloudStorageService(
     private val dao: Database,
     private val vertx: Vertx,
-    private val credentials: Credentials,
-    private val projectIdentifier: String,
-    private val bucketName: String
+    private val cloudStorageFactory: CloudStorageFactory
 ) : DataStorageService {
 
     override fun store(
         pipe: Pipe<Buffer>,
-        user: User,
-        contentRange: ContentRange,
-        uploadIdentifier: UUID,
-        metaData: RequestMetaData
+        uploadMetaData: UploadMetaData
     ): Future<Status> {
         val ret = Promise.promise<Status>()
         val targetStream = ReactiveWriteStream.writeStream<Buffer>(Vertx.vertx())
-        val cloud = createStorage(uploadIdentifier)
+        val uploadIdentifier = uploadMetaData.uploadIdentifier
+        val cloud = cloudStorageFactory.create(uploadIdentifier)
         val subscriber = CloudStorageSubscriber<Buffer>(cloud)
 
         targetStream.subscribe(subscriber)
         pipe.to(targetStream).onSuccess {
             // if finished store the metadata to Mongo and delete the tmp file.
-            if (cloud.bytesUploaded() == contentRange.totalBytes) {
+            val bytesUploaded = cloud.bytesUploaded()
+            val contentRange = uploadMetaData.contentRange
+            if (bytesUploaded != contentRange.toIndex + 1) {
+                ret.fail(
+                    ContentRangeNotMatchingFileSize(
+                        String.format(
+                            Locale.getDefault(),
+                            "Response: 500, Content-Range ({}) not matching file size ({})",
+                            contentRange,
+                            bytesUploaded
+                        )
+                    )
+                )
+            } else if (contentRange.totalBytes == contentRange.toIndex + 1) {
                 ret.complete(
                     Status(
                         uploadIdentifier,
                         StatusType.COMPLETE,
-                        contentRange.toIndex - contentRange.fromIndex
+                        bytesUploaded
                     )
                 )
-                dao.storeMetadata(metaData)
+                dao.storeMetadata(uploadMetaData.metaData)
             } else {
                 ret.complete(
                     Status(
                         uploadIdentifier,
                         StatusType.INCOMPLETE,
-                        contentRange.toIndex - contentRange.fromIndex
+                        bytesUploaded
                     )
                 )
             }
@@ -105,7 +108,7 @@ class GoogleCloudStorageService(
     override fun bytesUploaded(uploadIdentifier: UUID): Future<Long> {
         return vertx.executeBlocking(
             Callable {
-                val cloud = createStorage(uploadIdentifier)
+                val cloud = cloudStorageFactory.create(uploadIdentifier)
                 cloud.bytesUploaded()
             }
         )
@@ -114,7 +117,7 @@ class GoogleCloudStorageService(
     override fun clean(uploadIdentifier: UUID): Future<Void> {
         return vertx.executeBlocking(
             Callable {
-                val cloud = createStorage(uploadIdentifier)
+                val cloud = cloudStorageFactory.create(uploadIdentifier)
                 cloud.delete()
                 return@Callable null
             }
@@ -139,13 +142,6 @@ class GoogleCloudStorageService(
         See: https://stackoverflow.com/questions/55337912/is-it-possible-to-query-google-cloud-storage-custom-metadata
          */
         return dao.exists(deviceId, measurementId)
-    }
-
-    /**
-     * Create the actual storage instance used to communicate with the Google Cloud.
-     */
-    private fun createStorage(uploadIdentifier: UUID): GoogleCloudStorage {
-        return GoogleCloudStorage(credentials, projectIdentifier, bucketName, uploadIdentifier)
     }
 }
 

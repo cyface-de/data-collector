@@ -7,12 +7,22 @@ import java.util.Locale
 
 /**
  * The content range information as transmitted by the request header.
+ * It consists of the range of bytes uploaded and the total amount of bytes in this upload.
+ *
+ * The range of bytes (`fromIndex`...`toIndex`) does not necessarily cover all the bytes from `totalBytes`.
+ * If an upload is done in chunks, the range might actually be some fraction from somewhere in the middle of the data.
+ *
+ * For example:
+ * ```kotlin
+ * ContentRange(2L, 5L, 20L) // Upload Bytes 2, 3, 4 and 5 of 20 total bytes with this request.
+ * ContentRange(0L, 4L, 5L) // Upload all five bytes (0, 1, 2, 3 and 4) of the five total bytes of this request.
+ * ```
  *
  * @author Armin Schnabel
  * @version 1.0.0
  * @since 6.0.0
  * @property fromIndex The zero based byte index to start the content range at (including).
- * @property toIndex The zero based byte index to end the content range at (excluding).
+ * @property toIndex The zero based byte index to end the content range at (including).
  * @property totalBytes The total amount of bytes of the document to upload.
  */
 data class ContentRange(val fromIndex: Long, val toIndex: Long, val totalBytes: Long) {

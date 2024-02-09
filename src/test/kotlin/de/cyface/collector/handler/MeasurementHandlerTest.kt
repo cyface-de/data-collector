@@ -22,6 +22,7 @@ import de.cyface.collector.model.ContentRange
 import de.cyface.collector.model.User
 import de.cyface.collector.storage.DataStorageService
 import de.cyface.collector.storage.Status
+import de.cyface.collector.storage.UploadMetaData
 import io.vertx.core.Future
 import io.vertx.core.Handler
 import io.vertx.core.MultiMap
@@ -45,6 +46,7 @@ import org.mockito.kotlin.mock
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import java.util.UUID
+import kotlin.test.assertEquals
 
 @ExtendWith(MockitoExtension::class)
 class MeasurementHandlerTest {
@@ -126,7 +128,7 @@ class MeasurementHandlerTest {
         val mockBytesUploadedCall = mock<Future<Long>> {}
         whenever(mockStorageService.bytesUploaded(any())).thenReturn(mockBytesUploadedCall)
         val mockStoreCall = mock<Future<Status>> {}
-        whenever(mockStorageService.store(any(), any(), any(), any(), any())).thenReturn(mockStoreCall)
+        whenever(mockStorageService.store(any<Pipe<Buffer>>(), any<UploadMetaData>())).thenReturn(mockStoreCall)
 
         // Act
         oocut.handle(mockRoutingContext)
@@ -168,7 +170,12 @@ class MeasurementHandlerTest {
         oocut.handle(mockRoutingContext)
 
         // Assert
-        verify(mockStorageService).store(eq(mockPipe), eq(mockUser), eq(ContentRange(0L, 9L, 10L)), any(), any())
+        argumentCaptor<UploadMetaData> {
+            verify(mockStorageService).store(eq(mockPipe), capture())
+
+            assertEquals(mockUser, firstValue.user)
+            assertEquals(ContentRange(0L, 9L, 10L), firstValue.contentRange)
+        }
     }
 
     private fun metadata(

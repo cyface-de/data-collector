@@ -24,5 +24,6 @@ package de.cyface.collector.storage.exception
  *
  * @author Klemens Muthmann
  * @version 1.0.0
+ * @constructor Provide an explanation for the error via the `format` parameter.
  */
-class ContentRangeNotMatchingFileSize : Exception()
+class ContentRangeNotMatchingFileSize(format: String) : Exception(format)

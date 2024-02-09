@@ -23,6 +23,7 @@ import de.cyface.collector.model.RequestMetaData
 import de.cyface.collector.model.RequestMetaData.GeoLocation
 import de.cyface.collector.model.User
 import de.cyface.collector.storage.StatusType
+import de.cyface.collector.storage.UploadMetaData
 import io.vertx.core.Future
 import io.vertx.core.Handler
 import io.vertx.core.buffer.Buffer
@@ -56,7 +57,7 @@ import java.util.concurrent.TimeUnit
  * @author Klemens Muthmann
  * @version 1.0.1
  */
-class GridFSStorageTest {
+class GridFSStorageServiceTest {
     // Explicit Type Arguments are required by Mockito.
     @Suppress("RemoveExplicitTypeArguments", "RedundantSuppression")
     @Test
@@ -117,12 +118,14 @@ class GridFSStorageTest {
 
         // Act
         val countDownLatch = CountDownLatch(1)
-        val result = oocut.store(mockPipe, user, contentRange, uploadIdentifier, metaData)
+        val uploadMetaData = UploadMetaData(user, contentRange, uploadIdentifier, metaData)
+        val result = oocut.store(mockPipe, uploadMetaData)
         result.onFailure { cause ->
             fail("Failed Storing test data", cause)
         }
         result.onSuccess {
             assertThat(it.type, `is`(StatusType.COMPLETE))
+            assertThat(it.byteSize, `is`(5L))
             countDownLatch.countDown()
         }
 
@@ -236,9 +239,12 @@ class GridFSStorageTest {
         val oocut = GridFsStorageService(mockDao, mockFileSystem, Path.of("upload-folder"))
 
         // Act
-        val storeCall01 = oocut.store(mockPipe, mockUser, contentRange01, uploadIdentifier, metaData)
-        val storeCall02 = oocut.store(mockPipe, mockUser, contentRange02, uploadIdentifier, metaData)
-        val storeCall03 = oocut.store(mockPipe, mockUser, contentRange03, uploadIdentifier, metaData)
+        val uploadMetaData01 = UploadMetaData(mockUser, contentRange01, uploadIdentifier, metaData)
+        val storeCall01 = oocut.store(mockPipe, uploadMetaData01)
+        val uploadMetaData02 = UploadMetaData(mockUser, contentRange02, uploadIdentifier, metaData)
+        val storeCall02 = oocut.store(mockPipe, uploadMetaData02)
+        val uploadMetaData03 = UploadMetaData(mockUser, contentRange03, uploadIdentifier, metaData)
+        val storeCall03 = oocut.store(mockPipe, uploadMetaData03)
 
         // Assert
         storeCall01.onSuccess { status ->
