@@ -35,15 +35,12 @@ import java.io.FileInputStream
  * @property projectIdentifier The identifier of the Google Cloud project containing the bucket to store the data.
  * @property bucketName The Google Cloud storage bucket to store the data in.
  * @property credentialsFile The location of a file containing the credentials to authenticate with the Google Cloud.
- * @property pagingSize Paging size used by request to the Google Cloud Storage service. This influences how many files
- * are returned via a single request.
  */
 data class GoogleCloudStorageType(
     val collectionName: String,
     val projectIdentifier: String,
     val bucketName: String,
-    val credentialsFile: String,
-    val pagingSize: Long
+    val credentialsFile: String
 ) : StorageType {
     override fun dataStorageServiceBuilder(vertx: Vertx, mongoClient: MongoClient): DataStorageServiceBuilder {
         val credentials = FileInputStream(credentialsFile).use { stream -> GoogleCredentials.fromStream(stream) }
@@ -53,8 +50,7 @@ data class GoogleCloudStorageType(
             projectIdentifier,
             bucketName,
             dao,
-            vertx,
-            pagingSize
+            vertx
         )
     }
 }

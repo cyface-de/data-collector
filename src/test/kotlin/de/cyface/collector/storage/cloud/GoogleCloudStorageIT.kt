@@ -44,20 +44,32 @@ class GoogleCloudStorageIT {
     /**
      * You must set this before running this test.
      *
-     * See https://cloud.google.com/storage/docs/reference/libraries#client-libraries-install-java
+     * See Readme > Running a Google Cloud Store for Data.
      */
-    val credentialsFileLocation: String? = null
+    // Set absolute path of the json file containing the credentials of
+    // - your Google Cloud Admin Account (Development Environment)
+    // - or the file with the private key of the Service Account (Production Environment)
+    private val credentialsFileLocation: String? = null
+    private val projectIdentifier: String? = null // Set the id of the Google Cloud project here
+    private val bucketName: String? = null // set name of the Google Cloud Storage bucket here
 
     @BeforeEach
     fun setUp() {
-        // Authentication can be achieved following the Google Documentation: https://cloud.google.com/storage/docs/reference/libraries#client-libraries-install-java
+        // Authentication can be achieved following the Google Documentation:
+        // https://cloud.google.com/storage/docs/reference/libraries#client-libraries-install-java
         if (credentialsFileLocation.isNullOrEmpty()) {
             fail("Please set CREDENTIALS_FILE_LOCATION before running this test!")
+        }
+        if (projectIdentifier.isNullOrEmpty()) {
+            fail("Please set PROJECT_IDENTIFIER before running this test!")
+        }
+        if (bucketName.isNullOrEmpty()) {
+            fail("Please set BUCKET_NAME before running this test!")
         }
         val credentials = FileInputStream(credentialsFileLocation).use { stream ->
             GoogleCredentials.fromStream(stream)
         }
-        storage = GoogleCloudStorage(credentials, "cyface-test", "cyface-bucket", UUID.randomUUID())
+        storage = GoogleCloudStorage(credentials, projectIdentifier, bucketName, UUID.randomUUID())
     }
 
     @AfterEach

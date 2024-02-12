@@ -102,6 +102,33 @@ Collector provides the possibility to use Google Cloud Storage for storing recei
 You may configure this as explained in the section about valid arguments.
 Notice however that a Mongo database is still required to store user data for authentication and authorization as explained above.
 
+###### Development Environment
+
+You can use your Google Admin Account to test the Google Cloud Storage locally.
+
+1. [Install gcloud CLI](https://cloud.google.com/sdk/docs/install?hl=de#deb)
+   a. Confirm with `y` to log in with your Google Cloud Admin Account
+   b. Pick a Google Cloud Project, e.g. `Object Storage Staging`
+   c. Use the default compute region and zone.
+   d. The result of the previous step is a `.boto` file.
+2. Now [log into](https://cloud.google.com/storage/docs/reference/libraries#client-libraries-install-java) your Account with the `gcloud` shell
+   a. `gcloud auth application-default login`
+   b. You may ignore if the following error occurs: `RESOURCE_EXHAUSTED: Quota exceeded`
+   c. The result is `~/.config/gcloud/application_default_credentials.json`  
+3. Link the credentials file in the Collector
+   a. Set `credentialsFileLocation=/home/user/..._credentials.json` 
+
+###### Production Environment
+
+The production uses a Service Account to upload data to the Google Cloud Storage.
+The credentials are stored at the typical location under `Development > Google Cloud`.
+For more details about how to set up a Service Account, see `Confluence > Google Object Storage`.
+
+1. Link the private key from the service account `json` key in the Collector 
+   a. Set `credentialsFileLocation=/home/.../object-storage-412713-***.json`
+2. Test by executing the `GoogleCloudStorageIT` Test.
+   a. Comment `@Ignore` out. 
+
 #### Data Collector Arguments
 The Cyface data collector requires a few parameters to fine tune the runtime.
 The parameters are provided using the typical [Vertx `-conf` parameter](https://vertx.io/docs/vertx-core/java/#_the_vertx_command_line) with a value in JSON notation.
@@ -125,7 +152,6 @@ The following parameters are supported:
     * **project-identifier:** A Google Cloud Storage project identifier to where the upload bucket is located.
     * **bucket-name:** The Google Cloud Storage bucket name to load the data into.
     * **credentials-file:** A credentials file used to authenticate with the Google Cloud Storage account used to upload the data to the Cloud.
-    * **paging-size:** The number of buckets to load per request, when iterating through all the data uploaded. Large numbers require fewer requests but more memory.
 * **auth-type:** The type of authentication service to use. Currently, either `mocked` or `oauth` is supported. Defaults to `oauth`. Both require the following parameters:
   * **oauth.callback**: The callback URL you entered in your provider admin console. This defaults to `http://localhost:8080/callback`.
   * **oauth.client**: The name of the oauth client to contact. This defaults to `collector`.

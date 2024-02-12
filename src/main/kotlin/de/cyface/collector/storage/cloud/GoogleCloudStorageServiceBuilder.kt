@@ -42,10 +42,6 @@ import io.vertx.core.Vertx
  * @property bucketName The name of the Google Cloud Storage bucket used by the created builder to store data.
  * @property dao A data access object to store an uploads metadata.
  * @property vertx The Vertx instance this application runs on.
- * @property pagingSize A parameter used by Google Cloud for the amount of buckets returned per single request.
- * Higher numbers increase the possibility of failure, since requests and responses get larger, but also decrease the
- * number of requests necessary to carry out operations on the Cloud. On stable connections try high numbers on instable
- * ones try lower numbers.
  */
 class GoogleCloudStorageServiceBuilder(
     private val credentials: Credentials,
@@ -53,7 +49,6 @@ class GoogleCloudStorageServiceBuilder(
     private val bucketName: String,
     private val dao: Database,
     private val vertx: Vertx,
-    private val pagingSize: Long
 ) : DataStorageServiceBuilder {
     override fun create(): Future<DataStorageService> {
         val ret = Promise.promise<DataStorageService>()
@@ -67,6 +62,6 @@ class GoogleCloudStorageServiceBuilder(
     override fun createCleanupOperation(): CleanupOperation {
         val storage = StorageOptions.newBuilder().setCredentials(credentials)
             .setProjectId(projectIdentifier).build().service
-        return GoogleCloudCleanupOperation(storage, pagingSize)
+        return GoogleCloudCleanupOperation(storage, bucketName)
     }
 }
