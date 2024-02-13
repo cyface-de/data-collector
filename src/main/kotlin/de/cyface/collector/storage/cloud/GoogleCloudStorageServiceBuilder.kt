@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Cyface GmbH
+ * Copyright 2022-2024 Cyface GmbH
  *
  * This file is part of the Serialization.
  *
@@ -34,7 +34,7 @@ import io.vertx.core.Vertx
  * A [DataStorageServiceBuilder] for a [GoogleCloudStorageService].
  *
  * @author Klemens Muthmann
- * @version 1.0.0
+ * @version 1.0.1
  * @property credentials The Google Cloud [Credentials] used to authenticate with Google Cloud Storage.
  * For information on how to acquire such an instance see the [Google Cloud documentation]
  * (https://github.com/googleapis/google-auth-library-java/blob/040acefec507f419f6e4ec4eab9645a6e3888a15/samples/snippets/src/main/java/AuthenticateExplicit.java).
@@ -53,7 +53,8 @@ class GoogleCloudStorageServiceBuilder(
     override fun create(): Future<DataStorageService> {
         val ret = Promise.promise<DataStorageService>()
         vertx.runOnContext {
-            ret.complete(GoogleCloudStorageService(dao, vertx, credentials, projectIdentifier, bucketName))
+            val cloudStorageFactory = GoogleCloudStorageFactory(credentials, projectIdentifier, bucketName)
+            ret.complete(GoogleCloudStorageService(dao, vertx, cloudStorageFactory))
         }
         return ret.future()
     }

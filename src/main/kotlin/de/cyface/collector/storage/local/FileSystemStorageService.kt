@@ -1,5 +1,5 @@
 /*
- * Copyright 2022-2023 Cyface GmbH
+ * Copyright 2022-2024 Cyface GmbH
  *
  * This file is part of the Cyface Data Collector.
  *
@@ -18,12 +18,10 @@
  */
 package de.cyface.collector.storage.local
 
-import de.cyface.collector.model.ContentRange
-import de.cyface.collector.model.RequestMetaData
-import de.cyface.collector.model.User
 import de.cyface.collector.storage.CleanupOperation
 import de.cyface.collector.storage.DataStorageService
 import de.cyface.collector.storage.Status
+import de.cyface.collector.storage.UploadMetaData
 import io.vertx.core.Future
 import io.vertx.core.Vertx
 import io.vertx.core.buffer.Buffer
@@ -36,7 +34,7 @@ import java.util.UUID
  * On clustered Vert.x repeating uploads is not going to work.
  *
  * @author Klemens Muthmann
- * @version 1.0.1
+ * @version 2.0.0
  * @property vertx The Vert.x instance used to access the data and the file system.
  */
 @Suppress("unused")
@@ -44,10 +42,7 @@ class FileSystemStorageService(val vertx: Vertx) : DataStorageService {
 
     override fun store(
         pipe: Pipe<Buffer>,
-        user: User,
-        contentRange: ContentRange,
-        uploadIdentifier: UUID,
-        metaData: RequestMetaData
+        uploadMetaData: UploadMetaData
     ): Future<Status> {
         @Suppress("UnusedPrivateMember", "UNUSED_VARIABLE")
         val vertxFileSystem = vertx.fileSystem()

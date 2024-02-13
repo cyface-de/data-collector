@@ -1,5 +1,5 @@
 /*
- * Copyright 2022-2023 Cyface GmbH
+ * Copyright 2022-2024 Cyface GmbH
  *
  * This file is part of the Cyface Data Collector.
  *
@@ -37,26 +37,19 @@ import java.util.UUID
  * and to ask for status information. After an upload is complete, the `uploadIdentifier` becomes invalid.
  *
  * @author Klemens Muthmann
- * @version 1.0.1
+ * @version 3.0.0
  */
 interface DataStorageService {
     /**
      * Stores the data provided via the `pipe`.
      *
      * @param pipe A Vert.x `Pipe` with the data to upload.
-     * @param user The user who took the measurement.
-     * @param contentRange The content range of the uploaded data as provided by the content-range HTTP header.
-     * @param uploadIdentifier The cluster wide unique identifier of the upload.
-     * @param metaData Meta information provided alongside the measurement, to get insights into the measurement,
-     * without the need to deserialize the data.
+     * @param uploadMetaData Information required to store the uploaded data properly.
      * @return A `Future` providing the ``Status`` of the upload, when it has finished.
      */
     fun store(
         pipe: Pipe<Buffer>,
-        user: User,
-        contentRange: ContentRange,
-        uploadIdentifier: UUID,
-        metaData: RequestMetaData
+        uploadMetaData: UploadMetaData
     ): Future<Status>
 
     /**
@@ -97,3 +90,21 @@ interface DataStorageService {
      */
     fun isStored(deviceId: String, measurementId: Long): Future<Boolean>
 }
+
+/**
+ * A class summarizing the parameters required for data storage in addition to the raw data.
+ *
+ * @author Klemens Muthmann
+ * @version 1.0.0
+ * @property user The user who took the measurement.
+ * @property contentRange The content range of the uploaded data as provided by the content-range HTTP header.
+ * @property uploadIdentifier The cluster wide unique identifier of the upload.
+ * @property metaData Meta information provided alongside the measurement, to get insights into the measurement,
+ * without the need to deserialize the data.
+ */
+class UploadMetaData(
+    val user: User,
+    val contentRange: ContentRange,
+    val uploadIdentifier: UUID,
+    val metaData: RequestMetaData
+)

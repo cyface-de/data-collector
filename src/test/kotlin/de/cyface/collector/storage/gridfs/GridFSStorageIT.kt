@@ -1,5 +1,5 @@
 /*
- * Copyright 2022-2023 Cyface GmbH
+ * Copyright 2022-2024 Cyface GmbH
  *
  * This file is part of the Cyface Data Collector.
  *
@@ -25,6 +25,7 @@ import de.cyface.collector.model.ContentRange
 import de.cyface.collector.model.RequestMetaData
 import de.cyface.collector.model.User
 import de.cyface.collector.storage.StatusType
+import de.cyface.collector.storage.UploadMetaData
 import de.flapdoodle.embed.process.runtime.Network
 import io.vertx.core.Vertx
 import io.vertx.core.file.OpenOptions
@@ -49,7 +50,7 @@ import kotlin.test.assertNotNull
  * An integration test to check whether storing data to an embedded GridFS works as expected.
  *
  * @author Klemens Muthmann
- * @version 1.0.1
+ * @version 1.0.2
  */
 @ExtendWith(VertxExtension::class)
 class GridFSStorageIT {
@@ -102,12 +103,15 @@ class GridFSStorageIT {
                 val user = User(UUID.randomUUID(), "test-user")
                 val uploadIdentifier = UUID.randomUUID()
                 val contentRange = ContentRange(0L, 3L, 4L)
-                oocut.store(
-                    pipe,
+                val uploadMetaData = UploadMetaData(
                     user,
                     contentRange,
                     uploadIdentifier,
                     metaData
+                )
+                oocut.store(
+                    pipe,
+                    uploadMetaData
                 ).onComplete(
                     context.succeeding {
                         context.verify {

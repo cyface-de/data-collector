@@ -1,5 +1,5 @@
 /*
- * Copyright 2022-2023 Cyface GmbH
+ * Copyright 2022-2024 Cyface GmbH
  *
  * This file is part of the Cyface Data Collector.
  *
@@ -18,14 +18,12 @@
  */
 package de.cyface.collector.storage.gridfs
 
-import de.cyface.collector.model.ContentRange
 import de.cyface.collector.model.Measurement
-import de.cyface.collector.model.RequestMetaData
-import de.cyface.collector.model.User
 import de.cyface.collector.storage.CleanupOperation
 import de.cyface.collector.storage.DataStorageService
 import de.cyface.collector.storage.Status
 import de.cyface.collector.storage.StatusType
+import de.cyface.collector.storage.UploadMetaData
 import de.cyface.collector.storage.exception.ContentRangeNotMatchingFileSize
 import io.vertx.core.Future
 import io.vertx.core.Promise
@@ -48,7 +46,7 @@ import kotlin.io.path.name
  * A storage service to write the data to Mongo database Grid FS.
  *
  * @author Klemens Muthmann
- * @version 1.0.1
+ * @version 2.0.0
  * @property dao A data access object to communicate with GridFs.
  * @property fs The Vert.x file system, used to read the temporarily stored data, from the local disk.
  * @property uploadFolder Local folder to store temporary files,
@@ -63,23 +61,16 @@ class GridFsStorageService(
 
     override fun store(
         pipe: Pipe<Buffer>,
-        user: User,
-        contentRange: ContentRange,
-        uploadIdentifier: UUID,
-        metaData: RequestMetaData
+        uploadMetaData: UploadMetaData
     ): Future<Status> {
         val ret = Promise.promise<Status>()
-        val temporaryStorageFile = pathToTemporaryFile(uploadIdentifier)
+        val temporaryStorageFile = pathToTemporaryFile(uploadMetaData.uploadIdentifier)
         val fsOpenCall = fs.open(temporaryStorageFile.absolutePathString(), OpenOptions().setAppend(true))
         fsOpenCall.onSuccess { asyncFile ->
             val onTemporaryFileOpenedCall = onTemporaryFileOpened(
                 asyncFile,
-                contentRange,
-                uploadIdentifier,
                 pipe,
-                temporaryStorageFile,
-                metaData,
-                user
+                uploadMetaData
             )
             onTemporaryFileOpenedCall.onSuccess(ret::complete)
             onTemporaryFileOpenedCall.onFailure(ret::fail)
@@ -166,59 +157,22 @@ class GridFsStorageService(
      */
     private fun onTemporaryFileOpened(
         asyncFile: AsyncFile,
-        contentRange: ContentRange,
-        uploadIdentifier: UUID,
         pipe: Pipe<Buffer>,
-        temporaryStorageFile: Path,
-        metaData: RequestMetaData,
-        user: User
+        uploadMetaData: UploadMetaData
     ): Future<Status> {
         val ret = Promise.promise<Status>()
         // Pipe body to reduce memory usage and store body of interrupted connections (to support resume)
         val pipeToCall = pipe.to(asyncFile)
         pipeToCall.onSuccess {
             // Check if the upload is complete or if this was just a chunk
+            val temporaryStorageFile = pathToTemporaryFile(uploadMetaData.uploadIdentifier)
             val fsPropsCall = fs.props(temporaryStorageFile.toString())
-            fsPropsCall.onSuccess { props: FileProps ->
-
-                // Checking that the data was actually written successfully.
-                val byteSize = props.size()
-                if (byteSize - 1 != contentRange.toIndex) {
-                    LOGGER.error(
-                        "Response: 500, Content-Range ({}) not matching file size ({} - 1)",
-                        contentRange,
-                        byteSize
-                    )
-                    ret.fail(ContentRangeNotMatchingFileSize())
-                } else if (contentRange.toIndex != contentRange.totalBytes - 1) {
-                    // This was not the final chunk of data
-                    // Indicate that, e.g. for 100 received bytes, bytes 0-99 have been received
-                    val range = String.format(Locale.ENGLISH, "bytes=0-%d", byteSize - 1)
-                    LOGGER.debug("Response: 308, Range {}", range)
-                    ret.complete(Status(uploadIdentifier, StatusType.INCOMPLETE, byteSize))
-                } else {
-                    // Persist data
-                    val measurement =
-                        Measurement(metaData, user.idString, temporaryStorageFile.toFile())
-                    val storeToMongoDBResult = storeToMongoDB(measurement, temporaryStorageFile)
-                    storeToMongoDBResult.onSuccess {
-                        LOGGER.debug(
-                            "Stored measurement {}:{} under object id {}!",
-                            measurement.metaData.deviceIdentifier,
-                            measurement.metaData.measurementIdentifier,
-                            it.toString()
-                        )
-                        ret.complete(Status(uploadIdentifier, StatusType.COMPLETE, byteSize))
-                    }
-                    storeToMongoDBResult.onFailure {
-                        LOGGER.debug(
-                            "Failed to store measurement {}:{}!",
-                            measurement.metaData.deviceIdentifier,
-                            measurement.metaData.measurementIdentifier
-                        )
-                        ret.fail(it)
-                    }
-                }
+            fsPropsCall.onSuccess {
+                onFilePropsLoaded(
+                    it,
+                    ret,
+                    uploadMetaData
+                )
             }
             fsPropsCall.onFailure { cause: Throwable ->
                 LOGGER.error("Response: 500, failed to read props from temp file")
@@ -230,6 +184,67 @@ class GridFsStorageService(
             ret.fail(cause)
         }
         return ret.future()
+    }
+
+    /**
+     * Handles storage of data that is already inside temporary storage on the local disc.
+     */
+    private fun onFilePropsLoaded(
+        props: FileProps,
+        promise: Promise<Status>,
+        uploadMetaData: UploadMetaData
+    ) {
+        // Checking that the data was actually written successfully.
+        val byteSize = props.size()
+        val contentRange = uploadMetaData.contentRange
+        val uploadIdentifier = uploadMetaData.uploadIdentifier
+        if (byteSize - 1 != contentRange.toIndex) {
+            LOGGER.error(
+                "Response: 500, Content-Range ({}) not matching file size ({} - 1)",
+                contentRange,
+                byteSize
+            )
+            promise.fail(
+                ContentRangeNotMatchingFileSize(
+                    String.format(
+                        Locale.getDefault(),
+                        "Response: 500, Content-Range (%s) not matching file size (%d - 1)",
+                        contentRange,
+                        byteSize
+                    )
+                )
+            )
+        } else if (contentRange.toIndex != contentRange.totalBytes - 1) {
+            // This was not the final chunk of data
+            // Indicate that, e.g. for 100 received bytes, bytes 0-99 have been received
+            LOGGER.debug("Response: 308, Range bytes=0-{}", byteSize - 1)
+            promise.complete(Status(uploadIdentifier, StatusType.INCOMPLETE, byteSize))
+        } else {
+            // Persist data
+            val temporaryStorageFile = pathToTemporaryFile(uploadIdentifier)
+            val metaData = uploadMetaData.metaData
+            val user = uploadMetaData.user
+            val measurement =
+                Measurement(metaData, user.idString, temporaryStorageFile.toFile())
+            val storeToMongoDBResult = storeToMongoDB(measurement, temporaryStorageFile)
+            storeToMongoDBResult.onSuccess {
+                LOGGER.debug(
+                    "Stored measurement {}:{} under object id {}!",
+                    measurement.metaData.deviceIdentifier,
+                    measurement.metaData.measurementIdentifier,
+                    it.toString()
+                )
+                promise.complete(Status(uploadIdentifier, StatusType.COMPLETE, byteSize))
+            }
+            storeToMongoDBResult.onFailure {
+                LOGGER.debug(
+                    "Failed to store measurement {}:{}!",
+                    measurement.metaData.deviceIdentifier,
+                    measurement.metaData.measurementIdentifier
+                )
+                promise.fail(it)
+            }
+        }
     }
 
     companion object {

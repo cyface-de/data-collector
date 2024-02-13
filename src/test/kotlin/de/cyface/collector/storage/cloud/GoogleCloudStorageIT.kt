@@ -21,9 +21,9 @@ package de.cyface.collector.storage.cloud
 import com.google.auth.oauth2.GoogleCredentials
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Disabled
 import java.io.FileInputStream
 import java.util.UUID
-import kotlin.test.Ignore
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.fail
@@ -34,9 +34,9 @@ import kotlin.test.fail
  * As this test communicates with the Google Cloud it is ignored by default.
  *
  * @author Klemens Muthmann
- * @version 1.0.0
+ * @version 1.0.1
  */
-@Ignore
+@Disabled("This actually uploads data to the Google Cloud and should only be used if parameters are set correctly.")
 class GoogleCloudStorageIT {
 
     lateinit var storage: GoogleCloudStorage

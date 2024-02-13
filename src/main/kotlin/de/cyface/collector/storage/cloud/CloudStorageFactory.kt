@@ -1,5 +1,5 @@
 /*
- * Copyright 2022-2024 Cyface GmbH
+ * Copyright 2024 Cyface GmbH
  *
  * This file is part of the Cyface Data Collector.
  *
@@ -16,14 +16,21 @@
  * You should have received a copy of the GNU General Public License
  * along with the Cyface Data Collector. If not, see <http://www.gnu.org/licenses/>.
  */
-package de.cyface.collector.storage.exception
+package de.cyface.collector.storage.cloud
+
+import java.util.UUID
 
 /**
- * An `Exception` thrown when the provided content range of an uploaded file does not correspond to the content range,
- * provided via the HTTP header.
+ * An abstraction for the creation of a `CloudStorage` implementation.
+ * This is most useful to mock the instance for testing purposes, where no actual communication with the cloud is
+ * desired.
  *
  * @author Klemens Muthmann
- * @version 1.0.1
- * @constructor Provide an explanation for the error via the `format` parameter.
+ * @version 1.0.0
  */
-class ContentRangeNotMatchingFileSize(format: String) : Exception(format)
+fun interface CloudStorageFactory {
+    /**
+     * Build a new `CloudStorage` instance.
+     */
+    fun create(uploadIdentifier: UUID): CloudStorage
+}
