@@ -27,6 +27,7 @@ import java.util.UUID
  *
  * @author Klemens Muthmann
  * @version 1.0.0
+ * @since 7.1.1
  */
 fun interface CloudStorageFactory {
     /**
