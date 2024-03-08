@@ -208,7 +208,6 @@ class CollectorApiVerticle(
         val preRequestBodyHandler = BodyHandler.create().setBodyLimit(BYTES_IN_ONE_KILOBYTE)
         router.post(MEASUREMENTS_ENDPOINT)
             .consumes("application/json; charset=UTF-8")
-            .handler(LoggerHandler.create())
             // Read request body only once and before async calls or pause/resume must be used see [DAT-749]
             .handler(preRequestBodyHandler)
             .handler(oauth2Handler)
@@ -239,7 +238,6 @@ class CollectorApiVerticle(
         router.putWithRegex(String.format(Locale.ENGLISH, "\\%s\\/\\([a-z0-9]{32}\\)\\/", MEASUREMENTS_ENDPOINT))
             .consumes("application/octet-stream")
             // Not using BodyHandler as the `request.body()` can only be read once and the {@code #handler} does so.
-            .handler(LoggerHandler.create())
             .handler(oauth2Handler)
             .handler(authorizationHandler)
             .handler(MeasurementHandler(storageService, measurementHandler))
