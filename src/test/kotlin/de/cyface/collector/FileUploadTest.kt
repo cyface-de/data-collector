@@ -52,7 +52,7 @@ import kotlin.test.assertNotNull
  *
  * @author Klemens Muthmann
  * @author Armin Schnabel
- * @version 4.1.1
+ * @version 4.1.2
  * @since 2.0.0
  */
 // This warning is suppressed since it is wrong for Vert.x Tests.
@@ -560,16 +560,12 @@ class FileUploadTest {
         deviceId: String,
         handler: Handler<AsyncResult<HttpResponse<Buffer?>>>
     ) {
-        val authToken = "eyTestToken"
-
         val testFileResource = this.javaClass.getResource(testFileResourceName)
         assertNotNull(testFileResource)
 
         // Upload data (4 Bytes of data)
         val path = requestUri.substring(requestUri.indexOf("/api"))
         val builder = client.put(collectorClient.port, "localhost", path)
-        val jwtBearer = "Bearer $authToken"
-        builder.putHeader("Authorization", jwtBearer)
         builder.putHeader("Accept-Encoding", "gzip")
         builder.putHeader("Content-Range", String.format(Locale.ENGLISH, "bytes %d-%d/%d", from, to, total))
         builder.putHeader("User-Agent", "Google-HTTP-Java-Client/1.39.2 (gzip)")
