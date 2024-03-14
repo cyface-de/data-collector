@@ -18,6 +18,8 @@
  */
 package de.cyface.collector.storage.exception
 
+import java.util.Objects
+
 /**
  * An `Exception` thrown when the provided content range of an uploaded file does not correspond to the content range,
  * provided via the HTTP header.
@@ -26,4 +28,14 @@ package de.cyface.collector.storage.exception
  * @version 1.0.1
  * @constructor Provide an explanation for the error via the `format` parameter.
  */
-class ContentRangeNotMatchingFileSize(format: String) : Exception(format)
+class ContentRangeNotMatchingFileSize(format: String) : Exception(format) {
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other !is ContentRangeNotMatchingFileSize) return false
+        return this.message == other.message
+    }
+
+    override fun hashCode(): Int {
+        return Objects.hash(javaClass.hashCode(), message)
+    }
+}

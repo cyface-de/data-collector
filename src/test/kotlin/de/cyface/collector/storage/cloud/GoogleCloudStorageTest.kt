@@ -27,11 +27,13 @@ import de.cyface.collector.model.RequestMetaData
 import de.cyface.collector.model.User
 import de.cyface.collector.storage.StatusType
 import de.cyface.collector.storage.UploadMetaData
+import de.cyface.collector.storage.exception.ContentRangeNotMatchingFileSize
 import io.vertx.core.Future
 import io.vertx.core.Handler
 import io.vertx.core.Vertx
 import io.vertx.core.buffer.Buffer
 import io.vertx.core.streams.Pipe
+import io.vertx.core.streams.WriteStream
 import io.vertx.ext.reactivestreams.ReactiveWriteStream
 import org.mockito.kotlin.any
 import org.mockito.kotlin.argumentCaptor
@@ -208,6 +210,51 @@ class GoogleCloudStorageTest {
         // Assert
         verify(mockStorage).delete(testTemporaryFile)
         verify(mockStorage).delete(testDataFile)
+    }
+
+    /**
+     * Tests that uploading a file with a wrong size actually produces the correct error message.
+     */
+    @Test
+    fun `A Mismatch between file size and content range should fail`() {
+        // Arrange
+        val database: Database = mock()
+        val vertx: Vertx = mock()
+        val mockCloudStorage: CloudStorage = mock {
+            on { bytesUploaded() } doReturn 4
+        }
+        val cloudStorageFactory: CloudStorageFactory = mock {
+            on { create(any<UUID>()) } doReturn mockCloudStorage
+        }
+        val oocut = GoogleCloudStorageService(database, vertx, cloudStorageFactory)
+        val mockToFuture: Future<Void> = mock()
+        val mockPipe: Pipe<Buffer> = mock {
+            on { to(any<WriteStream<Buffer>>()) } doReturn mockToFuture
+        }
+        val metadata: UploadMetaData = mock {
+            on { contentRange } doReturn ContentRange(5, 7, 3)
+            on { uploadIdentifier } doReturn UUID.randomUUID()
+        }
+
+        // Act
+        val result = oocut.store(mockPipe, metadata)
+
+        // Assert
+        argumentCaptor<Handler<Void>> {
+            verify(mockToFuture).onSuccess(capture())
+
+            firstValue.handle(null)
+        }
+        assertTrue(result.isComplete)
+        assertTrue(result.failed())
+        assertEquals(
+            ContentRangeNotMatchingFileSize(
+                """
+                Response: 500, Content-Range (ContentRange(fromIndex=5, toIndex=7, totalBytes=3)) not matching file size (4)
+                """.trim()
+            ),
+            result.cause(),
+        )
     }
 
     /**
