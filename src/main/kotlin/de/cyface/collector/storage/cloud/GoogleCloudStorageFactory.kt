@@ -26,6 +26,7 @@ import java.util.UUID
  *
  * @author Klemens Muthmann
  * @version 1.0.0
+ * @since 7.1.1
  * @property credentials The Google Cloud [Credentials] used to authenticate with Google Cloud Storage.
  * For information on how to acquire such an instance see the [Google Cloud documentation]
  * (https://github.com/googleapis/google-auth-library-java/blob/040acefec507f419f6e4ec4eab9645a6e3888a15/samples/snippets/src/main/java/AuthenticateExplicit.java).
