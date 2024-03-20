@@ -122,7 +122,7 @@ paths:
               schema:
                 type: string
                 example: 0
-              description: Only useful in when a resume position is returned by the server (not yet supported).
+              description: Only useful when a resume position is returned by the server.
         '400':
           description: Unknown error for example if Web server reports status -1 or the client experienced a synchronisation error.
         '302':
@@ -146,7 +146,7 @@ paths:
 
   /measurements/({sessionId})/:
     put:
-      summary: Measurement upload request.
+      summary: Measurement upload request. You can either provide the data to upload or send an empty request to get the current state of the upload. Based on this state you can decide how the upload needs to start.
       operationId: uploadMeasurement
       security:
         - bearerAuth: []
@@ -268,7 +268,7 @@ paths:
             type: string
             example: 3
       requestBody:
-        required: true
+        required: false
         content:
           'application/octet-stream':
             schema:
@@ -276,12 +276,30 @@ paths:
               format: binary
 
       responses:
+        '200':
+          description: For a successful Status Request on an already completely uploaded measurement.
         '201':
           description: When the upload was successful.
         '400':
           description: Unknown error for example if Web server reports status -1 or the client experienced a synchronisation error.
         '302':
           description: No Authorization information provided. This request requires a valid JWT token to continue.
+        '308':
+          description: Respond to a Status Request with the content range to submit next or no content-range if no part of the measurement has been transmitted yet.
+          headers:
+            Content-Length:
+              schema:
+                type: integer
+                example: 0
+              description: Should be always 0 in this case as no content is delivered.
+              required: true
+            Range:
+              schema:
+                type: string
+                example: bytes=0-12
+                required: false
+              description: The range of bytes from the whole serialized measurement to upload next.
+              required: false
         '401':
           description: Invalid authorization information provided. This request requires a valid JWT token to continue.
         '403':

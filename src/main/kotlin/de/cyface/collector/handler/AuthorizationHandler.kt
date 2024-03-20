@@ -33,7 +33,7 @@ import java.util.UUID
  *
  * @author Klemens Muthmann
  * @author Armin Schnabel
- * @version 2.0.1
+ * @version 2.0.2
  */
 class AuthorizationHandler : Handler<RoutingContext> {
     override fun handle(context: RoutingContext) {
@@ -44,9 +44,11 @@ class AuthorizationHandler : Handler<RoutingContext> {
             LOGGER.debug("Request headers: {}", headers)
 
             // Inform next handler which user is authenticated
-            val username = Oauth2Credentials(context.user().principal()).username
+            val contextUser = context.user()
+            val principal = contextUser.principal()
+            val username = Oauth2Credentials(principal).username
             // The "sub" is the subject claim which represents the unique id of the authenticated user.
-            val uuid = context.user().principal().getString("sub")
+            val uuid = principal.getString("sub")
             val user = User(UUID.fromString(uuid), username)
             context.put("logged-in-user", user)
 

@@ -48,7 +48,7 @@ import io.vertx.junit5.VertxTestContext;
  *
  * @author Klemens Muthmann
  * @author Armin Schnabel
- * @version 3.1.0
+ * @version 3.1.1
  * @since 1.0.0
  */
 @ExtendWith(VertxExtension.class)
@@ -86,7 +86,6 @@ public final class RequestTest {
      * @param ctx The test context used to control the test <code>Vertx</code>
      * @throws IOException Fails the test if anything unexpected goes wrong
      */
-    @SuppressWarnings("JUnitMalformedDeclaration")
     @BeforeEach
     public void deployVerticle(final Vertx vertx, final VertxTestContext ctx) throws IOException {
         collectorClient = new DataCollectorClient();
