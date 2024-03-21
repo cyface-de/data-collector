@@ -67,7 +67,8 @@ class GoogleCloudStorageService(
         val subscriber = CloudStorageSubscriber<Buffer>(cloud)
 
         targetStream.subscribe(subscriber)
-        pipe.to(targetStream).onSuccess {
+        val pipeToProcess = pipe.to(targetStream)
+        pipeToProcess.onSuccess {
             // if finished store the metadata to Mongo and delete the tmp file.
             val bytesUploaded = cloud.bytesUploaded()
             val contentRange = uploadMetaData.contentRange
@@ -76,7 +77,7 @@ class GoogleCloudStorageService(
                     ContentRangeNotMatchingFileSize(
                         String.format(
                             Locale.getDefault(),
-                            "Response: 500, Content-Range ({}) not matching file size ({})",
+                            "Response: 500, Content-Range (%s) not matching file size (%s)",
                             contentRange,
                             bytesUploaded
                         )
@@ -100,7 +101,8 @@ class GoogleCloudStorageService(
                     )
                 )
             }
-        }.onFailure(ret::fail)
+        }
+        pipeToProcess.onFailure(ret::fail)
 
         return ret.future()
     }
