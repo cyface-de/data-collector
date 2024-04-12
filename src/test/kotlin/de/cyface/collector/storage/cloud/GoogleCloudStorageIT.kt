@@ -82,12 +82,14 @@ class GoogleCloudStorageIT {
         // Act
         storage.write(byteArrayOf(0x01, 0x02, 0x03, 0x04, 0x05))
         storage.write(byteArrayOf(0x06, 0x07, 0x08))
+        storage.write(byteArrayOf(0x09, 0x10, 0x11, 0x12))
 
         // Assert
-        assertEquals(8L, storage.bytesUploaded())
+        assertEquals(12L, storage.bytesUploaded())
 
         val download = storage.download().use { stream -> stream.toByteArray() }
 
+        assertEquals(download.size, 12)
         assertEquals(0x01, download[0])
         assertEquals(0x02, download[1])
         assertEquals(0x03, download[2])
@@ -96,5 +98,9 @@ class GoogleCloudStorageIT {
         assertEquals(0x06, download[5])
         assertEquals(0x07, download[6])
         assertEquals(0x08, download[7])
+        assertEquals(0x09, download[8])
+        assertEquals(0x10, download[9])
+        assertEquals(0x11, download[10])
+        assertEquals(0x12, download[11])
     }
 }
