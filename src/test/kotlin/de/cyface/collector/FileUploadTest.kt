@@ -258,17 +258,23 @@ class FileUploadTest {
 
     @Test
     fun `Test happy path for uploads returns HTTP Status 200`(vertx: Vertx, context: VertxTestContext) {
+        val testFileResourceName = "/test.bin"
+        val length = "0.0"
+        val binarySize = 4
+        val from = 0L
+        val to = 3L
+        val total = 4L
         // Create upload session
         preRequestAndReturnLocation(context) { uploadUri: String ->
             upload(
                 vertx,
-                "/test.bin",
-                "0.0",
-                4,
+                testFileResourceName,
+                length,
+                binarySize,
                 uploadUri,
-                0,
-                3,
-                4,
+                from,
+                to,
+                total,
                 deviceIdentifier,
                 context.succeeding { ar: HttpResponse<Buffer?> ->
                     context.verify {
