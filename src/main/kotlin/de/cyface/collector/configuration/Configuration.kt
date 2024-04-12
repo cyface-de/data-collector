@@ -36,11 +36,7 @@ import java.nio.file.Path
  * @property measurementPayloadLimit The maximum size in bytes accepted for a single measurement.
  * @property metricsEnabled `true` if prometheus metrics should be collected; `false` otherwise.
  * @property storageType The type of storage to use for storing the binary data blobs.
- * @property oauthCallback The callback URL you entered in your provider admin console.
- * @property oauthClient The name of the oauth client to contact.
- * @property oauthSecret The secret of the oauth client to contact.
- * @property oauthSite The Root URL for the provider without trailing slashes.
- * @property oauthTenant The name of the oauth realm to contact.
+ * @property oauthConfig The configuration for the OAuth authentication.
  */
 data class Configuration(
     val serviceHttpAddress: URL,
@@ -50,11 +46,7 @@ data class Configuration(
     val metricsEnabled: Boolean,
     val storageType: StorageType,
     val authType: AuthType,
-    val oauthCallback: URL,
-    val oauthClient: String,
-    val oauthSecret: String,
-    val oauthSite: URL,
-    val oauthTenant: String
+    val oauthConfig: OAuthConfig
 ) {
     companion object {
         /**
@@ -87,11 +79,13 @@ data class Configuration(
                     metricsEnabled,
                     storageType,
                     authType,
-                    oauthCallback,
-                    oauthClient,
-                    oauthSecret,
-                    oauthSite,
-                    oauthTenant
+                    OAuthConfig(
+                        oauthCallback,
+                        oauthClient,
+                        oauthSecret,
+                        oauthSite,
+                        oauthTenant
+                    )
                 )
             } catch (@Suppress("TooGenericExceptionCaught") e: NullPointerException) {
                 throw InvalidConfig("Some parameters are missing. Refer to the documentation or an example file.", e)
@@ -153,4 +147,23 @@ data class Configuration(
             return builder.toString()
         }
     }
+
+    /**
+     * Wrapper class for all the parameters relevant to initialize OAuth.
+     *
+     * @author Klemens Muthmann
+     * @version 1.0.0
+     * @property callback The callback URL you entered in your provider admin console.
+     * @property client The name of the oauth client to contact.
+     * @property secret The secret of the oauth client to contact.
+     * @property site The Root URL for the provider without trailing slashes.
+     * @property tenant The name of the oauth realm to contact.
+     */
+    data class OAuthConfig(
+        val callback: URL,
+        val client: String,
+        val secret: String,
+        val site: URL,
+        val tenant: String
+    )
 }

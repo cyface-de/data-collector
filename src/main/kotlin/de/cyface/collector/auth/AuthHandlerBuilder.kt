@@ -19,6 +19,7 @@
 package de.cyface.collector.auth
 
 import io.vertx.core.Future
+import io.vertx.ext.web.Router
 import io.vertx.ext.web.handler.OAuth2AuthHandler
 
 /**
@@ -34,5 +35,5 @@ interface AuthHandlerBuilder {
      * Start the creation process of a [AuthHandlerBuilder] and provide a [Future], that will be notified about
      * successful or failed completion.
      */
-    fun create(): Future<OAuth2AuthHandler>
+    fun create(apiRouter: Router): Future<OAuth2AuthHandler>
 }
