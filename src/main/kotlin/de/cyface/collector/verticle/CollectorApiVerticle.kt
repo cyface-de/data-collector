@@ -78,10 +78,14 @@ class CollectorApiVerticle(
             val cleanUpOperation = storageServiceBuilder.createCleanupOperation()
             storageService.startPeriodicCleaningOfTempData(uploadExpirationTime, vertx, cleanUpOperation)
 
-            val routerSetup = setupRoutes(storageService)
-            val httpServer = HttpServer(config.serviceHttpAddress.port)
-            routerSetup.onSuccess { httpServer.start(vertx, it, serverStartPromise) }
-            routerSetup.onFailure { startPromise.fail(it) }
+            try {
+                val routerSetup = setupRoutes(storageService)
+                val httpServer = HttpServer(config.serviceHttpAddress.port)
+                routerSetup.onSuccess { httpServer.start(vertx, it, serverStartPromise) }
+                routerSetup.onFailure { startPromise.fail(it) }
+            } catch (e: IllegalStateException) {
+               startPromise.fail(e)
+            }
         }
 
         // Block until future completed
