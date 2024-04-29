@@ -70,7 +70,7 @@ class GoogleCloudStorageTest {
     fun `Happy Path Test for Getting data from a ReactiveStreams Publisher into a CloudStorageSubscriber`() {
         // Arrange
         val cloudStorage: CloudStorage = mock()
-        val oocut = CloudStorageSubscriber<Buffer>(cloudStorage)
+        val oocut = CloudStorageSubscriber<Buffer>(cloudStorage, 23L)
         val publisher = SubmissionPublisher<Buffer>()
         val firstDataPackage = "Hello World!"
         val secondDataPackage = "Hello Mars!"

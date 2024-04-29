@@ -34,6 +34,7 @@ import io.vertx.core.streams.Pipe
 import io.vertx.ext.reactivestreams.ReactiveWriteStream
 import org.reactivestreams.Subscriber
 import org.reactivestreams.Subscription
+import org.slf4j.LoggerFactory
 import java.util.Locale
 import java.util.UUID
 import java.util.concurrent.Callable
@@ -56,6 +57,11 @@ class GoogleCloudStorageService(
     private val cloudStorageFactory: CloudStorageFactory
 ) : DataStorageService {
 
+    /**
+     * Logger used by objects of this class. Configure it using `/src/main/resources/logback.xml`.
+     */
+    private val logger = LoggerFactory.getLogger(GoogleCloudStorageService::class.java)
+
     override fun store(
         pipe: Pipe<Buffer>,
         uploadMetaData: UploadMetaData
@@ -64,8 +70,9 @@ class GoogleCloudStorageService(
         val targetStream = ReactiveWriteStream.writeStream<Buffer>(Vertx.vertx())
         val uploadIdentifier = uploadMetaData.uploadIdentifier
         val cloud = cloudStorageFactory.create(uploadIdentifier)
-        val subscriber = CloudStorageSubscriber<Buffer>(cloud)
+        val subscriber = CloudStorageSubscriber<Buffer>(cloud, uploadMetaData.contentRange.totalBytes)
 
+        logger.debug("Piping ${uploadMetaData.contentRange.totalBytes} bytes to Google Cloud.")
         targetStream.subscribe(subscriber)
         val pipeToProcess = pipe.to(targetStream)
         pipeToProcess.onSuccess {
@@ -159,13 +166,16 @@ class GoogleCloudStorageService(
  * @property cloudStorage The [CloudStorage] to communicate with the Cloud and write the received data.
  */
 class CloudStorageSubscriber<in T : Buffer>(
-    private val cloudStorage: CloudStorage
+    private val cloudStorage: CloudStorage,
+    private val totalBytes: Long
 ) : Subscriber<@UnsafeVariance T> {
 
+    private val logger = LoggerFactory.getLogger(CloudStorageSubscriber::class.java)
     /**
      * The Reactive Streams subscription of this [Subscriber].
      */
     private lateinit var subscription: Subscription
+    private var streamedBytes = 0
 
     /**
      * If an error occurred, this property provides further details.
@@ -182,15 +192,20 @@ class CloudStorageSubscriber<in T : Buffer>(
         this.subscription.cancel()
         cloudStorage.delete()
         this.error = t
+        logger.error("Error writing data!", t)
     }
 
     override fun onComplete() {
+        logger.debug("Completed writing data!")
         this.subscription.cancel()
     }
 
     override fun onNext(t: T) {
         // Write to Google Cloud
+        logger.debug("Streaming ${t.bytes.size} Bytes to Google Cloud Storage.")
+        streamedBytes += t.bytes.size
         cloudStorage.write(t.bytes)
-        this.subscription.request(1)
+        this.subscription.request(8192)
+        logger.debug("Progress: ${streamedBytes.toDouble()/totalBytes.toDouble() * 100.0} %")
     }
 }

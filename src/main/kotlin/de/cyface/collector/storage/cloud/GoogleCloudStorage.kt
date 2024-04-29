@@ -24,6 +24,9 @@ import com.google.auth.Credentials
 import com.google.cloud.storage.BlobInfo
 import com.google.cloud.storage.Storage
 import com.google.cloud.storage.StorageOptions
+import com.google.cloud.storage.StorageRetryStrategy
+import org.slf4j.LoggerFactory
+import org.threeten.bp.Duration
 import java.io.ByteArrayOutputStream
 import java.nio.ByteBuffer
 import java.nio.channels.WritableByteChannel
@@ -58,11 +61,28 @@ class GoogleCloudStorage internal constructor(
     private val uploadIdentifier: UUID
 ) : CloudStorage {
     /**
+     * The logger used for objects of this class. Configure it using `/src/main/resources/logback.xml`.
+     */
+    private val logger = LoggerFactory.getLogger(GoogleCloudStorage::class.java)
+    /**
      * The Google cloud storage instance, which is only initialized if needed.
      */
     private val storage: Storage by lazy {
-        StorageOptions.newBuilder().setCredentials(credentials)
-            .setProjectId(projectIdentifier).build().service
+        StorageOptions
+            .newBuilder()
+            .setStorageRetryStrategy(StorageRetryStrategy.getUniformStorageRetryStrategy())
+            .setRetrySettings(
+                StorageOptions
+                .getDefaultRetrySettings()
+                .toBuilder()
+                .setMaxAttempts(10)
+                .setRetryDelayMultiplier(3.0)
+                .setTotalTimeout(Duration.ofMinutes(5))
+                .build()
+            )
+            .setCredentials(credentials)
+            .setProjectId(projectIdentifier)
+            .build().service
     }
     override fun write(bytes: ByteArray) {
         // Google Cloud does not allow to directly append data.
@@ -70,32 +90,38 @@ class GoogleCloudStorage internal constructor(
         // See for example: https://stackoverflow.com/questions/20876780/how-to-append-write-to-google-cloud-storage-file-from-app-engine
         val tmpBlobInformation = BlobInfo.newBuilder(bucketName, tmpBlobName()).build()
         val dataBlobInformation = BlobInfo.newBuilder(bucketName, dataBlobName()).build()
-        val tmpBlob = storage.create(tmpBlobInformation)
-        val channel: WritableByteChannel = tmpBlob.writer()
-        channel.write(ByteBuffer.wrap(bytes))
-        channel.close()
+        logger.debug("Writing {} to Google Cloud Storage Blob {}", bytes.size, dataBlobInformation.blobId)
+        try {
+            val tmpBlob = storage.create(tmpBlobInformation)
+            val channel: WritableByteChannel = tmpBlob.writer()
+            channel.write(ByteBuffer.wrap(bytes))
+            channel.close()
 
-        // Create data if it does not exist
-        val dataBlob = storage.get(dataBlobInformation.blobId)
-        if (dataBlob == null || !storage.get(dataBlob.blobId).exists()) {
-            storage.create(dataBlobInformation)
-        }
+            // Create data if it does not exist
+            var dataBlob = storage.get(dataBlobInformation.blobId)
+            if (dataBlob == null || !storage.get(dataBlob.blobId).exists()) {
+                dataBlob = storage.create(dataBlobInformation)
+            }
 
-        // Merge data and tmp
-        storage.compose(
-            Storage.ComposeRequest.of(
-                bucketName,
-                listOf(dataBlobName(), tmpBlobName()),
-                dataBlobName()
+            // Merge data and tmp
+            storage.compose(
+                Storage.ComposeRequest.of(
+                    bucketName,
+                    listOf(dataBlobName(), tmpBlobName()),
+                    dataBlobName()
+                )
             )
-        )
-        // Delete the temporary storage
-        @Suppress("ForbiddenComment")
-        // TODO: This delete does not work at the moment.
-        // This is no show stopper as new data just overwrites the old, but it is odd and can increase our storage
-        // requirements significantly.
-        // Should be fixed prior to putting this into production.
-        storage.delete(bucketName, tmpBlobName())
+            // Delete the temporary storage
+            @Suppress("ForbiddenComment")
+            // TODO: This delete does not work at the moment.
+            // This is no show stopper as new data just overwrites the old, but it is odd and can increase our storage
+            // requirements significantly.
+            // Should be fixed prior to putting this into production.
+            storage.delete(bucketName, tmpBlobName())
+            logger.debug("Wrote {} bytes to Google Cloud Storage Blob {}!", bytes.size, dataBlob.blobId)
+        } catch (e: Exception) {
+            logger.error("Error writing {} bytes to Google cloud Storage Blob {}!", bytes.size, dataBlobInformation.blobId, e)
+        }
     }
 
     /**
