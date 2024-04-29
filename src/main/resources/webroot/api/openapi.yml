@@ -3,9 +3,6 @@ info:
   title: Cyface Data Collector
   description: This is a Cyface data collection endpoint, that receives traffic data from Cyface measurement devices, and stores them for further processing.
   version: 0.0.0
-  
-servers:
-  - url: /api/v4
 
 components:
   securitySchemes:
@@ -116,7 +113,7 @@ paths:
             Location:
               schema:
                 type: string
-                example: https://example.com/api/v4/measurements/(e9076dbc2c8f15dd26aa76b4b5b49595)/
+                example: https://example.com/measurements/(e9076dbc2c8f15dd26aa76b4b5b49595)/
               description: Endpoint to upload the measurement to.
             Content-Length:
               schema:

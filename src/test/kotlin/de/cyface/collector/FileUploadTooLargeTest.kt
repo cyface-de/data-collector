@@ -18,6 +18,7 @@
  */
 package de.cyface.collector
 
+import de.cyface.collector.auth.MockedHandlerBuilder
 import de.cyface.collector.commons.DataCollectorClient
 import de.cyface.collector.commons.MongoTest
 import de.cyface.collector.verticle.CollectorApiVerticle
@@ -91,7 +92,7 @@ class FileUploadTooLargeTest {
         // Set maximal payload size to 1 KB (test upload is 130 KB)
         collectorClient = DataCollectorClient(CollectorApiVerticle.BYTES_IN_ONE_KILOBYTE)
         mongoTest.setUpMongoDatabase(Network.freeServerPort(Network.getLocalHost()))
-        client = collectorClient.createWebClient(vertx, ctx, mongoTest)
+        client = collectorClient.createWebClient(vertx, ctx, mongoTest, MockedHandlerBuilder())
     }
 
     /**

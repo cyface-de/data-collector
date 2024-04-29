@@ -20,6 +20,7 @@ package de.cyface.collector.commons;
 
 import java.io.IOException;
 
+import de.cyface.collector.auth.AuthHandlerBuilder;
 import de.cyface.collector.verticle.CollectorApiVerticle;
 import de.flapdoodle.embed.process.runtime.Network;
 import io.vertx.core.Vertx;
@@ -77,7 +78,12 @@ public final class DataCollectorClient {
      * @return A completely configured <code>WebClient</code> capable of accessing the started Cyface Data Collector.
      * @throws IOException If the server port could not be opened.
      */
-    public WebClient createWebClient(final Vertx vertx, final VertxTestContext ctx, final MongoTest mongoClient)
+    public WebClient createWebClient(
+            final Vertx vertx,
+            final VertxTestContext ctx,
+            final MongoTest mongoClient,
+            final AuthHandlerBuilder authHandlerBuilder
+            )
             throws IOException {
         port = Network.freeServerPort(Network.getLocalHost());
 
@@ -88,7 +94,14 @@ public final class DataCollectorClient {
                 mongoDbConfig,
                 measurementLimit);
 
-        final var collectorVerticle = new CollectorApiVerticle(config);
+        final var collectorVerticle = new CollectorApiVerticle(
+                authHandlerBuilder,
+                config.getHttpPort(),
+                config.getMeasurementPayloadLimit(),
+                config.getUploadExpiration(),
+                config.getStorageType(),
+                config.getMongoDb()
+            );
         vertx.deployVerticle(collectorVerticle, ctx.succeedingThenComplete());
 
         return WebClient.create(vertx);

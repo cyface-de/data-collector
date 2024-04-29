@@ -83,8 +83,11 @@ class MainVerticle : AbstractVerticle() {
 
         val collectorApiVerticle = CollectorApiVerticle(
             authHandlerBuilder,
-            config.serviceHttpAddress,
-            config.measurementPayloadLimit
+            config.httpPort,
+            config.measurementPayloadLimit,
+            config.uploadExpiration,
+            config.storageType,
+            config.mongoDb
         )
 
         // Start the collector API as first verticle.

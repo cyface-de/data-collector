@@ -148,16 +148,13 @@ class MeasurementHandler(
                 context.response().putHeader("Content-Length", "0")
                 context.response().setStatusCode(RESUME_INCOMPLETE).end()
             }
+
             StatusType.COMPLETE -> {
                 // In case the response does not arrive at the client, the client will receive a 409 on a reupload.
                 // In case of the 409, the client can handle the successful upload. Therefore, the session is removed
                 // here to avoid dangling session references.
                 session.remove<Any>(UPLOAD_PATH_FIELD)
-                storageService.clean(status.uploadIdentifier).onSuccess {
-                    context.response().setStatusCode(HTTPStatus.CREATED).end()
-                }.onFailure { cause ->
-                    context.fail(cause)
-                }
+                context.response().setStatusCode(HTTPStatus.CREATED).end()
             }
         }
     }
@@ -223,6 +220,7 @@ class MeasurementHandler(
                     ret.complete(Status(uploadIdentifier, StatusType.INCOMPLETE, byteSize))
                 } else {
                     val uploadMetaData = UploadMetaData(user, contentRange, uploadIdentifier, metaData)
+                    LOGGER.debug("Storing $byteSize bytes to storage service.")
                     val acceptUploadResult = storageService.store(pipe, uploadMetaData)
                     acceptUploadResult.onSuccess { result -> ret.complete(result) }
                     acceptUploadResult.onFailure { cause -> ret.fail(cause) }

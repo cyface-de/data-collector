@@ -19,7 +19,7 @@
 package de.cyface.collector.verticle
 
 import de.cyface.collector.auth.AuthHandlerBuilder
-import de.cyface.collector.configuration.Configuration
+import de.cyface.collector.configuration.StorageType
 import de.cyface.collector.handler.AuthorizationHandler
 import de.cyface.collector.handler.FailureHandler
 import de.cyface.collector.handler.MeasurementHandler
@@ -29,18 +29,17 @@ import de.cyface.collector.storage.DataStorageService
 import io.vertx.core.AbstractVerticle
 import io.vertx.core.Future
 import io.vertx.core.Promise
+import io.vertx.core.json.JsonObject
 import io.vertx.ext.mongo.MongoClient
 import io.vertx.ext.web.Router
 import io.vertx.ext.web.handler.BodyHandler
 import io.vertx.ext.web.handler.ErrorHandler
-import io.vertx.ext.web.handler.LoggerHandler
 import io.vertx.ext.web.handler.OAuth2AuthHandler
 import io.vertx.ext.web.handler.SessionHandler
 import io.vertx.ext.web.handler.StaticHandler
 import io.vertx.ext.web.sstore.LocalSessionStore
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
-import java.net.URL
 import java.util.Locale
 
 /**
@@ -51,11 +50,15 @@ import java.util.Locale
  * @author Armin Schnabel
  * @version 2.3.1
  * @since 2.0.0
+ * @property port The HTTP Server port this service is accessible from.
  */
 class CollectorApiVerticle(
     private val authHandlerBuilder: AuthHandlerBuilder,
-    private val serviceHttpAddress: URL,
-    private val measurementPayloadLimit: Long
+    private val port: Int,
+    private val measurementPayloadLimit: Long,
+    private val uploadExpirationTimeInMillis: Long,
+    private val largeFileStorageType: StorageType,
+    private val mongoDatabaseConfiguration: JsonObject
 ) : AbstractVerticle() {
 
     /**
@@ -67,37 +70,33 @@ class CollectorApiVerticle(
     override fun start(startPromise: Promise<Void>) {
         logger.info("Starting collector API!")
 
-        // Parse Configuration
-        val jsonConfiguration = config()
-        logger.debug("Active Configuration")
-        logger.debug(jsonConfiguration.encodePrettily())
-        val config = Configuration.deserialize(jsonConfiguration)
-
         // Start http server
 
         val mongoClient = MongoClient.createShared(
             vertx,
-            config.mongoDb,
-            config.mongoDb.getString("data_source_name")
+            mongoDatabaseConfiguration,
+            mongoDatabaseConfiguration.getString("data_source_name")
         )
-        val storageServiceBuilder = config.storageType.dataStorageServiceBuilder(vertx, mongoClient)
+        val storageServiceBuilder = largeFileStorageType.dataStorageServiceBuilder(vertx, mongoClient)
         val storageServiceBuilderCall = storageServiceBuilder.create()
         val serverStartPromise = Promise.promise<Void>()
         storageServiceBuilderCall.onSuccess { storageService ->
             logger.info("Created storage service.")
-            val uploadExpirationTime = config.uploadExpiration
+            val uploadExpirationTime = uploadExpirationTimeInMillis
             logger.info("Requests to the storage service expire after $uploadExpirationTime milliseconds.")
             val cleanUpOperation = storageServiceBuilder.createCleanupOperation()
             storageService.startPeriodicCleaningOfTempData(uploadExpirationTime, vertx, cleanUpOperation)
 
             try {
-                val routerSetup = setupRoutes(storageService, serviceHttpAddress)
-                val httpServer = HttpServer(config.serviceHttpAddress.port)
+                val routerSetup = setupRoutes(storageService)
+                val httpServer = HttpServer(port)
                 routerSetup.onSuccess { httpServer.start(vertx, it, serverStartPromise) }
                 routerSetup.onFailure { startPromise.fail(it) }
             } catch (e: IllegalStateException) {
                startPromise.fail(e)
             }
+        }.onFailure {
+            startPromise.fail(it)
         }
 
         // Block until future completed
@@ -119,33 +118,25 @@ class CollectorApiVerticle(
      */
     private fun setupRoutes(
         storageService: DataStorageService,
-        serviceHttpAddress: URL,
     ): Future<Router> {
         // Setup router
-        val mainRouter = Router.router(vertx)
+        val router = Router.router(vertx)
         val promise = Promise.promise<Router>()
 
         // API
-        val apiRouter = Router.router(vertx)
-        val mainRoutePath = serviceHttpAddress.path
-        println("Starting Collector Server on: $mainRoutePath")
-        mainRouter
-            .route(mainRoutePath)
-            .handler(LoggerHandler.create())
-            .subRouter(apiRouter)
-        setupApiRouter(apiRouter, storageService)
-            .onSuccess { promise.complete(mainRouter) }
+        setupApiRouter(router, storageService)
+            .onSuccess { promise.complete(router) }
             .onFailure { promise.fail(it) }
 
         // Setup unknown-resource handler
-        mainRouter.route("/*").last().handler(FailureHandler(vertx))
+        router.route("/*").last().handler(FailureHandler(vertx))
         return promise.future()
     }
 
     /**
      * Sets up the routing for the Cyface collector API.
      *
-     * @param apiRouter The sub-router to be used.
+     * @param apiRouter A router hosting the collector API.
      * @param storageService The service used to store and retrieve data. This is required by the handlers receiving
      * data to store that data.
      */

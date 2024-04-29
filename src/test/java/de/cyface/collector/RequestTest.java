@@ -25,8 +25,8 @@ import static org.hamcrest.Matchers.is;
 import java.io.IOException;
 import java.util.stream.Stream;
 
+import de.cyface.collector.auth.MockedHandlerBuilder;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -91,7 +91,7 @@ public final class RequestTest {
         collectorClient = new DataCollectorClient();
         mongoTest = new MongoTest();
         mongoTest.setUpMongoDatabase(Network.freeServerPort(Network.getLocalHost()));
-        client = collectorClient.createWebClient(vertx, ctx, mongoTest);
+        client = collectorClient.createWebClient(vertx, ctx, mongoTest, new MockedHandlerBuilder());
     }
 
     /**

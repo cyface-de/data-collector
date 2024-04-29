@@ -30,7 +30,8 @@ import java.nio.file.Path
  * @author Klemens Muthmann
  * @author Armin Schnabel
  * @version 3.0.0
- * @property serviceHttpAddress The [URL] hosting the collector service.
+ * @property httpHost The host name of the server serving this collector service.
+ * @property httpPort The Port providing this collector service.
  * @property mongoDb The Mongo database configuration as described in the Vert.x documentation.
  * @property uploadExpiration The time an upload session stays valid to be resumed in the future, in milliseconds.
  * @property measurementPayloadLimit The maximum size in bytes accepted for a single measurement.
@@ -39,7 +40,8 @@ import java.nio.file.Path
  * @property oauthConfig The configuration for the OAuth authentication.
  */
 data class Configuration(
-    val serviceHttpAddress: URL,
+    val httpHost: String,
+    val httpPort: Int,
     val mongoDb: JsonObject,
     val uploadExpiration: Long,
     val measurementPayloadLimit: Long,
@@ -56,8 +58,6 @@ data class Configuration(
             try {
                 val httpHost = Validate.notEmpty(json.get<String>("http.host"))
                 val httpPort = json.get<Int>("http.port")
-                val httpEndpoint = vertxEndpoint(json["http.endpoint"])
-                val serviceHttpAddress = URL("https", httpHost, httpPort, httpEndpoint)
                 val mongoDb = json.get<JsonObject>("mongo.db")
                 val uploadExpiration = json.get<Long>("upload.expiration")
                 val measurementPayloadLimit = json.get<Long>("measurement.payload.limit")
@@ -72,7 +72,8 @@ data class Configuration(
                 val oauthTenant = json.get<String>("oauth.tenant")
 
                 return Configuration(
-                    serviceHttpAddress,
+                    httpHost,
+                    httpPort,
                     mongoDb,
                     uploadExpiration,
                     measurementPayloadLimit,
@@ -122,29 +123,6 @@ data class Configuration(
 
                 else -> throw InvalidConfig("Invalid storage type $storageTypeString!")
             }
-        }
-
-        /**
-         * Provide the HTTP endpoint configured for use with a Vertx router.
-         *
-         * This means a '*' is appended as the last path element to match all
-         * requests.
-         *
-         * @param endpoint The original endpoint provided by the configuration.
-         */
-        private fun vertxEndpoint(endpoint: String): String {
-            Validate.notEmpty(
-                endpoint,
-                "Endpoint not found. Please use the parameter $endpoint."
-            )
-            val builder = StringBuilder(endpoint)
-            val lastChar = endpoint.last()
-            if (lastChar == '/') {
-                builder.append("*")
-            } else if (lastChar != '*') {
-                builder.append("/*")
-            }
-            return builder.toString()
         }
     }
 

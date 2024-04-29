@@ -77,7 +77,7 @@ class HttpServer(
     ) {
         if (serverStartup.succeeded()) {
             promise.complete()
-            LOGGER.info("Successfully started API!")
+            LOGGER.info("Successfully started API on Port $port!")
         } else {
             promise.fail(serverStartup.cause())
             LOGGER.info("Starting API failed!")
