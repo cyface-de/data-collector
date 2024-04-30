@@ -99,7 +99,7 @@ class CollectorApiVerticle(
                 routerSetup.onSuccess { httpServer.start(vertx, it, serverStartPromise) }
                 routerSetup.onFailure { startPromise.fail(it) }
             } catch (e: IllegalStateException) {
-               startPromise.fail(e)
+                startPromise.fail(e)
             }
         }.onFailure {
             startPromise.fail(it)

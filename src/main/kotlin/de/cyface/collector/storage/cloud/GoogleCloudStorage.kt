@@ -28,6 +28,7 @@ import com.google.cloud.storage.StorageRetryStrategy
 import org.slf4j.LoggerFactory
 import org.threeten.bp.Duration
 import java.io.ByteArrayOutputStream
+import java.io.IOException
 import java.nio.ByteBuffer
 import java.nio.channels.WritableByteChannel
 import java.util.UUID
@@ -64,6 +65,7 @@ class GoogleCloudStorage internal constructor(
      * The logger used for objects of this class. Configure it using `/src/main/resources/logback.xml`.
      */
     private val logger = LoggerFactory.getLogger(GoogleCloudStorage::class.java)
+
     /**
      * The Google cloud storage instance, which is only initialized if needed.
      */
@@ -73,17 +75,18 @@ class GoogleCloudStorage internal constructor(
             .setStorageRetryStrategy(StorageRetryStrategy.getUniformStorageRetryStrategy())
             .setRetrySettings(
                 StorageOptions
-                .getDefaultRetrySettings()
-                .toBuilder()
-                .setMaxAttempts(10)
-                .setRetryDelayMultiplier(3.0)
-                .setTotalTimeout(Duration.ofMinutes(5))
-                .build()
+                    .getDefaultRetrySettings()
+                    .toBuilder()
+                    .setMaxAttempts(Companion.maxAttempts)
+                    .setRetryDelayMultiplier(Companion.retryDelayMultiplier)
+                    .setTotalTimeout(Duration.ofMinutes(Companion.totalTimeoutDuration))
+                    .build()
             )
             .setCredentials(credentials)
             .setProjectId(projectIdentifier)
             .build().service
     }
+
     override fun write(bytes: ByteArray) {
         // Google Cloud does not allow to directly append data.
         // Thus we need to write everything to a temporary blob, then merge with the data and delete the temporary one.
@@ -119,8 +122,13 @@ class GoogleCloudStorage internal constructor(
             // Should be fixed prior to putting this into production.
             storage.delete(bucketName, tmpBlobName())
             logger.debug("Wrote {} bytes to Google Cloud Storage Blob {}!", bytes.size, dataBlob.blobId)
-        } catch (e: Exception) {
-            logger.error("Error writing {} bytes to Google cloud Storage Blob {}!", bytes.size, dataBlobInformation.blobId, e)
+        } catch (e: IOException) {
+            logger.error(
+                "Error writing {} bytes to Google cloud Storage Blob {}!",
+                bytes.size,
+                dataBlobInformation.blobId,
+                e
+            )
         }
     }
 
@@ -131,6 +139,7 @@ class GoogleCloudStorage internal constructor(
         storage.delete(bucketName, tmpBlobName())
         storage.delete(bucketName, dataBlobName())
     }
+
     override fun bytesUploaded(): Long {
         val dataBlob = storage[bucketName, dataBlobName()]
         return dataBlob.size
@@ -157,5 +166,22 @@ class GoogleCloudStorage internal constructor(
      */
     private fun dataBlobName(): String {
         return "$uploadIdentifier/data"
+    }
+
+    companion object {
+        /**
+         * The maximum time one chunk of data may require to upload.
+         */
+        private const val totalTimeoutDuration = 5L
+
+        /**
+         * The multiplier used to increase the delay time between subsequent retries.
+         */
+        private const val retryDelayMultiplier = 3.0
+
+        /**
+         * The maximum number of retry attempts per uploaded chunk of data.
+         */
+        private const val maxAttempts = 10
     }
 }

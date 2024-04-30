@@ -52,12 +52,12 @@ object ConfigurationFactory {
             }
             on { authType } doReturn AuthType.Mocked
             on { oauthConfig } doReturn Configuration.OAuthConfig(
-                    URL("http://localhost:8080/callback"),
-                    "collector-test",
-                    "SECRET",
-                    URL("https://example.com:8443/realms/{tenant}"),
-                    "rfr"
-                )
+                URL("http://localhost:8080/callback"),
+                "collector-test",
+                "SECRET",
+                URL("https://example.com:8443/realms/{tenant}"),
+                "rfr"
+            )
         }
         return ret
     }

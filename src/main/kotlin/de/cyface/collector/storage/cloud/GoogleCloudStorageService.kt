@@ -171,11 +171,19 @@ class CloudStorageSubscriber<in T : Buffer>(
     private val vertx: Vertx
 ) : Subscriber<@UnsafeVariance T> {
 
+    /**
+     * Logger used by objects of this class. Configure it using `src/main/resources/logback.xml".
+     */
     private val logger = LoggerFactory.getLogger(CloudStorageSubscriber::class.java)
+
     /**
      * The Reactive Streams subscription of this [Subscriber].
      */
     private lateinit var subscription: Subscription
+
+    /**
+     * The number of bytes that have been streamed.
+     */
     private var streamedBytes = 0
 
     /**
@@ -210,12 +218,26 @@ class CloudStorageSubscriber<in T : Buffer>(
                 cloudStorage.write(t.bytes)
             }
         )
+
+        this.subscription.request(Companion.chunkSize)
+        logger.debug("Progress: ${streamedBytes.toDouble() / totalBytes.toDouble() * Companion.oneHundredPercent} %")
+    }
+
+    companion object {
+        @Suppress("ForbiddenComment")
         // TODO: Why is this required to be 8192? Data is submitted in hunks of that size,
         //  but this should depend on something and not be hardcoded here. I could not find the reason as of
         // 29.04.2024. I also posted the question into the Vert.x Discord.
         // https://discord.com/channels/751380286071242794/751397908611596368/1234487960280502312
         // No Answer yet.
-        this.subscription.request(8192)
-        logger.debug("Progress: ${streamedBytes.toDouble()/totalBytes.toDouble() * 100.0} %")
+        /**
+         * The size of one data chunk in bytes.
+         */
+        private const val chunkSize = 8192L
+
+        /**
+         * Constant used to display the upload progress in percent.
+         */
+        private const val oneHundredPercent = 100.0
     }
 }

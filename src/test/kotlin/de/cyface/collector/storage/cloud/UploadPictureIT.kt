@@ -98,38 +98,44 @@ class UploadPictureIT {
 
         val verticleDeployedFuture = vertx.deployVerticle(oocut)
 
-        verticleDeployedFuture.onComplete(testContext.succeeding {
-            // Make the pre request
-            val preRequestFuture = onSuccessfullyDeployed(
-                webClient,
-                httpHost,
-                httpPort,
-                deviceIdentifier,
-                measurementIdentifier
-            )
-            preRequestFuture.onComplete(testContext.succeeding {
-                val response = it.result()
-                print(response.bodyAsString())
-                testContext.verify {
-                    assertEquals(200, response.statusCode())
-                }
-                // On Success make the actual upload request
-                val uploadLocation = URL(response.headers()["Location"])
-                val uploadResponseFuture = onPreRequestSuccessful(
+        verticleDeployedFuture.onComplete(
+            testContext.succeeding {
+                // Make the pre request
+                val preRequestFuture = onSuccessfullyDeployed(
                     webClient,
-                    uploadLocation,
+                    httpHost,
+                    httpPort,
                     deviceIdentifier,
-                    measurementIdentifier,
-                    data
+                    measurementIdentifier
                 )
-                uploadResponseFuture.onComplete(testContext.succeeding {
-                    testContext.verify {
-                        assertEquals(201, it.result().statusCode())
+                preRequestFuture.onComplete(
+                    testContext.succeeding {
+                        val response = it.result()
+                        print(response.bodyAsString())
+                        testContext.verify {
+                            assertEquals(200, response.statusCode())
+                        }
+                        // On Success make the actual upload request
+                        val uploadLocation = URL(response.headers()["Location"])
+                        val uploadResponseFuture = onPreRequestSuccessful(
+                            webClient,
+                            uploadLocation,
+                            deviceIdentifier,
+                            measurementIdentifier,
+                            data
+                        )
+                        uploadResponseFuture.onComplete(
+                            testContext.succeeding {
+                                testContext.verify {
+                                    assertEquals(201, it.result().statusCode())
+                                }
+                                testContext.completeNow()
+                            }
+                        )
                     }
-                    testContext.completeNow()
-                })
-            })
-        })
+                )
+            }
+        )
     }
 
     private fun onSuccessfullyDeployed(
@@ -141,7 +147,6 @@ class UploadPictureIT {
     ): Future<AsyncResult<HttpResponse<Buffer>>> {
         val promise = Promise.promise<AsyncResult<HttpResponse<Buffer>>>()
         try {
-
             // Make a pre request
 
             val request = webClient.post(port, host, "/measurements")
@@ -151,8 +156,7 @@ class UploadPictureIT {
                 .sendJson(metaData(200L, deviceIdentifier, measurementIdentifier)) {
                     promise.complete(it)
                 }
-
-        } catch(error: Exception) {
+        } catch (error: Exception) {
             promise.fail(error)
         }
 
@@ -245,7 +249,7 @@ class UploadPictureIT {
         return ret
     }
 
-    private fun data(): ByteArray {//this.javaClass.getResource("/example-image.jpg").readBytes()
+    private fun data(): ByteArray {
         val ret = mutableListOf<Byte>()
         (0..10_000).forEach {
             ret.add(it.toByte())
@@ -253,7 +257,8 @@ class UploadPictureIT {
         return ret.toByteArray()
     }
 
+    @Suppress("UnusedPrivateMember")
     private fun imageData(): ByteArray {
-       return this.javaClass.getResource("/example-image.jpg").readBytes()
+        return this.javaClass.getResource("/example-image.jpg")?.readBytes() ?: error("Unable to load example image.")
     }
 }

@@ -48,7 +48,8 @@ class MongoDatabase(private val mongoClient: MongoClient, private val collection
     }
 
     /**
-     * Checks if the provided combination of deviceIdentifier and measurementIdentifier is already stored in the database.
+     * Checks if the provided combination of deviceIdentifier and measurementIdentifier is already stored in the
+     * database.
      */
     override fun exists(deviceIdentifier: String, measurementIdentifier: Long): Future<Boolean> {
         val ret = Promise.promise<Boolean>()
