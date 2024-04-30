@@ -30,7 +30,7 @@ import org.slf4j.LoggerFactory
  * A wrapper which starts the `HttpServer` for [CollectorApiVerticle].
  *
  * @author Armin Schnabel
- * @version 1.0.3
+ * @version 1.0.4
  * @since 7.1.0
  * @property port The port on which the HTTP server should listen
  */

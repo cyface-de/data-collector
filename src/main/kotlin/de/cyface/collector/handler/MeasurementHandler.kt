@@ -61,7 +61,7 @@ import java.util.UUID
  *
  * @author Armin Schnabel
  * @author Klemens Muthmann
- * @version 1.0.2
+ * @version 1.0.3
  * @since 6.0.0
  */
 class MeasurementHandler(

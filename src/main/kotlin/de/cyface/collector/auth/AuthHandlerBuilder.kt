@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 Cyface GmbH
+ * Copyright 2023-2024 Cyface GmbH
  *
  * This file is part of the Cyface Data Collector.
  *
@@ -26,7 +26,7 @@ import io.vertx.ext.web.handler.OAuth2AuthHandler
  * Interface for the builder which creates an [OAuth2AuthHandler] to allow mocking.
  *
  * @author Armin Schnabel
- * @version 1.0.0
+ * @version 2.0.0
  * @since 7.0.0
  */
 interface AuthHandlerBuilder {

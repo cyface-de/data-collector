@@ -1,5 +1,5 @@
 /*
- * Copyright 2022-2023 Cyface GmbH
+ * Copyright 2022-2024 Cyface GmbH
  *
  * This file is part of the Cyface Data Collector.
  *
@@ -29,7 +29,8 @@ import java.nio.file.Path
  *
  * @author Klemens Muthmann
  * @author Armin Schnabel
- * @version 3.0.0
+ * @version 4.0.0
+ * @since 1.0.0
  * @property httpHost The host name of the server serving this collector service.
  * @property httpPort The Port providing this collector service.
  * @property mongoDb The Mongo database configuration as described in the Vert.x documentation.

@@ -48,9 +48,15 @@ import java.util.Locale
  *
  * @author Klemens Muthmann
  * @author Armin Schnabel
- * @version 2.3.1
+ * @version 3.0.0
  * @since 2.0.0
+ * @property authHandlerBuilder Create a handler for authentication requests.
  * @property port The HTTP Server port this service is accessible from.
+ * @property measurementPayloadLimit The maximum size of measurement sensor data.
+ * @property uploadExpirationTimeInMillis The time a request might stay open.
+ * @property largeFileStorageType A strategy to store large files such as road images.
+ * @property mongoDatabaseConfiguration Configuration of a mongo database to store sensor data and meta data
+ * for a measurement.
  */
 class CollectorApiVerticle(
     private val authHandlerBuilder: AuthHandlerBuilder,

@@ -1,5 +1,5 @@
 /*
- * Copyright 2021-2023 Cyface GmbH
+ * Copyright 2021-2024 Cyface GmbH
  *
  * This file is part of the Cyface Data Collector.
  *
@@ -54,7 +54,7 @@ import kotlin.test.assertNotNull
  *
  * @author Klemens Muthmann
  * @author Armin Schnabel
- * @version 4.1.2
+ * @version 4.1.3
  * @since 2.0.0
  */
 // This warning is suppressed since it is wrong for Vert.x Tests.

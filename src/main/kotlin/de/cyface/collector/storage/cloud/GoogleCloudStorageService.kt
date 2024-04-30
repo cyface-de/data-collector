@@ -46,7 +46,7 @@ import java.util.concurrent.Callable
  * [here](https://cloud.google.com/docs/authentication/application-default-credentials).
  *
  * @author Klemens Muthmann
- * @version 2.0.0
+ * @version 2.0.1
  * @property dao The data access object to write an uploads' metadata.
  * @property vertx A Vertx instance of the current Vertx environment.
  *
@@ -162,7 +162,7 @@ class GoogleCloudStorageService(
  * Vertx, since there is no implementation from Vertx directly.
  *
  * @author Klemens Muthmann
- * @version 1.0.0
+ * @version 2.0.0
  * @property cloudStorage The [CloudStorage] to communicate with the Cloud and write the received data.
  */
 class CloudStorageSubscriber<in T : Buffer>(

@@ -32,7 +32,7 @@ import java.util.Locale
  * A [Database] implementation to store metadata into a Mongo database.
  *
  * @author Klemens Muthmann
- * @version 1.0.0
+ * @version 1.0.1
  * @property mongoClient The Vertx [MongoClient] used to access the Mongo database.
  * @property collectionName The name of the collection to store the metadata under.
  */

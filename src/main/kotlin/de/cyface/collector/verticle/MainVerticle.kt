@@ -32,7 +32,7 @@ import java.io.IOException
  *
  * @author Klemens Muthmann
  * @author Armin Schnabel
- * @version 2.2.0
+ * @version 2.2.1
  * @since 2.0.0
  */
 class MainVerticle : AbstractVerticle() {

@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 Cyface GmbH
+ * Copyright 2023-2024 Cyface GmbH
  *
  * This file is part of the Cyface Data Collector.
  *
@@ -31,7 +31,7 @@ import java.net.URL
  * Keycloak OAuth2 builder which creates an OAuth2 handler.
  *
  * @author Armin Schnabel
- * @version 1.0.1
+ * @version 2.0.0
  * @since 7.0.0
  * @property vertx
  * @property callbackUrl The callback URL you entered in your provider admin console.

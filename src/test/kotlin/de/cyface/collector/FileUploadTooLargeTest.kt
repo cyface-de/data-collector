@@ -1,5 +1,5 @@
 /*
- * Copyright 2021-2023 Cyface GmbH
+ * Copyright 2021-2024 Cyface GmbH
  *
  * This file is part of the Cyface Data Collector.
  *
@@ -52,7 +52,7 @@ import kotlin.test.assertNotNull
  * Tests that uploading measurements to the Cyface API works as expected.
  *
  * @author Armin Schnabel
- * @version 1.0.3
+ * @version 1.0.4
  * @since 6.0.0
  */
 @ExtendWith(VertxExtension::class)

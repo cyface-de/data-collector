@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 Cyface GmbH
+ * Copyright 2023-2024 Cyface GmbH
  *
  * This file is part of the Cyface Data Collector.
  *
@@ -31,7 +31,7 @@ import java.util.UUID
  * Mocked OAuth2 builder which creates an OAuth2 handler for testing.
  *
  * @author Armin Schnabel
- * @version 1.0.0
+ * @version 2.0.0
  * @since 7.0.0
  */
 class MockedHandlerBuilder : AuthHandlerBuilder {
