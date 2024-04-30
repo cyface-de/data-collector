@@ -39,11 +39,13 @@ import org.mockito.kotlin.any
 import org.mockito.kotlin.argumentCaptor
 import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.mock
+import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
 import org.reactivestreams.FlowAdapters
 import java.time.OffsetDateTime
 import java.time.temporal.ChronoUnit
 import java.util.UUID
+import java.util.concurrent.Callable
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Flow
 import java.util.concurrent.SubmissionPublisher
@@ -70,7 +72,8 @@ class GoogleCloudStorageTest {
     fun `Happy Path Test for Getting data from a ReactiveStreams Publisher into a CloudStorageSubscriber`() {
         // Arrange
         val cloudStorage: CloudStorage = mock()
-        val oocut = CloudStorageSubscriber<Buffer>(cloudStorage, 23L)
+        val mockedVertx = mock<Vertx>()
+        val oocut = CloudStorageSubscriber<Buffer>(cloudStorage, 23L, mockedVertx)
         val publisher = SubmissionPublisher<Buffer>()
         val firstDataPackage = "Hello World!"
         val secondDataPackage = "Hello Mars!"
@@ -100,6 +103,12 @@ class GoogleCloudStorageTest {
 
         lock.await(5L, TimeUnit.SECONDS)
         // Assert
+        argumentCaptor<Callable<Unit>> {
+            verify(mockedVertx, times(2)).executeBlocking(capture())
+
+            allValues[0].call()
+            allValues[1].call()
+        }
         verify(cloudStorage).write(firstDataPackage.toByteArray(Charsets.UTF_8))
         verify(cloudStorage).write(firstDataPackage.toByteArray(Charsets.UTF_8))
     }

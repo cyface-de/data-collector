@@ -15,8 +15,10 @@ import io.vertx.ext.web.client.WebClient
 import io.vertx.junit5.Timeout
 import io.vertx.junit5.VertxExtension
 import io.vertx.junit5.VertxTestContext
+import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.extension.ExtendWith
 import java.net.URL
+import java.nio.ByteBuffer
 import java.util.Locale
 import java.util.UUID
 import java.util.concurrent.TimeUnit
@@ -31,14 +33,24 @@ import kotlin.test.assertEquals
  * @author Klemens Muthmann
  * @version 1.0.0
  */
+@Disabled("This test calls the actual API without mocking calls to the Google Object Storage.")
 @ExtendWith(VertxExtension::class)
 class UploadPictureIT {
+
+    /**
+     * Consider changing the data source by modifying the data variable inside this method.
+     * For example there is an example image to upload, which can take very long or just some generated data.
+     * Both are available from ``imageData`` and ``data`` methods, respectively.
+     */
     @Test
     @Timeout(value = 960, timeUnit = TimeUnit.SECONDS)
     fun `upload an image to a data collector service using the Google Cloud Backend`(
         vertx: Vertx,
         testContext: VertxTestContext
     ) {
+        val data = data()
+        // val data = imageData()
+
         val httpHost = "localhost"
         val httpPort = 8080
         val mongoDb = JsonObject()
@@ -47,21 +59,12 @@ class UploadPictureIT {
             .put("data_source_name", "cyface")
         val uploadExpiration = 60000L
         val measurementPayloadLimit = 104857600L
-        //val metricsEnabled = false
         val storageType = GoogleCloudStorageType(
             collectionName = "cyface",
             projectIdentifier = "object-storage-412713",
             bucketName = "cyface",
             credentialsFile = "/Users/muthmann/.config/gcloud/application_default_credentials.json"
         )
-        //val authType = AuthType.Mocked
-        /*val oauthConfig = Configuration.OAuthConfig(
-            callback = URL("http://localhost:8080/callback"),
-            client = "collector",
-            secret = "**********",
-            site = URL("http://localhost:8081/realms/{tenant}"),
-            tenant = "rfr",
-        )*/
 
         val oocut = CollectorApiVerticle(
             MockedHandlerBuilder(),
@@ -99,7 +102,8 @@ class UploadPictureIT {
                     webClient,
                     uploadLocation,
                     deviceIdentifier,
-                    measurementIdentifier
+                    measurementIdentifier,
+                    data
                 )
                 uploadResponseFuture.onComplete(testContext.succeeding {
                     testContext.verify {
@@ -142,12 +146,11 @@ class UploadPictureIT {
         webClient: WebClient,
         location: URL,
         deviceIdentifier: UUID,
-        measurementIdentifier: Long
+        measurementIdentifier: Long,
+        data: ByteArray
     ): Future<AsyncResult<HttpResponse<Buffer>>> {
         val promise = Promise.promise<AsyncResult<HttpResponse<Buffer>>>()
         val request = webClient.put(location.port, location.host, location.path)
-        // val data = data()
-        val data = imageData()
 
         try {
             request.putHeader("Content-Type", "application/octet-stream")
@@ -227,7 +230,7 @@ class UploadPictureIT {
 
     private fun data(): ByteArray {//this.javaClass.getResource("/example-image.jpg").readBytes()
         val ret = mutableListOf<Byte>()
-        (0..500000).forEach {
+        (0..10_000).forEach {
             ret.add(it.toByte())
         }
         return ret.toByteArray()

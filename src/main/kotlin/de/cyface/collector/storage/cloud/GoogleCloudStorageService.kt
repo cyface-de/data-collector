@@ -70,7 +70,7 @@ class GoogleCloudStorageService(
         val targetStream = ReactiveWriteStream.writeStream<Buffer>(Vertx.vertx())
         val uploadIdentifier = uploadMetaData.uploadIdentifier
         val cloud = cloudStorageFactory.create(uploadIdentifier)
-        val subscriber = CloudStorageSubscriber<Buffer>(cloud, uploadMetaData.contentRange.totalBytes)
+        val subscriber = CloudStorageSubscriber<Buffer>(cloud, uploadMetaData.contentRange.totalBytes, vertx)
 
         logger.debug("Piping ${uploadMetaData.contentRange.totalBytes} bytes to Google Cloud.")
         targetStream.subscribe(subscriber)
@@ -167,7 +167,8 @@ class GoogleCloudStorageService(
  */
 class CloudStorageSubscriber<in T : Buffer>(
     private val cloudStorage: CloudStorage,
-    private val totalBytes: Long
+    private val totalBytes: Long,
+    private val vertx: Vertx
 ) : Subscriber<@UnsafeVariance T> {
 
     private val logger = LoggerFactory.getLogger(CloudStorageSubscriber::class.java)
@@ -204,7 +205,16 @@ class CloudStorageSubscriber<in T : Buffer>(
         // Write to Google Cloud
         logger.debug("Streaming ${t.bytes.size} Bytes to Google Cloud Storage.")
         streamedBytes += t.bytes.size
-        cloudStorage.write(t.bytes)
+        vertx.executeBlocking(
+            Callable {
+                cloudStorage.write(t.bytes)
+            }
+        )
+        // TODO: Why is this required to be 8192? Data is submitted in hunks of that size,
+        //  but this should depend on something and not be hardcoded here. I could not find the reason as of
+        // 29.04.2024. I also posted the question into the Vert.x Discord.
+        // https://discord.com/channels/751380286071242794/751397908611596368/1234487960280502312
+        // No Answer yet.
         this.subscription.request(8192)
         logger.debug("Progress: ${streamedBytes.toDouble()/totalBytes.toDouble() * 100.0} %")
     }
