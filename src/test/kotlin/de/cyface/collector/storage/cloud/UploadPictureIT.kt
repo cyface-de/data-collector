@@ -53,21 +53,24 @@ import kotlin.test.assertEquals
 @Disabled("This test calls the actual API without mocking calls to the Google Object Storage.")
 @ExtendWith(VertxExtension::class)
 class UploadPictureIT {
-
+    // Change the following parameters to appropriate values for this test to run.
     /**
      * Consider changing the data source by modifying the data variable inside this method.
      * For example there is an example image to upload, which can take very long or just some generated data.
      * Both are available from ``imageData`` and ``data`` methods, respectively.
      */
+    val data = data() // imageData()
+    val collectionName: String = ""
+    val projectIdentifier: String = ""
+    val bucketName: String = ""
+    val credentialsFile: String = ""
+
     @Test
     @Timeout(value = 960, timeUnit = TimeUnit.SECONDS)
     fun `upload an image to a data collector service using the Google Cloud Backend`(
         vertx: Vertx,
         testContext: VertxTestContext
     ) {
-        val data = data()
-        // val data = imageData()
-
         val httpHost = "localhost"
         val httpPort = 8080
         val mongoDb = JsonObject()
@@ -77,10 +80,10 @@ class UploadPictureIT {
         val uploadExpiration = 60000L
         val measurementPayloadLimit = 104857600L
         val storageType = GoogleCloudStorageType(
-            collectionName = "cyface",
-            projectIdentifier = "object-storage-412713",
-            bucketName = "cyface",
-            credentialsFile = "/Users/muthmann/.config/gcloud/application_default_credentials.json"
+            collectionName = collectionName,
+            projectIdentifier = projectIdentifier,
+            bucketName = bucketName,
+            credentialsFile = credentialsFile
         )
 
         val oocut = CollectorApiVerticle(
