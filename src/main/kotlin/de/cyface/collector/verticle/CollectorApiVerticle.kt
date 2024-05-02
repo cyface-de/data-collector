@@ -97,12 +97,12 @@ class CollectorApiVerticle(
                 val routerSetup = setupRoutes(storageService)
                 val httpServer = HttpServer(port)
                 routerSetup.onSuccess { httpServer.start(vertx, it, serverStartPromise) }
-                routerSetup.onFailure { startPromise.fail(it) }
+                routerSetup.onFailure { serverStartPromise.fail(it) }
             } catch (e: IllegalStateException) {
-                startPromise.fail(e)
+                serverStartPromise.fail(e)
             }
         }.onFailure {
-            startPromise.fail(it)
+            serverStartPromise.fail(it)
         }
 
         // Block until future completed

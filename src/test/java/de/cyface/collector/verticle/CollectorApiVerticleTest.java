@@ -98,11 +98,14 @@ public class CollectorApiVerticleTest {
         when(configuration.getUploadExpiration()).thenReturn(60_000L);
         when(configuration.getMeasurementPayloadLimit()).thenReturn(1_048_576L);
         when(configuration.getAuthType()).thenReturn(AuthType.Mocked);
-        when(configuration.getOauthConfig().getCallback()).thenReturn(new URL("http://localhost:8080/callback"));
-        when(configuration.getOauthConfig().getClient()).thenReturn("collector-test");
-        when(configuration.getOauthConfig().getSecret()).thenReturn("SECRET");
-        when(configuration.getOauthConfig().getSite()).thenReturn(new URL("https://example.com:8443/realms/{tenant}"));
-        when(configuration.getOauthConfig().getTenant()).thenReturn("rfr");
+        when(configuration.getOauthConfig()).thenReturn(new Configuration.OAuthConfig(
+                new URL("http://localhost:8080/callback"),
+                "collector-test",
+                "SECRET",
+                new URL("https://example.com:8443/realms/{tenant}"),
+                "rfr"
+        ));
+
 
         // Act, Assert
         vertx.deployVerticle(new CollectorApiVerticle(

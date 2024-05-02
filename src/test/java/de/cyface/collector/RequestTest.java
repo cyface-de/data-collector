@@ -144,6 +144,6 @@ public final class RequestTest {
      * @return Provide the parameters for each run of the parameterized test
      */
     static Stream<String> testParameters() {
-        return Stream.of("/api/v4/");
+        return Stream.of("/");
     }
 }
