@@ -1,5 +1,5 @@
 /*
- * Copyright 2018-2023 Cyface GmbH
+ * Copyright 2018-2024 Cyface GmbH
  *
  * This file is part of the Cyface Data Collector.
  *
@@ -25,8 +25,8 @@ import static org.hamcrest.Matchers.is;
 import java.io.IOException;
 import java.util.stream.Stream;
 
+import de.cyface.collector.auth.MockedHandlerBuilder;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -48,7 +48,7 @@ import io.vertx.junit5.VertxTestContext;
  *
  * @author Klemens Muthmann
  * @author Armin Schnabel
- * @version 3.1.1
+ * @version 3.1.2
  * @since 1.0.0
  */
 @ExtendWith(VertxExtension.class)
@@ -91,7 +91,7 @@ public final class RequestTest {
         collectorClient = new DataCollectorClient();
         mongoTest = new MongoTest();
         mongoTest.setUpMongoDatabase(Network.freeServerPort(Network.getLocalHost()));
-        client = collectorClient.createWebClient(vertx, ctx, mongoTest);
+        client = collectorClient.createWebClient(vertx, ctx, mongoTest, new MockedHandlerBuilder());
     }
 
     /**
@@ -144,6 +144,6 @@ public final class RequestTest {
      * @return Provide the parameters for each run of the parameterized test
      */
     static Stream<String> testParameters() {
-        return Stream.of("/api/v4/");
+        return Stream.of("/");
     }
 }

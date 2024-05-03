@@ -1,5 +1,5 @@
 /*
- * Copyright 2022-2023 Cyface GmbH
+ * Copyright 2022-2024 Cyface GmbH
  *
  * This file is part of the Cyface Data Collector.
  *
@@ -32,7 +32,7 @@ import java.nio.file.Path
  *
  * @author Klemens Muthmann
  * @author Armin Schnabel
- * @version 1.2.0
+ * @version 1.2.1
  */
 object ConfigurationFactory {
     /**
@@ -41,20 +41,8 @@ object ConfigurationFactory {
     fun mockedConfiguration(port: Int, mongoDbConfig: JsonObject, measurementLimit: Long?): Configuration {
         val ret = mock<Configuration> {
             on { mongoDb } doReturn mongoDbConfig
-            on { serviceHttpAddress } doReturn
-                URL(
-                    "https",
-                    "localhost",
-                    port,
-                    "/api/v4/*"
-                )
+            on { httpPort } doReturn port
             on { uploadExpiration } doReturn 60_000L
-            URL(
-                "https",
-                "localhost",
-                port,
-                "/"
-            )
             on { metricsEnabled } doReturn false
             on { storageType } doReturn GridFsStorageType(Path.of("uploadFolder"))
             if (measurementLimit != null) {
@@ -63,11 +51,13 @@ object ConfigurationFactory {
                 on { measurementPayloadLimit } doReturn 104_857_600L
             }
             on { authType } doReturn AuthType.Mocked
-            on { oauthCallback } doReturn URL("http://localhost:8080/callback")
-            on { oauthClient } doReturn "collector-test"
-            on { oauthSecret } doReturn "SECRET"
-            on { oauthSite } doReturn URL("https://example.com:8443/realms/{tenant}")
-            on { oauthTenant } doReturn "rfr"
+            on { oauthConfig } doReturn Configuration.OAuthConfig(
+                URL("http://localhost:8080/callback"),
+                "collector-test",
+                "SECRET",
+                URL("https://example.com:8443/realms/{tenant}"),
+                "rfr"
+            )
         }
         return ret
     }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 Cyface GmbH
+ * Copyright 2023-2024 Cyface GmbH
  *
  * This file is part of the Cyface Data Collector.
  *
@@ -19,13 +19,14 @@
 package de.cyface.collector.auth
 
 import io.vertx.core.Future
+import io.vertx.ext.web.Router
 import io.vertx.ext.web.handler.OAuth2AuthHandler
 
 /**
  * Interface for the builder which creates an [OAuth2AuthHandler] to allow mocking.
  *
  * @author Armin Schnabel
- * @version 1.0.0
+ * @version 2.0.0
  * @since 7.0.0
  */
 interface AuthHandlerBuilder {
@@ -34,5 +35,5 @@ interface AuthHandlerBuilder {
      * Start the creation process of a [AuthHandlerBuilder] and provide a [Future], that will be notified about
      * successful or failed completion.
      */
-    fun create(): Future<OAuth2AuthHandler>
+    fun create(apiRouter: Router): Future<OAuth2AuthHandler>
 }

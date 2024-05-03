@@ -1,5 +1,5 @@
 /*
- * Copyright 2021-2023 Cyface GmbH
+ * Copyright 2021-2024 Cyface GmbH
  *
  * This file is part of the Cyface Data Collector.
  *
@@ -18,6 +18,7 @@
  */
 package de.cyface.collector
 
+import de.cyface.collector.auth.MockedHandlerBuilder
 import de.cyface.collector.commons.DataCollectorClient
 import de.cyface.collector.commons.MongoTest
 import de.cyface.collector.verticle.CollectorApiVerticle
@@ -43,6 +44,7 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
 import org.slf4j.LoggerFactory
 import java.io.IOException
+import java.net.URL
 import java.util.Locale
 import java.util.UUID
 import kotlin.test.assertNotNull
@@ -51,7 +53,7 @@ import kotlin.test.assertNotNull
  * Tests that uploading measurements to the Cyface API works as expected.
  *
  * @author Armin Schnabel
- * @version 1.0.3
+ * @version 1.0.4
  * @since 6.0.0
  */
 @ExtendWith(VertxExtension::class)
@@ -91,7 +93,7 @@ class FileUploadTooLargeTest {
         // Set maximal payload size to 1 KB (test upload is 130 KB)
         collectorClient = DataCollectorClient(CollectorApiVerticle.BYTES_IN_ONE_KILOBYTE)
         mongoTest.setUpMongoDatabase(Network.freeServerPort(Network.getLocalHost()))
-        client = collectorClient.createWebClient(vertx, ctx, mongoTest)
+        client = collectorClient.createWebClient(vertx, ctx, mongoTest, MockedHandlerBuilder())
     }
 
     /**
@@ -151,7 +153,7 @@ class FileUploadTooLargeTest {
         preRequestAndReturnLocation(
             context,
             1000 // fake a small upload to bypass pre-request size check
-        ) { uploadUri: String ->
+        ) { uploadUri: URL ->
             upload(
                 vertx,
                 "/iphone-neu.ccyf",
@@ -228,7 +230,7 @@ class FileUploadTooLargeTest {
     private fun preRequestAndReturnLocation(
         context: VertxTestContext,
         @Suppress("SameParameterValue") uploadSize: Long,
-        uploadUriHandler: Handler<String>
+        uploadUriHandler: Handler<URL>
     ) {
         preRequest(
             2,
@@ -240,16 +242,16 @@ class FileUploadTooLargeTest {
                         res.statusCode(),
                         `is`(equalTo(200))
                     )
-                    val location = res.getHeader("Location")
+                    val location = URL(res.getHeader("Location"))
                     assertThat(
                         "Missing HTTP Location header in pre-request response!",
                         location,
                         notNullValue()
                     )
-                    val locationPattern = "http://10\\.0\\.2\\.2:8081/api/v4/measurements/\\([a-z0-9]{32}\\)/"
+                    val locationPattern = "http://10\\.0\\.2\\.2:8081/measurements/\\([a-z0-9]{32}\\)/"
                     assertThat(
                         "Wrong HTTP Location header on pre-request!",
-                        location,
+                        location.toExternalForm(),
                         matchesPattern(locationPattern)
                     )
                     uploadUriHandler.handle(location)
@@ -278,7 +280,7 @@ class FileUploadTooLargeTest {
         @Suppress("SameParameterValue") testFileResourceName: String,
         @Suppress("SameParameterValue") length: String,
         @Suppress("SameParameterValue") binarySize: Int,
-        requestUri: String,
+        requestUri: URL,
         @Suppress("SameParameterValue") from: Long,
         @Suppress("SameParameterValue") to: Long,
         @Suppress("SameParameterValue") total: Long,
@@ -291,8 +293,7 @@ class FileUploadTooLargeTest {
         assertNotNull(testFileResource)
 
         // Upload data (4 Bytes of data)
-        val path = requestUri.substring(requestUri.indexOf("/api"))
-        val builder = client.put(collectorClient.port, "localhost", path)
+        val builder = client.put(collectorClient.port, "localhost", requestUri.path)
         val jwtBearer = "Bearer $authToken"
         builder.putHeader("Authorization", jwtBearer)
         builder.putHeader("Accept-Encoding", "gzip")
@@ -355,7 +356,7 @@ class FileUploadTooLargeTest {
          * The endpoint to upload measurements to. The parameter `uploadType=resumable` is added automatically by the
          * Google API client library used on Android, so we make sure the endpoints can handle this.
          */
-        private const val MEASUREMENTS_UPLOAD_ENDPOINT_PATH = "/api/v4/measurements?uploadType=resumable"
+        private const val MEASUREMENTS_UPLOAD_ENDPOINT_PATH = "/measurements?uploadType=resumable"
 
         /**
          * A Mongo database lifecycle handler. This provides the test with the capabilities to run and shutdown a Mongo

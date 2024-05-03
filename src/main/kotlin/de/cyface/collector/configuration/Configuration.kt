@@ -1,5 +1,5 @@
 /*
- * Copyright 2022-2023 Cyface GmbH
+ * Copyright 2022-2024 Cyface GmbH
  *
  * This file is part of the Cyface Data Collector.
  *
@@ -29,32 +29,27 @@ import java.nio.file.Path
  *
  * @author Klemens Muthmann
  * @author Armin Schnabel
- * @version 3.0.0
- * @property serviceHttpAddress The [URL] hosting the collector service.
+ * @version 4.0.0
+ * @since 1.0.0
+ * @property httpHost The host name of the server serving this collector service.
+ * @property httpPort The Port providing this collector service.
  * @property mongoDb The Mongo database configuration as described in the Vert.x documentation.
  * @property uploadExpiration The time an upload session stays valid to be resumed in the future, in milliseconds.
  * @property measurementPayloadLimit The maximum size in bytes accepted for a single measurement.
  * @property metricsEnabled `true` if prometheus metrics should be collected; `false` otherwise.
  * @property storageType The type of storage to use for storing the binary data blobs.
- * @property oauthCallback The callback URL you entered in your provider admin console.
- * @property oauthClient The name of the oauth client to contact.
- * @property oauthSecret The secret of the oauth client to contact.
- * @property oauthSite The Root URL for the provider without trailing slashes.
- * @property oauthTenant The name of the oauth realm to contact.
+ * @property oauthConfig The configuration for the OAuth authentication.
  */
 data class Configuration(
-    val serviceHttpAddress: URL,
+    val httpHost: String,
+    val httpPort: Int,
     val mongoDb: JsonObject,
     val uploadExpiration: Long,
     val measurementPayloadLimit: Long,
     val metricsEnabled: Boolean,
     val storageType: StorageType,
     val authType: AuthType,
-    val oauthCallback: URL,
-    val oauthClient: String,
-    val oauthSecret: String,
-    val oauthSite: URL,
-    val oauthTenant: String
+    val oauthConfig: OAuthConfig
 ) {
     companion object {
         /**
@@ -64,8 +59,6 @@ data class Configuration(
             try {
                 val httpHost = Validate.notEmpty(json.get<String>("http.host"))
                 val httpPort = json.get<Int>("http.port")
-                val httpEndpoint = vertxEndpoint(json["http.endpoint"])
-                val serviceHttpAddress = URL("https", httpHost, httpPort, httpEndpoint)
                 val mongoDb = json.get<JsonObject>("mongo.db")
                 val uploadExpiration = json.get<Long>("upload.expiration")
                 val measurementPayloadLimit = json.get<Long>("measurement.payload.limit")
@@ -80,18 +73,21 @@ data class Configuration(
                 val oauthTenant = json.get<String>("oauth.tenant")
 
                 return Configuration(
-                    serviceHttpAddress,
+                    httpHost,
+                    httpPort,
                     mongoDb,
                     uploadExpiration,
                     measurementPayloadLimit,
                     metricsEnabled,
                     storageType,
                     authType,
-                    oauthCallback,
-                    oauthClient,
-                    oauthSecret,
-                    oauthSite,
-                    oauthTenant
+                    OAuthConfig(
+                        oauthCallback,
+                        oauthClient,
+                        oauthSecret,
+                        oauthSite,
+                        oauthTenant
+                    )
                 )
             } catch (@Suppress("TooGenericExceptionCaught") e: NullPointerException) {
                 throw InvalidConfig("Some parameters are missing. Refer to the documentation or an example file.", e)
@@ -129,28 +125,24 @@ data class Configuration(
                 else -> throw InvalidConfig("Invalid storage type $storageTypeString!")
             }
         }
-
-        /**
-         * Provide the HTTP endpoint configured for use with a Vertx router.
-         *
-         * This means a '*' is appended as the last path element to match all
-         * requests.
-         *
-         * @param endpoint The original endpoint provided by the configuration.
-         */
-        private fun vertxEndpoint(endpoint: String): String {
-            Validate.notEmpty(
-                endpoint,
-                "Endpoint not found. Please use the parameter $endpoint."
-            )
-            val builder = StringBuilder(endpoint)
-            val lastChar = endpoint.last()
-            if (lastChar == '/') {
-                builder.append("*")
-            } else if (lastChar != '*') {
-                builder.append("/*")
-            }
-            return builder.toString()
-        }
     }
+
+    /**
+     * Wrapper class for all the parameters relevant to initialize OAuth.
+     *
+     * @author Klemens Muthmann
+     * @version 1.0.0
+     * @property callback The callback URL you entered in your provider admin console.
+     * @property client The name of the oauth client to contact.
+     * @property secret The secret of the oauth client to contact.
+     * @property site The Root URL for the provider without trailing slashes.
+     * @property tenant The name of the oauth realm to contact.
+     */
+    data class OAuthConfig(
+        val callback: URL,
+        val client: String,
+        val secret: String,
+        val site: URL,
+        val tenant: String
+    )
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 Cyface GmbH
+ * Copyright 2023-2024 Cyface GmbH
  *
  * This file is part of the Cyface Data Collector.
  *
@@ -22,6 +22,7 @@ import io.vertx.core.Future
 import io.vertx.core.json.JsonObject
 import io.vertx.ext.auth.impl.UserImpl
 import io.vertx.ext.web.Route
+import io.vertx.ext.web.Router
 import io.vertx.ext.web.RoutingContext
 import io.vertx.ext.web.handler.OAuth2AuthHandler
 import java.util.UUID
@@ -30,12 +31,12 @@ import java.util.UUID
  * Mocked OAuth2 builder which creates an OAuth2 handler for testing.
  *
  * @author Armin Schnabel
- * @version 1.0.0
+ * @version 2.0.0
  * @since 7.0.0
  */
 class MockedHandlerBuilder : AuthHandlerBuilder {
 
-    override fun create(): Future<OAuth2AuthHandler> {
+    override fun create(apiRouter: Router): Future<OAuth2AuthHandler> {
         val handler: OAuth2AuthHandler = object : OAuth2AuthHandler {
             override fun handle(event: RoutingContext) {
                 val principal = JsonObject()

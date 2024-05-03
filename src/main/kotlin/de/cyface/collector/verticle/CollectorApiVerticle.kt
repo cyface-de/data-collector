@@ -18,10 +18,8 @@
  */
 package de.cyface.collector.verticle
 
-import de.cyface.collector.auth.MockedHandlerBuilder
-import de.cyface.collector.auth.OAuth2HandlerBuilder
-import de.cyface.collector.configuration.AuthType
-import de.cyface.collector.configuration.Configuration
+import de.cyface.collector.auth.AuthHandlerBuilder
+import de.cyface.collector.configuration.StorageType
 import de.cyface.collector.handler.AuthorizationHandler
 import de.cyface.collector.handler.FailureHandler
 import de.cyface.collector.handler.MeasurementHandler
@@ -31,16 +29,16 @@ import de.cyface.collector.storage.DataStorageService
 import io.vertx.core.AbstractVerticle
 import io.vertx.core.Future
 import io.vertx.core.Promise
-import io.vertx.ext.auth.oauth2.OAuth2Options
+import io.vertx.core.json.JsonObject
 import io.vertx.ext.mongo.MongoClient
 import io.vertx.ext.web.Router
 import io.vertx.ext.web.handler.BodyHandler
 import io.vertx.ext.web.handler.ErrorHandler
-import io.vertx.ext.web.handler.LoggerHandler
 import io.vertx.ext.web.handler.OAuth2AuthHandler
 import io.vertx.ext.web.handler.SessionHandler
 import io.vertx.ext.web.handler.StaticHandler
 import io.vertx.ext.web.sstore.LocalSessionStore
+import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.util.Locale
 
@@ -50,47 +48,70 @@ import java.util.Locale
  *
  * @author Klemens Muthmann
  * @author Armin Schnabel
- * @version 2.3.1
+ * @version 3.0.0
  * @since 2.0.0
- * @property config The configuration used for the verticle.
+ * @property authHandlerBuilder Create a handler for authentication requests.
+ * @property port The HTTP Server port this service is accessible from.
+ * @property measurementPayloadLimit The maximum size of measurement sensor data.
+ * @property uploadExpirationTimeInMillis The time a request might stay open.
+ * @property largeFileStorageType A strategy to store large files such as road images.
+ * @property mongoDatabaseConfiguration Configuration of a mongo database to store sensor data and meta data
+ * for a measurement.
  */
 class CollectorApiVerticle(
-    private val config: Configuration,
+    private val authHandlerBuilder: AuthHandlerBuilder,
+    private val port: Int,
+    private val measurementPayloadLimit: Long,
+    private val uploadExpirationTimeInMillis: Long,
+    private val largeFileStorageType: StorageType,
+    private val mongoDatabaseConfiguration: JsonObject
 ) : AbstractVerticle() {
+
+    /**
+     * Logger used by objects of this class. Configure it using "src/main/resources/logback.xml".
+     */
+    val logger: Logger = LoggerFactory.getLogger(CollectorApiVerticle::class.java)
+
     @Throws(Exception::class)
     override fun start(startPromise: Promise<Void>) {
-        LOGGER.info("Starting collector API!")
+        logger.info("Starting collector API!")
 
         // Start http server
 
         val mongoClient = MongoClient.createShared(
             vertx,
-            config.mongoDb,
-            config.mongoDb.getString("data_source_name")
+            mongoDatabaseConfiguration,
+            mongoDatabaseConfiguration.getString("data_source_name")
         )
-        val storageServiceBuilder = config.storageType.dataStorageServiceBuilder(vertx, mongoClient)
+        val storageServiceBuilder = largeFileStorageType.dataStorageServiceBuilder(vertx, mongoClient)
         val storageServiceBuilderCall = storageServiceBuilder.create()
         val serverStartPromise = Promise.promise<Void>()
         storageServiceBuilderCall.onSuccess { storageService ->
-            LOGGER.info("Created storage service.")
-            val uploadExpirationTime = config.uploadExpiration
-            LOGGER.info("Requests to the storage service expire after $uploadExpirationTime milliseconds.")
+            logger.info("Created storage service.")
+            val uploadExpirationTime = uploadExpirationTimeInMillis
+            logger.info("Requests to the storage service expire after $uploadExpirationTime milliseconds.")
             val cleanUpOperation = storageServiceBuilder.createCleanupOperation()
             storageService.startPeriodicCleaningOfTempData(uploadExpirationTime, vertx, cleanUpOperation)
 
-            val routerSetup = setupRoutes(storageService)
-            val httpServer = HttpServer(config.serviceHttpAddress.port)
-            routerSetup.onSuccess { httpServer.start(vertx, it, serverStartPromise) }
-            routerSetup.onFailure { startPromise.fail(it) }
+            try {
+                val routerSetup = setupRoutes(storageService)
+                val httpServer = HttpServer(port)
+                routerSetup.onSuccess { httpServer.start(vertx, it, serverStartPromise) }
+                routerSetup.onFailure { serverStartPromise.fail(it) }
+            } catch (e: IllegalStateException) {
+                serverStartPromise.fail(e)
+            }
+        }.onFailure {
+            serverStartPromise.fail(it)
         }
 
         // Block until future completed
         serverStartPromise.future().onSuccess {
-            LOGGER.info("Successfully started collector API!")
+            logger.info("Successfully started collector API!")
             startPromise.complete()
         }
         serverStartPromise.future().onFailure { cause: Throwable? ->
-            LOGGER.error("Failed to start collector API!", cause)
+            logger.error("Failed to start collector API!", cause)
             startPromise.fail(cause)
         }
     }
@@ -101,38 +122,33 @@ class CollectorApiVerticle(
      * @param storageService The service used to store the received data.
      * @return the created main `Router`
      */
-    private fun setupRoutes(storageService: DataStorageService): Future<Router> {
+    private fun setupRoutes(
+        storageService: DataStorageService,
+    ): Future<Router> {
         // Setup router
-        val mainRouter = Router.router(vertx)
+        val router = Router.router(vertx)
         val promise = Promise.promise<Router>()
 
         // API
-        val apiRouter = Router.router(vertx)
-        val mainRoutePath = config.serviceHttpAddress.path
-        println("Starting Collector Server on: $mainRoutePath")
-        mainRouter
-            .route(mainRoutePath)
-            .handler(LoggerHandler.create())
-            .subRouter(apiRouter)
-        setupApiRouter(apiRouter, storageService)
-            .onSuccess { promise.complete(mainRouter) }
+        setupApiRouter(router, storageService)
+            .onSuccess { promise.complete(router) }
             .onFailure { promise.fail(it) }
 
         // Setup unknown-resource handler
-        mainRouter.route("/*").last().handler(FailureHandler(vertx))
+        router.route("/*").last().handler(FailureHandler(vertx))
         return promise.future()
     }
 
     /**
      * Sets up the routing for the Cyface collector API.
      *
-     * @param apiRouter The sub-router to be used.
+     * @param apiRouter A router hosting the collector API.
      * @param storageService The service used to store and retrieve data. This is required by the handlers receiving
      * data to store that data.
      */
     private fun setupApiRouter(
         apiRouter: Router,
-        storageService: DataStorageService
+        storageService: DataStorageService,
     ): Future<Void> {
         val promise = Promise.promise<Void>()
         val failureHandler = FailureHandler(vertx)
@@ -144,22 +160,7 @@ class CollectorApiVerticle(
         apiRouter.route().handler(sessionHandler)
 
         // Setup OAuth2 discovery and callback route for token introspection (authentication)
-        val options = OAuth2Options()
-            .setClientId(config.oauthClient)
-            .setClientSecret(config.oauthSecret)
-            .setSite(config.oauthSite.toString())
-            .setTenant(config.oauthTenant)
-        val authBuilder = if (config.authType == AuthType.Mocked) {
-            MockedHandlerBuilder()
-        } else {
-            OAuth2HandlerBuilder(
-                vertx,
-                apiRouter,
-                config.oauthCallback,
-                options
-            )
-        }
-        authBuilder.create()
+        authHandlerBuilder.create(apiRouter)
             .onSuccess {
                 // Register handlers which require authentication
                 val preRequestHandlerAuthorizationHandler = AuthorizationHandler()
@@ -168,7 +169,7 @@ class CollectorApiVerticle(
                     it,
                     preRequestHandlerAuthorizationHandler,
                     failureHandler,
-                    storageService
+                    storageService,
                 )
                 val measurementRequestAuthorizationHandler = AuthorizationHandler()
                 registerMeasurementHandler(
@@ -176,7 +177,7 @@ class CollectorApiVerticle(
                     it,
                     measurementRequestAuthorizationHandler,
                     failureHandler,
-                    storageService
+                    storageService,
                 )
 
                 promise.complete()
@@ -203,7 +204,7 @@ class CollectorApiVerticle(
         oauth2Handler: OAuth2AuthHandler,
         authorizationHandler: AuthorizationHandler,
         failureHandler: ErrorHandler,
-        storageService: DataStorageService
+        storageService: DataStorageService,
     ) {
         val preRequestBodyHandler = BodyHandler.create().setBodyLimit(BYTES_IN_ONE_KILOBYTE)
         router.post(MEASUREMENTS_ENDPOINT)
@@ -212,7 +213,7 @@ class CollectorApiVerticle(
             .handler(preRequestBodyHandler)
             .handler(oauth2Handler)
             .handler(authorizationHandler)
-            .handler(PreRequestHandler(storageService, config.measurementPayloadLimit))
+            .handler(PreRequestHandler(storageService, measurementPayloadLimit))
             .failureHandler(failureHandler)
     }
 
@@ -230,28 +231,21 @@ class CollectorApiVerticle(
         oauth2Handler: OAuth2AuthHandler,
         authorizationHandler: AuthorizationHandler,
         failureHandler: ErrorHandler,
-        storageService: DataStorageService
+        storageService: DataStorageService,
     ) {
         // The path pattern ../(sid)/.. was chosen because of the documentation of Vert.X SessionHandler
         // https://vertx.io/docs/vertx-web/java/#_handling_sessions
-        val measurementHandler = config.measurementPayloadLimit
         router.putWithRegex(String.format(Locale.ENGLISH, "\\%s\\/\\([a-z0-9]{32}\\)\\/", MEASUREMENTS_ENDPOINT))
             .consumes("application/octet-stream")
             // Not using BodyHandler as the `request.body()` can only be read once and the {@code #handler} does so.
             .handler(oauth2Handler)
             .handler(authorizationHandler)
-            .handler(MeasurementHandler(storageService, measurementHandler))
+            .handler(MeasurementHandler(storageService, measurementPayloadLimit))
             .handler(StatusHandler(storageService))
             .failureHandler(failureHandler)
     }
 
     companion object {
-        /**
-         * The `Logger` used for objects of this class. Configure it by changing the settings in
-         * `src/main/resources/logback.xml`.
-         */
-        private val LOGGER = LoggerFactory.getLogger(CollectorApiVerticle::class.java)
-
         /**
          * The endpoint which accepts measurement uploads.
          */

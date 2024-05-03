@@ -1,5 +1,5 @@
 /*
- * Copyright 2021-2023 Cyface GmbH
+ * Copyright 2021-2024 Cyface GmbH
  *
  * This file is part of the Cyface Data Collector.
  *
@@ -29,6 +29,7 @@ import java.net.URL;
 import java.nio.file.Path;
 import java.util.concurrent.TimeUnit;
 
+import de.cyface.collector.auth.MockedHandlerBuilder;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -48,7 +49,7 @@ import io.vertx.junit5.VertxTestContext;
  * Tests if running the {@link CollectorApiVerticle} works as expected.
  *
  * @author Klemens Muthmann
- * @version 1.1.0
+ * @version 1.1.1
  * @since 5.2.0
  */
 @ExtendWith(VertxExtension.class)
@@ -91,24 +92,30 @@ public class CollectorApiVerticleTest {
         // Arrange
         final var port = Network.freeServerPort(Network.getLocalHost());
         final var configuration = mock(Configuration.class);
-        when(configuration.getServiceHttpAddress()).thenReturn(new URL(
-                "https",
-                "localhost",
-                port,
-                "/api/v4/*"));
+        when(configuration.getHttpPort()).thenReturn(port);
         when(configuration.getMongoDb()).thenReturn(mongoTest.clientConfiguration());
         when(configuration.getStorageType()).thenReturn(new GridFsStorageType(Path.of("upload-folder")));
         when(configuration.getUploadExpiration()).thenReturn(60_000L);
         when(configuration.getMeasurementPayloadLimit()).thenReturn(1_048_576L);
         when(configuration.getAuthType()).thenReturn(AuthType.Mocked);
-        when(configuration.getOauthCallback()).thenReturn(new URL("http://localhost:8080/callback"));
-        when(configuration.getOauthClient()).thenReturn("collector-test");
-        when(configuration.getOauthSecret()).thenReturn("SECRET");
-        when(configuration.getOauthSite()).thenReturn(new URL("https://example.com:8443/realms/{tenant}"));
-        when(configuration.getOauthTenant()).thenReturn("rfr");
+        when(configuration.getOauthConfig()).thenReturn(new Configuration.OAuthConfig(
+                new URL("http://localhost:8080/callback"),
+                "collector-test",
+                "SECRET",
+                new URL("https://example.com:8443/realms/{tenant}"),
+                "rfr"
+        ));
+
 
         // Act, Assert
-        vertx.deployVerticle(new CollectorApiVerticle(configuration), testContext.succeedingThenComplete());
+        vertx.deployVerticle(new CollectorApiVerticle(
+                new MockedHandlerBuilder(),
+                configuration.getHttpPort(),
+                configuration.getMeasurementPayloadLimit(),
+                configuration.getUploadExpiration(),
+                configuration.getStorageType(),
+                configuration.getMongoDb()
+        ), testContext.succeedingThenComplete());
 
         // https://vertx.io/docs/vertx-junit5/java/#_a_test_context_for_asynchronous_executions
         assertThat(testContext.awaitCompletion(20, TimeUnit.SECONDS), is(equalTo(true)));

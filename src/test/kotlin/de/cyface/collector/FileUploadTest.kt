@@ -1,5 +1,5 @@
 /*
- * Copyright 2021-2023 Cyface GmbH
+ * Copyright 2021-2024 Cyface GmbH
  *
  * This file is part of the Cyface Data Collector.
  *
@@ -18,6 +18,7 @@
  */
 package de.cyface.collector
 
+import de.cyface.collector.auth.MockedHandlerBuilder
 import de.cyface.collector.commons.DataCollectorClient
 import de.cyface.collector.commons.MongoTest
 import de.flapdoodle.embed.process.runtime.Network
@@ -43,6 +44,7 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
 import org.slf4j.LoggerFactory
 import java.io.IOException
+import java.net.URL
 import java.util.Locale
 import java.util.UUID
 import kotlin.test.assertNotNull
@@ -52,7 +54,7 @@ import kotlin.test.assertNotNull
  *
  * @author Klemens Muthmann
  * @author Armin Schnabel
- * @version 4.1.2
+ * @version 4.1.3
  * @since 2.0.0
  */
 // This warning is suppressed since it is wrong for Vert.x Tests.
@@ -97,7 +99,7 @@ class FileUploadTest {
         collectorClient = DataCollectorClient(140_000L)
         mongoTest = MongoTest()
         mongoTest.setUpMongoDatabase(Network.freeServerPort(Network.getLocalHost()))
-        client = collectorClient.createWebClient(vertx, ctx, mongoTest)
+        client = collectorClient.createWebClient(vertx, ctx, mongoTest, MockedHandlerBuilder())
     }
 
     /**
@@ -156,7 +158,7 @@ class FileUploadTest {
     @Test
     fun testUploadWithUnParsableMetaData_Returns422(vertx: Vertx, context: VertxTestContext) {
         // Create upload session
-        preRequestAndReturnLocation(context) { uploadUri: String ->
+        preRequestAndReturnLocation(context) { uploadUri: URL ->
 
             // Set invalid value for a form attribute
             upload(
@@ -186,7 +188,7 @@ class FileUploadTest {
     @Test
     fun testUploadStatusWithoutPriorUpload_happyPath(context: VertxTestContext) {
         // Create upload session
-        preRequestAndReturnLocation(context) { uploadUri: String ->
+        preRequestAndReturnLocation(context) { uploadUri: URL ->
             uploadStatus(
                 uploadUri,
                 "bytes */4",
@@ -210,7 +212,7 @@ class FileUploadTest {
     @Test
     fun testUploadStatusAfterPartialUpload_happyPath(vertx: Vertx, context: VertxTestContext) {
         // Create upload session
-        preRequestAndReturnLocation(context) { uploadUri: String ->
+        preRequestAndReturnLocation(context) { uploadUri: URL ->
             upload(
                 vertx,
                 "/test.bin",
@@ -258,17 +260,23 @@ class FileUploadTest {
 
     @Test
     fun `Test happy path for uploads returns HTTP Status 200`(vertx: Vertx, context: VertxTestContext) {
+        val testFileResourceName = "/test.bin"
+        val length = "0.0"
+        val binarySize = 4
+        val from = 0L
+        val to = 3L
+        val total = 4L
         // Create upload session
-        preRequestAndReturnLocation(context) { uploadUri: String ->
+        preRequestAndReturnLocation(context) { uploadUri: URL ->
             upload(
                 vertx,
-                "/test.bin",
-                "0.0",
-                4,
+                testFileResourceName,
+                length,
+                binarySize,
                 uploadUri,
-                0,
-                3,
-                4,
+                from,
+                to,
+                total,
                 deviceIdentifier,
                 context.succeeding { ar: HttpResponse<Buffer?> ->
                     context.verify {
@@ -306,12 +314,13 @@ class FileUploadTest {
      */
     @Test
     fun testUploadWithInvalidSession_returns404(vertx: Vertx, context: VertxTestContext) {
+        val uploadPathWithInvalidSession = URL("http://localhost:8081/measurements/(random78901234567890123456789012)/")
         upload(
             vertx,
             "/test.bin",
             "0.0",
             4,
-            UPLOAD_PATH_WITH_INVALID_SESSION,
+            uploadPathWithInvalidSession,
             0,
             3,
             4,
@@ -390,7 +399,7 @@ class FileUploadTest {
     fun uploadWithWrongDeviceId_Returns422(vertx: Vertx, context: VertxTestContext) {
         preRequestAndReturnLocation(
             context
-        ) { uploadUri: String ->
+        ) { uploadUri: URL ->
             upload(
                 vertx,
                 "/test.bin",
@@ -449,7 +458,7 @@ class FileUploadTest {
         val builder = client.post(
             collectorClient.port,
             "localhost",
-            "/api/v4/measurements?uploadType=resumable"
+            "/measurements?uploadType=resumable"
         )
         builder.putHeader("Authorization", "Bearer $authToken")
         builder.putHeader("Accept-Encoding", "gzip")
@@ -481,7 +490,7 @@ class FileUploadTest {
         val returnedRequestFuture = context.checkpoint()
         preRequestAndReturnLocation(
             context
-        ) { uploadUri: String ->
+        ) { uploadUri: URL ->
             upload(
                 vertx,
                 testFileResourceName,
@@ -506,7 +515,7 @@ class FileUploadTest {
         }
     }
 
-    private fun preRequestAndReturnLocation(context: VertxTestContext, uploadUriHandler: Handler<String>) {
+    private fun preRequestAndReturnLocation(context: VertxTestContext, uploadUriHandler: Handler<URL>) {
         preRequest(
             2,
             context.succeeding { res: HttpResponse<Buffer?> ->
@@ -524,13 +533,14 @@ class FileUploadTest {
                         location,
                         notNullValue()
                     )
-                    val locationPattern = "http://10\\.0\\.2\\.2:8081/api/v4/measurements/\\([a-z0-9]{32}\\)/"
+                    val locationPattern = "http://10\\.0\\.2\\.2:8081/measurements/\\([a-z0-9]{32}\\)/"
                     assertThat(
                         "Wrong HTTP Location header on pre-request!",
                         location,
                         matchesPattern(locationPattern)
                     )
-                    uploadUriHandler.handle(location)
+                    val locationUrl = URL(location)
+                    uploadUriHandler.handle(locationUrl)
                 }
             }
         )
@@ -553,7 +563,7 @@ class FileUploadTest {
         testFileResourceName: String,
         length: String,
         binarySize: Int,
-        requestUri: String,
+        requestUri: URL,
         @Suppress("SameParameterValue") from: Long,
         to: Long,
         total: Long,
@@ -563,8 +573,8 @@ class FileUploadTest {
         val testFileResource = this.javaClass.getResource(testFileResourceName)
         assertNotNull(testFileResource)
 
-        // Upload data (4 Bytes of data)
-        val path = requestUri.substring(requestUri.indexOf("/api"))
+        // Upload data
+        val path = requestUri.path
         val builder = client.put(collectorClient.port, "localhost", path)
         builder.putHeader("Accept-Encoding", "gzip")
         builder.putHeader("Content-Range", String.format(Locale.ENGLISH, "bytes %d-%d/%d", from, to, total))
@@ -596,14 +606,14 @@ class FileUploadTest {
     }
 
     private fun uploadStatus(
-        requestUri: String,
+        requestUri: URL,
         contentRange: String,
         handler: Handler<AsyncResult<HttpResponse<Buffer?>>>
     ) {
         val authToken = "eyTestToken"
 
         // Send empty PUT request to ask where to continue the upload
-        val path = requestUri.substring(requestUri.indexOf("/api"))
+        val path = requestUri.path
         val builder = client.put(collectorClient.port, "localhost", path)
         val jwtBearer = "Bearer $authToken"
         builder.putHeader("Authorization", jwtBearer)
@@ -661,11 +671,5 @@ class FileUploadTest {
          * The geographical longitude of the test measurement.
          */
         private const val TEST_MEASUREMENT_START_LOCATION_LON = "10.0"
-
-        /**
-         * The endpoint to upload measurements to. The parameter `uploadType=resumable` is added automatically by the
-         * Google API client library used on Android, so we make sure the endpoints can handle this.
-         */
-        private const val UPLOAD_PATH_WITH_INVALID_SESSION = "/api/v4/measurements/(random78901234567890123456789012)/"
     }
 }

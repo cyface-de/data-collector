@@ -34,6 +34,7 @@ import io.vertx.core.streams.Pipe
 import io.vertx.ext.reactivestreams.ReactiveWriteStream
 import org.reactivestreams.Subscriber
 import org.reactivestreams.Subscription
+import org.slf4j.LoggerFactory
 import java.util.Locale
 import java.util.UUID
 import java.util.concurrent.Callable
@@ -45,7 +46,7 @@ import java.util.concurrent.Callable
  * [here](https://cloud.google.com/docs/authentication/application-default-credentials).
  *
  * @author Klemens Muthmann
- * @version 2.0.0
+ * @version 2.0.1
  * @property dao The data access object to write an uploads' metadata.
  * @property vertx A Vertx instance of the current Vertx environment.
  *
@@ -56,6 +57,11 @@ class GoogleCloudStorageService(
     private val cloudStorageFactory: CloudStorageFactory
 ) : DataStorageService {
 
+    /**
+     * Logger used by objects of this class. Configure it using `/src/main/resources/logback.xml`.
+     */
+    private val logger = LoggerFactory.getLogger(GoogleCloudStorageService::class.java)
+
     override fun store(
         pipe: Pipe<Buffer>,
         uploadMetaData: UploadMetaData
@@ -64,8 +70,9 @@ class GoogleCloudStorageService(
         val targetStream = ReactiveWriteStream.writeStream<Buffer>(Vertx.vertx())
         val uploadIdentifier = uploadMetaData.uploadIdentifier
         val cloud = cloudStorageFactory.create(uploadIdentifier)
-        val subscriber = CloudStorageSubscriber<Buffer>(cloud)
+        val subscriber = CloudStorageSubscriber<Buffer>(cloud, uploadMetaData.contentRange.totalBytes, vertx)
 
+        logger.debug("Piping ${uploadMetaData.contentRange.totalBytes} bytes to Google Cloud.")
         targetStream.subscribe(subscriber)
         val pipeToProcess = pipe.to(targetStream)
         pipeToProcess.onSuccess {
@@ -155,17 +162,29 @@ class GoogleCloudStorageService(
  * Vertx, since there is no implementation from Vertx directly.
  *
  * @author Klemens Muthmann
- * @version 1.0.0
+ * @version 2.0.0
  * @property cloudStorage The [CloudStorage] to communicate with the Cloud and write the received data.
  */
 class CloudStorageSubscriber<in T : Buffer>(
-    private val cloudStorage: CloudStorage
+    private val cloudStorage: CloudStorage,
+    private val totalBytes: Long,
+    private val vertx: Vertx
 ) : Subscriber<@UnsafeVariance T> {
+
+    /**
+     * Logger used by objects of this class. Configure it using `src/main/resources/logback.xml".
+     */
+    private val logger = LoggerFactory.getLogger(CloudStorageSubscriber::class.java)
 
     /**
      * The Reactive Streams subscription of this [Subscriber].
      */
     private lateinit var subscription: Subscription
+
+    /**
+     * The number of bytes that have been streamed.
+     */
+    private var streamedBytes = 0
 
     /**
      * If an error occurred, this property provides further details.
@@ -182,15 +201,43 @@ class CloudStorageSubscriber<in T : Buffer>(
         this.subscription.cancel()
         cloudStorage.delete()
         this.error = t
+        logger.error("Error writing data!", t)
     }
 
     override fun onComplete() {
+        logger.debug("Completed writing data!")
         this.subscription.cancel()
     }
 
     override fun onNext(t: T) {
         // Write to Google Cloud
-        cloudStorage.write(t.bytes)
-        this.subscription.request(1)
+        logger.debug("Streaming ${t.bytes.size} Bytes to Google Cloud Storage.")
+        streamedBytes += t.bytes.size
+        vertx.executeBlocking(
+            Callable {
+                cloudStorage.write(t.bytes)
+            }
+        )
+
+        this.subscription.request(Companion.chunkSize)
+        logger.debug("Progress: ${streamedBytes.toDouble() / totalBytes.toDouble() * Companion.oneHundredPercent} %")
+    }
+
+    companion object {
+        @Suppress("ForbiddenComment")
+        // TODO: Why is this required to be 8192? Data is submitted in hunks of that size,
+        //  but this should depend on something and not be hardcoded here. I could not find the reason as of
+        // 29.04.2024. I also posted the question into the Vert.x Discord.
+        // https://discord.com/channels/751380286071242794/751397908611596368/1234487960280502312
+        // No Answer yet.
+        /**
+         * The size of one data chunk in bytes.
+         */
+        private const val chunkSize = 8192L
+
+        /**
+         * Constant used to display the upload progress in percent.
+         */
+        private const val oneHundredPercent = 100.0
     }
 }

@@ -28,7 +28,7 @@ import java.net.URL
  *
  * @author Klemens Muthmann
  * @author Armin Schnabel
- * @version 2.0.2
+ * @version 2.0.3
  * @since 1.0.0
  */
 buildscript {
@@ -87,12 +87,12 @@ kotlin {
   jvmToolchain(17)
 }
 
-val vertxVersion = "4.5.0"
+val vertxVersion = "4.5.7"
 val micrometerVersion = "1.10.6"
 val commonsLangVersion = "3.12.0"
-val logbackVersion = "1.4.6"
+val logbackVersion = "1.4.14"
 val gradleWrapperVersion = "7.6.1"
-val googleCloudLibrariesVersion = "26.29.0"
+val googleCloudLibrariesVersion = "26.35.0"
 
 // Versions of testing dependencies
 val junitVersion = "5.9.2"

@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 Cyface GmbH
+ * Copyright 2023-2024 Cyface GmbH
  *
  * This file is part of the Cyface Data Collector.
  *
@@ -31,21 +31,19 @@ import java.net.URL
  * Keycloak OAuth2 builder which creates an OAuth2 handler.
  *
  * @author Armin Schnabel
- * @version 1.0.1
+ * @version 2.0.0
  * @since 7.0.0
  * @property vertx
- * @property apiRouter
  * @property callbackUrl The callback URL you entered in your provider admin console.
  * @property options the oauth configuration.
  */
 class OAuth2HandlerBuilder(
     private val vertx: Vertx,
-    private val apiRouter: Router,
     private val callbackUrl: URL,
     private val options: OAuth2Options,
 ) : AuthHandlerBuilder {
 
-    override fun create(): Future<OAuth2AuthHandler> {
+    override fun create(apiRouter: Router): Future<OAuth2AuthHandler> {
         val promise = Promise.promise<OAuth2AuthHandler>()
 
         KeycloakAuth.discover(vertx, options)

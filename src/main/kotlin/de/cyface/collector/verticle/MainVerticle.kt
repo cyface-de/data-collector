@@ -18,10 +18,11 @@
  */
 package de.cyface.collector.verticle
 
+import de.cyface.collector.auth.OAuth2HandlerBuilder
 import de.cyface.collector.configuration.Configuration
 import io.vertx.core.AbstractVerticle
-import io.vertx.core.DeploymentOptions
 import io.vertx.core.Promise
+import io.vertx.ext.auth.oauth2.OAuth2Options
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.io.IOException
@@ -31,7 +32,7 @@ import java.io.IOException
  *
  * @author Klemens Muthmann
  * @author Armin Schnabel
- * @version 2.2.0
+ * @version 2.2.1
  * @since 2.0.0
  */
 class MainVerticle : AbstractVerticle() {
@@ -68,12 +69,29 @@ class MainVerticle : AbstractVerticle() {
     @Throws(IOException::class)
     private fun deploy(startFuture: Promise<Void>, config: Configuration) {
         logger.info("Deploying main verticle!")
-        val verticleConfig = DeploymentOptions().setConfig(config())
 
-        val collectorApiVerticle = CollectorApiVerticle(config)
+        val options = OAuth2Options()
+            .setClientId(config.oauthConfig.client)
+            .setClientSecret(config.oauthConfig.secret)
+            .setSite(config.oauthConfig.site.toString())
+            .setTenant(config.oauthConfig.tenant)
+        val authHandlerBuilder = OAuth2HandlerBuilder(
+            vertx,
+            config.oauthConfig.callback,
+            options
+        )
+
+        val collectorApiVerticle = CollectorApiVerticle(
+            authHandlerBuilder,
+            config.httpPort,
+            config.measurementPayloadLimit,
+            config.uploadExpiration,
+            config.storageType,
+            config.mongoDb
+        )
 
         // Start the collector API as first verticle.
-        val collectorDeployment = vertx.deployVerticle(collectorApiVerticle, verticleConfig)
+        val collectorDeployment = vertx.deployVerticle(collectorApiVerticle)
 
         // As soon the future has succeeded or one failed, finish the startup process.
         collectorDeployment.onSuccess {

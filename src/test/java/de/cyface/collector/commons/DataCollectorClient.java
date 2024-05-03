@@ -1,5 +1,5 @@
 /*
- * Copyright 2018-2022 Cyface GmbH
+ * Copyright 2018-2024 Cyface GmbH
  *
  * This file is part of the Cyface Data Collector.
  *
@@ -20,6 +20,7 @@ package de.cyface.collector.commons;
 
 import java.io.IOException;
 
+import de.cyface.collector.auth.AuthHandlerBuilder;
 import de.cyface.collector.verticle.CollectorApiVerticle;
 import de.flapdoodle.embed.process.runtime.Network;
 import io.vertx.core.Vertx;
@@ -31,7 +32,7 @@ import io.vertx.junit5.VertxTestContext;
  *
  * @author Klemens Muthmann
  * @author Armin Schnabel
- * @version 1.3.0
+ * @version 2.0.0
  * @since 2.0.0
  */
 public final class DataCollectorClient {
@@ -77,7 +78,12 @@ public final class DataCollectorClient {
      * @return A completely configured <code>WebClient</code> capable of accessing the started Cyface Data Collector.
      * @throws IOException If the server port could not be opened.
      */
-    public WebClient createWebClient(final Vertx vertx, final VertxTestContext ctx, final MongoTest mongoClient)
+    public WebClient createWebClient(
+            final Vertx vertx,
+            final VertxTestContext ctx,
+            final MongoTest mongoClient,
+            final AuthHandlerBuilder authHandlerBuilder
+            )
             throws IOException {
         port = Network.freeServerPort(Network.getLocalHost());
 
@@ -88,7 +94,14 @@ public final class DataCollectorClient {
                 mongoDbConfig,
                 measurementLimit);
 
-        final var collectorVerticle = new CollectorApiVerticle(config);
+        final var collectorVerticle = new CollectorApiVerticle(
+                authHandlerBuilder,
+                config.getHttpPort(),
+                config.getMeasurementPayloadLimit(),
+                config.getUploadExpiration(),
+                config.getStorageType(),
+                config.getMongoDb()
+            );
         vertx.deployVerticle(collectorVerticle, ctx.succeedingThenComplete());
 
         return WebClient.create(vertx);
