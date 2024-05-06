@@ -21,6 +21,7 @@ package de.cyface.collector.storage.cloud
 import de.cyface.collector.auth.MockedHandlerBuilder
 import de.cyface.collector.configuration.GoogleCloudStorageType
 import de.cyface.collector.verticle.CollectorApiVerticle
+import de.cyface.collector.verticle.ServerConfiguration
 import io.vertx.core.AsyncResult
 import io.vertx.core.Future
 import io.vertx.core.MultiMap
@@ -88,10 +89,13 @@ class UploadPictureIT {
 
         val oocut = CollectorApiVerticle(
             MockedHandlerBuilder(),
-            httpPort,
-            measurementPayloadLimit,
-            uploadExpiration,
-            storageType,
+            ServerConfiguration(
+                httpPort,
+                "/",
+                measurementPayloadLimit,
+                uploadExpiration,
+                storageType,
+            ),
             mongoDb
 
         )

@@ -110,10 +110,13 @@ public class CollectorApiVerticleTest {
         // Act, Assert
         vertx.deployVerticle(new CollectorApiVerticle(
                 new MockedHandlerBuilder(),
-                configuration.getHttpPort(),
-                configuration.getMeasurementPayloadLimit(),
-                configuration.getUploadExpiration(),
-                configuration.getStorageType(),
+                new ServerConfiguration(
+                    configuration.getHttpPort(),
+                    "/",
+                    configuration.getMeasurementPayloadLimit(),
+                    configuration.getUploadExpiration(),
+                    configuration.getStorageType()
+                ),
                 configuration.getMongoDb()
         ), testContext.succeedingThenComplete());
 

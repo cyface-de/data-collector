@@ -22,6 +22,7 @@ import java.io.IOException;
 
 import de.cyface.collector.auth.AuthHandlerBuilder;
 import de.cyface.collector.verticle.CollectorApiVerticle;
+import de.cyface.collector.verticle.ServerConfiguration;
 import de.flapdoodle.embed.process.runtime.Network;
 import io.vertx.core.Vertx;
 import io.vertx.ext.web.client.WebClient;
@@ -96,10 +97,13 @@ public final class DataCollectorClient {
 
         final var collectorVerticle = new CollectorApiVerticle(
                 authHandlerBuilder,
-                config.getHttpPort(),
-                config.getMeasurementPayloadLimit(),
-                config.getUploadExpiration(),
-                config.getStorageType(),
+                new ServerConfiguration(
+                    config.getHttpPort(),
+                    "/",
+                    config.getMeasurementPayloadLimit(),
+                    config.getUploadExpiration(),
+                    config.getStorageType()
+                ),
                 config.getMongoDb()
             );
         vertx.deployVerticle(collectorVerticle, ctx.succeedingThenComplete());

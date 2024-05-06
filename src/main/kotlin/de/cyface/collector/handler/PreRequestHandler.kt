@@ -35,6 +35,8 @@ import io.vertx.core.json.JsonObject
 import io.vertx.ext.web.RoutingContext
 import io.vertx.ext.web.Session
 import org.slf4j.LoggerFactory
+import java.net.URI
+import java.net.URL
 import java.util.Locale
 
 /**
@@ -48,10 +50,13 @@ import java.util.Locale
  * @property storageService The service used to store data and retrieve information about stored data
  *                          by this application.
  * @property measurementLimit The maximal number of `Byte`s which may be uploaded in the upload request.
+ * @property httpPath The path of the URL under which the Collector service is deployed. This is used to return the
+ * correct "Location" header.
  */
 class PreRequestHandler(
     private val storageService: DataStorageService,
-    private val measurementLimit: Long
+    private val measurementLimit: Long,
+    private val httpPath: String
 ) : Handler<RoutingContext> {
 
     override fun handle(ctx: RoutingContext) {
@@ -85,12 +90,12 @@ class PreRequestHandler(
                     // `https://host/endpoint?uploadType=resumable&upload_id=SESSION_ID`
                     // To use the Vert.X session parsing we use:
                     // `https://host/endpoint?uploadType=resumable&upload_id=(SESSION_ID)"
-                    val requestUri = request.absoluteURI()
+                    val requestUri = URL(request.absoluteURI())
                     val protocol = request.getHeader("X-Forwarded-Proto")
                     val locationUri = locationUri(requestUri, protocol, session.id())
                     LOGGER.debug("Response 200, Location: $locationUri")
                     ctx.response()
-                        .putHeader("Location", locationUri)
+                        .putHeader("Location", locationUri.toURL().toExternalForm())
                         .putHeader("Content-Length", "0")
                         .setStatusCode(OK).end()
                 }
@@ -141,15 +146,45 @@ class PreRequestHandler(
      * @param sessionId the upload session id to be added to the `Location` header assembled.
      * @return The assembled `Location` `Uri` to be returned to the client
      */
-    private fun locationUri(requestUri: String, protocol: String?, sessionId: String): String {
+    @Deprecated(
+        "This requires knowledge about the applications deployment behind a proxy and thus should " +
+            "not be used. Instead make the location header relative and avoid rewriting this URL here."
+    )
+    private fun locationUri(requestUri: URL, protocol: String?, sessionId: String): URI {
         // Our current setup forwards https requests to http internally. As the `Location` returned is automatically
         // used by the Google Client API library for the upload request we make sure the original protocol use returned.
-        val protocolReplaced = if (protocol != null) requestUri.replace("http:", "$protocol:") else requestUri
+        val scheme = if (protocol != null) protocol else requestUri.toURI().scheme
         // The Google Client API library automatically adds the parameter `uploadType` to the Uri. As our upload API
         // offers an endpoint address in the format `measurement/(SID)` we remove the `uploadType` parameter.
         // We don't need to process the `uploadType` as we're only offering one upload type: resumable.
-        val uploadTypeRemoved = protocolReplaced.replace("?uploadType=resumable", "")
-        return String.format(Locale.ENGLISH, "%s/(%s)/", uploadTypeRemoved, sessionId)
+        var query = requestUri.query?.replace("uploadType=resumable", "")
+        query = if (query != null && query.isEmpty()) { null } else { query }
+
+        var strippedPath = if (httpPath.startsWith("/")) {
+            httpPath.subSequence(1..<httpPath.length)
+        } else {
+            httpPath
+        }
+        strippedPath = if (strippedPath.endsWith("/")) {
+            strippedPath.subSequence(0..<strippedPath.length - 1)
+        } else {
+            strippedPath
+        }
+        val path = if (strippedPath.isEmpty()) {
+            "${requestUri.path}/($sessionId)/"
+        } else {
+            "/$strippedPath${requestUri.path}/($sessionId)/"
+        }
+
+        return URI(
+            scheme,
+            null,
+            requestUri.host,
+            requestUri.port,
+            path,
+            query,
+            null
+        )
     }
 
     /**

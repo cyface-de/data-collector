@@ -1,5 +1,5 @@
 /*
- * Copyright 2018-2023 Cyface GmbH
+ * Copyright 2018-2024 Cyface GmbH
  *
  * This file is part of the Cyface Data Collector.
  *
@@ -19,7 +19,6 @@
 package de.cyface.collector.verticle
 
 import de.cyface.collector.auth.AuthHandlerBuilder
-import de.cyface.collector.configuration.StorageType
 import de.cyface.collector.handler.AuthorizationHandler
 import de.cyface.collector.handler.FailureHandler
 import de.cyface.collector.handler.MeasurementHandler
@@ -48,22 +47,16 @@ import java.util.Locale
  *
  * @author Klemens Muthmann
  * @author Armin Schnabel
- * @version 3.0.0
+ * @version 4.0.0
  * @since 2.0.0
  * @property authHandlerBuilder Create a handler for authentication requests.
- * @property port The HTTP Server port this service is accessible from.
- * @property measurementPayloadLimit The maximum size of measurement sensor data.
- * @property uploadExpirationTimeInMillis The time a request might stay open.
- * @property largeFileStorageType A strategy to store large files such as road images.
+ * @property serverConfiguration The configuration used by this `CollectorApiVerticle`.
  * @property mongoDatabaseConfiguration Configuration of a mongo database to store sensor data and meta data
  * for a measurement.
  */
 class CollectorApiVerticle(
     private val authHandlerBuilder: AuthHandlerBuilder,
-    private val port: Int,
-    private val measurementPayloadLimit: Long,
-    private val uploadExpirationTimeInMillis: Long,
-    private val largeFileStorageType: StorageType,
+    private val serverConfiguration: ServerConfiguration,
     private val mongoDatabaseConfiguration: JsonObject
 ) : AbstractVerticle() {
 
@@ -83,19 +76,22 @@ class CollectorApiVerticle(
             mongoDatabaseConfiguration,
             mongoDatabaseConfiguration.getString("data_source_name")
         )
-        val storageServiceBuilder = largeFileStorageType.dataStorageServiceBuilder(vertx, mongoClient)
+        val storageServiceBuilder = serverConfiguration.largeFileStorageType.dataStorageServiceBuilder(
+            vertx,
+            mongoClient
+        )
         val storageServiceBuilderCall = storageServiceBuilder.create()
         val serverStartPromise = Promise.promise<Void>()
         storageServiceBuilderCall.onSuccess { storageService ->
             logger.info("Created storage service.")
-            val uploadExpirationTime = uploadExpirationTimeInMillis
+            val uploadExpirationTime = serverConfiguration.uploadExpirationTimeInMillis
             logger.info("Requests to the storage service expire after $uploadExpirationTime milliseconds.")
             val cleanUpOperation = storageServiceBuilder.createCleanupOperation()
             storageService.startPeriodicCleaningOfTempData(uploadExpirationTime, vertx, cleanUpOperation)
 
             try {
                 val routerSetup = setupRoutes(storageService)
-                val httpServer = HttpServer(port)
+                val httpServer = HttpServer(serverConfiguration.port)
                 routerSetup.onSuccess { httpServer.start(vertx, it, serverStartPromise) }
                 routerSetup.onFailure { serverStartPromise.fail(it) }
             } catch (e: IllegalStateException) {
@@ -164,12 +160,17 @@ class CollectorApiVerticle(
             .onSuccess {
                 // Register handlers which require authentication
                 val preRequestHandlerAuthorizationHandler = AuthorizationHandler()
+                val preRequestHandler = PreRequestHandler(
+                    storageService,
+                    serverConfiguration.measurementPayloadLimit,
+                    serverConfiguration.httpEndpoint
+                )
                 registerPreRequestHandler(
                     apiRouter,
                     it,
                     preRequestHandlerAuthorizationHandler,
                     failureHandler,
-                    storageService,
+                    preRequestHandler,
                 )
                 val measurementRequestAuthorizationHandler = AuthorizationHandler()
                 registerMeasurementHandler(
@@ -197,14 +198,14 @@ class CollectorApiVerticle(
      * @param oauth2Handler The handler to authenticate the user using an OAuth2 endpoint.
      * @param authorizationHandler The handler used to authorize a user after successful authentication.
      * @param failureHandler The handler to add to handle failures.
-     * @param storageService Service used to write the received data.
+     * @param requestHandler The actual handler for the received HTTP request.
      */
     private fun registerPreRequestHandler(
         router: Router,
         oauth2Handler: OAuth2AuthHandler,
         authorizationHandler: AuthorizationHandler,
         failureHandler: ErrorHandler,
-        storageService: DataStorageService,
+        requestHandler: PreRequestHandler,
     ) {
         val preRequestBodyHandler = BodyHandler.create().setBodyLimit(BYTES_IN_ONE_KILOBYTE)
         router.post(MEASUREMENTS_ENDPOINT)
@@ -213,7 +214,7 @@ class CollectorApiVerticle(
             .handler(preRequestBodyHandler)
             .handler(oauth2Handler)
             .handler(authorizationHandler)
-            .handler(PreRequestHandler(storageService, measurementPayloadLimit))
+            .handler(requestHandler)
             .failureHandler(failureHandler)
     }
 
@@ -240,7 +241,7 @@ class CollectorApiVerticle(
             // Not using BodyHandler as the `request.body()` can only be read once and the {@code #handler} does so.
             .handler(oauth2Handler)
             .handler(authorizationHandler)
-            .handler(MeasurementHandler(storageService, measurementPayloadLimit))
+            .handler(MeasurementHandler(storageService, serverConfiguration.measurementPayloadLimit))
             .handler(StatusHandler(storageService))
             .failureHandler(failureHandler)
     }

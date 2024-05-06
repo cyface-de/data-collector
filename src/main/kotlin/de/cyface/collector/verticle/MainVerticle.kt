@@ -83,10 +83,13 @@ class MainVerticle : AbstractVerticle() {
 
         val collectorApiVerticle = CollectorApiVerticle(
             authHandlerBuilder,
-            config.httpPort,
-            config.measurementPayloadLimit,
-            config.uploadExpiration,
-            config.storageType,
+            ServerConfiguration(
+                config.httpPort,
+                config.httpPath,
+                config.measurementPayloadLimit,
+                config.uploadExpiration,
+                config.storageType,
+            ),
             config.mongoDb
         )
 
