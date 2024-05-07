@@ -49,7 +49,7 @@ import io.vertx.junit5.VertxTestContext;
  * Tests if running the {@link CollectorApiVerticle} works as expected.
  *
  * @author Klemens Muthmann
- * @version 1.1.1
+ * @version 1.1.2
  * @since 5.2.0
  */
 @ExtendWith(VertxExtension.class)

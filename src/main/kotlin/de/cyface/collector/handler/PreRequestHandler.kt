@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 - 2022 Cyface GmbH
+ * Copyright 2021-2024 Cyface GmbH
  *
  * This file is part of the Cyface Data Collector.
  *
@@ -45,7 +45,7 @@ import java.util.Locale
  *
  * @author Armin Schnabel
  * @author Klemens Muthmann
- * @version 1.0.1
+ * @version 2.0.0
  * @since 6.0.0
  * @property storageService The service used to store data and retrieve information about stored data
  *                          by this application.

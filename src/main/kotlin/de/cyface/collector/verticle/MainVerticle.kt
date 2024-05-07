@@ -1,5 +1,5 @@
 /*
- * Copyright 2018-2023 Cyface GmbH
+ * Copyright 2018-2024 Cyface GmbH
  *
  * This file is part of the Cyface Data Collector.
  *
@@ -32,7 +32,7 @@ import java.io.IOException
  *
  * @author Klemens Muthmann
  * @author Armin Schnabel
- * @version 2.2.1
+ * @version 2.2.2
  * @since 2.0.0
  */
 class MainVerticle : AbstractVerticle() {
