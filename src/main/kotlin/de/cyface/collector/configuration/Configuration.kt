@@ -24,15 +24,20 @@ import org.apache.commons.lang3.Validate
 import java.net.URL
 import java.nio.file.Path
 
+@Suppress("ForbiddenComment")
+// TODO: Remove the HTTP Path Parameter by switching to returning a relative Location header.
+//  This requires adapted clients.
 /**
  * A POJO representing the configuration provided to this application.
  *
  * @author Klemens Muthmann
  * @author Armin Schnabel
- * @version 4.0.0
+ * @version 5.0.0
  * @since 1.0.0
  * @property httpHost The host name of the server serving this collector service.
  * @property httpPort The Port providing this collector service.
+ * @property httpPath The path under which this service is deployed.
+ * This is required to send the client proper absolute locations for
  * @property mongoDb The Mongo database configuration as described in the Vert.x documentation.
  * @property uploadExpiration The time an upload session stays valid to be resumed in the future, in milliseconds.
  * @property measurementPayloadLimit The maximum size in bytes accepted for a single measurement.
@@ -43,6 +48,7 @@ import java.nio.file.Path
 data class Configuration(
     val httpHost: String,
     val httpPort: Int,
+    val httpPath: String,
     val mongoDb: JsonObject,
     val uploadExpiration: Long,
     val measurementPayloadLimit: Long,
@@ -59,6 +65,7 @@ data class Configuration(
             try {
                 val httpHost = Validate.notEmpty(json.get<String>("http.host"))
                 val httpPort = json.get<Int>("http.port")
+                val httpPath = json.get<String>("http.endpoint")
                 val mongoDb = json.get<JsonObject>("mongo.db")
                 val uploadExpiration = json.get<Long>("upload.expiration")
                 val measurementPayloadLimit = json.get<Long>("measurement.payload.limit")
@@ -75,6 +82,7 @@ data class Configuration(
                 return Configuration(
                     httpHost,
                     httpPort,
+                    httpPath,
                     mongoDb,
                     uploadExpiration,
                     measurementPayloadLimit,

@@ -21,6 +21,7 @@ package de.cyface.collector.storage.cloud
 import de.cyface.collector.auth.MockedHandlerBuilder
 import de.cyface.collector.configuration.GoogleCloudStorageType
 import de.cyface.collector.verticle.CollectorApiVerticle
+import de.cyface.collector.verticle.ServerConfiguration
 import io.vertx.core.AsyncResult
 import io.vertx.core.Future
 import io.vertx.core.MultiMap
@@ -49,6 +50,7 @@ import kotlin.test.assertEquals
  *
  * @author Klemens Muthmann
  * @version 1.0.0
+ * @since 7.1.3
  */
 @Disabled("This test calls the actual API without mocking calls to the Google Object Storage.")
 @ExtendWith(VertxExtension::class)
@@ -60,10 +62,27 @@ class UploadPictureIT {
      * Both are available from ``imageData`` and ``data`` methods, respectively.
      */
     val data = data() // imageData()
-    val collectionName: String = ""
-    val projectIdentifier: String = ""
-    val bucketName: String = ""
-    val credentialsFile: String = ""
+
+    /**
+     * The name of the Mongo collection to store measurement meta data.
+     */
+    private val collectionName: String = ""
+
+    /**
+     * The Google Cloud project identifier hosting the Object Store.
+     */
+    private val projectIdentifier: String = ""
+
+    /**
+     * The Google Cloud Data Storage bucket used to store the test data.
+     */
+    private val bucketName: String = ""
+
+    /**
+     * An authentication file created using the Google cloud shell.
+     * @see <a href="https://cloud.google.com/docs/authentication/client-libraries?hl=de">Google Cloud Documentation</a>
+     */
+    private val credentialsFile: String = ""
 
     @Test
     @Timeout(value = 960, timeUnit = TimeUnit.SECONDS)
@@ -88,10 +107,13 @@ class UploadPictureIT {
 
         val oocut = CollectorApiVerticle(
             MockedHandlerBuilder(),
-            httpPort,
-            measurementPayloadLimit,
-            uploadExpiration,
-            storageType,
+            ServerConfiguration(
+                httpPort,
+                "/",
+                measurementPayloadLimit,
+                uploadExpiration,
+                storageType,
+            ),
             mongoDb
 
         )
@@ -141,6 +163,9 @@ class UploadPictureIT {
         )
     }
 
+    /**
+     * This method is called if the test has successfully deployed the Vert.x Application.
+     */
     private fun onSuccessfullyDeployed(
         webClient: WebClient,
         host: String,
@@ -166,6 +191,9 @@ class UploadPictureIT {
         return promise.future()
     }
 
+    /**
+     * This method is called if the test has successfully send a pre request to the test server.
+     */
     private fun onPreRequestSuccessful(
         webClient: WebClient,
         location: URL,
@@ -218,6 +246,9 @@ class UploadPictureIT {
         return promise.future()
     }
 
+    /**
+     * Create some static meta data for the test fixture.
+     */
     private fun metaData(locationCount: Long, deviceIdentifier: UUID, measurementIdentifier: Long): JsonObject {
         val metaDataBody = JsonObject()
         metaDataBody.put("deviceType", "testDeviceType")
@@ -238,6 +269,9 @@ class UploadPictureIT {
         return metaDataBody
     }
 
+    /**
+     * Create the HTTP headers for the pre request.
+     */
     private fun headers(authToken: String, host: String, port: Int): MultiMap {
         val ret = MultiMap.caseInsensitiveMultiMap()
         ret.add("Authorization", "Bearer $authToken")
@@ -252,6 +286,10 @@ class UploadPictureIT {
         return ret
     }
 
+    /**
+     * Create a numbered array of data points.
+     * This allows us to check if the upload finished correctly and no bytes where garbled up.
+     */
     private fun data(): ByteArray {
         val ret = mutableListOf<Byte>()
         (0..10_000).forEach {

@@ -47,7 +47,8 @@ import java.util.UUID
  * Tests for running the [PreRequestHandler] in isolation.
  *
  * @author Klemens Muthmann
- * @version 1.0.0
+ * @version 1.0.1
+ * @since 6.11.0
  */
 @ExtendWith(MockitoExtension::class)
 class PreRequestTest {
@@ -106,7 +107,7 @@ class PreRequestTest {
 
         whenever(mockRoutingContext.body()).thenReturn(mockBody)
         whenever(mockBody.asJsonObject()).thenReturn(preRequestBody(deviceId))
-        oocut = PreRequestHandler(mockStorageService, 100L)
+        oocut = PreRequestHandler(mockStorageService, 100L, "/")
     }
 
     @Test

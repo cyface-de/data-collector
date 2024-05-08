@@ -137,7 +137,7 @@ The following parameters are supported:
 
 * **http.port:** The port the API  is available at.
 * **http.host:** The hostname under which the Cyface Data Collector is running. This can be something like `localhost`.
-* **http.endpoint:** The path to the endpoint the Cyface Data Collector. This defaults to `/api/v4`.
+* **http.endpoint:** The path to the endpoint the Cyface Data Collector.
 * **mongo.db:** Settings for a Mongo database storing information about all the users capable of logging into the system and all data uploaded via the Cyface data collector. This defaults to a Mongo database available at `mongodb://127.0.0.1:27017`. The value of this should be a JSON object configured as described [here](https://vertx.io/docs/vertx-mongo-client/java/#_configuring_the_client).
 * **metrics.enabled:** Set to either `true` or `false`. If `true` the collector API publishes metrics using micrometer. These metrics are accessible by a [Prometheus](https://prometheus.io/) server (Which you need to set up yourself) at port `8081`.
 * **upload.expiration:** The time an interrupted upload is stored for continuation in the future in milliseconds. If this time expires, the upload must start from the beginning.
