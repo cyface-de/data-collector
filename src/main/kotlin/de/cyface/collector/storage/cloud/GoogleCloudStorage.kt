@@ -21,6 +21,7 @@
 package de.cyface.collector.storage.cloud
 
 import com.google.auth.Credentials
+import com.google.cloud.storage.Blob
 import com.google.cloud.storage.BlobInfo
 import com.google.cloud.storage.Storage
 import com.google.cloud.storage.StorageOptions
@@ -77,9 +78,9 @@ class GoogleCloudStorage internal constructor(
                 StorageOptions
                     .getDefaultRetrySettings()
                     .toBuilder()
-                    .setMaxAttempts(Companion.maxAttempts)
-                    .setRetryDelayMultiplier(Companion.retryDelayMultiplier)
-                    .setTotalTimeout(Duration.ofMinutes(Companion.totalTimeoutDuration))
+                    .setMaxAttempts(maxAttempts)
+                    .setRetryDelayMultiplier(retryDelayMultiplier)
+                    .setTotalTimeout(Duration.ofMinutes(totalTimeoutDuration))
                     .build()
             )
             .setCredentials(credentials)
@@ -141,8 +142,8 @@ class GoogleCloudStorage internal constructor(
     }
 
     override fun bytesUploaded(): Long {
-        val dataBlob = storage[bucketName, dataBlobName()]
-        return dataBlob.size
+        val dataBlob: Blob? = storage[bucketName, dataBlobName()]
+        return dataBlob?.size ?: 0L
     }
 
     fun download(): ByteArrayOutputStream {
