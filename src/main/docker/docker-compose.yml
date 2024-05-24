@@ -21,6 +21,16 @@ version: "3.8"
 name: collector
 services:
 
+  proxy:
+    container_name: collector_proxy
+    image: nginx
+    ports:
+      - "127.0.0.1:8889:80"
+    volumes:
+      - ./proxy/default.conf:/etc/nginx/conf.d/default.conf
+    networks:
+      - proxy
+
   # Mongo Database Container
   mongo:
     container_name: collector_mongo
@@ -103,3 +113,5 @@ networks:
     name: cyface-collector_database
   authentication:
     name: cyface-collector_authentication
+  proxy:
+    name: cyface-collector_proxy
