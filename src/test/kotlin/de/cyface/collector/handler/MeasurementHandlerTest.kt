@@ -29,7 +29,7 @@ import io.vertx.core.MultiMap
 import io.vertx.core.buffer.Buffer
 import io.vertx.core.http.HttpServerRequest
 import io.vertx.core.http.HttpServerResponse
-import io.vertx.core.streams.Pipe
+import io.vertx.core.streams.ReadStream
 import io.vertx.ext.web.RoutingContext
 import io.vertx.ext.web.Session
 import org.junit.jupiter.api.BeforeEach
@@ -52,7 +52,6 @@ import kotlin.test.assertEquals
  * Run tests on the [MeasurementHandler] directly without a Vert.x environment.
  *
  * @author Klemens Muthmann
- * @version 1.0.0
  */
 @ExtendWith(MockitoExtension::class)
 class MeasurementHandlerTest {
@@ -62,9 +61,6 @@ class MeasurementHandlerTest {
 
     @Mock
     lateinit var mockResponse: HttpServerResponse
-
-    @Mock
-    lateinit var mockPipe: Pipe<Buffer>
 
     @Mock
     lateinit var mockUser: User
@@ -95,7 +91,6 @@ class MeasurementHandlerTest {
             on { getHeader(any()) } doAnswer { getHeaderCall ->
                 headers.get(getHeaderCall.getArgument(0, String::class.java))
             }
-            on { pipe() } doReturn mockPipe
         }
 
         mockSession = mock {
@@ -134,7 +129,7 @@ class MeasurementHandlerTest {
         val mockBytesUploadedCall = mock<Future<Long>> {}
         whenever(mockStorageService.bytesUploaded(any())).thenReturn(mockBytesUploadedCall)
         val mockStoreCall = mock<Future<Status>> {}
-        whenever(mockStorageService.store(any<Pipe<Buffer>>(), any<UploadMetaData>())).thenReturn(mockStoreCall)
+        whenever(mockStorageService.store(any<ReadStream<Buffer>>(), any<UploadMetaData>())).thenReturn(mockStoreCall)
 
         // Act
         oocut.handle(mockRoutingContext)
@@ -177,7 +172,7 @@ class MeasurementHandlerTest {
 
         // Assert
         argumentCaptor<UploadMetaData> {
-            verify(mockStorageService).store(eq(mockPipe), capture())
+            verify(mockStorageService).store(eq(mockRequest), capture())
 
             assertEquals(mockUser, firstValue.user)
             assertEquals(ContentRange(0L, 9L, 10L), firstValue.contentRange)

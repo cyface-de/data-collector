@@ -50,7 +50,6 @@ import kotlin.test.assertNotNull
  * An integration test to check whether storing data to an embedded GridFS works as expected.
  *
  * @author Klemens Muthmann
- * @version 1.0.2
  */
 @ExtendWith(VertxExtension::class)
 class GridFSStorageIT {
@@ -99,7 +98,6 @@ class GridFSStorageIT {
             testFileURI.absolutePathString(),
             OpenOptions(),
             context.succeeding {
-                val pipe = it.pipe()
                 val user = User(UUID.randomUUID(), "test-user")
                 val uploadIdentifier = UUID.randomUUID()
                 val contentRange = ContentRange(0L, 3L, 4L)
@@ -110,7 +108,7 @@ class GridFSStorageIT {
                     metaData
                 )
                 oocut.store(
-                    pipe,
+                    it,
                     uploadMetaData
                 ).onComplete(
                     context.succeeding {

@@ -49,7 +49,6 @@ import java.util.UUID
  * previously present data.
  *
  * @author Klemens Muthmann
- * @version 1.1.1
  * @property credentials A Google Cloud credentials instance. For information on how to acquire such an instance see
  * the [Google Cloud documentation](https://github.com/googleapis/google-auth-library-java/blob/040acefec507f419f6e4ec4eab9645a6e3888a15/samples/snippets/src/main/java/AuthenticateExplicit.java).
  * @property projectIdentifier The name of the Google Cloud project to upload the data to.

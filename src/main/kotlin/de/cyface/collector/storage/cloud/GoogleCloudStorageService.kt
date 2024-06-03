@@ -31,6 +31,7 @@ import io.vertx.core.Promise
 import io.vertx.core.Vertx
 import io.vertx.core.buffer.Buffer
 import io.vertx.core.streams.Pipe
+import io.vertx.core.streams.ReadStream
 import io.vertx.ext.reactivestreams.ReactiveWriteStream
 import org.reactivestreams.Subscriber
 import org.reactivestreams.Subscription
@@ -46,7 +47,6 @@ import java.util.concurrent.Callable
  * [here](https://cloud.google.com/docs/authentication/application-default-credentials).
  *
  * @author Klemens Muthmann
- * @version 2.0.1
  * @property dao The data access object to write an uploads' metadata.
  * @property vertx A Vertx instance of the current Vertx environment.
  *
@@ -63,52 +63,61 @@ class GoogleCloudStorageService(
     private val logger = LoggerFactory.getLogger(GoogleCloudStorageService::class.java)
 
     override fun store(
-        pipe: Pipe<Buffer>,
+        sourceData: ReadStream<Buffer>,
         uploadMetaData: UploadMetaData
     ): Future<Status> {
         val ret = Promise.promise<Status>()
-        val targetStream = ReactiveWriteStream.writeStream<Buffer>(Vertx.vertx())
+        val pipe = sourceData.pipe().endOnSuccess(false)
+        val targetStream = ReactiveWriteStream.writeStream<Buffer>(vertx)
         val uploadIdentifier = uploadMetaData.uploadIdentifier
         val cloud = cloudStorageFactory.create(uploadIdentifier)
         val subscriber = CloudStorageSubscriber<Buffer>(cloud, uploadMetaData.contentRange.totalBytes, vertx)
-
-        logger.debug("Piping ${uploadMetaData.contentRange.totalBytes} bytes to Google Cloud.")
-        targetStream.subscribe(subscriber)
-        val pipeToProcess = pipe.to(targetStream)
-        pipeToProcess.onSuccess {
-            // if finished store the metadata to Mongo and delete the tmp file.
-            val bytesUploaded = cloud.bytesUploaded()
-            val contentRange = uploadMetaData.contentRange
-            if (bytesUploaded != contentRange.toIndex + 1) {
-                ret.fail(
-                    ContentRangeNotMatchingFileSize(
-                        String.format(
-                            Locale.getDefault(),
-                            "Response: 500, Content-Range (%s) not matching file size (%s)",
-                            contentRange,
+        subscriber.dataWrittenListener = object : CloudStorageSubscriber.DataWrittenListener {
+            override fun dataWritten() {
+                logger.debug("Finished writing upload: {}.", uploadIdentifier)
+                // if finished store the metadata to Mongo and delete the tmp file.
+                val bytesUploaded = cloud.bytesUploaded()
+                logger.debug("Wrote $bytesUploaded")
+                val contentRange = uploadMetaData.contentRange
+                logger.debug("Expected {}", contentRange)
+                if (bytesUploaded != contentRange.toIndex + 1) {
+                    ret.fail(
+                        ContentRangeNotMatchingFileSize(
+                            String.format(
+                                Locale.getDefault(),
+                                "Response: 500, Content-Range (%s) not matching file size (%s)",
+                                contentRange,
+                                bytesUploaded
+                            )
+                        )
+                    )
+                } else if (contentRange.totalBytes == contentRange.toIndex + 1) {
+                    ret.complete(
+                        Status(
+                            uploadIdentifier,
+                            StatusType.COMPLETE,
                             bytesUploaded
                         )
                     )
-                )
-            } else if (contentRange.totalBytes == contentRange.toIndex + 1) {
-                ret.complete(
-                    Status(
-                        uploadIdentifier,
-                        StatusType.COMPLETE,
-                        bytesUploaded
+                    dao.storeMetadata(uploadMetaData.metaData)
+                } else {
+                    ret.complete(
+                        Status(
+                            uploadIdentifier,
+                            StatusType.INCOMPLETE,
+                            bytesUploaded
+                        )
                     )
-                )
-                dao.storeMetadata(uploadMetaData.metaData)
-            } else {
-                ret.complete(
-                    Status(
-                        uploadIdentifier,
-                        StatusType.INCOMPLETE,
-                        bytesUploaded
-                    )
-                )
+                }
             }
         }
+
+        logger.debug("Piping ${uploadMetaData.contentRange.totalBytes} bytes to Google Cloud.")
+        targetStream.subscribe(subscriber)
+        // This End-Handler is crucial!!!. Without the pipe does not provide all the data available.
+        sourceData.endHandler { logger.debug("All data read for upload {}!", uploadIdentifier) }
+        val pipeToProcess = pipe.to(targetStream)
+        pipeToProcess.onSuccess { logger.debug("Pipe finished for upload {}!", uploadIdentifier) }
         pipeToProcess.onFailure(ret::fail)
 
         return ret.future()
@@ -162,7 +171,6 @@ class GoogleCloudStorageService(
  * Vertx, since there is no implementation from Vertx directly.
  *
  * @author Klemens Muthmann
- * @version 2.0.0
  * @property cloudStorage The [CloudStorage] to communicate with the Cloud and write the received data.
  */
 class CloudStorageSubscriber<in T : Buffer>(
@@ -187,21 +195,27 @@ class CloudStorageSubscriber<in T : Buffer>(
     private var streamedBytes = 0
 
     /**
+     * A listener that is informed if all data received was written successfully.
+     */
+    var dataWrittenListener: DataWrittenListener? = null
+
+    /**
      * If an error occurred, this property provides further details.
      * If no error occurred, this property remains `null``
      */
     var error: Throwable? = null
     override fun onSubscribe(subscription: Subscription) {
+        logger.debug("Subscribing to data!")
         this.subscription = subscription
         this.subscription.request(1)
     }
 
     override fun onError(t: Throwable) {
         // Delete content from Google Cloud
+        logger.error("Error writing data!", t)
         this.subscription.cancel()
         cloudStorage.delete()
         this.error = t
-        logger.error("Error writing data!", t)
     }
 
     override fun onComplete() {
@@ -216,25 +230,25 @@ class CloudStorageSubscriber<in T : Buffer>(
         vertx.executeBlocking(
             Callable {
                 cloudStorage.write(t.bytes)
+                logger.debug("Progress: ${streamedBytes.toDouble() / totalBytes.toDouble() * oneHundredPercent} %")
+                if (streamedBytes >= totalBytes) {
+                    dataWrittenListener?.dataWritten()
+                } else {
+                    logger.debug("Requesting new data")
+                    this.subscription.request(1)
+                }
             }
-        )
+        ).onFailure {
+            logger.error("Failed writing ${t.bytes.size}!")
+            onError(it)
+        }
+    }
 
-        this.subscription.request(Companion.chunkSize)
-        logger.debug("Progress: ${streamedBytes.toDouble() / totalBytes.toDouble() * Companion.oneHundredPercent} %")
+    interface DataWrittenListener {
+        fun dataWritten()
     }
 
     companion object {
-        @Suppress("ForbiddenComment")
-        // TODO: Why is this required to be 8192? Data is submitted in hunks of that size,
-        //  but this should depend on something and not be hardcoded here. I could not find the reason as of
-        // 29.04.2024. I also posted the question into the Vert.x Discord.
-        // https://discord.com/channels/751380286071242794/751397908611596368/1234487960280502312
-        // No Answer yet.
-        /**
-         * The size of one data chunk in bytes.
-         */
-        private const val chunkSize = 8192L
-
         /**
          * Constant used to display the upload progress in percent.
          */

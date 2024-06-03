@@ -25,7 +25,7 @@ import de.cyface.collector.storage.UploadMetaData
 import io.vertx.core.Future
 import io.vertx.core.Vertx
 import io.vertx.core.buffer.Buffer
-import io.vertx.core.streams.Pipe
+import io.vertx.core.streams.ReadStream
 import java.util.UUID
 
 /**
@@ -41,7 +41,7 @@ import java.util.UUID
 class FileSystemStorageService(val vertx: Vertx) : DataStorageService {
 
     override fun store(
-        pipe: Pipe<Buffer>,
+        sourceData: ReadStream<Buffer>,
         uploadMetaData: UploadMetaData
     ): Future<Status> {
         @Suppress("UnusedPrivateMember", "UNUSED_VARIABLE")
