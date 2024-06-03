@@ -18,16 +18,26 @@
  */
 package de.cyface.collector.storage.cloud
 
+import com.google.auth.oauth2.GoogleCredentials
 import de.cyface.collector.auth.MockedHandlerBuilder
 import de.cyface.collector.configuration.GoogleCloudStorageType
+import de.cyface.collector.model.ContentRange
+import de.cyface.collector.model.User
+import de.cyface.collector.storage.UploadMetaData
 import de.cyface.collector.verticle.CollectorApiVerticle
 import de.cyface.collector.verticle.ServerConfiguration
+import de.cyface.model.RequestMetaData
+import de.cyface.uploader.DefaultUploader
+import de.cyface.uploader.Result
+import de.cyface.uploader.UploadProgressListener
 import io.vertx.core.AsyncResult
 import io.vertx.core.Future
 import io.vertx.core.MultiMap
 import io.vertx.core.Promise
 import io.vertx.core.Vertx
 import io.vertx.core.buffer.Buffer
+import io.vertx.core.file.AsyncFile
+import io.vertx.core.file.OpenOptions
 import io.vertx.core.json.JsonObject
 import io.vertx.ext.web.client.HttpResponse
 import io.vertx.ext.web.client.WebClient
@@ -36,6 +46,11 @@ import io.vertx.junit5.VertxExtension
 import io.vertx.junit5.VertxTestContext
 import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.extension.ExtendWith
+import org.mockito.kotlin.mock
+import org.slf4j.LoggerFactory
+import org.testcontainers.containers.GenericContainer
+import java.io.File
+import java.io.FileInputStream
 import java.net.URL
 import java.util.Locale
 import java.util.UUID
@@ -49,12 +64,15 @@ import kotlin.test.assertEquals
  * To get this test running an accessible Mongo database and Google Cloud Storage service is required.
  *
  * @author Klemens Muthmann
- * @version 1.0.0
- * @since 7.1.3
  */
 @Disabled("This test calls the actual API without mocking calls to the Google Object Storage.")
 @ExtendWith(VertxExtension::class)
+@Suppress("LongMethod")
 class UploadPictureIT {
+    /**
+     * The logger used for objects of this class. Configure it using `src/test/resources/logback-test.xml`.
+     */
+    private val logger = LoggerFactory.getLogger(javaClass)
     // Change the following parameters to appropriate values for this test to run.
     /**
      * Consider changing the data source by modifying the data variable inside this method.
@@ -80,6 +98,7 @@ class UploadPictureIT {
 
     /**
      * An authentication file created using the Google cloud shell.
+     * This often resides at `~/.config/gcloud/application_default_credentials.json`.
      * @see <a href="https://cloud.google.com/docs/authentication/client-libraries?hl=de">Google Cloud Documentation</a>
      */
     private val credentialsFile: String = ""
@@ -161,6 +180,165 @@ class UploadPictureIT {
                 )
             }
         )
+    }
+
+    @Test
+    fun `upload data using the uploader library, mirroring the implementation found on Android Phones`(
+        vertx: Vertx,
+        testContext: VertxTestContext
+    ) {
+        val mongoPort = 27017
+        val mongo = GenericContainer("mongo:5.0.16").withExposedPorts(mongoPort)
+        mongo.start()
+
+        val port = 8080
+        val httpEndpoint = "/"
+        val uploadExpirationtimeInMillis = 60000L
+        val measurementPayloadLimit = 104857600L
+        val largeFileStorageType = GoogleCloudStorageType(
+            collectionName = collectionName,
+            projectIdentifier = projectIdentifier,
+            bucketName = bucketName,
+            credentialsFile = credentialsFile,
+        )
+
+        val authHandlerBuilder = MockedHandlerBuilder()
+        val serverConfiguration = ServerConfiguration(
+            port,
+            httpEndpoint,
+            measurementPayloadLimit,
+            uploadExpirationtimeInMillis,
+            largeFileStorageType
+        )
+        val mongoDatabaseConfiguration = JsonObject()
+            .put("db_name", "cyface")
+            .put("connection_string", "mongodb://${mongo.getHost()}:${mongo.getMappedPort(mongoPort)}")
+            .put("data_source_name", "cyface")
+
+        val verticle = CollectorApiVerticle(
+            authHandlerBuilder,
+            serverConfiguration,
+            mongoDatabaseConfiguration
+        )
+
+        vertx.deployVerticle(verticle).onComplete(
+            testContext.succeeding {
+                val uploader = DefaultUploader("http://localhost:8080/")
+                val jwtToken = "eyTestToken"
+                val metaData = RequestMetaData(
+                    deviceIdentifier = UUID.randomUUID().toString(),
+                    measurementIdentifier = "0",
+                    operatingSystemVersion = "iOS17",
+                    deviceType = "iPhone14,1",
+                    applicationVersion = "7.6.5",
+                    length = 200.0,
+                    locationCount = 20,
+                    startLocation = RequestMetaData.GeoLocation(System.currentTimeMillis(), 13.711864, 51.047010),
+                    endLocation = RequestMetaData.GeoLocation(System.currentTimeMillis(), 13.714954, 51.050895),
+                    modality = "BICYCLE",
+                    formatVersion = 3,
+                    logCount = 0,
+                    imageCount = 0,
+                    videoCount = 0,
+                    filesSize = 0,
+                )
+                val pathToUpload = this::class.java.getResource("/example-image-enterprise.jpg")?.file
+                if (pathToUpload.isNullOrEmpty()) {
+                    testContext.failNow("No input file available.")
+                } else {
+                    val fileToUpload = File(pathToUpload)
+                    val result = uploader.uploadMeasurement(
+                        jwtToken,
+                        metaData,
+                        fileToUpload,
+                        object : UploadProgressListener {
+                            override fun updatedProgress(percent: Float) {
+                                print("Upload Progress: $percent")
+                            }
+                        }
+                    )
+
+                    testContext.verify {
+                        assertEquals(
+                            Result.UPLOAD_SUCCESSFUL,
+                            result
+                        )
+                    }
+                    mongo.stop()
+                    testContext.completeNow()
+                }
+            }
+        )
+    }
+
+    /**
+     * This tests does not start a server, but rather uploads the data directly from a file.
+     */
+    @Test
+    @Timeout(value = 960, timeUnit = TimeUnit.SECONDS)
+    fun `Test the inner workings of the GoogelCloudStorageService using a real sized image`(
+        vertx: Vertx,
+        vertxTestContext: VertxTestContext
+    ) {
+        val testUploadIdentifier = UUID.randomUUID()
+        logger.debug("Simulating upload with identifier: {}", testUploadIdentifier)
+        val user = mock<User>()
+        val projectIdentifier = projectIdentifier
+        val bucketName = bucketName
+        val credentialsFile = credentialsFile
+        val credentials = FileInputStream(credentialsFile).use { stream -> GoogleCredentials.fromStream(stream) }
+        val dao = mock<Database> {}
+        val dataStorageServiceBuilder = GoogleCloudStorageServiceBuilder(
+            credentials,
+            projectIdentifier,
+            bucketName,
+            dao,
+            vertx
+        )
+        val createDataStorageServiceBuilderProcess = dataStorageServiceBuilder.create()
+
+        val loadExampleProcess = vertx.fileSystem().open("example-image-enterprise.jpg", OpenOptions())
+
+        Future
+            .all(loadExampleProcess, createDataStorageServiceBuilderProcess)
+            .onComplete(
+                vertxTestContext.succeeding { result ->
+                    val exampleFile = result.resultAt<AsyncFile>(0)
+                    val dataStorageService = result.resultAt<GoogleCloudStorageService>(1)
+                    val fileSize = exampleFile.sizeBlocking()
+                    val metaData = de.cyface.collector.model.RequestMetaData(
+                        deviceIdentifier = UUID.randomUUID().toString(),
+                        measurementIdentifier = "0",
+                        operatingSystemVersion = "1",
+                        deviceType = "test",
+                        applicationVersion = "1",
+                        length = 200.0,
+                        locationCount = 20L,
+                        startLocation = de.cyface.collector.model.RequestMetaData.GeoLocation(
+                            System.currentTimeMillis(),
+                            13.707209,
+                            51.044796
+                        ),
+                        endLocation = de.cyface.collector.model.RequestMetaData.GeoLocation(
+                            System.currentTimeMillis(),
+                            13.718708,
+                            51.051013
+                        ),
+                        modality = "BICYCLE",
+                        formatVersion = 3,
+                    )
+
+                    val uploadMetaData = UploadMetaData(
+                        user = user,
+                        contentRange = ContentRange(0, fileSize - 1, fileSize),
+                        uploadIdentifier = testUploadIdentifier,
+                        metaData = metaData
+                    )
+
+                    dataStorageService.store(exampleFile, uploadMetaData)
+                        .onComplete(vertxTestContext.succeedingThenComplete())
+                }
+            )
     }
 
     /**

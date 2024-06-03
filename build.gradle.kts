@@ -28,8 +28,6 @@ import java.net.URL
  *
  * @author Klemens Muthmann
  * @author Armin Schnabel
- * @version 2.0.3
- * @since 1.0.0
  */
 buildscript {
   repositories {
@@ -87,7 +85,7 @@ kotlin {
   jvmToolchain(17)
 }
 
-val vertxVersion = "4.5.7"
+val vertxVersion = "4.5.8"
 val micrometerVersion = "1.10.6"
 val commonsLangVersion = "3.12.0"
 val logbackVersion = "1.4.14"
@@ -105,6 +103,8 @@ val flapdoodleVersion = "3.5.3" // major upgrade available
 val mockitoKotlinVersion = "4.1.0"
 val dokkaVersion = "1.9.10"
 val detektVersion = "1.23.1"
+val cyfaceSynchronizerVersion = "1.3.1"
+val testContainerVersion = "1.19.8"
 
 tasks.wrapper {
   gradleVersion = project.extra["gradleWrapperVersion"].toString()
@@ -158,7 +158,10 @@ dependencies {
   testImplementation("io.vertx:vertx-junit5:$vertxVersion")
   testImplementation("io.vertx:vertx-web-client:$vertxVersion")
   // This is required to run an embedded Mongo instance for integration testing.
+  // TODO: Switch to using testcontainers completely.
   testImplementation("de.flapdoodle.embed:de.flapdoodle.embed.mongo:$flapdoodleVersion")
+  testImplementation("de.cyface:uploader:$cyfaceSynchronizerVersion")
+  testImplementation("org.testcontainers:testcontainers:$testContainerVersion")
 
   // Required to create inline documentation
   dokkaHtmlPlugin("org.jetbrains.dokka:kotlin-as-java-plugin:$dokkaVersion")

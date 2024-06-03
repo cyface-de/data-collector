@@ -42,7 +42,7 @@ import io.vertx.core.Handler
 import io.vertx.core.Promise
 import io.vertx.core.buffer.Buffer
 import io.vertx.core.http.HttpServerRequest
-import io.vertx.core.streams.Pipe
+import io.vertx.core.streams.ReadStream
 import io.vertx.ext.web.RoutingContext
 import io.vertx.ext.web.Session
 import org.apache.commons.lang3.Validate
@@ -61,8 +61,6 @@ import java.util.UUID
  *
  * @author Armin Schnabel
  * @author Klemens Muthmann
- * @version 1.0.3
- * @since 6.0.0
  */
 class MeasurementHandler(
     private val storageService: DataStorageService,
@@ -95,7 +93,7 @@ class MeasurementHandler(
 
             // Handle first chunk
             val contentRange = contentRange(request, bodySize)
-            val checkResult = checkAndStore(session, loggedInUser, request.pipe(), contentRange, metaData)
+            val checkResult = checkAndStore(session, loggedInUser, request, contentRange, metaData)
             checkResult.onSuccess { result ->
                 onCheckSuccessful(result, ctx, session)
             }
@@ -164,7 +162,7 @@ class MeasurementHandler(
      *
      * @param session The HTTP session used as a context for this request.
      * @param user The user trying to upload the data.
-     * @param pipe The pipe containing the data to upload.
+     * @param sourceData The `ReadStream` containing the data to upload.
      * @param contentRange Range information about the data to upload.
      * This data should have been provided via HTTP content-range parameter.
      * @param metaData Meta information about the measurement to handle.
@@ -172,7 +170,7 @@ class MeasurementHandler(
     private fun checkAndStore(
         session: Session,
         user: User,
-        pipe: Pipe<Buffer>,
+        sourceData: ReadStream<Buffer>,
         contentRange: ContentRange,
         metaData: RequestMetaData
     ): Future<Status> {
@@ -204,7 +202,7 @@ class MeasurementHandler(
             acceptNewUpload(
                 session,
                 ret,
-                pipe,
+                sourceData,
                 user,
                 contentRange,
                 metaData
@@ -221,7 +219,7 @@ class MeasurementHandler(
                 } else {
                     val uploadMetaData = UploadMetaData(user, contentRange, uploadIdentifier, metaData)
                     LOGGER.debug("Storing $byteSize bytes to storage service.")
-                    val acceptUploadResult = storageService.store(pipe, uploadMetaData)
+                    val acceptUploadResult = storageService.store(sourceData, uploadMetaData)
                     acceptUploadResult.onSuccess { result -> ret.complete(result) }
                     acceptUploadResult.onFailure { cause -> ret.fail(cause) }
                 }
@@ -231,7 +229,7 @@ class MeasurementHandler(
                 acceptNewUpload(
                     session,
                     ret,
-                    pipe,
+                    sourceData,
                     user,
                     contentRange,
                     metaData
@@ -245,7 +243,7 @@ class MeasurementHandler(
     private fun acceptNewUpload(
         session: Session,
         uploadAccepted: Promise<Status>,
-        pipe: Pipe<Buffer>,
+        sourceData: ReadStream<Buffer>,
         user: User,
         contentRange: ContentRange,
         metaData: RequestMetaData
@@ -256,7 +254,7 @@ class MeasurementHandler(
         // Bind session to this measurement and mark as "pre-request accepted"
         session.put(UPLOAD_PATH_FIELD, newUploadIdentifier)
         val uploadMetaData = UploadMetaData(user, contentRange, newUploadIdentifier, metaData)
-        val acceptUpload = storageService.store(pipe, uploadMetaData)
+        val acceptUpload = storageService.store(sourceData, uploadMetaData)
         acceptUpload.onSuccess { result -> uploadAccepted.complete(result) }
         acceptUpload.onFailure { cause -> uploadAccepted.fail(cause) }
     }

@@ -34,6 +34,7 @@ import io.vertx.core.file.FileProps
 import io.vertx.core.file.FileSystem
 import io.vertx.core.file.OpenOptions
 import io.vertx.core.streams.Pipe
+import io.vertx.core.streams.ReadStream
 import org.bson.types.ObjectId
 import org.slf4j.LoggerFactory
 import java.nio.file.Path
@@ -46,7 +47,6 @@ import kotlin.io.path.name
  * A storage service to write the data to Mongo database Grid FS.
  *
  * @author Klemens Muthmann
- * @version 2.0.0
  * @property dao A data access object to communicate with GridFs.
  * @property fs The Vert.x file system, used to read the temporarily stored data, from the local disk.
  * @property uploadFolder Local folder to store temporary files,
@@ -60,16 +60,17 @@ class GridFsStorageService(
 ) : DataStorageService {
 
     override fun store(
-        pipe: Pipe<Buffer>,
+        sourceData: ReadStream<Buffer>,
         uploadMetaData: UploadMetaData
     ): Future<Status> {
         val ret = Promise.promise<Status>()
+        val sourceToTempPipe = sourceData.pipe()
         val temporaryStorageFile = pathToTemporaryFile(uploadMetaData.uploadIdentifier)
         val fsOpenCall = fs.open(temporaryStorageFile.absolutePathString(), OpenOptions().setAppend(true))
         fsOpenCall.onSuccess { asyncFile ->
             val onTemporaryFileOpenedCall = onTemporaryFileOpened(
                 asyncFile,
-                pipe,
+                sourceToTempPipe,
                 uploadMetaData
             )
             onTemporaryFileOpenedCall.onSuccess(ret::complete)
@@ -157,13 +158,15 @@ class GridFsStorageService(
      */
     private fun onTemporaryFileOpened(
         asyncFile: AsyncFile,
-        pipe: Pipe<Buffer>,
+        sourceToTempPipe: Pipe<Buffer>,
         uploadMetaData: UploadMetaData
     ): Future<Status> {
         val ret = Promise.promise<Status>()
+
         // Pipe body to reduce memory usage and store body of interrupted connections (to support resume)
-        val pipeToCall = pipe.to(asyncFile)
+        val pipeToCall = sourceToTempPipe.to(asyncFile)
         pipeToCall.onSuccess {
+            LOGGER.debug("Finished Reading request!")
             // Check if the upload is complete or if this was just a chunk
             val temporaryStorageFile = pathToTemporaryFile(uploadMetaData.uploadIdentifier)
             val fsPropsCall = fs.props(temporaryStorageFile.toString())
@@ -195,6 +198,11 @@ class GridFsStorageService(
         uploadMetaData: UploadMetaData
     ) {
         // Checking that the data was actually written successfully.
+        LOGGER.debug(
+            "Temporary storage contained {} and expected {}.",
+            props.size(),
+            uploadMetaData.contentRange.totalBytes
+        )
         val byteSize = props.size()
         val contentRange = uploadMetaData.contentRange
         val uploadIdentifier = uploadMetaData.uploadIdentifier

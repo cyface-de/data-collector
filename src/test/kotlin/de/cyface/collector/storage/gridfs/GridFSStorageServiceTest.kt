@@ -30,6 +30,7 @@ import io.vertx.core.buffer.Buffer
 import io.vertx.core.file.AsyncFile
 import io.vertx.core.file.FileProps
 import io.vertx.core.file.FileSystem
+import io.vertx.core.http.HttpServerRequest
 import io.vertx.core.streams.Pipe
 import io.vertx.ext.mongo.GridFsUploadOptions
 import io.vertx.ext.mongo.MongoClient
@@ -55,7 +56,6 @@ import java.util.concurrent.TimeUnit
  * Tests that storing data to Mongo Grid FS works as expected.
  *
  * @author Klemens Muthmann
- * @version 1.1.0
  */
 class GridFSStorageServiceTest {
     // Explicit Type Arguments are required by Mockito.
@@ -85,7 +85,9 @@ class GridFSStorageServiceTest {
         val mockPipe: Pipe<Buffer> = mock {
             on { to(any<AsyncFile>()) } doReturn pipeToResultMock
         }
-        val mockFile: AsyncFile = mock()
+        val mockFile: AsyncFile = mock {
+            on { pipe() } doReturn mockPipe
+        }
 
         val user = User(UUID.randomUUID(), "testUser")
         val contentRange = ContentRange(0L, 4L, 5L)
@@ -119,7 +121,7 @@ class GridFSStorageServiceTest {
         // Act
         val countDownLatch = CountDownLatch(1)
         val uploadMetaData = UploadMetaData(user, contentRange, uploadIdentifier, metaData)
-        val result = oocut.store(mockPipe, uploadMetaData)
+        val result = oocut.store(mockFile, uploadMetaData)
         result.onFailure { cause ->
             fail("Failed Storing test data", cause)
         }
@@ -226,8 +228,10 @@ class GridFSStorageServiceTest {
                 .doReturn(mockStorePipeCall02)
                 .doReturn(mockStorePipeCall03)
         }
+        val mockRequest = mock<HttpServerRequest> {
+            on { pipe() } doReturn mockPipe
+        }
 
-        @Suppress("SpellCheckingInspection")
         val mockUser = mock<User> {
             on { idString } doReturn "testuser"
         }
@@ -240,11 +244,11 @@ class GridFSStorageServiceTest {
 
         // Act
         val uploadMetaData01 = UploadMetaData(mockUser, contentRange01, uploadIdentifier, metaData)
-        val storeCall01 = oocut.store(mockPipe, uploadMetaData01)
+        val storeCall01 = oocut.store(mockRequest, uploadMetaData01)
         val uploadMetaData02 = UploadMetaData(mockUser, contentRange02, uploadIdentifier, metaData)
-        val storeCall02 = oocut.store(mockPipe, uploadMetaData02)
+        val storeCall02 = oocut.store(mockRequest, uploadMetaData02)
         val uploadMetaData03 = UploadMetaData(mockUser, contentRange03, uploadIdentifier, metaData)
-        val storeCall03 = oocut.store(mockPipe, uploadMetaData03)
+        val storeCall03 = oocut.store(mockRequest, uploadMetaData03)
 
         // Assert
         storeCall01.onSuccess { status ->
