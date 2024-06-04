@@ -1,5 +1,5 @@
 /*
- * Copyright 2018-2022 Cyface GmbH
+ * Copyright 2018-2024 Cyface GmbH
  *
  * This file is part of the Cyface Data Collector.
  *
@@ -23,18 +23,16 @@ import java.io.File
 import java.io.Serializable
 
 /**
- * A POJO representing a single measurement, which has arrived at the API version 3 and needs to be stored to persistent
- * storage.
+ * A POJO representing a single measurement or attachment, which has arrived at the API version 3 and needs to be
+ * stored to persistent storage.
  *
  * @author Klemens Muthmann
  * @author Armin Schnabel
- * @version 7.0.0
- * @since 2.0.0
  * @property metaData The metadata from the request header.
- * @property userId The id of the user uploading the measurement.
- * @property binary The binary uploaded with the measurement. This contains the actual data.
+ * @property userId The id of the user uploading the data.
+ * @property binary The actual data uploaded.
  */
-data class Measurement(val metaData: RequestMetaData, val userId: String, val binary: File) : Serializable {
+data class Upload(val metaData: RequestMetaData, val userId: String, val binary: File) : Serializable {
 
     /**
      * @return A JSON representation of this measurement.
@@ -52,6 +50,7 @@ data class Measurement(val metaData: RequestMetaData, val userId: String, val bi
         /**
          * Used to serialize objects of this class. Only change this value if this classes attribute set changes.
          */
+        @Suppress("ConstPropertyName")
         private const val serialVersionUID = -8304842300727933736L
 
         /**

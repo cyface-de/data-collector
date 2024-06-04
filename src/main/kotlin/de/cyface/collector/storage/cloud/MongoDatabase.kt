@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Cyface GmbH
+ * Copyright 2022-2024 Cyface GmbH
  *
  * This file is part of the Serialization.
  *
@@ -32,7 +32,6 @@ import java.util.Locale
  * A [Database] implementation to store metadata into a Mongo database.
  *
  * @author Klemens Muthmann
- * @version 1.0.1
  * @property mongoClient The Vertx [MongoClient] used to access the Mongo database.
  * @property collectionName The name of the collection to store the metadata under.
  */
@@ -74,6 +73,54 @@ class MongoDatabase(private val mongoClient: MongoClient, private val collection
                                 ids.size,
                                 deviceIdentifier,
                                 measurementIdentifier
+                            )
+                        )
+                    )
+                } else if (ids.size == 1) {
+                    ret.complete(true)
+                } else {
+                    ret.complete(false)
+                }
+            } catch (exception: RuntimeException) {
+                ret.fail(exception)
+            }
+        }
+        queryCall.onFailure(ret::fail)
+
+        return ret.future()
+    }
+
+    /**
+     * Checks if the provided combination of deviceIdentifier, measurementIdentifier and attachmentId is already stored
+     * in the database.
+     */
+    override fun exists(deviceIdentifier: String, measurementIdentifier: Long, attachmentIdentifier: Long):
+            Future<Boolean> {
+        val ret = Promise.promise<Boolean>()
+        val query = JsonObject()
+        query.put("features.0.properties.${FormAttributes.DEVICE_ID.value}", deviceIdentifier)
+        query.put("features.0.properties.${FormAttributes.MEASUREMENT_ID.value}", measurementIdentifier)
+        query.put("features.0.properties.${FormAttributes.ATTACHMENT_ID.value}", attachmentIdentifier)
+
+        val queryCall = mongoClient.find(collectionName, query)
+        queryCall.onSuccess { ids ->
+            try {
+                if (ids.size > 1) {
+                    logger.error(
+                        "More than one attachment found for did {} mid {} aid {}",
+                        deviceIdentifier,
+                        measurementIdentifier,
+                        attachmentIdentifier
+                    )
+                    ret.fail(
+                        DuplicatesInDatabase(
+                            String.format(
+                                Locale.ENGLISH,
+                                "Found %d datasets with did %s, mid %d and aid %d",
+                                ids.size,
+                                deviceIdentifier,
+                                measurementIdentifier,
+                                attachmentIdentifier
                             )
                         )
                     )

@@ -46,7 +46,7 @@ import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
-import static de.cyface.collector.model.Measurement.USER_ID_FIELD;
+import static de.cyface.collector.model.Upload.USER_ID_FIELD;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.greaterThan;

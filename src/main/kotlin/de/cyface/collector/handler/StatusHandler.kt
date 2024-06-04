@@ -1,5 +1,5 @@
 /*
- * Copyright 2021-2022 Cyface GmbH
+ * Copyright 2021-2024 Cyface GmbH
  *
  * This file is part of the Cyface Data Collector.
  *
@@ -33,15 +33,15 @@ import java.util.UUID
 /**
  * A handler for receiving HTTP PUT requests with an empty body on the "measurements" end point.
  *
- *
  * This request type is used by clients to ask the upload status and, thus, where to continue the upload.
  *
  * @author Armin Schnabel
- * @version 1.0.0
- * @since 6.0.0
  * @property storageService Service used to write and interact with received data.
  */
 class StatusHandler(private val storageService: DataStorageService) : Handler<RoutingContext> {
+
+    private lateinit var uploadStrategy: UploadStrategy
+
     override fun handle(ctx: RoutingContext) {
         LOGGER.info("Received new upload status request.")
         val request = ctx.request()
@@ -56,46 +56,53 @@ class StatusHandler(private val storageService: DataStorageService) : Handler<Ro
             return
         }
         try {
-            // Check if measurement already exists in database
+            // Decide which upload strategy to use
+            uploadStrategy = if (request.path().contains("attachments")) {
+                AttachmentUploadStrategy(storageService)
+            } else {
+                MeasurementUploadStrategy(storageService)
+            }
+
+            // Check upload conflict with existing data
             val deviceId = request.getHeader(FormAttributes.DEVICE_ID.value)
             val measurementId = request.getHeader(FormAttributes.MEASUREMENT_ID.value)
-            LOGGER.debug("Status of {}:{}", deviceId, measurementId)
+            val attachmentId = request.getHeader(FormAttributes.ATTACHMENT_ID.value)
+            LOGGER.debug("Status of {}:{}:?{}", deviceId, measurementId, attachmentId)
             if (deviceId == null || measurementId == null) {
                 throw InvalidMetaData("Data incomplete!")
             }
-            val isStoredResult = storageService.isStored(deviceId, measurementId.toLong())
-            isStoredResult.onSuccess {
-                val uploadIdentifier = session.get<UUID>(UPLOAD_PATH_FIELD)
+            uploadStrategy.checkConflict(deviceId, measurementId, attachmentId)
+                .onSuccess { conflict ->
+                    val uploadIdentifier = session.get<UUID>(UPLOAD_PATH_FIELD)
 
-                if (it) {
-                    LOGGER.debug("Measurement {}:{} is already stored.", deviceId, measurementId)
-                    ctx.response().setStatusCode(OK).end()
-                } else if (uploadIdentifier == null) {
-                    // If no bytes have been received, return 308 but without a `Range` header to indicate this
-                    LOGGER.debug("Response: 308, no Range (no path)")
-                    ctx.response().putHeader("Content-Length", "0")
-                    ctx.response().setStatusCode(RESUME_INCOMPLETE).end()
-                } else {
-                    storageService.bytesUploaded(uploadIdentifier).onSuccess { byteSize ->
-                        // Indicate that, e.g. for 100 received bytes, bytes 0-99 have been received
-                        val range = String.format(Locale.GERMAN, "bytes=0-%d", byteSize - 1)
-                        LOGGER.debug(String.format(Locale.GERMAN, "Response: 308, Range %s", range))
-                        ctx.response().putHeader("Range", range)
+                    if (conflict) {
+                        LOGGER.debug("Upload {}:{}:?{} is already stored.", deviceId, measurementId, attachmentId)
+                        ctx.response().setStatusCode(OK).end()
+                    } else if (uploadIdentifier == null) {
+                        // If no bytes have been received, return 308 but without a `Range` header to indicate this
+                        LOGGER.debug("Response: 308, no Range (no path)")
                         ctx.response().putHeader("Content-Length", "0")
                         ctx.response().setStatusCode(RESUME_INCOMPLETE).end()
-                    }.onFailure {
-                        // As this links to a non-existing file, remove this
-                        session.remove<UUID>(UPLOAD_PATH_FIELD)
+                    } else {
+                        storageService.bytesUploaded(uploadIdentifier).onSuccess { byteSize ->
+                            // Indicate that, e.g. for 100 received bytes, bytes 0-99 have been received
+                            val range = String.format(Locale.GERMAN, "bytes=0-%d", byteSize - 1)
+                            LOGGER.debug(String.format(Locale.GERMAN, "Response: 308, Range %s", range))
+                            ctx.response().putHeader("Range", range)
+                            ctx.response().putHeader("Content-Length", "0")
+                            ctx.response().setStatusCode(RESUME_INCOMPLETE).end()
+                        }.onFailure {
+                            // As this links to a non-existing file, remove this
+                            session.remove<UUID>(UPLOAD_PATH_FIELD)
 
-                        // If no bytes have been received, return 308 but without a `Range` header to
-                        // indicate this
-                        LOGGER.debug("Response: 308, no Range (path, no file)")
-                        ctx.response().putHeader("Content-Length", "0")
-                        ctx.response().setStatusCode(RESUME_INCOMPLETE).end()
+                            // If no bytes have been received, return 308 but without a `Range` header to
+                            // indicate this
+                            LOGGER.debug("Response: 308, no Range (path, no file)")
+                            ctx.response().putHeader("Content-Length", "0")
+                            ctx.response().setStatusCode(RESUME_INCOMPLETE).end()
+                        }
                     }
-                }
-            }
-            isStoredResult.onFailure(ctx::fail)
+                }.onFailure(ctx::fail)
         } catch (e: InvalidMetaData) {
             ctx.fail(ENTITY_UNPARSABLE, e)
         }

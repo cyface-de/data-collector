@@ -34,7 +34,6 @@ import java.util.UUID
  * On clustered Vert.x repeating uploads is not going to work.
  *
  * @author Klemens Muthmann
- * @version 2.0.0
  * @property vertx The Vert.x instance used to access the data and the file system.
  */
 @Suppress("unused")
@@ -70,6 +69,10 @@ class FileSystemStorageService(val vertx: Vertx) : DataStorageService {
     }
 
     override fun isStored(deviceId: String, measurementId: Long): Future<Boolean> {
+        TODO("Not yet implemented")
+    }
+
+    override fun isStored(deviceId: String, measurementId: Long, attachmentId: Long): Future<Boolean> {
         TODO("Not yet implemented")
     }
 }

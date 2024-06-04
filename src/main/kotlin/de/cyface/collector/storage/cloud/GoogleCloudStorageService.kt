@@ -161,6 +161,17 @@ class GoogleCloudStorageService(
          */
         return dao.exists(deviceId, measurementId)
     }
+
+    override fun isStored(deviceId: String, measurementId: Long, attachmentId: Long): Future<Boolean> {
+
+        /*
+        This solution is incorrect. Since I do not store files in gridFS there will be no metadata either.
+        Where should I store the metadata? According to stackoverflow in a separate database. So probably inside the
+        mongo database as well.
+        See: https://stackoverflow.com/questions/55337912/is-it-possible-to-query-google-cloud-storage-custom-metadata
+         */
+        return dao.exists(deviceId, measurementId, attachmentId)
+    }
 }
 
 /**

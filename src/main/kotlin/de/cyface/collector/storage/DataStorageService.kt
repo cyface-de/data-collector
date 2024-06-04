@@ -30,8 +30,8 @@ import io.vertx.core.streams.ReadStream
 import java.util.UUID
 
 /**
- * Implementations of this interface realize the storage of uploaded measurements, and provide information about the
- * status of the upload.
+ * Implementations of this interface realize the storage of uploaded measurements or attachments, and provide
+ * information about the status of the upload.
  *
  * Each upload is associated with an `uploadIdentifier`. This identifier can be used to repeat uploads if interrupted
  * and to ask for status information. After an upload is complete, the `uploadIdentifier` becomes invalid.
@@ -88,6 +88,17 @@ interface DataStorageService {
      * the result will be `true` and `false` otherwise.
      */
     fun isStored(deviceId: String, measurementId: Long): Future<Boolean>
+
+    /**
+     * Check the data storage on whether some attachment for a measurement is already stored.
+     *
+     * @param deviceId The worldwide unique device identifier of the measurement to check.
+     * @param measurementId The device wide unique identifier of the measurement to check.
+     * @param attachmentId The device wide unique identifier of the attachment to check.
+     * @return A `Future` telling the caller asynchronously whether the attachment is already stored or not. If it is
+     * the result will be `true` and `false` otherwise.
+     */
+    fun isStored(deviceId: String, measurementId: Long, attachmentId: Long): Future<Boolean>
 }
 
 /**

@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Cyface GmbH
+ * Copyright 2022-2024 Cyface GmbH
  *
  * This file is part of the Serialization.
  *
@@ -25,7 +25,6 @@ import io.vertx.core.Future
  * The interface to a database storing the metadata of some uploaded data.
  *
  * @author Klemens Muthmann
- * @version 1.0.0
  */
 interface Database {
     /**
@@ -40,4 +39,12 @@ interface Database {
      * @return A [Future] that is called upon successful or failed completion of this operation.
      */
     fun exists(deviceIdentifier: String, measurementIdentifier: Long): Future<Boolean>
+
+    /**
+     * Queries the database asynchronously for the existence of an attachment with the provided `deviceIdentifier`,
+     * `measurementIdentifier` and `attachmentId`.
+     *
+     * @return A [Future] that is called upon successful or failed completion of this operation.
+     */
+    fun exists(deviceIdentifier: String, measurementIdentifier: Long, attachmentId: Long): Future<Boolean>
 }

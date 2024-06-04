@@ -57,48 +57,56 @@ class PreRequestHandler(
     private val httpPath: String
 ) : Handler<RoutingContext> {
 
+    private lateinit var uploadStrategy: UploadStrategy
+
     override fun handle(ctx: RoutingContext) {
         LOGGER.info("Received new pre-request.")
         val request = ctx.request()
         val session = ctx.session()
         val metaData = ctx.body().asJsonObject()
         try {
-            bodySize(request.headers(), measurementLimit, X_UPLOAD_CONTENT_LENGTH_FIELD)
+            // Decide which upload strategy to use
+            uploadStrategy = if (request.path().contains("attachments")) {
+                AttachmentUploadStrategy(storageService)
+            } else {
+                MeasurementUploadStrategy(storageService)
+            }
+
+            bodySize(request.headers(), uploadLimit, X_UPLOAD_CONTENT_LENGTH_FIELD)
             check(metaData)
             check(session)
 
-            // Check if measurement already exists in database
-            val measurementId = metaData.getString(FormAttributes.MEASUREMENT_ID.value)
+            // Check upload conflict with existing data
             val deviceId = metaData.getString(FormAttributes.DEVICE_ID.value)
+            val measurementId = metaData.getString(FormAttributes.MEASUREMENT_ID.value)
+            val attachmentId = metaData.getString(FormAttributes.ATTACHMENT_ID.value)
             if (measurementId == null || deviceId == null) {
                 throw InvalidMetaData("Data incomplete!")
             }
+            uploadStrategy.checkConflict(deviceId, measurementId, attachmentId)
+                .onSuccess { conflict ->
+                    if (conflict) {
+                        LOGGER.debug("Response: 409, measurement already exists, no upload needed")
+                        ctx.response().setStatusCode(HTTP_CONFLICT).end()
+                    } else {
+                        // Bind session to this measurement and mark as "pre-request accepted"
+                        session.put(MEASUREMENT_ID_FIELD, measurementId)
+                        session.put(DEVICE_ID_FIELD, deviceId)
 
-            val isStoredResult = storageService.isStored(deviceId, measurementId.toLong())
-            isStoredResult.onSuccess { measurementExists ->
-                if (measurementExists) {
-                    LOGGER.debug("Response: 409, measurement already exists, no upload needed")
-                    ctx.response().setStatusCode(HTTP_CONFLICT).end()
-                } else {
-                    // Bind session to this measurement and mark as "pre-request accepted"
-                    session.put(MEASUREMENT_ID_FIELD, measurementId)
-                    session.put(DEVICE_ID_FIELD, deviceId)
-
-                    // Google uses the `Location` format:
-                    // `https://host/endpoint?uploadType=resumable&upload_id=SESSION_ID`
-                    // To use the Vert.X session parsing we use:
-                    // `https://host/endpoint?uploadType=resumable&upload_id=(SESSION_ID)"
-                    val requestUri = URL(request.absoluteURI())
-                    val protocol = request.getHeader("X-Forwarded-Proto")
-                    val locationUri = locationUri(requestUri, protocol, session.id())
-                    LOGGER.debug("Response 200, Location: $locationUri")
-                    ctx.response()
-                        .putHeader("Location", locationUri.toURL().toExternalForm())
-                        .putHeader("Content-Length", "0")
-                        .setStatusCode(OK).end()
-                }
-            }
-            isStoredResult.onFailure { ctx.fail(SERVER_ERROR) }
+                        // Google uses the `Location` format:
+                        // `https://host/endpoint?uploadType=resumable&upload_id=SESSION_ID`
+                        // To use the Vert.X session parsing we use:
+                        // `https://host/endpoint?uploadType=resumable&upload_id=(SESSION_ID)"
+                        val requestUri = URL(request.absoluteURI())
+                        val protocol = request.getHeader("X-Forwarded-Proto")
+                        val locationUri = locationUri(requestUri, protocol, session.id())
+                        LOGGER.debug("Response 200, Location: $locationUri")
+                        ctx.response()
+                            .putHeader("Location", locationUri.toURL().toExternalForm())
+                            .putHeader("Content-Length", "0")
+                            .setStatusCode(OK).end()
+                    }
+                }.onFailure { ctx.fail(SERVER_ERROR, it) }
         } catch (e: InvalidMetaData) {
             ctx.fail(ENTITY_UNPARSABLE, e)
         } catch (e: Unparsable) {

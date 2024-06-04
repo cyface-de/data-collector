@@ -67,6 +67,8 @@ class UploadHandler(
     private val payloadLimit: Long
 ) : Handler<RoutingContext> {
 
+    private var uploadStrategy: UploadStrategy? = null
+
     init {
         Validate.isTrue(payloadLimit > 0)
     }
@@ -82,6 +84,14 @@ class UploadHandler(
                 ctx.response().setStatusCode(HTTPStatus.UNAUTHORIZED).end()
                 return
             }
+
+            // Decide which upload strategy to use
+            uploadStrategy = if (request.path().contains("attachments")) {
+                AttachmentUploadStrategy(storageService)
+            } else {
+                MeasurementUploadStrategy(storageService)
+            }
+
             val bodySize = PreRequestHandler.bodySize(request.headers(), payloadLimit, "content-length")
             val metaData = metaData(request)
             checkSessionValidity(session, metaData)
