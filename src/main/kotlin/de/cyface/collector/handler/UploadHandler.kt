@@ -317,6 +317,18 @@ class UploadHandler(
                 ?: throw InvalidMetaData("Data incomplete!")
             val formatVersion = formatVersionString.toInt()
 
+            // Attachments - set to 0 if not present to support older clients
+            var logCount = request.getHeader(FormAttributes.LOG_COUNT.value)?.toIntOrNull()
+            var imageCount = request.getHeader(FormAttributes.IMAGE_COUNT.value)?.toIntOrNull()
+            var videoCount = request.getHeader(FormAttributes.VIDEO_COUNT.value)?.toIntOrNull()
+            var filesSize = request.getHeader(FormAttributes.FILES_SIZE.value)?.toIntOrNull()
+            if (logCount == null || imageCount == null || videoCount == null || filesSize == null) {
+                logCount = 0
+                imageCount = 0
+                videoCount = 0
+                filesSize = 0
+            }
+
             // Etc.
             val deviceType = request.getHeader(FormAttributes.DEVICE_TYPE.value)
             val osVersion = request.getHeader(FormAttributes.OS_VERSION.value)
@@ -325,7 +337,8 @@ class UploadHandler(
             val modality = request.getHeader(FormAttributes.MODALITY.value)
             RequestMetaData(
                 deviceId, measurementId, osVersion, deviceType, applicationVersion,
-                length, locationCount, startLocation, endLocation, modality, formatVersion
+                length, locationCount, startLocation, endLocation, modality, formatVersion,
+                logCount, imageCount, videoCount, filesSize
             )
         } catch (e: IllegalArgumentException) {
             throw InvalidMetaData("Data was not parsable!", e)

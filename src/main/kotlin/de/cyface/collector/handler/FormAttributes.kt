@@ -1,5 +1,5 @@
 /*
- * Copyright 2018-2023 Cyface GmbH
+ * Copyright 2018-2024 Cyface GmbH
  *
  * This file is part of the Cyface Data Collector.
  *
@@ -23,8 +23,6 @@ package de.cyface.collector.handler
  *
  * @author Klemens Muthmann
  * @author Armin Schnabel
- * @version 3.3.0
- * @since 2.0.0
  * @property value The value identifying the attribute in the multipart form request.
  */
 enum class FormAttributes(val value: String) {
@@ -113,5 +111,25 @@ enum class FormAttributes(val value: String) {
     /**
      * The format version of the transfer file.
      */
-    FORMAT_VERSION("formatVersion")
+    FORMAT_VERSION("formatVersion"),
+
+    /**
+     * The count of log files which will be uploaded for the transmitted measurement.
+     */
+    LOG_COUNT("logCount"),
+
+    /**
+     * The count of image files which will be uploaded for the transmitted measurement.
+     */
+    IMAGE_COUNT("imageCount"),
+
+    /**
+     * The count of video files which will be uploaded for the transmitted measurement.
+     */
+    VIDEO_COUNT("videoCount"),
+
+    /**
+     * The number of bytes of the attachments which will be uploaded for this measurement (log, image and video data).
+     */
+    FILES_SIZE("filesSize"),
 }

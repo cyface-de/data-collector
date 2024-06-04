@@ -147,7 +147,11 @@ class GridFSStorageIT {
                 startLocation,
                 endLocation,
                 modality,
-                formatVersion
+                formatVersion,
+                0,
+                0,
+                0,
+                0L,
             )
         }
 

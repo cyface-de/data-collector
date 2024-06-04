@@ -326,6 +326,10 @@ class UploadPictureIT {
                         ),
                         modality = "BICYCLE",
                         formatVersion = 3,
+                        logCount = 0,
+                        imageCount = 0,
+                        videoCount = 0,
+                        filesSize = 0L,
                     )
 
                     val uploadMetaData = UploadMetaData(

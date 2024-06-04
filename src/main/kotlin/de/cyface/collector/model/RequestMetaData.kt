@@ -1,5 +1,5 @@
 /*
- * Copyright 2021-2022 Cyface GmbH
+ * Copyright 2021-2024 Cyface GmbH
  *
  * This file is part of the Serialization.
  *
@@ -30,8 +30,6 @@ import java.nio.charset.Charset
  *
  * @author Armin Schnabel
  * @author Klemens Muthmann
- * @version 1.0.1
- * @since 6.0.0
  * @property deviceIdentifier The worldwide unique identifier of the device uploading the data.
  * @property measurementIdentifier The device wide unique identifier of the uploaded measurement.
  * @property operatingSystemVersion The operating system version, such as Android 9.0.0 or iOS 11.2.
@@ -43,6 +41,10 @@ import java.nio.charset.Charset
  * @property endLocation The `GeoLocation` at the end of the track represented by the transmitted measurement.
  * @property modality The modality type used to capture the measurement.
  * @property formatVersion The format version of the upload file.
+ * @property logCount The count of log files which will be uploaded for the transmitted measurement.
+ * @property imageCount The count of image files which will be uploaded for the transmitted measurement.
+ * @property videoCount The count of video files which will be uploaded for the transmitted measurement.
+ * @property filesSize The number of bytes of the attachments for this measurement (log, image and video data).
  */
 data class RequestMetaData(
     val deviceIdentifier: String,
@@ -55,7 +57,11 @@ data class RequestMetaData(
     val startLocation: GeoLocation?,
     val endLocation: GeoLocation?,
     val modality: String,
-    val formatVersion: Int
+    val formatVersion: Int,
+    val logCount: Int,
+    val imageCount: Int,
+    val videoCount: Int,
+    val filesSize: Long,
 ) : Serializable {
 
     init {
@@ -112,6 +118,10 @@ data class RequestMetaData(
             "Unsupported formatVersion: %d",
             formatVersion.toLong()
         )
+        require(logCount >= 0) { "Field logCount had an invalid value $logCount which is smaller then 0!" }
+        require(imageCount >= 0) { "Field imageCount had an invalid value $imageCount which is smaller then 0!" }
+        require(videoCount >= 0) { "Field videoCount had an invalid value $videoCount which is smaller then 0!" }
+        require(filesSize >= 0) { "Field filesSize had an invalid value $filesSize which is smaller then 0!" }
     }
 
     /**
@@ -134,6 +144,10 @@ data class RequestMetaData(
         }
         ret.put(FormAttributes.MODALITY.value, modality)
         ret.put(FormAttributes.FORMAT_VERSION.value, formatVersion)
+        ret.put(FormAttributes.LOG_COUNT.value, logCount)
+        ret.put(FormAttributes.IMAGE_COUNT.value, imageCount)
+        ret.put(FormAttributes.VIDEO_COUNT.value, videoCount)
+        ret.put(FormAttributes.FILES_SIZE.value, filesSize)
         return ret
     }
 
@@ -171,6 +185,10 @@ data class RequestMetaData(
         properties.put(FormAttributes.LOCATION_COUNT.value, locationCount)
         properties.put(FormAttributes.MODALITY.value, modality)
         properties.put(FormAttributes.FORMAT_VERSION.value, formatVersion)
+        properties.put(FormAttributes.LOG_COUNT.value, logCount)
+        properties.put(FormAttributes.IMAGE_COUNT.value, imageCount)
+        properties.put(FormAttributes.VIDEO_COUNT.value, videoCount)
+        properties.put(FormAttributes.FILES_SIZE.value, filesSize)
 
         feature
             .put("type", "Feature")
@@ -187,8 +205,6 @@ data class RequestMetaData(
      * This class represents a geolocation at the start or end of a track.
      *
      * @author Armin Schnabel
-     * @version 1.0.0
-     * @since 6.0.0
      * @property timestamp The timestamp this location was captured on in milliseconds since 1st January 1970 (epoch).
      * @property latitude Geographical latitude in coordinates (decimal fraction)
      *                    ranging from -90° (south) to 90° (north).
@@ -217,6 +233,7 @@ data class RequestMetaData(
         /**
          * Used to serialize objects of this class. Only change this value if this classes attribute set changes.
          */
+        @Suppress("ConstPropertyName")
         private const val serialVersionUID = -1700430112854515404L
 
         /**

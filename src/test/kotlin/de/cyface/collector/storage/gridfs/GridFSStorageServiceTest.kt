@@ -114,7 +114,11 @@ class GridFSStorageServiceTest {
             startLocation,
             endLocation,
             modality,
-            formatVersion
+            formatVersion,
+            0,
+            0,
+            0,
+            0L,
         )
         val oocut = GridFsStorageService(GridFsDao(mockMongoClient), fileSystem, Path.of("upload-folder"))
 
@@ -337,7 +341,11 @@ class GridFSStorageServiceTest {
             startLocation = GeoLocation(512367323L, 51.0, 13.0),
             endLocation = GeoLocation(512377323L, 51.5, 13.2),
             modality = "BICYCLE",
-            formatVersion = 3
+            formatVersion = 3,
+            logCount = 0,
+            imageCount = 0,
+            videoCount = 0,
+            filesSize = 0L,
         )
     }
 }

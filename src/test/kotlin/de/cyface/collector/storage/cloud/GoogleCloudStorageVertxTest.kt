@@ -187,7 +187,11 @@ class GoogleCloudStorageVertxTest {
             startLocation = RequestMetaData.GeoLocation(512367323L, 51.0, 13.0),
             endLocation = RequestMetaData.GeoLocation(512377323L, 51.5, 13.2),
             modality = "BICYCLE",
-            formatVersion = 3
+            formatVersion = 3,
+            logCount = 0,
+            imageCount = 0,
+            videoCount = 0,
+            filesSize = 0L,
         )
     }
 }
