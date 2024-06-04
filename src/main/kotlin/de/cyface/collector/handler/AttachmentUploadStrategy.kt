@@ -27,7 +27,7 @@ import io.vertx.core.Promise
 /**
  * Strategy for checking conflicts with attachment uploads and the persistent storage.
  */
-class AttachmentUploadStrategy(private val storageService: DataStorageService): UploadStrategy {
+class AttachmentUploadStrategy(private val storageService: DataStorageService) : UploadStrategy {
 
     override fun checkConflict(deviceId: String, measurementId: String, attachmentId: String?): Future<Boolean> {
         if (attachmentId?.toLongOrNull() == null) {

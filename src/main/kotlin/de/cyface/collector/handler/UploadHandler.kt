@@ -277,6 +277,7 @@ class UploadHandler(
      * @throws SkipUpload when the server is not interested in the uploaded data
      * @throws InvalidMetaData when the request is missing metadata fields
      */
+    @SuppressWarnings("LongMethod", "CyclomaticComplexMethod")
     @Throws(InvalidMetaData::class, SkipUpload::class)
     private fun metaData(request: HttpServerRequest): RequestMetaData {
         return try {

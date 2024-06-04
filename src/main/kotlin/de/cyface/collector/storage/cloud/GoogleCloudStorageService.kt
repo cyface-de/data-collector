@@ -163,7 +163,6 @@ class GoogleCloudStorageService(
     }
 
     override fun isStored(deviceId: String, measurementId: Long, attachmentId: Long): Future<Boolean> {
-
         /*
         This solution is incorrect. Since I do not store files in gridFS there will be no metadata either.
         Where should I store the metadata? According to stackoverflow in a separate database. So probably inside the

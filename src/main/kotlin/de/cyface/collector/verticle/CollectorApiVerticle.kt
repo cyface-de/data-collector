@@ -21,9 +21,9 @@ package de.cyface.collector.verticle
 import de.cyface.collector.auth.AuthHandlerBuilder
 import de.cyface.collector.handler.AuthorizationHandler
 import de.cyface.collector.handler.FailureHandler
-import de.cyface.collector.handler.UploadHandler
 import de.cyface.collector.handler.PreRequestHandler
 import de.cyface.collector.handler.StatusHandler
+import de.cyface.collector.handler.UploadHandler
 import de.cyface.collector.storage.DataStorageService
 import io.vertx.core.AbstractVerticle
 import io.vertx.core.Future
@@ -47,8 +47,6 @@ import java.util.Locale
  *
  * @author Klemens Muthmann
  * @author Armin Schnabel
- * @version 4.0.0
- * @since 2.0.0
  * @property authHandlerBuilder Create a handler for authentication requests.
  * @property serverConfiguration The configuration used by this `CollectorApiVerticle`.
  * @property mongoDatabaseConfiguration Configuration of a mongo database to store sensor data and meta data

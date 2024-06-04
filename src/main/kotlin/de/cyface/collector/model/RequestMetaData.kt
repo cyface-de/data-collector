@@ -64,7 +64,7 @@ data class RequestMetaData(
     val imageCount: Int,
     val videoCount: Int,
     val filesSize: Long,
-    val attachmentIdentifier: Long?,
+    val attachmentIdentifier: Long? = null,
 ) : Serializable {
 
     init {

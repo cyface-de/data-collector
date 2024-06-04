@@ -95,7 +95,7 @@ class MongoDatabase(private val mongoClient: MongoClient, private val collection
      * in the database.
      */
     override fun exists(deviceIdentifier: String, measurementIdentifier: Long, attachmentIdentifier: Long):
-            Future<Boolean> {
+        Future<Boolean> {
         val ret = Promise.promise<Boolean>()
         val query = JsonObject()
         query.put("features.0.properties.${FormAttributes.DEVICE_ID.value}", deviceIdentifier)

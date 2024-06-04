@@ -205,6 +205,7 @@ class PreRequestHandler(
      * @throws SkipUpload If the server is not interested in the data.
      * @throws Unparsable E.g. if there is a syntax error in the body.
      */
+    @SuppressWarnings("CyclomaticComplexMethod")
     @Throws(InvalidMetaData::class, SkipUpload::class, Unparsable::class)
     private fun check(body: JsonObject) {
         try {
@@ -311,7 +312,6 @@ class PreRequestHandler(
          * are only accepted with an accepted pre request.
          */
         const val ATTACHMENT_ID_FIELD = "attachment-id"
-
 
         /**
          * Checks if the information about the upload size in the header exceeds the {@param measurementLimit}.

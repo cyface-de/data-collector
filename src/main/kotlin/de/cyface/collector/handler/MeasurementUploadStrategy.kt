@@ -28,8 +28,7 @@ import io.vertx.core.Promise
  */
 class MeasurementUploadStrategy(private val storageService: DataStorageService) : UploadStrategy {
 
-    override fun checkConflict(deviceId: String, measurementId: String, attachmentId: String?):
-            Future<Boolean> {
+    override fun checkConflict(deviceId: String, measurementId: String, attachmentId: String?): Future<Boolean> {
         if (attachmentId != null) {
             throw InvalidMetaData("AttachmentId must be null for measurement uploads")
         }
