@@ -62,7 +62,7 @@ import java.util.UUID
  * @author Armin Schnabel
  * @author Klemens Muthmann
  */
-class MeasurementHandler(
+class UploadHandler(
     private val storageService: DataStorageService,
     private val payloadLimit: Long
 ) : Handler<RoutingContext> {
@@ -97,7 +97,7 @@ class MeasurementHandler(
             checkResult.onSuccess { result ->
                 onCheckSuccessful(result, ctx, session)
             }
-            checkResult.onFailure(MeasurementFailureHandler(ctx))
+            checkResult.onFailure(UploadFailureHandler(ctx))
         } catch (e: InvalidMetaData) {
             LOGGER.error("Response: 422", e)
             ctx.fail(ENTITY_UNPARSABLE, e)
@@ -406,6 +406,6 @@ class MeasurementHandler(
          * The logger for objects of this class. You can change its configuration by
          * adapting the values in `src/main/resources/logback.xml`.
          */
-        private val LOGGER = LoggerFactory.getLogger(MeasurementHandler::class.java)
+        private val LOGGER = LoggerFactory.getLogger(UploadHandler::class.java)
     }
 }

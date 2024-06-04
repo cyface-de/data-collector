@@ -21,7 +21,7 @@ package de.cyface.collector.verticle
 import de.cyface.collector.auth.AuthHandlerBuilder
 import de.cyface.collector.handler.AuthorizationHandler
 import de.cyface.collector.handler.FailureHandler
-import de.cyface.collector.handler.MeasurementHandler
+import de.cyface.collector.handler.UploadHandler
 import de.cyface.collector.handler.PreRequestHandler
 import de.cyface.collector.handler.StatusHandler
 import de.cyface.collector.storage.DataStorageService
@@ -241,7 +241,7 @@ class CollectorApiVerticle(
             // Not using BodyHandler as the `request.body()` can only be read once and the {@code #handler} does so.
             .handler(oauth2Handler)
             .handler(authorizationHandler)
-            .handler(MeasurementHandler(storageService, serverConfiguration.measurementPayloadLimit))
+            .handler(UploadHandler(storageService, serverConfiguration.measurementPayloadLimit))
             .handler(StatusHandler(storageService))
             .failureHandler(failureHandler)
     }
