@@ -317,16 +317,17 @@ class UploadHandler(
                 ?: throw InvalidMetaData("Data incomplete!")
             val formatVersion = formatVersionString.toInt()
 
-            // Attachments - set to 0 if not present to support older clients
-            var logCount = request.getHeader(FormAttributes.LOG_COUNT.value)?.toIntOrNull()
-            var imageCount = request.getHeader(FormAttributes.IMAGE_COUNT.value)?.toIntOrNull()
-            var videoCount = request.getHeader(FormAttributes.VIDEO_COUNT.value)?.toIntOrNull()
-            var filesSize = request.getHeader(FormAttributes.FILES_SIZE.value)?.toIntOrNull()
-            if (logCount == null || imageCount == null || videoCount == null || filesSize == null) {
-                logCount = 0
-                imageCount = 0
-                videoCount = 0
-                filesSize = 0
+            // Attachments - set to counters 0 if not present to support older clients
+            val attachmentId = request.getHeader(FormAttributes.ATTACHMENT_ID.value)
+            var logCount = 0
+            var imageCount = 0
+            var videoCount = 0
+            var filesSize = 0L
+            if (attachmentId != null) {
+                logCount = request.getHeader(FormAttributes.LOG_COUNT.value)!!.toInt()
+                imageCount = request.getHeader(FormAttributes.IMAGE_COUNT.value)!!.toInt()
+                videoCount = request.getHeader(FormAttributes.VIDEO_COUNT.value)!!.toInt()
+                filesSize = request.getHeader(FormAttributes.FILES_SIZE.value)!!.toLong()
             }
 
             // Etc.
@@ -338,7 +339,7 @@ class UploadHandler(
             RequestMetaData(
                 deviceId, measurementId, osVersion, deviceType, applicationVersion,
                 length, locationCount, startLocation, endLocation, modality, formatVersion,
-                logCount, imageCount, videoCount, filesSize
+                logCount, imageCount, videoCount, filesSize, attachmentId.toLongOrNull() ?: 0L
             )
         } catch (e: IllegalArgumentException) {
             throw InvalidMetaData("Data was not parsable!", e)
@@ -391,6 +392,7 @@ class UploadHandler(
         // Ensure this session was accepted by PreRequestHandler and bound to this measurement
         val sessionMeasurementId = session.get<String>(PreRequestHandler.MEASUREMENT_ID_FIELD)
         val sessionDeviceId = session.get<String>(PreRequestHandler.DEVICE_ID_FIELD)
+        val sessionAttachmentId = session.get<String>(PreRequestHandler.ATTACHMENT_ID_FIELD)
         if (sessionMeasurementId == null || sessionDeviceId == null) {
             throw SessionExpired("Mid/did missing, session maybe expired, request upload restart (404).")
         }
@@ -409,6 +411,15 @@ class UploadHandler(
                     Locale.ENGLISH,
                     "Unexpected device id: %s.",
                     sessionDeviceId
+                )
+            )
+        }
+        if (sessionAttachmentId.toLongOrNull() != metaData.attachmentIdentifier) {
+            throw IllegalSession(
+                String.format(
+                    Locale.ENGLISH,
+                    "Unexpected attachment id: %s.",
+                    sessionAttachmentId
                 )
             )
         }

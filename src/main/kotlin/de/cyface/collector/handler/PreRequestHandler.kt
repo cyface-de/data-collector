@@ -40,22 +40,20 @@ import java.net.URL
 import java.util.Locale
 
 /**
- * A handler for receiving HTTP POST requests on the "measurements" end point.
+ * A handler for receiving HTTP POST requests on the "measurements" or "attachments" end point.
  * This end point tells the client if the upload may continue or should be skipped.
  *
  * @author Armin Schnabel
  * @author Klemens Muthmann
- * @version 2.0.0
- * @since 6.0.0
  * @property storageService The service used to store data and retrieve information about stored data
  *                          by this application.
- * @property measurementLimit The maximal number of `Byte`s which may be uploaded in the upload request.
+ * @property uploadLimit The maximal number of `Byte`s which may be uploaded in the upload request.
  * @property httpPath The path of the URL under which the Collector service is deployed. This is used to return the
  * correct "Location" header.
  */
 class PreRequestHandler(
     private val storageService: DataStorageService,
-    private val measurementLimit: Long,
+    private val uploadLimit: Long,
     private val httpPath: String
 ) : Handler<RoutingContext> {
 
@@ -128,11 +126,15 @@ class PreRequestHandler(
         // Thus, we're expecting that the `SessionHandler` automatically created a new session for this pre-request.
         val measurementId = session.get<Any>(MEASUREMENT_ID_FIELD)
         val deviceId = session.get<Any>(DEVICE_ID_FIELD)
+        val attachmentId = session.get<Any>(ATTACHMENT_ID_FIELD)
         if (measurementId != null) {
             throw IllegalSession(String.format(Locale.ENGLISH, "Unexpected measurement id: %s.", measurementId))
         }
         if (deviceId != null) {
             throw IllegalSession(String.format(Locale.ENGLISH, "Unexpected device id: %s.", deviceId))
+        }
+        if (attachmentId != null) {
+            throw IllegalSession(String.format(Locale.ENGLISH, "Unexpected attachment id: %s.", attachmentId))
         }
     }
 
@@ -153,7 +155,7 @@ class PreRequestHandler(
     private fun locationUri(requestUri: URL, protocol: String?, sessionId: String): URI {
         // Our current setup forwards https requests to http internally. As the `Location` returned is automatically
         // used by the Google Client API library for the upload request we make sure the original protocol use returned.
-        val scheme = if (protocol != null) protocol else requestUri.toURI().scheme
+        val scheme = protocol ?: requestUri.toURI().scheme
         // The Google Client API library automatically adds the parameter `uploadType` to the Uri. As our upload API
         // offers an endpoint address in the format `measurement/(SID)` we remove the `uploadType` parameter.
         // We don't need to process the `uploadType` as we're only offering one upload type: resumable.
@@ -223,6 +225,31 @@ class PreRequestHandler(
             if (measurementId == null || deviceId == null) {
                 throw InvalidMetaData("Data incomplete!")
             }
+            val attachmentId = body.getString(FormAttributes.ATTACHMENT_ID.value)
+            val logCount = body.getString(FormAttributes.LOG_COUNT.value)
+            val imageCount = body.getString(FormAttributes.IMAGE_COUNT.value)
+            val videoCount = body.getString(FormAttributes.VIDEO_COUNT.value)
+            val filesSize = body.getString(FormAttributes.FILES_SIZE.value)
+            if (attachmentId == null) {
+                @SuppressWarnings("ComplexCondition")
+                if (logCount != null || imageCount != null || videoCount != null || filesSize != null) {
+                    throw InvalidMetaData("Data incomplete attachmentId was null!")
+                }
+            } else {
+                if (logCount == null) throw InvalidMetaData("Data incomplete logCount was null!")
+                if (imageCount == null) throw InvalidMetaData("Data incomplete imageCount was null!")
+                if (videoCount == null) throw InvalidMetaData("Data incomplete videoCount was null!")
+                if (filesSize == null) throw InvalidMetaData("Data incomplete filesSize was null!")
+                if (logCount.toInt() == 0 && imageCount.toInt() == 0 && videoCount.toInt() == 0) {
+                    throw InvalidMetaData("No files registered for attachment.")
+                }
+                if (logCount.toInt() < 0 || imageCount.toInt() < 0 || videoCount.toInt() < 0) {
+                    throw InvalidMetaData("Invalid file count for attachment.")
+                }
+                if (filesSize.toLong() <= 0L) {
+                    throw InvalidMetaData("Files size for attachment must be greater than 0.")
+                }
+            }
         } catch (e: IllegalArgumentException) {
             throw InvalidMetaData("Data was not parsable!", e)
         } catch (e: NullPointerException) {
@@ -256,7 +283,6 @@ class PreRequestHandler(
         /**
          * The field name for the session entry which contains the measurement id.
          *
-         *
          * This field is set in the [PreRequestHandler] to make sure sessions are bound to measurements and uploads
          * are only accepted with an accepted pre request.
          */
@@ -265,11 +291,19 @@ class PreRequestHandler(
         /**
          * The field name for the session entry which contains the device id.
          *
-         *
          * This field is set in the [PreRequestHandler] to make sure sessions are bound to measurements and uploads
          * are only accepted with an accepted pre request.
          */
         const val DEVICE_ID_FIELD = "device-id"
+
+        /**
+         * The field name for the session entry which contains the attachment id if this is an attachment upload.
+         *
+         * This field is set in the [PreRequestHandler] to make sure sessions are bound to attachments and uploads
+         * are only accepted with an accepted pre request.
+         */
+        const val ATTACHMENT_ID_FIELD = "attachment-id"
+
 
         /**
          * Checks if the information about the upload size in the header exceeds the {@param measurementLimit}.

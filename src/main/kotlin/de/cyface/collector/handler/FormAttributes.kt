@@ -132,4 +132,9 @@ enum class FormAttributes(val value: String) {
      * The number of bytes of the attachments which will be uploaded for this measurement (log, image and video data).
      */
     FILES_SIZE("filesSize"),
+
+    /**
+     * The identifier of the attachment, if this upload is an attachment.
+     */
+    ATTACHMENT_ID("attachmentId"),
 }

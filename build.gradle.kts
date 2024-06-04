@@ -103,7 +103,7 @@ val flapdoodleVersion = "3.5.3" // major upgrade available
 val mockitoKotlinVersion = "4.1.0"
 val dokkaVersion = "1.9.10"
 val detektVersion = "1.23.1"
-val cyfaceSynchronizerVersion = "1.3.1"
+val cyfaceSynchronizerVersion = "1.4.0-alpha1" // FIXME
 val testContainerVersion = "1.19.8"
 
 tasks.wrapper {

@@ -24,6 +24,7 @@ import io.vertx.core.json.JsonObject
 import org.apache.commons.lang3.Validate
 import java.io.Serializable
 import java.nio.charset.Charset
+import java.util.Locale
 
 /**
  * The metadata as transmitted in the request header or pre-request body.
@@ -45,6 +46,7 @@ import java.nio.charset.Charset
  * @property imageCount The count of image files which will be uploaded for the transmitted measurement.
  * @property videoCount The count of video files which will be uploaded for the transmitted measurement.
  * @property filesSize The number of bytes of the attachments for this measurement (log, image and video data).
+ * @property attachmentIdentifier The identifier of the attachment, if this measurement is an attachment.
  */
 data class RequestMetaData(
     val deviceIdentifier: String,
@@ -62,6 +64,7 @@ data class RequestMetaData(
     val imageCount: Int,
     val videoCount: Int,
     val filesSize: Long,
+    val attachmentIdentifier: Long?,
 ) : Serializable {
 
     init {
@@ -75,7 +78,7 @@ data class RequestMetaData(
             deviceType.length.toLong()
         )
         Validate.isTrue(
-            measurementIdentifier.isNotEmpty() && measurementIdentifier.length <= MAX_MEASUREMENT_ID_LENGTH,
+            measurementIdentifier.isNotEmpty() && measurementIdentifier.length <= MAX_ID_LENGTH,
             "Field measurementId had an invalid length of %d!",
             measurementIdentifier.length.toLong()
         )
@@ -122,6 +125,19 @@ data class RequestMetaData(
         require(imageCount >= 0) { "Field imageCount had an invalid value $imageCount which is smaller then 0!" }
         require(videoCount >= 0) { "Field videoCount had an invalid value $videoCount which is smaller then 0!" }
         require(filesSize >= 0) { "Field filesSize had an invalid value $filesSize which is smaller then 0!" }
+        if (attachmentIdentifier != null) {
+            require(attachmentIdentifier.toString().length <= MAX_ID_LENGTH) {
+                String.format(
+                    Locale.getDefault(),
+                    "Field attachmentId had an invalid length of %d!",
+                    attachmentIdentifier.toString().length.toLong()
+                )
+            }
+            require(logCount > 0 || imageCount > 0 || videoCount > 0) {
+                "Attachment must contain at least one file!"
+            }
+            require(filesSize > 0) { "Attachment must have a size greater than 0!" }
+        }
     }
 
     /**
@@ -253,10 +269,10 @@ data class RequestMetaData(
         const val MAX_GENERIC_METADATA_FIELD_LENGTH = 30
 
         /**
-         * The maximum length of the measurement identifier in characters (this is the amount of characters of
+         * The maximum length of the identifier in characters (this is the amount of characters of
          * {@value Long#MAX_VALUE}).
          */
-        private const val MAX_MEASUREMENT_ID_LENGTH = 20
+        private const val MAX_ID_LENGTH = 20
 
         /**
          * The minimum length of a track stored with a measurement.
