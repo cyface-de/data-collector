@@ -37,12 +37,12 @@ import org.mockito.kotlin.verify
 import java.util.UUID
 
 /**
- * Tests the correct workings of the [StatusHandler].
+ * Tests the correct workings of the [MeasurementStatusHandler].
  *
  * @author Klemens Muthmann
  * @version 1.0.0
  */
-class StatusHandlerTest {
+class MeasurementStatusHandlerTest {
 
     @Test
     fun `Asking for Status after successful upload returns HTTP status 200`() {
@@ -95,7 +95,7 @@ class StatusHandlerTest {
             on { request() } doReturn mockRequest
             on { session() } doReturn mockSession
         }
-        val oocut = StatusHandler(storageService)
+        val oocut = MeasurementStatusHandler(storageService)
 
         // Act
         oocut.handle(mockRoutingContext)

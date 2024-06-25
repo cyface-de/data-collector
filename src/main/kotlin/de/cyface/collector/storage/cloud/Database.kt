@@ -30,7 +30,7 @@ interface Database {
     /**
      * Stores the metadata asynchronously and returns a [Future], that is called on completion of that operation.
      */
-    fun storeMetadata(metaData: RequestMetaData): Future<String>
+    fun <T : RequestMetaData.MeasurementIdentifier> storeMetadata(metaData: RequestMetaData<T>): Future<String>
 
     /**
      * Queries the database asynchronously for the existence of an upload with the provided `deviceIdentifier` and

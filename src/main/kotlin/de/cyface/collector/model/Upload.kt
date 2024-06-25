@@ -32,7 +32,11 @@ import java.io.Serializable
  * @property userId The id of the user uploading the data.
  * @property binary The actual data uploaded.
  */
-data class Upload(val metaData: RequestMetaData, val userId: String, val binary: File) : Serializable {
+data class Upload<T : RequestMetaData.MeasurementIdentifier>(
+    val metaData: RequestMetaData<T>,
+    val userId: String,
+    val binary: File,
+) : Serializable {
 
     /**
      * @return A JSON representation of this measurement.

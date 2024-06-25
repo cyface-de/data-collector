@@ -1,5 +1,5 @@
 /*
- * Copyright 2021-2024 Cyface GmbH
+ * Copyright 2024 Cyface GmbH
  *
  * This file is part of the Cyface Data Collector.
  *
@@ -23,6 +23,7 @@ import de.cyface.collector.handler.HTTPStatus.OK
 import de.cyface.collector.handler.HTTPStatus.RESUME_INCOMPLETE
 import de.cyface.collector.handler.SessionFields.UPLOAD_PATH_FIELD
 import de.cyface.collector.handler.exception.InvalidMetaData
+import de.cyface.collector.model.RequestMetaData
 import de.cyface.collector.storage.DataStorageService
 import io.vertx.core.Handler
 import io.vertx.ext.web.RoutingContext
@@ -31,52 +32,40 @@ import java.util.Locale
 import java.util.UUID
 
 /**
- * A handler for receiving HTTP PUT requests with an empty body on the "measurements" end point.
+ * A handler for receiving HTTP PUT requests with an empty body on the "attachments" end point.
  *
  * This request type is used by clients to ask the upload status and, thus, where to continue the upload.
  *
  * @author Armin Schnabel
+ * @property checkService The service to be used to check the request.
  * @property storageService Service used to write and interact with received data.
  */
-class StatusHandler(private val storageService: DataStorageService) : Handler<RoutingContext> {
-
-    private lateinit var uploadStrategy: UploadStrategy
+class AttachmentStatusHandler(
+    private val checkService: AttachmentCheckService,
+    private val storageService: DataStorageService,
+) : Handler<RoutingContext> {
 
     override fun handle(ctx: RoutingContext) {
-        LOGGER.info("Received new upload status request.")
-        val request = ctx.request()
-        val session = ctx.session()
-
-        // Only accepting requests when client knows the file size
-        // i.e. `Content-Range` headers with `bytes */SIZE` but not `bytes */*`
-        val rangeRequest = request.getHeader("Content-Range")
-        if (!rangeRequest.matches(RANGE_VALUE_CHECK)) {
-            LOGGER.error("Content-Range request not supported: {}", rangeRequest)
-            ctx.fail(ENTITY_UNPARSABLE)
-            return
-        }
         try {
-            // Decide which upload strategy to use
-            uploadStrategy = if (request.path().contains("attachments")) {
-                AttachmentUploadStrategy(storageService)
-            } else {
-                MeasurementUploadStrategy(storageService)
+            LOGGER.info("Received new attachment upload status request.")
+            val request = ctx.request()
+            val session = ctx.session()
+
+            // Check request
+            if (!checkService.checkContentRange(request.headers())) {
+                ctx.fail(ENTITY_UNPARSABLE)
+                return
             }
 
             // Check upload conflict with existing data
-            val deviceId = request.getHeader(FormAttributes.DEVICE_ID.value)
-            val measurementId = request.getHeader(FormAttributes.MEASUREMENT_ID.value)
-            val attachmentId = request.getHeader(FormAttributes.ATTACHMENT_ID.value)
-            LOGGER.debug("Status of {}:{}:?{}", deviceId, measurementId, attachmentId)
-            if (deviceId == null || measurementId == null) {
-                throw InvalidMetaData("Data incomplete!")
-            }
-            uploadStrategy.checkConflict(deviceId, measurementId, attachmentId)
+            val metaData = checkService.metaData<RequestMetaData.AttachmentIdentifier>(request.headers())
+            LOGGER.debug("Status of {}", metaData.identifier)
+            checkService.checkConflict(metaData.identifier)
                 .onSuccess { conflict ->
                     val uploadIdentifier = session.get<UUID>(UPLOAD_PATH_FIELD)
 
                     if (conflict) {
-                        LOGGER.debug("Upload {}:{}:?{} is already stored.", deviceId, measurementId, attachmentId)
+                        LOGGER.debug("Upload {} is already stored.", metaData.identifier)
                         ctx.response().setStatusCode(OK).end()
                     } else if (uploadIdentifier == null) {
                         // If no bytes have been received, return 308 but without a `Range` header to indicate this
@@ -113,11 +102,6 @@ class StatusHandler(private val storageService: DataStorageService) : Handler<Ro
          * The logger for objects of this class. You can change its configuration by
          * adapting the values in `src/main/resources/logback.xml`.
          */
-        private val LOGGER = LoggerFactory.getLogger(StatusHandler::class.java)
-
-        /**
-         * A regular expression to check the range HTTP header parameter value.
-         */
-        private val RANGE_VALUE_CHECK = "bytes \\*/[0-9]+".toRegex()
+        private val LOGGER = LoggerFactory.getLogger(AttachmentStatusHandler::class.java)
     }
 }

@@ -44,7 +44,7 @@ import org.mockito.kotlin.whenever
 import java.util.UUID
 
 /**
- * Tests for running the [PreRequestHandler] in isolation.
+ * Tests for running the [MeasurementPreRequestHandler] in isolation.
  *
  * @author Klemens Muthmann
  * @version 1.0.1
@@ -97,7 +97,7 @@ class PreRequestTest {
     /**
      * The object of the class under test.
      */
-    private lateinit var oocut: PreRequestHandler
+    private lateinit var oocut: MeasurementPreRequestHandler
 
     @BeforeEach
     fun setUp() {
@@ -107,7 +107,7 @@ class PreRequestTest {
 
         whenever(mockRoutingContext.body()).thenReturn(mockBody)
         whenever(mockBody.asJsonObject()).thenReturn(preRequestBody(deviceId))
-        oocut = PreRequestHandler(mockStorageService, 100L, "/")
+        oocut = MeasurementPreRequestHandler(mockStorageService, 100L, "/")
     }
 
     @Test

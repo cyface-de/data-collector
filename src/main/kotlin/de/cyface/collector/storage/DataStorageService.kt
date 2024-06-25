@@ -46,9 +46,9 @@ interface DataStorageService {
      * @param uploadMetaData Information required to store the uploaded data properly.
      * @return A `Future` providing the ``Status`` of the upload, when it has finished.
      */
-    fun store(
+    fun <T : RequestMetaData.MeasurementIdentifier> store(
         sourceData: ReadStream<Buffer>,
-        uploadMetaData: UploadMetaData
+        uploadMetaData: UploadMetaData<T>,
     ): Future<Status>
 
     /**
@@ -111,9 +111,9 @@ interface DataStorageService {
  * @property metaData Meta information provided alongside the measurement, to get insights into the measurement,
  * without the need to deserialize the data.
  */
-class UploadMetaData(
+class UploadMetaData<T : RequestMetaData.MeasurementIdentifier>(
     val user: User,
     val contentRange: ContentRange,
     val uploadIdentifier: UUID,
-    val metaData: RequestMetaData
+    val metaData: RequestMetaData<T>
 )

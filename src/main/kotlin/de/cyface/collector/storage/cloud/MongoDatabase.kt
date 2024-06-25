@@ -42,7 +42,8 @@ class MongoDatabase(private val mongoClient: MongoClient, private val collection
      */
     private val logger = LoggerFactory.getLogger(MongoDatabase::class.java)
 
-    override fun storeMetadata(metaData: RequestMetaData): Future<String> {
+    override fun <T : RequestMetaData.MeasurementIdentifier> storeMetadata(metaData: RequestMetaData<T>):
+            Future<String> {
         return mongoClient.insert(collectionName, metaData.toGeoJson())
     }
 

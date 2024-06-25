@@ -19,11 +19,16 @@
 package de.cyface.collector.verticle
 
 import de.cyface.collector.auth.AuthHandlerBuilder
+import de.cyface.collector.handler.AttachmentCheckService
+import de.cyface.collector.handler.AttachmentPreRequestHandler
+import de.cyface.collector.handler.AttachmentStatusHandler
+import de.cyface.collector.handler.AttachmentUploadHandler
 import de.cyface.collector.handler.AuthorizationHandler
 import de.cyface.collector.handler.FailureHandler
-import de.cyface.collector.handler.PreRequestHandler
-import de.cyface.collector.handler.StatusHandler
-import de.cyface.collector.handler.UploadHandler
+import de.cyface.collector.handler.MeasurementCheckService
+import de.cyface.collector.handler.MeasurementPreRequestHandler
+import de.cyface.collector.handler.MeasurementStatusHandler
+import de.cyface.collector.handler.MeasurementUploadHandler
 import de.cyface.collector.storage.DataStorageService
 import io.vertx.core.AbstractVerticle
 import io.vertx.core.Future
@@ -158,8 +163,9 @@ class CollectorApiVerticle(
             .onSuccess {
                 // Register handlers which require authentication
                 val authorizationHandler = AuthorizationHandler()
-                val preRequestHandler = PreRequestHandler(
-                    storageService,
+                val measurementCheckService = MeasurementCheckService(storageService)
+                val measurementPreRequestHandler = MeasurementPreRequestHandler(
+                    measurementCheckService,
                     serverConfiguration.measurementPayloadLimit,
                     serverConfiguration.httpEndpoint
                 )
@@ -168,33 +174,53 @@ class CollectorApiVerticle(
                     it,
                     authorizationHandler,
                     failureHandler,
-                    preRequestHandler,
+                    measurementPreRequestHandler,
                 )
+                val measurementUploadHandler = MeasurementUploadHandler(
+                    measurementCheckService,
+                    storageService,
+                    serverConfiguration.measurementPayloadLimit,
+                )
+                val measurementStatusHandler = MeasurementStatusHandler(measurementCheckService, storageService)
                 registerMeasurementUploadHandler(
                     apiRouter,
                     it,
                     authorizationHandler,
                     failureHandler,
-                    storageService,
+                    measurementUploadHandler,
+                    measurementStatusHandler,
                 )
                 // Register attachment endpoints after the measurement endpoints to ensure they can be distinguished
                 // by the router. The measurement endpoint is:
                 // - /measurements/(sessionId)
                 // The attachment endpoint, a subdirectory of the provider measurement endpoint, is:
                 // - /measurements/:did/:mid/attachments/(sessionId)
+                val attachmentCheckService = AttachmentCheckService(storageService)
+                val attachmentPreRequestHandler = AttachmentPreRequestHandler(
+                    attachmentCheckService,
+                    serverConfiguration.measurementPayloadLimit,
+                    serverConfiguration.httpEndpoint
+                )
                 registerAttachmentPreRequestHandler(
                     apiRouter,
                     it,
                     authorizationHandler,
                     failureHandler,
-                    preRequestHandler,
+                    attachmentPreRequestHandler,
                 )
+                val attachmentUploadHandler = AttachmentUploadHandler(
+                    attachmentCheckService,
+                    storageService,
+                    serverConfiguration.measurementPayloadLimit,
+                )
+                val attachmentStatusHandler = AttachmentStatusHandler(attachmentCheckService, storageService)
                 registerAttachmentUploadHandler(
                     apiRouter,
                     it,
                     authorizationHandler,
                     failureHandler,
-                    storageService,
+                    attachmentUploadHandler,
+                    attachmentStatusHandler,
                 )
 
                 promise.complete()
@@ -221,7 +247,7 @@ class CollectorApiVerticle(
         oauth2Handler: OAuth2AuthHandler,
         authorizationHandler: AuthorizationHandler,
         failureHandler: ErrorHandler,
-        requestHandler: PreRequestHandler,
+        requestHandler: MeasurementPreRequestHandler,
     ) {
         val preRequestBodyHandler = BodyHandler.create().setBodyLimit(BYTES_IN_ONE_KILOBYTE)
         router.post(MEASUREMENTS_ENDPOINT)
@@ -241,14 +267,16 @@ class CollectorApiVerticle(
      * @param oauth2Handler The handler to authenticate the user using an OAuth2 endpoint.
      * @param authorizationHandler The handler used to authorize a user after successful authentication.
      * @param failureHandler The handler to add to handle failures.
-     * @param storageService Service used to write the received data.
+     * @param requestHandler The actual handler for upload requests.
+     * @param statusHandler The actual handler for status requests.
      */
     private fun registerMeasurementUploadHandler(
         router: Router,
         oauth2Handler: OAuth2AuthHandler,
         authorizationHandler: AuthorizationHandler,
         failureHandler: ErrorHandler,
-        storageService: DataStorageService,
+        requestHandler: MeasurementUploadHandler,
+        statusHandler: MeasurementStatusHandler,
     ) {
         // The path pattern ../(sid)/.. was chosen because of the documentation of Vert.X SessionHandler
         // https://vertx.io/docs/vertx-web/java/#_handling_sessions
@@ -257,8 +285,8 @@ class CollectorApiVerticle(
             // Not using BodyHandler as the `request.body()` can only be read once and the {@code #handler} does so.
             .handler(oauth2Handler)
             .handler(authorizationHandler)
-            .handler(UploadHandler(storageService, serverConfiguration.measurementPayloadLimit))
-            .handler(StatusHandler(storageService))
+            .handler(requestHandler)
+            .handler(statusHandler)
             .failureHandler(failureHandler)
     }
 
@@ -276,7 +304,7 @@ class CollectorApiVerticle(
         oauth2Handler: OAuth2AuthHandler,
         authorizationHandler: AuthorizationHandler,
         failureHandler: ErrorHandler,
-        requestHandler: PreRequestHandler,
+        requestHandler: AttachmentPreRequestHandler,
     ) {
         val preRequestBodyHandler = BodyHandler.create().setBodyLimit(BYTES_IN_ONE_KILOBYTE)
         router.postWithRegex(
@@ -304,14 +332,16 @@ class CollectorApiVerticle(
      * @param oauth2Handler The handler to authenticate the user using an OAuth2 endpoint.
      * @param authorizationHandler The handler used to authorize a user after successful authentication.
      * @param failureHandler The handler to add to handle failures.
-     * @param storageService Service used to write the received data.
+     * @param requestHandler The actual handler for upload requests.
+     * @param statusHandler The actual handler for status requests.
      */
     private fun registerAttachmentUploadHandler(
         router: Router,
         oauth2Handler: OAuth2AuthHandler,
         authorizationHandler: AuthorizationHandler,
         failureHandler: ErrorHandler,
-        storageService: DataStorageService,
+        requestHandler: AttachmentUploadHandler,
+        statusHandler: AttachmentStatusHandler,
     ) {
         // The path pattern ../(sid)/.. was chosen because of the documentation of Vert.X SessionHandler
         // https://vertx.io/docs/vertx-web/java/#_handling_sessions
@@ -328,8 +358,8 @@ class CollectorApiVerticle(
             // Not using BodyHandler as the `request.body()` can only be read once and the {@code #handler} does so.
             .handler(oauth2Handler)
             .handler(authorizationHandler)
-            .handler(UploadHandler(storageService, serverConfiguration.measurementPayloadLimit))
-            .handler(StatusHandler(storageService))
+            .handler(requestHandler)
+            .handler(statusHandler)
             .failureHandler(failureHandler)
     }
 
@@ -338,6 +368,7 @@ class CollectorApiVerticle(
          * The endpoint which accepts measurement uploads.
          */
         private const val MEASUREMENTS_ENDPOINT = "/measurements"
+
         /**
          * The endpoint which accepts measurement uploads.
          */

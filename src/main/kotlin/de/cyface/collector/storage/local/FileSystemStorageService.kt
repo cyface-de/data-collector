@@ -18,6 +18,7 @@
  */
 package de.cyface.collector.storage.local
 
+import de.cyface.collector.model.RequestMetaData
 import de.cyface.collector.storage.CleanupOperation
 import de.cyface.collector.storage.DataStorageService
 import de.cyface.collector.storage.Status
@@ -39,9 +40,9 @@ import java.util.UUID
 @Suppress("unused")
 class FileSystemStorageService(val vertx: Vertx) : DataStorageService {
 
-    override fun store(
+    override fun <T : RequestMetaData.MeasurementIdentifier> store(
         sourceData: ReadStream<Buffer>,
-        uploadMetaData: UploadMetaData
+        uploadMetaData: UploadMetaData<T>
     ): Future<Status> {
         @Suppress("UnusedPrivateMember", "UNUSED_VARIABLE")
         val vertxFileSystem = vertx.fileSystem()

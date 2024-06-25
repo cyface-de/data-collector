@@ -49,12 +49,12 @@ import java.util.UUID
 import kotlin.test.assertEquals
 
 /**
- * Run tests on the [UploadHandler] directly without a Vert.x environment.
+ * Run tests on the [MeasurementUploadHandler] directly without a Vert.x environment.
  *
  * @author Klemens Muthmann
  */
 @ExtendWith(MockitoExtension::class)
-class UploadHandlerTest {
+class MeasurementUploadHandlerTest {
 
     @Mock
     lateinit var mockStorageService: DataStorageService
@@ -73,7 +73,7 @@ class UploadHandlerTest {
 
     private lateinit var headers: MultiMap
 
-    private lateinit var oocut: UploadHandler
+    private lateinit var oocut: MeasurementUploadHandler
 
     @BeforeEach
     fun setUp() {
@@ -84,7 +84,7 @@ class UploadHandlerTest {
 
         val payloadLimit = 10L
 
-        oocut = UploadHandler(mockStorageService, payloadLimit)
+        oocut = MeasurementUploadHandler(measurementCheckService, mockStorageService, payloadLimit)
 
         mockRequest = mock {
             on { headers() } doReturn headers
