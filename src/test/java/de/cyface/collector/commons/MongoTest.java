@@ -1,5 +1,5 @@
 /*
- * Copyright 2018-2021 Cyface GmbH
+ * Copyright 2018-2024 Cyface GmbH
  * 
  * This file is part of the Cyface Data Collector.
  *
@@ -34,8 +34,6 @@ import io.vertx.core.json.JsonObject;
  * restart.
  * 
  * @author Klemens Muthmann
- * @version 2.0.3
- * @since 2.0.0
  */
 public final class MongoTest {
     private static final MongodStarter starter = MongodStarter.getDefaultInstance();

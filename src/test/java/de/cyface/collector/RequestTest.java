@@ -48,8 +48,6 @@ import io.vertx.junit5.VertxTestContext;
  *
  * @author Klemens Muthmann
  * @author Armin Schnabel
- * @version 3.1.2
- * @since 1.0.0
  */
 @ExtendWith(VertxExtension.class)
 @SuppressWarnings("PMD.MethodNamingConventions")
