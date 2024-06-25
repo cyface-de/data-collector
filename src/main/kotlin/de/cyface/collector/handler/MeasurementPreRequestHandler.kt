@@ -41,12 +41,14 @@ import java.net.URL
  *
  * @author Armin Schnabel
  * @author Klemens Muthmann
- * @property checkService The service to be used to check the request.
+ * @property requestService The service to be used to check the request.
+ * @property metaService The service to be used to check metadata.
  * @property uploadLimit The maximal number of `Byte`s which may be uploaded in the upload request.
  * @property httpPath The path of the URL under which the Collector is deployed. To ensemble the "Location" header.
  */
 class MeasurementPreRequestHandler(
-    private val checkService: MeasurementCheckService,
+    private val requestService: MeasurementRequestService,
+    private val metaService: MeasurementMetaDataService,
     private val uploadLimit: Long,
     private val httpPath: String
 ) : Handler<RoutingContext> {
@@ -58,13 +60,13 @@ class MeasurementPreRequestHandler(
             val session = ctx.session()
 
             // Check request
-            checkService.checkBodySize(request.headers(), uploadLimit, X_UPLOAD_CONTENT_LENGTH_FIELD)
+            requestService.checkBodySize(request.headers(), uploadLimit, X_UPLOAD_CONTENT_LENGTH_FIELD)
             val metaDataJson = ctx.body().asJsonObject()
-            val metaData = checkService.metaData<RequestMetaData.MeasurementIdentifier>(metaDataJson)
-            checkService.checkSession(session)
+            val metaData = metaService.metaData<RequestMetaData.MeasurementIdentifier>(metaDataJson)
+            requestService.checkSession(session)
 
             // Check conflict
-            checkService.checkConflict(metaData.identifier)
+            requestService.checkConflict(metaData.identifier)
                 .onSuccess { conflict ->
                     if (conflict) {
                         LOGGER.debug("Response: 409, measurement already exists, no upload needed")
@@ -146,7 +148,7 @@ class MeasurementPreRequestHandler(
          */
         @Deprecated(
             "This requires knowledge about the applications deployment behind a proxy and thus should " +
-                    "not be used. Instead make the location header relative and avoid rewriting this URL here."
+                "not be used. Instead make the location header relative and avoid rewriting this URL here."
         )
         fun locationUri(httpPath: String, requestUri: URL, protocol: String?, sessionId: String): URI {
             // Our current setup forwards https requests to http internally. As the `Location` returned is automatically

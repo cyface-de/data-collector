@@ -19,14 +19,16 @@
 package de.cyface.collector.verticle
 
 import de.cyface.collector.auth.AuthHandlerBuilder
-import de.cyface.collector.handler.AttachmentCheckService
+import de.cyface.collector.handler.AttachmentMetaDataService
 import de.cyface.collector.handler.AttachmentPreRequestHandler
+import de.cyface.collector.handler.AttachmentRequestService
 import de.cyface.collector.handler.AttachmentStatusHandler
 import de.cyface.collector.handler.AttachmentUploadHandler
 import de.cyface.collector.handler.AuthorizationHandler
 import de.cyface.collector.handler.FailureHandler
-import de.cyface.collector.handler.MeasurementCheckService
+import de.cyface.collector.handler.MeasurementMetaDataService
 import de.cyface.collector.handler.MeasurementPreRequestHandler
+import de.cyface.collector.handler.MeasurementRequestService
 import de.cyface.collector.handler.MeasurementStatusHandler
 import de.cyface.collector.handler.MeasurementUploadHandler
 import de.cyface.collector.storage.DataStorageService
@@ -163,65 +165,13 @@ class CollectorApiVerticle(
             .onSuccess {
                 // Register handlers which require authentication
                 val authorizationHandler = AuthorizationHandler()
-                val measurementCheckService = MeasurementCheckService(storageService)
-                val measurementPreRequestHandler = MeasurementPreRequestHandler(
-                    measurementCheckService,
-                    serverConfiguration.measurementPayloadLimit,
-                    serverConfiguration.httpEndpoint
-                )
-                registerMeasurementPreRequestHandler(
-                    apiRouter,
-                    it,
-                    authorizationHandler,
-                    failureHandler,
-                    measurementPreRequestHandler,
-                )
-                val measurementUploadHandler = MeasurementUploadHandler(
-                    measurementCheckService,
-                    storageService,
-                    serverConfiguration.measurementPayloadLimit,
-                )
-                val measurementStatusHandler = MeasurementStatusHandler(measurementCheckService, storageService)
-                registerMeasurementUploadHandler(
-                    apiRouter,
-                    it,
-                    authorizationHandler,
-                    failureHandler,
-                    measurementUploadHandler,
-                    measurementStatusHandler,
-                )
+                registerMeasurementHandlers(storageService, apiRouter, it, authorizationHandler, failureHandler)
                 // Register attachment endpoints after the measurement endpoints to ensure they can be distinguished
                 // by the router. The measurement endpoint is:
                 // - /measurements/(sessionId)
                 // The attachment endpoint, a subdirectory of the provider measurement endpoint, is:
                 // - /measurements/:did/:mid/attachments/(sessionId)
-                val attachmentCheckService = AttachmentCheckService(storageService)
-                val attachmentPreRequestHandler = AttachmentPreRequestHandler(
-                    attachmentCheckService,
-                    serverConfiguration.measurementPayloadLimit,
-                    serverConfiguration.httpEndpoint
-                )
-                registerAttachmentPreRequestHandler(
-                    apiRouter,
-                    it,
-                    authorizationHandler,
-                    failureHandler,
-                    attachmentPreRequestHandler,
-                )
-                val attachmentUploadHandler = AttachmentUploadHandler(
-                    attachmentCheckService,
-                    storageService,
-                    serverConfiguration.measurementPayloadLimit,
-                )
-                val attachmentStatusHandler = AttachmentStatusHandler(attachmentCheckService, storageService)
-                registerAttachmentUploadHandler(
-                    apiRouter,
-                    it,
-                    authorizationHandler,
-                    failureHandler,
-                    attachmentUploadHandler,
-                    attachmentStatusHandler,
-                )
+                registerAttachmentHandlers(storageService, apiRouter, it, authorizationHandler, failureHandler)
 
                 promise.complete()
             }
@@ -231,6 +181,92 @@ class CollectorApiVerticle(
         apiRouter.route().handler(StaticHandler.create("webroot/api"))
 
         return promise.future()
+    }
+
+    private fun registerMeasurementHandlers(
+        storageService: DataStorageService,
+        apiRouter: Router,
+        oAuth2AuthHandler: OAuth2AuthHandler,
+        authorizationHandler: AuthorizationHandler,
+        failureHandler: FailureHandler
+    ) {
+        val measurementRequestService = MeasurementRequestService(storageService)
+        val measurementMetaService = MeasurementMetaDataService()
+        val measurementPreRequestHandler = MeasurementPreRequestHandler(
+            measurementRequestService,
+            measurementMetaService,
+            serverConfiguration.measurementPayloadLimit,
+            serverConfiguration.httpEndpoint
+        )
+        registerMeasurementPreRequestHandler(
+            apiRouter,
+            oAuth2AuthHandler,
+            authorizationHandler,
+            failureHandler,
+            measurementPreRequestHandler,
+        )
+        val measurementUploadHandler = MeasurementUploadHandler(
+            measurementRequestService,
+            measurementMetaService,
+            storageService,
+            serverConfiguration.measurementPayloadLimit,
+        )
+        val measurementStatusHandler = MeasurementStatusHandler(
+            measurementRequestService,
+            measurementMetaService,
+            storageService,
+        )
+        registerMeasurementUploadHandler(
+            apiRouter,
+            oAuth2AuthHandler,
+            authorizationHandler,
+            failureHandler,
+            measurementUploadHandler,
+            measurementStatusHandler,
+        )
+    }
+
+    private fun registerAttachmentHandlers(
+        storageService: DataStorageService,
+        apiRouter: Router,
+        oAuth2AuthHandler: OAuth2AuthHandler,
+        authorizationHandler: AuthorizationHandler,
+        failureHandler: FailureHandler
+    ) {
+        val attachmentRequestService = AttachmentRequestService(storageService)
+        val attachmentMetaService = AttachmentMetaDataService()
+        val attachmentPreRequestHandler = AttachmentPreRequestHandler(
+            attachmentRequestService,
+            attachmentMetaService,
+            serverConfiguration.measurementPayloadLimit,
+            serverConfiguration.httpEndpoint
+        )
+        registerAttachmentPreRequestHandler(
+            apiRouter,
+            oAuth2AuthHandler,
+            authorizationHandler,
+            failureHandler,
+            attachmentPreRequestHandler,
+        )
+        val attachmentUploadHandler = AttachmentUploadHandler(
+            attachmentRequestService,
+            attachmentMetaService,
+            storageService,
+            serverConfiguration.measurementPayloadLimit,
+        )
+        val attachmentStatusHandler = AttachmentStatusHandler(
+            attachmentRequestService,
+            attachmentMetaService,
+            storageService,
+        )
+        registerAttachmentUploadHandler(
+            apiRouter,
+            oAuth2AuthHandler,
+            authorizationHandler,
+            failureHandler,
+            attachmentUploadHandler,
+            attachmentStatusHandler,
+        )
     }
 
     /**

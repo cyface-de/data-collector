@@ -140,7 +140,7 @@ class GridFsStorageService(
      * @param temporaryStorage The temporary storage for the uploaded data to store.
      */
     private fun <T : RequestMetaData.MeasurementIdentifier> storeToMongoDB(upload: Upload<T>, temporaryStorage: Path):
-            Future<ObjectId> {
+        Future<ObjectId> {
         val promise = Promise.promise<ObjectId>()
         LOGGER.debug("Insert upload with id {}!", upload.metaData.identifier)
 

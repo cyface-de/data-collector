@@ -19,10 +19,12 @@
 package de.cyface.collector.handler
 
 import de.cyface.collector.handler.HTTPStatus.ENTITY_UNPARSABLE
+import de.cyface.collector.handler.HTTPStatus.HTTP_CONFLICT
 import de.cyface.collector.handler.HTTPStatus.OK
 import de.cyface.collector.handler.HTTPStatus.RESUME_INCOMPLETE
 import de.cyface.collector.handler.SessionFields.UPLOAD_PATH_FIELD
 import de.cyface.collector.handler.exception.InvalidMetaData
+import de.cyface.collector.handler.exception.SkipUpload
 import de.cyface.collector.model.RequestMetaData
 import de.cyface.collector.storage.DataStorageService
 import io.vertx.core.Handler
@@ -37,30 +39,32 @@ import java.util.UUID
  * This request type is used by clients to ask the upload status and, thus, where to continue the upload.
  *
  * @author Armin Schnabel
- * @property checkService The service to be used to check the request.
+ * @property requestService The service to be used to check the request.
+ * @property metaService The service to be used to check metadata.
  * @property storageService Service used to write and interact with received data.
  */
 class MeasurementStatusHandler(
-    private val checkService: MeasurementCheckService,
+    private val requestService: MeasurementRequestService,
+    private val metaService: MeasurementMetaDataService,
     private val storageService: DataStorageService,
 ) : Handler<RoutingContext> {
 
     override fun handle(ctx: RoutingContext) {
+        val session = ctx.session()
         try {
             LOGGER.info("Received new measurement upload status request.")
             val request = ctx.request()
-            val session = ctx.session()
 
             // Check request
-            if (!checkService.checkContentRange(request.headers())) {
+            if (!requestService.checkContentRange(request.headers())) {
                 ctx.fail(ENTITY_UNPARSABLE)
                 return
             }
 
             // Check upload conflict with existing data
-            val metaData = checkService.metaData<RequestMetaData.MeasurementIdentifier>(request.headers())
+            val metaData = metaService.metaData<RequestMetaData.MeasurementIdentifier>(request.headers())
             LOGGER.debug("Status of {}", metaData.identifier)
-            checkService.checkConflict(metaData.identifier)
+            requestService.checkConflict(metaData.identifier)
                 .onSuccess { conflict ->
                     val uploadIdentifier = session.get<UUID>(UPLOAD_PATH_FIELD)
 
@@ -92,6 +96,9 @@ class MeasurementStatusHandler(
                         }
                     }
                 }.onFailure(ctx::fail)
+        } catch (e: SkipUpload) {
+            session.destroy() // client won't resume
+            ctx.fail(HTTP_CONFLICT, e)
         } catch (e: InvalidMetaData) {
             ctx.fail(ENTITY_UNPARSABLE, e)
         }

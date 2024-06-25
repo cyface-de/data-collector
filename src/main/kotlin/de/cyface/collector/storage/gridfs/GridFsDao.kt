@@ -84,7 +84,7 @@ open class GridFsDao(private val mongoClient: MongoClient) {
      * @return A [Future] that is notified of the success or failure, upon completion of this operation.
      */
     open fun <T : RequestMetaData.MeasurementIdentifier> store(upload: Upload<T>, fileName: String, data: AsyncFile):
-            Future<ObjectId> {
+        Future<ObjectId> {
         val promise = Promise.promise<ObjectId>()
         val bucketServiceCreationCall = mongoClient.createDefaultGridFsBucketService()
         bucketServiceCreationCall.onFailure(promise::fail)

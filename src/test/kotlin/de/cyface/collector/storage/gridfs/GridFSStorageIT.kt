@@ -21,6 +21,7 @@ package de.cyface.collector.storage.gridfs
 import com.natpryce.hamkrest.assertion.assertThat
 import com.natpryce.hamkrest.equalTo
 import de.cyface.collector.commons.MongoTest
+import de.cyface.collector.handler.MetaDataService.Companion.CURRENT_TRANSFER_FILE_FORMAT_VERSION
 import de.cyface.collector.model.ContentRange
 import de.cyface.collector.model.RequestMetaData
 import de.cyface.collector.model.User
@@ -122,7 +123,7 @@ class GridFSStorageIT {
         )
     }
 
-    private val metaData: RequestMetaData
+    private val metaData: RequestMetaData<RequestMetaData.MeasurementIdentifier>
         get() {
             val deviceIdentifier = UUID.randomUUID()
             val measurementIdentifier = "1L"
@@ -131,27 +132,17 @@ class GridFSStorageIT {
             val applicationVersion = "6.0.0"
             val length = 13.0
             val locationCount = 666L
-            val startLocation = RequestMetaData.GeoLocation(1L, 10.0, 10.0)
-            val endLocation = RequestMetaData.GeoLocation(2L, 12.0, 12.0)
+            val startLocation = RequestMetaData.MeasurementMetaData.GeoLocation(1L, 10.0, 10.0)
+            val endLocation = RequestMetaData.MeasurementMetaData.GeoLocation(2L, 12.0, 12.0)
             val modality = "BICYCLE"
-            val formatVersion = RequestMetaData.CURRENT_TRANSFER_FILE_FORMAT_VERSION
+            val formatVersion = CURRENT_TRANSFER_FILE_FORMAT_VERSION
 
             return RequestMetaData(
-                deviceIdentifier.toString(),
-                measurementIdentifier,
-                operatingSystemVersion,
-                deviceType,
-                applicationVersion,
-                length,
-                locationCount,
-                startLocation,
-                endLocation,
-                modality,
-                formatVersion,
-                0,
-                0,
-                0,
-                0L,
+                RequestMetaData.MeasurementIdentifier(deviceIdentifier.toString(), measurementIdentifier),
+                RequestMetaData.DeviceMetaData(operatingSystemVersion, deviceType),
+                RequestMetaData.ApplicationMetaData(applicationVersion, formatVersion),
+                RequestMetaData.MeasurementMetaData(length, locationCount, startLocation, endLocation, modality),
+                RequestMetaData.AttachmentMetaData(0, 0, 0, 0L),
             )
         }
 

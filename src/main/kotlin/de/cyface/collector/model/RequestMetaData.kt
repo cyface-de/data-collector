@@ -260,7 +260,7 @@ data class RequestMetaData<T : RequestMetaData.MeasurementIdentifier>(
         init {
             require(
                 operatingSystemVersion.isNotEmpty() &&
-                        operatingSystemVersion.length <= MAX_GENERIC_METADATA_FIELD_LENGTH
+                    operatingSystemVersion.length <= MAX_GENERIC_METADATA_FIELD_LENGTH
             ) {
                 "Field osVersion had an invalid length of ${operatingSystemVersion.length.toLong()}"
             }

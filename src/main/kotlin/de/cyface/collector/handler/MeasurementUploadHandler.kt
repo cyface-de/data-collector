@@ -18,7 +18,6 @@
  */
 package de.cyface.collector.handler
 
-import de.cyface.collector.handler.CheckService.Companion
 import de.cyface.collector.handler.HTTPStatus.ENTITY_UNPARSABLE
 import de.cyface.collector.handler.HTTPStatus.NOT_FOUND
 import de.cyface.collector.handler.HTTPStatus.PRECONDITION_FAILED
@@ -57,6 +56,7 @@ import java.util.UUID
  * measurements for persistent storage.
  *
  * @property checkService The service to be used to check the request.
+ * @property metaService The service to be used to check metadata.
  * @property storageService A service used to store the received data to some persistent data store.
  * @property payloadLimit The maximum number of `Byte`s which may be uploaded.
  *
@@ -64,7 +64,8 @@ import java.util.UUID
  * @author Klemens Muthmann
  */
 class MeasurementUploadHandler(
-    private val checkService: MeasurementCheckService,
+    private val checkService: MeasurementRequestService,
+    private val metaService: MeasurementMetaDataService,
     private val storageService: DataStorageService,
     private val payloadLimit: Long
 ) : Handler<RoutingContext> {
@@ -87,7 +88,7 @@ class MeasurementUploadHandler(
 
             // Check request
             val bodySize = checkService.checkBodySize(request.headers(), payloadLimit, "content-length")
-            val metaData = checkService.metaData<RequestMetaData.MeasurementIdentifier>(request.headers())
+            val metaData = metaService.metaData<RequestMetaData.MeasurementIdentifier>(request.headers())
             checkService.checkSessionValidity(session, metaData)
 
             // Handle upload status request

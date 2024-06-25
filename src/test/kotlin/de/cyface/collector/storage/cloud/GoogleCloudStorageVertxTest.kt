@@ -73,7 +73,7 @@ class GoogleCloudStorageVertxTest {
         val user: User = mock()
         val contentRange = ContentRange(0L, 9L, 10L)
         val uploadIdentifier = UUID.randomUUID()
-        val metaData: RequestMetaData = metadata()
+        val metaData: RequestMetaData<RequestMetaData.MeasurementIdentifier> = metadata()
         val uploadMetaData = UploadMetaData(user, contentRange, uploadIdentifier, metaData)
 
         // Act
@@ -107,7 +107,7 @@ class GoogleCloudStorageVertxTest {
             on { create(any<UUID>()) } doReturn mockCloudStorage
         }
         val oocut = GoogleCloudStorageService(database, vertx, cloudStorageFactory)
-        val metadata: UploadMetaData = mock {
+        val metadata: UploadMetaData<RequestMetaData.MeasurementIdentifier> = mock {
             on { contentRange } doReturn ContentRange(5, 7, 3)
             on { uploadIdentifier } doReturn UUID.randomUUID()
         }
@@ -175,23 +175,33 @@ class GoogleCloudStorageVertxTest {
     /**
      * Provide some example metadata usable by tests.
      */
-    private fun metadata(): RequestMetaData {
+    private fun metadata(): RequestMetaData<RequestMetaData.MeasurementIdentifier> {
         return RequestMetaData(
-            deviceIdentifier = "78370516-4f7e-11ed-bdc3-0242ac120002",
-            measurementIdentifier = "1",
-            operatingSystemVersion = "iOS",
-            deviceType = "iPhone16",
-            applicationVersion = "3.2.1",
-            length = 20.0,
-            locationCount = 434,
-            startLocation = RequestMetaData.GeoLocation(512367323L, 51.0, 13.0),
-            endLocation = RequestMetaData.GeoLocation(512377323L, 51.5, 13.2),
-            modality = "BICYCLE",
-            formatVersion = 3,
-            logCount = 0,
-            imageCount = 0,
-            videoCount = 0,
-            filesSize = 0L,
+            RequestMetaData.MeasurementIdentifier(
+                "78370516-4f7e-11ed-bdc3-0242ac120002",
+                "1",
+            ),
+            RequestMetaData.DeviceMetaData(
+                "iOS",
+                "iPhone 16",
+            ),
+            RequestMetaData.ApplicationMetaData(
+                applicationVersion = "3.2.1",
+                formatVersion = 3,
+            ),
+            RequestMetaData.MeasurementMetaData(
+                length = 20.0,
+                locationCount = 434,
+                startLocation = RequestMetaData.MeasurementMetaData.GeoLocation(512367323L, 51.0, 13.0),
+                endLocation = RequestMetaData.MeasurementMetaData.GeoLocation(512377323L, 51.5, 13.2),
+                modality = "BICYCLE",
+            ),
+            RequestMetaData.AttachmentMetaData(
+                logCount = 0,
+                imageCount = 0,
+                videoCount = 0,
+                filesSize = 0L,
+            )
         )
     }
 }

@@ -95,7 +95,11 @@ class MeasurementStatusHandlerTest {
             on { request() } doReturn mockRequest
             on { session() } doReturn mockSession
         }
-        val oocut = MeasurementStatusHandler(storageService)
+        val oocut = MeasurementStatusHandler(
+            MeasurementRequestService(storageService),
+            MeasurementMetaDataService(),
+            storageService
+        )
 
         // Act
         oocut.handle(mockRoutingContext)

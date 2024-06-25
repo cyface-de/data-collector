@@ -43,12 +43,14 @@ import java.net.URL
  * This end point tells the client if the upload may continue or should be skipped.
  *
  * @author Armin Schnabel
- * @property checkService The service to be used to check the request.
+ * @property requestService The service to be used to check the request.
+ * @property metaService The service to be used to check metadata.
  * @property uploadLimit The maximal number of `Byte`s which may be uploaded in the upload request.
  * @property httpPath The path of the URL under which the Collector is deployed. To ensemble the "Location" header.
  */
 class AttachmentPreRequestHandler(
-    private val checkService: AttachmentCheckService,
+    private val requestService: AttachmentRequestService,
+    private val metaService: AttachmentMetaDataService,
     private val uploadLimit: Long,
     private val httpPath: String,
 ) : Handler<RoutingContext> {
@@ -60,13 +62,13 @@ class AttachmentPreRequestHandler(
             val session = ctx.session()
 
             // Check request
-            checkService.checkBodySize(request.headers(), uploadLimit, X_UPLOAD_CONTENT_LENGTH_FIELD)
+            requestService.checkBodySize(request.headers(), uploadLimit, X_UPLOAD_CONTENT_LENGTH_FIELD)
             val metaDataJson = ctx.body().asJsonObject()
-            val metaData = checkService.metaData<RequestMetaData.AttachmentIdentifier>(metaDataJson)
-            checkService.checkSession(session)
+            val metaData = metaService.metaData<RequestMetaData.AttachmentIdentifier>(metaDataJson)
+            requestService.checkSession(session)
 
             // Check conflict
-            checkService.checkConflict(metaData.identifier)
+            requestService.checkConflict(metaData.identifier)
                 .onSuccess { conflict ->
                     if (conflict) {
                         LOGGER.debug("Response: 409, attachment already exists, no upload needed")

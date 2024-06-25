@@ -19,6 +19,7 @@
 package de.cyface.collector.handler
 
 import de.cyface.collector.model.ContentRange
+import de.cyface.collector.model.RequestMetaData
 import de.cyface.collector.model.User
 import de.cyface.collector.storage.DataStorageService
 import de.cyface.collector.storage.Status
@@ -39,7 +40,6 @@ import org.mockito.Mock
 import org.mockito.junit.jupiter.MockitoExtension
 import org.mockito.kotlin.any
 import org.mockito.kotlin.argumentCaptor
-import org.mockito.kotlin.doAnswer
 import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.eq
 import org.mockito.kotlin.mock
@@ -84,13 +84,18 @@ class MeasurementUploadHandlerTest {
 
         val payloadLimit = 10L
 
-        oocut = MeasurementUploadHandler(measurementCheckService, mockStorageService, payloadLimit)
+        oocut = MeasurementUploadHandler(
+            MeasurementRequestService(mockStorageService),
+            MeasurementMetaDataService(),
+            mockStorageService,
+            payloadLimit
+        )
 
         mockRequest = mock {
             on { headers() } doReturn headers
-            on { getHeader(any()) } doAnswer { getHeaderCall ->
+            /*on { getHeader(any()) } doAnswer { getHeaderCall ->
                 headers.get(getHeaderCall.getArgument(0, String::class.java))
-            }
+            }*/
         }
 
         mockSession = mock {
@@ -129,7 +134,12 @@ class MeasurementUploadHandlerTest {
         val mockBytesUploadedCall = mock<Future<Long>> {}
         whenever(mockStorageService.bytesUploaded(any())).thenReturn(mockBytesUploadedCall)
         val mockStoreCall = mock<Future<Status>> {}
-        whenever(mockStorageService.store(any<ReadStream<Buffer>>(), any<UploadMetaData>())).thenReturn(mockStoreCall)
+        whenever(
+            mockStorageService.store(
+                any<ReadStream<Buffer>>(),
+                any<UploadMetaData<RequestMetaData.MeasurementIdentifier>>()
+            )
+        ).thenReturn(mockStoreCall)
 
         // Act
         oocut.handle(mockRoutingContext)
@@ -171,7 +181,7 @@ class MeasurementUploadHandlerTest {
         oocut.handle(mockRoutingContext)
 
         // Assert
-        argumentCaptor<UploadMetaData> {
+        argumentCaptor<UploadMetaData<RequestMetaData.MeasurementIdentifier>> {
             verify(mockStorageService).store(eq(mockRequest), capture())
 
             assertEquals(mockUser, firstValue.user)

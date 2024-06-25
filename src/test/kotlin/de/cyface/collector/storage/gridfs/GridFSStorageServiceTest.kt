@@ -18,9 +18,10 @@
  */
 package de.cyface.collector.storage.gridfs
 
+import de.cyface.collector.handler.MetaDataService.Companion.CURRENT_TRANSFER_FILE_FORMAT_VERSION
 import de.cyface.collector.model.ContentRange
 import de.cyface.collector.model.RequestMetaData
-import de.cyface.collector.model.RequestMetaData.GeoLocation
+import de.cyface.collector.model.RequestMetaData.MeasurementMetaData.GeoLocation
 import de.cyface.collector.model.User
 import de.cyface.collector.storage.StatusType
 import de.cyface.collector.storage.UploadMetaData
@@ -59,7 +60,7 @@ import java.util.concurrent.TimeUnit
  */
 class GridFSStorageServiceTest {
     // Explicit Type Arguments are required by Mockito.
-    @Suppress("RemoveExplicitTypeArguments", "RedundantSuppression")
+    @Suppress("RemoveExplicitTypeArguments", "RedundantSuppression", "LongMethod")
     @Test
     fun `Happy path for storing a file to GridFS`() {
         // Arrange
@@ -102,23 +103,13 @@ class GridFSStorageServiceTest {
         val startLocation = GeoLocation(1L, 10.0, 10.0)
         val endLocation = GeoLocation(2L, 12.0, 12.0)
         val modality = "BICYCLE"
-        val formatVersion = RequestMetaData.CURRENT_TRANSFER_FILE_FORMAT_VERSION
+        val formatVersion = CURRENT_TRANSFER_FILE_FORMAT_VERSION
         val metaData = RequestMetaData(
-            deviceIdentifier.toString(),
-            measurementIdentifier,
-            operatingSystemVersion,
-            deviceType,
-            applicationVersion,
-            length,
-            locationCount,
-            startLocation,
-            endLocation,
-            modality,
-            formatVersion,
-            0,
-            0,
-            0,
-            0L,
+            RequestMetaData.MeasurementIdentifier(deviceIdentifier.toString(), measurementIdentifier),
+            RequestMetaData.DeviceMetaData(operatingSystemVersion, deviceType),
+            RequestMetaData.ApplicationMetaData(applicationVersion, formatVersion),
+            RequestMetaData.MeasurementMetaData(length, locationCount, startLocation, endLocation, modality),
+            RequestMetaData.AttachmentMetaData(0, 0, 0, 0L),
         )
         val oocut = GridFsStorageService(GridFsDao(mockMongoClient), fileSystem, Path.of("upload-folder"))
 
@@ -192,11 +183,12 @@ class GridFSStorageServiceTest {
      * Test that data in multiple chunks is correctly written to temporary storage at first and to GridFS in the end.
      */
     @Test
+    @SuppressWarnings("LongMethod")
     fun `Upload file in multiple chunks`() {
         // Arrange
         val storeCall = mock<Future<ObjectId>> {}
         val mockDao = mock<GridFsDao> {
-            on { store(any(), anyString(), any()) } doReturn storeCall
+            on { store<RequestMetaData.MeasurementIdentifier>(any(), anyString(), any()) } doReturn storeCall
         }
         val mockTemporaryFileOpenCall01 = mock<Future<AsyncFile>> {}
         val mockTemporaryFileOpenCall02 = mock<Future<AsyncFile>> {}
@@ -236,6 +228,7 @@ class GridFSStorageServiceTest {
             on { pipe() } doReturn mockPipe
         }
 
+        @Suppress("SpellCheckingInspection")
         val mockUser = mock<User> {
             on { idString } doReturn "testuser"
         }
@@ -326,26 +319,22 @@ class GridFSStorageServiceTest {
         }
 
         // Verify that the file is actually stored at the end.
-        verify(mockDao).store(any(), anyString(), any())
+        verify(mockDao).store<RequestMetaData.MeasurementIdentifier>(any(), anyString(), any())
     }
 
-    private fun metadata(): RequestMetaData {
+    private fun metadata(): RequestMetaData<RequestMetaData.MeasurementIdentifier> {
         return RequestMetaData(
-            deviceIdentifier = "78370516-4f7e-11ed-bdc3-0242ac120002",
-            measurementIdentifier = "1",
-            operatingSystemVersion = "iOS",
-            deviceType = "iPhone16",
-            applicationVersion = "3.2.1",
-            length = 20.0,
-            locationCount = 434,
-            startLocation = GeoLocation(512367323L, 51.0, 13.0),
-            endLocation = GeoLocation(512377323L, 51.5, 13.2),
-            modality = "BICYCLE",
-            formatVersion = 3,
-            logCount = 0,
-            imageCount = 0,
-            videoCount = 0,
-            filesSize = 0L,
+            RequestMetaData.MeasurementIdentifier("78370516-4f7e-11ed-bdc3-0242ac120002", "1"),
+            RequestMetaData.DeviceMetaData("iOS", "iPhone16"),
+            RequestMetaData.ApplicationMetaData("3.2.1", 3),
+            RequestMetaData.MeasurementMetaData(
+                20.0,
+                434,
+                GeoLocation(512367323L, 51.0, 13.0),
+                GeoLocation(512377323L, 51.5, 13.2),
+                "BICYCLE",
+            ),
+            RequestMetaData.AttachmentMetaData(0, 0, 0, 0L),
         )
     }
 }

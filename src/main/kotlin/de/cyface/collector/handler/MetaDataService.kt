@@ -19,99 +19,21 @@
 package de.cyface.collector.handler
 
 import de.cyface.collector.handler.exception.DeprecatedFormatVersion
-import de.cyface.collector.handler.exception.IllegalSession
 import de.cyface.collector.handler.exception.InvalidMetaData
-import de.cyface.collector.handler.exception.PayloadTooLarge
-import de.cyface.collector.handler.exception.SessionExpired
 import de.cyface.collector.handler.exception.SkipUpload
 import de.cyface.collector.handler.exception.TooFewLocations
 import de.cyface.collector.handler.exception.UnknownFormatVersion
 import de.cyface.collector.handler.exception.Unparsable
-import de.cyface.collector.model.ContentRange
 import de.cyface.collector.model.RequestMetaData
-import io.vertx.core.Future
 import io.vertx.core.MultiMap
 import io.vertx.core.json.JsonObject
-import io.vertx.ext.web.Session
-import org.slf4j.LoggerFactory
-import java.util.Locale
 
 /**
- * Interface for services which check upload requests and their pre-requests.
+ * Interface for services which check metadata from upload requests and their pre-requests.
  *
  * @author Armin Schnabel
  */
-interface CheckService {
-    /**
-     * Checks if the information about the upload size in the header exceeds the {@param measurementLimit}.
-     *
-     * @param headers The header to check.
-     * @param measurementLimit The maximal number of `Byte`s which may be uploaded in the upload request.
-     * @param uploadLengthField The name of the header field to check.
-     * @return the number of bytes to be uploaded
-     * @throws Unparsable If the header is missing the expected field about the upload size.
-     * @throws PayloadTooLarge If the requested upload is too large.
-     */
-    @Throws(Unparsable::class, PayloadTooLarge::class)
-    fun checkBodySize(headers: MultiMap, measurementLimit: Long, uploadLengthField: String): Long {
-        val uploadLengthString = headers[uploadLengthField]
-            ?: throw Unparsable(
-                String.format(
-                    Locale.ENGLISH,
-                    "The header is missing the field %s",
-                    uploadLengthField
-                )
-            )
-
-        val uploadLength = try {
-            uploadLengthString.toLong()
-        } catch (e: NumberFormatException) {
-            throw Unparsable(
-                String.format(
-                    Locale.ENGLISH,
-                    "The header field %s is unparsable: %s",
-                    uploadLengthField,
-                    uploadLengthString
-                )
-            )
-        }
-
-        if (uploadLength > measurementLimit) {
-            throw PayloadTooLarge(
-                String.format(
-                    Locale.ENGLISH,
-                    "Upload size in the pre-request (%d) is too large, limit is %d bytes.",
-                    uploadLength,
-                    measurementLimit
-                )
-            )
-        }
-
-        return uploadLength
-    }
-
-    /**
-     * Checks that no pre-existing session was passed in the pre-request.
-     *
-     * The purpose of the `pre-request` is to generate an upload session for `upload requests`.
-     * Thus, we're expecting that the `SessionHandler` automatically created a new session for this pre-request.
-     *
-     * @param session the session to check
-     * @throws IllegalSession if an existing session was passed
-     */
-    @Throws(IllegalSession::class)
-    fun checkSession(session: Session)
-
-    /**
-     * Checks if the file to be uploaded is already stored in the database.
-     *
-     * This can include checking for the existence of the measurement itself or also for the existence of attachments.
-     *
-     * @param identifier The id of the transmitted file to check if it already exists.
-     * @return A future that will be completed with true if the check are successful. Depending on the implementation
-     * this might mean that the measurement does or does not yet exist or that the attachment does not yet exist.
-     */
-    fun checkConflict(identifier: RequestMetaData.MeasurementIdentifier): Future<Boolean>
+interface MetaDataService {
 
     /**
      * Extracts the metadata from the request header.
@@ -157,7 +79,7 @@ interface CheckService {
                 attachmentMetaData,
             )
         } catch (e: DeprecatedFormatVersion) {
-            throw SkipUpload(e) // FIXME: should maybe be outside?
+            throw SkipUpload(e)
         } catch (e: UnknownFormatVersion) {
             throw InvalidMetaData(e)
         } catch (e: TooFewLocations) {
@@ -263,69 +185,10 @@ interface CheckService {
     }
 
     fun attachmentMetaData(logCount: String?, imageCount: String?, videoCount: String?, filesSize: String?):
-            RequestMetaData.AttachmentMetaData
-
-    /**
-     * Checks if the session is considered "valid", i.e. there was a pre-request which was accepted by the server with
-     * the same identifiers as in this request.
-     *
-     * @param session the session to be checked
-     * @param metaData the identifier of this request header
-     * @throws IllegalSession if the device-/measurement id of this request does not match the one of the pre-request
-     * @throws SessionExpired if the session is not found, e.g. because it expired
-     */
-    @Throws(IllegalSession::class, SessionExpired::class)
-    fun <T : RequestMetaData.MeasurementIdentifier> checkSessionValidity(session: Session, metaData: RequestMetaData<T>)
-
-    /**
-     * Extracts the content range information from the request header and checks it matches the body size information
-     * from the header.
-     *
-     * @param headers the request header to check
-     * @param bodySize the number of bytes to be uploaded
-     * @return the extracted content range information
-     * @throws Unparsable if the content range does not match the body size information
-     */
-    @Throws(Unparsable::class)
-    fun contentRange(headers: MultiMap, bodySize: Long): ContentRange {
-        // The client informs what data is attached: `bytes fromIndex-toIndex/totalBytes`
-        val contentRangeString = headers.get("Content-Range")
-        val contentRange = ContentRange.fromHTTPHeader(contentRangeString)
-
-        // Make sure content-length matches the content range (to-from+1)
-        val sizeAccordingToContentRange = contentRange.toIndex - contentRange.fromIndex + 1L
-        if (bodySize != sizeAccordingToContentRange) {
-            throw Unparsable(
-                String.format(
-                    Locale.ENGLISH,
-                    "Upload size (%d) does not match content rang of header (%s)!",
-                    bodySize,
-                    contentRange
-                )
-            )
-        }
-        return contentRange
-    }
-
-    /**
-     * Checks the `Content-Range` field in the request.
-     *
-     * Only requests are accepted where the client knows the file size, i.e. `Content-Range` headers with
-     * `bytes *\/SIZE` but not `bytes *\/\*` (ignore the escape-characters `\` in the documentation).
-     *
-     * @param headers the request header to check
-     */
-    fun checkContentRange(headers: MultiMap): Boolean {
-        val rangeRequest = headers.get("Content-Range")
-        if (!rangeRequest.matches(RANGE_VALUE_CHECK)) {
-            LOGGER.error("Content-Range request not supported: {}", rangeRequest)
-            return false
-        }
-        return true
-    }
+        RequestMetaData.AttachmentMetaData
 
     fun geoLocation(timestamp: String?, latitude: String?, longitude: String?):
-            RequestMetaData.MeasurementMetaData.GeoLocation? {
+        RequestMetaData.MeasurementMetaData.GeoLocation? {
         return if (timestamp != null && latitude != null && longitude != null) {
             RequestMetaData.MeasurementMetaData.GeoLocation(
                 timestamp.toLong(),
@@ -339,12 +202,6 @@ interface CheckService {
 
     companion object {
         /**
-         * The logger for objects of this class. You can change its configuration by
-         * adapting the values in `src/main/resources/logback.xml`.
-         */
-        private val LOGGER = LoggerFactory.getLogger(CheckService::class.java)
-
-        /**
          * The minimum amount of location points required to accept an upload.
          */
         const val MINIMUM_LOCATION_COUNT = 2
@@ -354,10 +211,5 @@ interface CheckService {
          * transferred and helps compatible APIs to process data from different client versions.
          */
         const val CURRENT_TRANSFER_FILE_FORMAT_VERSION = 3
-
-        /**
-         * A regular expression to check the range HTTP header parameter value.
-         */
-        private val RANGE_VALUE_CHECK = "bytes \\*/[0-9]+".toRegex()
     }
 }

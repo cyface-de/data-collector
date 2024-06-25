@@ -107,7 +107,12 @@ class PreRequestTest {
 
         whenever(mockRoutingContext.body()).thenReturn(mockBody)
         whenever(mockBody.asJsonObject()).thenReturn(preRequestBody(deviceId))
-        oocut = MeasurementPreRequestHandler(mockStorageService, 100L, "/")
+        oocut = MeasurementPreRequestHandler(
+            MeasurementRequestService(mockStorageService),
+            MeasurementMetaDataService(),
+            100L,
+            "/"
+        )
     }
 
     @Test

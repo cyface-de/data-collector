@@ -45,14 +45,16 @@ import java.util.UUID
  * new measurements from any measurement device and forwarding those
  * measurements for persistent storage.
  *
- * @property checkService The service to be used to check the request.
+ * @property requestService The service to be used to check the request.
+ * @property metaService The service to be used to check metadata.
  * @property storageService A service used to store the received data to some persistent data store.
  * @property payloadLimit The maximum number of `Byte`s which may be uploaded.
  *
  * @author Armin Schnabel
  */
 class AttachmentUploadHandler(
-    private val checkService: AttachmentCheckService,
+    private val requestService: AttachmentRequestService,
+    private val metaService: AttachmentMetaDataService,
     private val storageService: DataStorageService,
     private val payloadLimit: Long
 ) : Handler<RoutingContext> {
@@ -74,9 +76,9 @@ class AttachmentUploadHandler(
             }
 
             // Check request
-            val bodySize = checkService.checkBodySize(request.headers(), payloadLimit, "content-length")
-            val metaData = checkService.metaData<RequestMetaData.AttachmentIdentifier>(request.headers())
-            checkService.checkSessionValidity(session, metaData)
+            val bodySize = requestService.checkBodySize(request.headers(), payloadLimit, "content-length")
+            val metaData = metaService.metaData<RequestMetaData.AttachmentIdentifier>(request.headers())
+            requestService.checkSessionValidity(session, metaData)
 
             // Handle upload status request
             if (bodySize == 0L) {
@@ -84,7 +86,7 @@ class AttachmentUploadHandler(
             }
 
             // Handle first chunk
-            val contentRange = checkService.contentRange(request.headers(), bodySize)
+            val contentRange = requestService.contentRange(request.headers(), bodySize)
             checkAndStore(session, loggedInUser, request, contentRange, metaData, storageService)
                 .onSuccess { onCheckSuccessful(it, ctx, session) }
                 .onFailure(UploadFailureHandler(ctx))
