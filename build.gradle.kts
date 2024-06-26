@@ -99,7 +99,6 @@ val mockitoVersion = "5.2.0"
 // TODO: Remove the following. It belongs to java and should be replaced by hamKrest
 val hamcrestVersion = "2.2"
 val hamKrestVersion = "1.8.0.1"
-val flapdoodleVersion = "3.5.3" // major upgrade available
 val mockitoKotlinVersion = "4.1.0"
 val dokkaVersion = "1.9.10"
 val detektVersion = "1.23.1"
@@ -157,9 +156,6 @@ dependencies {
 
   testImplementation("io.vertx:vertx-junit5:$vertxVersion")
   testImplementation("io.vertx:vertx-web-client:$vertxVersion")
-  // This is required to run an embedded Mongo instance for integration testing.
-  // TODO: Switch to using testcontainers completely.
-  testImplementation("de.flapdoodle.embed:de.flapdoodle.embed.mongo:$flapdoodleVersion")
   testImplementation("de.cyface:uploader:$cyfaceSynchronizerVersion")
   testImplementation("org.testcontainers:testcontainers:$testContainerVersion")
 

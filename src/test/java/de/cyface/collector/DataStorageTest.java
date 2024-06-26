@@ -1,5 +1,5 @@
 /*
- * Copyright 2018-2023 Cyface GmbH
+ * Copyright 2018-2024 Cyface GmbH
  *
  * This file is part of the Cyface Data Collector.
  *
@@ -20,7 +20,6 @@ package de.cyface.collector;
 
 import de.cyface.collector.commons.MongoTest;
 import de.cyface.collector.handler.FormAttributes;
-import de.flapdoodle.embed.process.runtime.Network;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.core.file.OpenOptions;
@@ -39,7 +38,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.IOException;
 import java.net.URISyntaxException;
 import java.nio.file.Path;
 import java.util.List;
@@ -56,8 +54,6 @@ import static org.hamcrest.Matchers.is;
  * Tests that storing data to an underlying Mongo database works.
  *
  * @author Klemens Muthmann
- * @version 1.1.5
- * @since 2.0.0
  */
 @ExtendWith(VertxExtension.class)
 @SuppressWarnings("PMD.MethodNamingConventions")
@@ -93,12 +89,11 @@ public final class DataStorageTest {
     /**
      * Starts a test in memory Mongo database.
      *
-     * @throws IOException If creating the server fails
      */
     @BeforeEach
-    void setUp() throws IOException {
+    void setUp() {
         mongoTest = new MongoTest();
-        mongoTest.setUpMongoDatabase(Network.freeServerPort(Network.getLocalHost()));
+        mongoTest.setUpMongoDatabase();
     }
 
     /**

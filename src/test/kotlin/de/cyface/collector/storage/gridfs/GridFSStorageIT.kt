@@ -27,7 +27,6 @@ import de.cyface.collector.model.RequestMetaData
 import de.cyface.collector.model.User
 import de.cyface.collector.storage.StatusType
 import de.cyface.collector.storage.UploadMetaData
-import de.flapdoodle.embed.process.runtime.Network
 import io.vertx.core.Vertx
 import io.vertx.core.file.OpenOptions
 import io.vertx.ext.mongo.MongoClient
@@ -69,7 +68,7 @@ class GridFSStorageIT {
     @BeforeEach
     fun setUp(vertx: Vertx, context: VertxTestContext) {
         mongoTest = MongoTest()
-        mongoTest.setUpMongoDatabase(Network.freeServerPort(Network.getLocalHost()))
+        mongoTest.setUpMongoDatabase()
         vertx.fileSystem().mkdir(uploadFolder.absolutePathString()).onComplete {
             context.completeNow()
         }

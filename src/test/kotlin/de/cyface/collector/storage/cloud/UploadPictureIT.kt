@@ -20,6 +20,7 @@ package de.cyface.collector.storage.cloud
 
 import com.google.auth.oauth2.GoogleCredentials
 import de.cyface.collector.auth.MockedHandlerBuilder
+import de.cyface.collector.commons.MongoTest
 import de.cyface.collector.configuration.GoogleCloudStorageType
 import de.cyface.collector.model.ContentRange
 import de.cyface.collector.model.User
@@ -48,7 +49,6 @@ import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.extension.ExtendWith
 import org.mockito.kotlin.mock
 import org.slf4j.LoggerFactory
-import org.testcontainers.containers.GenericContainer
 import java.io.File
 import java.io.FileInputStream
 import java.net.URL
@@ -187,9 +187,8 @@ class UploadPictureIT {
         vertx: Vertx,
         testContext: VertxTestContext
     ) {
-        val mongoPort = 27017
-        val mongo = GenericContainer("mongo:5.0.16").withExposedPorts(mongoPort)
-        mongo.start()
+        val mongoTest = MongoTest()
+        mongoTest.setUpMongoDatabase()
 
         val port = 8080
         val httpEndpoint = "/"
@@ -212,7 +211,7 @@ class UploadPictureIT {
         )
         val mongoDatabaseConfiguration = JsonObject()
             .put("db_name", "cyface")
-            .put("connection_string", "mongodb://${mongo.getHost()}:${mongo.getMappedPort(mongoPort)}")
+            .put("connection_string", "mongodb://${mongoTest.getMongoHost()}:${mongoTest.getMongoPort()}")
             .put("data_source_name", "cyface")
 
         val verticle = CollectorApiVerticle(
@@ -268,7 +267,7 @@ class UploadPictureIT {
                             result
                         )
                     }
-                    mongo.stop()
+                    mongoTest.stopMongoDb()
                     testContext.completeNow()
                 }
             }
