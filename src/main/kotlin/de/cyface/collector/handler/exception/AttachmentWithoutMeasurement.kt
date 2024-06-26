@@ -1,5 +1,5 @@
 /*
- * Copyright 2021-2024 Cyface GmbH
+ * Copyright 2024 Cyface GmbH
  *
  * This file is part of the Cyface Data Collector.
  *
@@ -19,12 +19,8 @@
 package de.cyface.collector.handler.exception
 
 /**
- * Exception thrown when the upload or pre-request does not contain the expected metadata.
+ * Exception thrown when the client tries to upload an attachment before the measurement was received.
  *
- * @author Armin Schnabel
+ * @param message Details about the reason for this `Exception`.
  */
-class InvalidMetaData : Exception {
-    constructor(message: String, cause: Throwable) : super(message, cause)
-    constructor(message: String) : super(message)
-    constructor(cause: Throwable) : super(cause)
-}
+class AttachmentWithoutMeasurement(message: String) : Exception(message)

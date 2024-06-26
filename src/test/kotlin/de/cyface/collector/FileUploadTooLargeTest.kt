@@ -22,7 +22,6 @@ import de.cyface.collector.auth.MockedHandlerBuilder
 import de.cyface.collector.commons.DataCollectorClient
 import de.cyface.collector.commons.MongoTest
 import de.cyface.collector.verticle.CollectorApiVerticle
-import de.flapdoodle.embed.process.runtime.Network
 import io.vertx.core.AsyncResult
 import io.vertx.core.Handler
 import io.vertx.core.Vertx
@@ -53,8 +52,6 @@ import kotlin.test.assertNotNull
  * Tests that uploading measurements to the Cyface API works as expected.
  *
  * @author Armin Schnabel
- * @version 1.0.4
- * @since 6.0.0
  */
 @ExtendWith(VertxExtension::class)
 class FileUploadTooLargeTest {
@@ -92,7 +89,7 @@ class FileUploadTooLargeTest {
         // FIXME: can we somehow overwrite the @setup method to reuse {@link FileUploadTest}?
         // Set maximal payload size to 1 KB (test upload is 130 KB)
         collectorClient = DataCollectorClient(CollectorApiVerticle.BYTES_IN_ONE_KILOBYTE)
-        mongoTest.setUpMongoDatabase(Network.freeServerPort(Network.getLocalHost()))
+        mongoTest.setUpMongoDatabase()
         client = collectorClient.createWebClient(vertx, ctx, mongoTest, MockedHandlerBuilder())
     }
 

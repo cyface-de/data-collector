@@ -22,10 +22,8 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.is;
 
-import java.io.IOException;
 import java.util.stream.Stream;
 
-import de.cyface.collector.auth.MockedHandlerBuilder;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -34,10 +32,10 @@ import org.junit.jupiter.params.provider.MethodSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import de.cyface.collector.auth.MockedHandlerBuilder;
 import de.cyface.collector.commons.DataCollectorClient;
 import de.cyface.collector.commons.MongoTest;
 import de.cyface.collector.verticle.CollectorApiVerticle;
-import de.flapdoodle.embed.process.runtime.Network;
 import io.vertx.core.Vertx;
 import io.vertx.ext.web.client.WebClient;
 import io.vertx.junit5.VertxExtension;
@@ -48,8 +46,6 @@ import io.vertx.junit5.VertxTestContext;
  *
  * @author Klemens Muthmann
  * @author Armin Schnabel
- * @version 3.1.2
- * @since 1.0.0
  */
 @ExtendWith(VertxExtension.class)
 @SuppressWarnings("PMD.MethodNamingConventions")
@@ -84,13 +80,12 @@ public final class RequestTest {
      *
      * @param vertx A <code>Vertx</code> instance used for deploying the verticle
      * @param ctx The test context used to control the test <code>Vertx</code>
-     * @throws IOException Fails the test if anything unexpected goes wrong
      */
     @BeforeEach
-    public void deployVerticle(final Vertx vertx, final VertxTestContext ctx) throws IOException {
+    public void deployVerticle(final Vertx vertx, final VertxTestContext ctx) {
         collectorClient = new DataCollectorClient();
         mongoTest = new MongoTest();
-        mongoTest.setUpMongoDatabase(Network.freeServerPort(Network.getLocalHost()));
+        mongoTest.setUpMongoDatabase();
         client = collectorClient.createWebClient(vertx, ctx, mongoTest, new MockedHandlerBuilder());
     }
 

@@ -32,7 +32,7 @@ import org.slf4j.LoggerFactory
  * @version 1.0.0
  * @property ctx The failed routing context, containing the error information.
  */
-class MeasurementFailureHandler(private val ctx: RoutingContext) : Handler<Throwable> {
+class UploadFailureHandler(private val ctx: RoutingContext) : Handler<Throwable> {
     override fun handle(event: Throwable) {
         when (event) {
             is UnexpectedContentRange -> {
@@ -51,6 +51,6 @@ class MeasurementFailureHandler(private val ctx: RoutingContext) : Handler<Throw
         /**
          * The logger used by objects of this class. Configure it using `src/main/resources/logback.xml`.
          */
-        private val LOGGER = LoggerFactory.getLogger(MeasurementFailureHandler::class.java)
+        private val LOGGER = LoggerFactory.getLogger(UploadFailureHandler::class.java)
     }
 }

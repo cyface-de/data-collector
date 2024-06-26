@@ -20,6 +20,7 @@
 
 package de.cyface.collector.storage.cloud
 
+import de.cyface.collector.model.RequestMetaData
 import de.cyface.collector.storage.CleanupOperation
 import de.cyface.collector.storage.DataStorageService
 import de.cyface.collector.storage.Status
@@ -62,9 +63,9 @@ class GoogleCloudStorageService(
      */
     private val logger = LoggerFactory.getLogger(GoogleCloudStorageService::class.java)
 
-    override fun store(
+    override fun <T : RequestMetaData.MeasurementIdentifier> store(
         sourceData: ReadStream<Buffer>,
-        uploadMetaData: UploadMetaData
+        uploadMetaData: UploadMetaData<T>
     ): Future<Status> {
         val ret = Promise.promise<Status>()
         val pipe = sourceData.pipe().endOnSuccess(false)
@@ -160,6 +161,16 @@ class GoogleCloudStorageService(
         See: https://stackoverflow.com/questions/55337912/is-it-possible-to-query-google-cloud-storage-custom-metadata
          */
         return dao.exists(deviceId, measurementId)
+    }
+
+    override fun isStored(deviceId: String, measurementId: Long, attachmentId: Long): Future<Boolean> {
+        /*
+        This solution is incorrect. Since I do not store files in gridFS there will be no metadata either.
+        Where should I store the metadata? According to stackoverflow in a separate database. So probably inside the
+        mongo database as well.
+        See: https://stackoverflow.com/questions/55337912/is-it-possible-to-query-google-cloud-storage-custom-metadata
+         */
+        return dao.exists(deviceId, measurementId, attachmentId)
     }
 }
 

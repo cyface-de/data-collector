@@ -25,6 +25,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import java.io.IOException;
+import java.net.ServerSocket;
 import java.net.URL;
 import java.nio.file.Path;
 import java.util.concurrent.TimeUnit;
@@ -40,7 +41,6 @@ import de.cyface.collector.commons.MongoTest;
 import de.cyface.collector.configuration.AuthType;
 import de.cyface.collector.configuration.Configuration;
 import de.cyface.collector.configuration.GridFsStorageType;
-import de.flapdoodle.embed.process.runtime.Network;
 import io.vertx.core.Vertx;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
@@ -49,8 +49,6 @@ import io.vertx.junit5.VertxTestContext;
  * Tests if running the {@link CollectorApiVerticle} works as expected.
  *
  * @author Klemens Muthmann
- * @version 1.1.2
- * @since 5.2.0
  */
 @ExtendWith(VertxExtension.class)
 public class CollectorApiVerticleTest {
@@ -62,13 +60,11 @@ public class CollectorApiVerticleTest {
     /**
      * Starts a test in memory Mongo database.
      *
-     * @throws IOException If creating the server fails
      */
     @BeforeEach
-    void setUp() throws IOException {
+    void setUp() {
         mongoTest = new MongoTest();
-        int mongoPort = Network.freeServerPort(Network.getLocalHost());
-        mongoTest.setUpMongoDatabase(mongoPort);
+        mongoTest.setUpMongoDatabase();
     }
 
     /**
@@ -90,7 +86,7 @@ public class CollectorApiVerticleTest {
     @DisplayName("Happy Path test for starting the collector API.")
     void test(final Vertx vertx, final VertxTestContext testContext) throws Throwable {
         // Arrange
-        final var port = Network.freeServerPort(Network.getLocalHost());
+        final var port = findFreePort();
         final var configuration = mock(Configuration.class);
         when(configuration.getHttpPort()).thenReturn(port);
         when(configuration.getMongoDb()).thenReturn(mongoTest.clientConfiguration());
@@ -124,6 +120,15 @@ public class CollectorApiVerticleTest {
         assertThat(testContext.awaitCompletion(20, TimeUnit.SECONDS), is(equalTo(true)));
         if (testContext.failed()) {
             throw testContext.causeOfFailure();
+        }
+    }
+
+    public static int findFreePort() {
+        try (ServerSocket socket = new ServerSocket(0)) {
+            socket.setReuseAddress(true);
+            return socket.getLocalPort();
+        } catch (IOException e) {
+            throw new RuntimeException("No free port found", e);
         }
     }
 }

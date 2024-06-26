@@ -21,7 +21,6 @@ package de.cyface.collector
 import de.cyface.collector.auth.MockedHandlerBuilder
 import de.cyface.collector.commons.DataCollectorClient
 import de.cyface.collector.commons.MongoTest
-import de.flapdoodle.embed.process.runtime.Network
 import io.vertx.core.AsyncResult
 import io.vertx.core.Handler
 import io.vertx.core.Vertx
@@ -54,8 +53,6 @@ import kotlin.test.assertNotNull
  *
  * @author Klemens Muthmann
  * @author Armin Schnabel
- * @version 4.1.3
- * @since 2.0.0
  */
 // This warning is suppressed since it is wrong for Vert.x Tests.
 @ExtendWith(VertxExtension::class)
@@ -98,7 +95,7 @@ class FileUploadTest {
     private fun deployVerticle(vertx: Vertx, ctx: VertxTestContext) {
         collectorClient = DataCollectorClient(140_000L)
         mongoTest = MongoTest()
-        mongoTest.setUpMongoDatabase(Network.freeServerPort(Network.getLocalHost()))
+        mongoTest.setUpMongoDatabase()
         client = collectorClient.createWebClient(vertx, ctx, mongoTest, MockedHandlerBuilder())
     }
 

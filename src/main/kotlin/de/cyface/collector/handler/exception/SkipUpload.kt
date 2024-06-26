@@ -22,8 +22,8 @@ package de.cyface.collector.handler.exception
  * Exception thrown when the server does not want to receive the data offered in the upload pre-request.
  *
  * @author Armin Schnabel
- * @version 1.0.0
- * @since 7.0.0
- * @param message Details about the reason for this `Exception`.
  */
-class SkipUpload(message: String) : Exception(message)
+class SkipUpload : Exception {
+    constructor(message: String) : super(message)
+    constructor(cause: Throwable) : super(cause)
+}

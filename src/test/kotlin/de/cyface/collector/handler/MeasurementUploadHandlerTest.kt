@@ -19,6 +19,7 @@
 package de.cyface.collector.handler
 
 import de.cyface.collector.model.ContentRange
+import de.cyface.collector.model.RequestMetaData
 import de.cyface.collector.model.User
 import de.cyface.collector.storage.DataStorageService
 import de.cyface.collector.storage.Status
@@ -39,7 +40,6 @@ import org.mockito.Mock
 import org.mockito.junit.jupiter.MockitoExtension
 import org.mockito.kotlin.any
 import org.mockito.kotlin.argumentCaptor
-import org.mockito.kotlin.doAnswer
 import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.eq
 import org.mockito.kotlin.mock
@@ -49,12 +49,12 @@ import java.util.UUID
 import kotlin.test.assertEquals
 
 /**
- * Run tests on the [MeasurementHandler] directly without a Vert.x environment.
+ * Run tests on the [MeasurementUploadHandler] directly without a Vert.x environment.
  *
  * @author Klemens Muthmann
  */
 @ExtendWith(MockitoExtension::class)
-class MeasurementHandlerTest {
+class MeasurementUploadHandlerTest {
 
     @Mock
     lateinit var mockStorageService: DataStorageService
@@ -73,7 +73,7 @@ class MeasurementHandlerTest {
 
     private lateinit var headers: MultiMap
 
-    private lateinit var oocut: MeasurementHandler
+    private lateinit var oocut: MeasurementUploadHandler
 
     @BeforeEach
     fun setUp() {
@@ -84,13 +84,18 @@ class MeasurementHandlerTest {
 
         val payloadLimit = 10L
 
-        oocut = MeasurementHandler(mockStorageService, payloadLimit)
+        oocut = MeasurementUploadHandler(
+            MeasurementRequestService(mockStorageService),
+            MeasurementMetaDataService(),
+            mockStorageService,
+            payloadLimit
+        )
 
         mockRequest = mock {
             on { headers() } doReturn headers
-            on { getHeader(any()) } doAnswer { getHeaderCall ->
+            /*on { getHeader(any()) } doAnswer { getHeaderCall ->
                 headers.get(getHeaderCall.getArgument(0, String::class.java))
-            }
+            }*/
         }
 
         mockSession = mock {
@@ -129,7 +134,12 @@ class MeasurementHandlerTest {
         val mockBytesUploadedCall = mock<Future<Long>> {}
         whenever(mockStorageService.bytesUploaded(any())).thenReturn(mockBytesUploadedCall)
         val mockStoreCall = mock<Future<Status>> {}
-        whenever(mockStorageService.store(any<ReadStream<Buffer>>(), any<UploadMetaData>())).thenReturn(mockStoreCall)
+        whenever(
+            mockStorageService.store(
+                any<ReadStream<Buffer>>(),
+                any<UploadMetaData<RequestMetaData.MeasurementIdentifier>>()
+            )
+        ).thenReturn(mockStoreCall)
 
         // Act
         oocut.handle(mockRoutingContext)
@@ -171,7 +181,7 @@ class MeasurementHandlerTest {
         oocut.handle(mockRoutingContext)
 
         // Assert
-        argumentCaptor<UploadMetaData> {
+        argumentCaptor<UploadMetaData<RequestMetaData.MeasurementIdentifier>> {
             verify(mockStorageService).store(eq(mockRequest), capture())
 
             assertEquals(mockUser, firstValue.user)

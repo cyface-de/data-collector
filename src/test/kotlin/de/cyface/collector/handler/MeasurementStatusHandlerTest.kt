@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Cyface GmbH
+ * Copyright 2022-2024 Cyface GmbH
  *
  * This file is part of the Cyface Data Collector.
  *
@@ -37,21 +37,19 @@ import org.mockito.kotlin.verify
 import java.util.UUID
 
 /**
- * Tests the correct workings of the [StatusHandler].
+ * Tests the correct workings of the [MeasurementStatusHandler].
  *
  * @author Klemens Muthmann
- * @version 1.0.0
  */
-class StatusHandlerTest {
+class MeasurementStatusHandlerTest {
 
     @Test
     fun `Asking for Status after successful upload returns HTTP status 200`() {
         // Arrange
         val deviceIdentifier = UUID.randomUUID().toString()
         val measurementIdentifier = 1L
-        val mockIsStoredFuture: Future<Boolean> = mock()
         val storageService: DataStorageService = mock {
-            on { isStored(deviceIdentifier, measurementIdentifier) } doReturn mockIsStoredFuture
+            on { isStored(deviceIdentifier, measurementIdentifier) } doReturn Future.succeededFuture(true)
         }
         val mockResponse: HttpServerResponse = mock {
             on { setStatusCode(anyInt()) } doReturn it
@@ -88,6 +86,9 @@ class StatusHandlerTest {
                 val firstArgument: String = invocation.getArgument(0)
                 requestHeaders.get(firstArgument)
             }
+            on { headers() } doAnswer {
+                requestHeaders
+            }
         }
         val mockSession: Session = mock()
         val mockRoutingContext: RoutingContext = mock {
@@ -95,17 +96,17 @@ class StatusHandlerTest {
             on { request() } doReturn mockRequest
             on { session() } doReturn mockSession
         }
-        val oocut = StatusHandler(storageService)
+        val oocut = MeasurementStatusHandler(
+            MeasurementRequestService(storageService),
+            MeasurementMetaDataService(),
+            storageService
+        )
 
         // Act
         oocut.handle(mockRoutingContext)
 
         // Assert
         argumentCaptor<Handler<Boolean>> {
-            verify(mockIsStoredFuture).onSuccess(capture())
-
-            firstValue.handle(true)
-
             verify(mockResponse).statusCode = 200
         }
     }

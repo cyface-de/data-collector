@@ -23,18 +23,17 @@ import java.io.IOException;
 import de.cyface.collector.auth.AuthHandlerBuilder;
 import de.cyface.collector.verticle.CollectorApiVerticle;
 import de.cyface.collector.verticle.ServerConfiguration;
-import de.flapdoodle.embed.process.runtime.Network;
 import io.vertx.core.Vertx;
 import io.vertx.ext.web.client.WebClient;
 import io.vertx.junit5.VertxTestContext;
+
+import static de.cyface.collector.verticle.CollectorApiVerticleTest.findFreePort;
 
 /**
  * A client providing capabilities for tests to communicate with a Cyface Data Collector server.
  *
  * @author Klemens Muthmann
  * @author Armin Schnabel
- * @version 2.0.1
- * @since 2.0.0
  */
 public final class DataCollectorClient {
 
@@ -77,16 +76,14 @@ public final class DataCollectorClient {
      * @param ctx The <code>TestContext</code> to create a new Server and <code>WebClient</code>.
      * @param mongoClient A representation of the in-memory test database.
      * @return A completely configured <code>WebClient</code> capable of accessing the started Cyface Data Collector.
-     * @throws IOException If the server port could not be opened.
      */
     public WebClient createWebClient(
             final Vertx vertx,
             final VertxTestContext ctx,
             final MongoTest mongoClient,
             final AuthHandlerBuilder authHandlerBuilder
-            )
-            throws IOException {
-        port = Network.freeServerPort(Network.getLocalHost());
+            ) {
+        port = findFreePort();
 
         final var mongoDbConfig = mongoClient.clientConfiguration();
 

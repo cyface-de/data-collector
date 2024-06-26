@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Cyface GmbH
+ * Copyright 2022-2024 Cyface GmbH
  *
  * This file is part of the Cyface Data Collector.
  *
@@ -21,7 +21,6 @@ package de.cyface.collector.handler
 import de.cyface.collector.handler.exception.PayloadTooLarge
 import de.cyface.collector.storage.DataStorageService
 import io.vertx.core.Future
-import io.vertx.core.Handler
 import io.vertx.core.MultiMap
 import io.vertx.core.http.HttpServerRequest
 import io.vertx.core.http.HttpServerResponse
@@ -33,7 +32,6 @@ import io.vertx.ext.web.Session
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
-import org.mockito.ArgumentCaptor
 import org.mockito.Mock
 import org.mockito.Mockito
 import org.mockito.Mockito.any
@@ -44,11 +42,9 @@ import org.mockito.kotlin.whenever
 import java.util.UUID
 
 /**
- * Tests for running the [PreRequestHandler] in isolation.
+ * Tests for running the [MeasurementPreRequestHandler] in isolation.
  *
  * @author Klemens Muthmann
- * @version 1.0.1
- * @since 6.11.0
  */
 @ExtendWith(MockitoExtension::class)
 class PreRequestTest {
@@ -97,7 +93,7 @@ class PreRequestTest {
     /**
      * The object of the class under test.
      */
-    private lateinit var oocut: PreRequestHandler
+    private lateinit var oocut: MeasurementPreRequestHandler
 
     @BeforeEach
     fun setUp() {
@@ -105,22 +101,24 @@ class PreRequestTest {
         whenever(mockRoutingContext.request()).thenReturn(mockRequest)
         whenever(mockRoutingContext.session()).thenReturn(mockSession)
 
-        whenever(mockRoutingContext.body()).thenReturn(mockBody)
-        whenever(mockBody.asJsonObject()).thenReturn(preRequestBody(deviceId))
-        oocut = PreRequestHandler(mockStorageService, 100L, "/")
+        oocut = MeasurementPreRequestHandler(
+            MeasurementRequestService(mockStorageService),
+            MeasurementMetaDataService(),
+            100L,
+            "/"
+        )
     }
 
     @Test
     fun `Successful PreRequest Happy Path returns status 200`() {
         // Arrange
+        whenever(mockRoutingContext.body()).thenReturn(mockBody)
+        whenever(mockBody.asJsonObject()).thenReturn(preRequestBody(deviceId))
         whenever(mockRoutingContext.response()).thenReturn(mockResponse)
         whenever(mockResponse.putHeader(any(String::class.java), any(String::class.java))).thenReturn(mockResponse)
         whenever(mockResponse.setStatusCode(anyInt())).thenReturn(mockResponse)
         whenever(mockRequest.headers()).thenReturn(preRequestHeaders(50))
-        val mockIsStoredResult = Mockito.mock(Future::class.java)
-        @Suppress("UNCHECKED_CAST")
-        whenever(mockStorageService.isStored(deviceId, 1L)).thenReturn(mockIsStoredResult as Future<Boolean>)
-        val captor = ArgumentCaptor.forClass(Handler::class.java)
+        whenever(mockStorageService.isStored(deviceId, 1L)).thenReturn(Future.succeededFuture(false))
         whenever(mockRequest.absoluteURI()).thenReturn("https://localhost:8080/api/v4/measurements/(some-uuid)")
         whenever(mockSession.id()).thenReturn("mock-session")
 
@@ -128,10 +126,6 @@ class PreRequestTest {
         oocut.handle(mockRoutingContext)
 
         // Assert
-        @Suppress("UNCHECKED_CAST")
-        verify(mockIsStoredResult).onSuccess(captor.capture() as Handler<Boolean>?)
-        @Suppress("UNCHECKED_CAST")
-        (captor.value as Handler<Boolean>).handle(false)
         verify(mockResponse).statusCode = 200
     }
 
