@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Cyface GmbH
+ * Copyright 2022-2024 Cyface GmbH
  *
  * This file is part of the Cyface Data Collector.
  *
@@ -40,7 +40,6 @@ import java.util.UUID
  * Tests the correct workings of the [MeasurementStatusHandler].
  *
  * @author Klemens Muthmann
- * @version 1.0.0
  */
 class MeasurementStatusHandlerTest {
 
@@ -49,9 +48,8 @@ class MeasurementStatusHandlerTest {
         // Arrange
         val deviceIdentifier = UUID.randomUUID().toString()
         val measurementIdentifier = 1L
-        val mockIsStoredFuture: Future<Boolean> = mock()
         val storageService: DataStorageService = mock {
-            on { isStored(deviceIdentifier, measurementIdentifier) } doReturn mockIsStoredFuture
+            on { isStored(deviceIdentifier, measurementIdentifier) } doReturn Future.succeededFuture(true)
         }
         val mockResponse: HttpServerResponse = mock {
             on { setStatusCode(anyInt()) } doReturn it
@@ -88,6 +86,9 @@ class MeasurementStatusHandlerTest {
                 val firstArgument: String = invocation.getArgument(0)
                 requestHeaders.get(firstArgument)
             }
+            on { headers() } doAnswer {
+                requestHeaders
+            }
         }
         val mockSession: Session = mock()
         val mockRoutingContext: RoutingContext = mock {
@@ -106,10 +107,6 @@ class MeasurementStatusHandlerTest {
 
         // Assert
         argumentCaptor<Handler<Boolean>> {
-            verify(mockIsStoredFuture).onSuccess(capture())
-
-            firstValue.handle(true)
-
             verify(mockResponse).statusCode = 200
         }
     }

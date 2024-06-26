@@ -393,9 +393,9 @@ data class RequestMetaData<T : RequestMetaData.MeasurementIdentifier>(
             private const val MINIMUM_TRACK_LENGTH = 0.0
 
             /**
-             * The minimum valid amount of locations stored inside a measurement.
+             * The minimum valid amount of locations stored inside a measurement, or else skip the upload.
              */
-            private const val MINIMUM_LOCATION_COUNT = 0L
+            private const val MINIMUM_LOCATION_COUNT = 2L
         }
     }
 

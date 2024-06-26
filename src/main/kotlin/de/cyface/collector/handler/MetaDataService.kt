@@ -133,6 +133,8 @@ interface MetaDataService {
                 RequestMetaData.MeasurementMetaData(length, locationCount, startLocation, endLocation, modality),
                 attachmentMetaData,
             )
+        } catch (e: TooFewLocations) {
+            throw SkipUpload(e)
         } catch (e: IllegalArgumentException) {
             throw InvalidMetaData("Data was not parsable!", e)
         } catch (e: NullPointerException) {
