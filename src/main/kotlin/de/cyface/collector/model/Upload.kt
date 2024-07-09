@@ -28,12 +28,12 @@ import java.io.Serializable
  *
  * @author Klemens Muthmann
  * @author Armin Schnabel
- * @property metaData The metadata from the request header.
+ * @property uploadable The metadata from the request header.
  * @property userId The id of the user uploading the data.
  * @property binary The actual data uploaded.
  */
-data class Upload<T : RequestMetaData.MeasurementIdentifier>(
-    val metaData: RequestMetaData<T>,
+data class Upload (
+    val uploadable: Uploadable,
     val userId: String,
     val binary: File,
 ) : Serializable {
@@ -42,7 +42,7 @@ data class Upload<T : RequestMetaData.MeasurementIdentifier>(
      * @return A JSON representation of this measurement.
      */
     fun toJson(): JsonObject {
-        val ret = metaData.toJson()
+        val ret = uploadable.toJson()
         // We can only store the usedId as string as:
         // - `new ObjectId(userId)` inserts `{timestamp:1654072354, date:1654072354000}` into the database
         // - `new JsonObject().put("$oid", userId))` leads to an exception: Invalid BSON field name $oid

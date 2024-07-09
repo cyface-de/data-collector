@@ -1,5 +1,5 @@
 /*
- * Copyright 2021-2024 Cyface GmbH
+ * Copyright 2024 Cyface GmbH
  *
  * This file is part of the Cyface Data Collector.
  *
@@ -16,7 +16,7 @@
  * You should have received a copy of the GNU General Public License
  * along with the Cyface Data Collector. If not, see <http://www.gnu.org/licenses/>.
  */
-package de.cyface.collector.handler
+package de.cyface.collector.handler.upload
 
 import de.cyface.collector.handler.HTTPStatus.ENTITY_UNPARSABLE
 import de.cyface.collector.handler.HTTPStatus.HTTP_CONFLICT
@@ -28,7 +28,8 @@ import de.cyface.collector.handler.exception.InvalidMetaData
 import de.cyface.collector.handler.exception.PayloadTooLarge
 import de.cyface.collector.handler.exception.SkipUpload
 import de.cyface.collector.handler.exception.Unparsable
-import de.cyface.collector.model.RequestMetaData
+import de.cyface.collector.model.UploadableFactory
+import de.cyface.collector.storage.DataStorageService
 import io.vertx.core.Handler
 import io.vertx.ext.web.RoutingContext
 import org.slf4j.LoggerFactory
@@ -36,51 +37,56 @@ import java.net.URI
 import java.net.URL
 
 /**
- * A handler for receiving HTTP POST requests on the "measurements" end point.
+ * A handler for receiving HTTP POST requests.
  * This end point tells the client if the upload may continue or should be skipped.
  *
  * @author Armin Schnabel
  * @author Klemens Muthmann
- * @property requestService The service to be used to check the request.
- * @property metaService The service to be used to check metadata.
+ * @property uploadableFactory Used to create the correct type of uploadable.
+ * @property storage The storage containing already uploaded data.
  * @property uploadLimit The maximal number of `Byte`s which may be uploaded in the upload request.
  * @property httpPath The path of the URL under which the Collector is deployed. To ensemble the "Location" header.
  */
-class MeasurementPreRequestHandler(
-    private val requestService: MeasurementRequestService,
-    private val metaService: MeasurementMetaDataService,
+class PreRequestHandler(
+    private val uploadableFactory: UploadableFactory,
+    private val storage: DataStorageService,
     private val uploadLimit: Long,
-    private val httpPath: String
+    private val httpPath: String,
 ) : Handler<RoutingContext> {
+
+    /**
+     * The `Logger` used for objects of this class. Configure it by changing the settings in
+     * `src/main/resources/logback.xml`.
+     */
+    private val logger = LoggerFactory.getLogger(PreRequestHandler::class.java)
 
     override fun handle(ctx: RoutingContext) {
         try {
-            LOGGER.info("Received new measurement pre-request.")
+            logger.info("Received new attachment pre-request.")
             val request = ctx.request()
             val session = ctx.session()
 
             // Check request
-            requestService.checkBodySize(request.headers(), uploadLimit, X_UPLOAD_CONTENT_LENGTH_FIELD)
+            request.checkBodySize(uploadLimit, X_UPLOAD_CONTENT_LENGTH_FIELD)
             val metaDataJson = ctx.body().asJsonObject()
-            val metaData = metaService.metaData<RequestMetaData.MeasurementIdentifier>(metaDataJson)
-            requestService.checkSession(session)
+            val uploadable = uploadableFactory.from(metaDataJson)
+            uploadable.check(session)
 
             // Check conflict
-            requestService.checkConflict(metaData.identifier)
+            uploadable.checkConflict(storage)
                 .onSuccess { conflict ->
                     if (conflict) {
-                        LOGGER.debug("Response: 409, measurement already exists, no upload needed")
+                        logger.debug("Response: 409, attachment already exists, no upload needed")
                         ctx.response().setStatusCode(HTTP_CONFLICT).end()
                     } else {
-                        // Bind session to this measurement and mark as "pre-request accepted"
-                        session.put(DEVICE_ID_FIELD, metaData.identifier.deviceId)
-                        session.put(MEASUREMENT_ID_FIELD, metaData.identifier.measurementId)
+                        // Bind session to this attachment and mark as "pre-request accepted"
+                        uploadable.bindTo(session)
 
                         val requestUri = URL(request.absoluteURI())
                         val protocol = request.getHeader("X-Forwarded-Proto")
                         val locationUri = locationUri(httpPath, requestUri, protocol, session.id())
 
-                        LOGGER.debug("Response 200, Location: {}", locationUri)
+                        logger.debug("Response 200, Location: {}", locationUri)
                         ctx.response()
                             .putHeader("Location", locationUri.toURL().toExternalForm())
                             .putHeader("Content-Length", "0")
@@ -104,32 +110,9 @@ class MeasurementPreRequestHandler(
 
     companion object {
         /**
-         * The `Logger` used for objects of this class. Configure it by changing the settings in
-         * `src/main/resources/logback.xml`.
-         */
-        private val LOGGER = LoggerFactory.getLogger(MeasurementPreRequestHandler::class.java)
-
-        /**
          * The header field which contains the number of bytes of the "requested" upload.
          */
         const val X_UPLOAD_CONTENT_LENGTH_FIELD = "x-upload-content-length"
-
-        /**
-         * The field name for the session entry which contains the measurement id.
-         *
-         * This field is set in the [MeasurementPreRequestHandler] to ensure sessions are bound to measurements and
-         * uploads are only accepted with an accepted pre request.
-         */
-        const val MEASUREMENT_ID_FIELD = "measurement-id"
-
-        /**
-         * The field name for the session entry which contains the device id.
-         *
-         * This field is set in the [MeasurementPreRequestHandler] to ensure sessions are bound to measurements and
-         * uploads are only accepted with an accepted pre request.
-         */
-        const val DEVICE_ID_FIELD = "device-id"
-
         /**
          * Assembles the `Uri` for the `Location` header required by the client who sent the upload request.
          *
@@ -148,7 +131,7 @@ class MeasurementPreRequestHandler(
          */
         @Deprecated(
             "This requires knowledge about the applications deployment behind a proxy and thus should " +
-                "not be used. Instead make the location header relative and avoid rewriting this URL here."
+                    "not be used. Instead make the location header relative and avoid rewriting this URL here."
         )
         fun locationUri(httpPath: String, requestUri: URL, protocol: String?, sessionId: String): URI {
             // Our current setup forwards https requests to http internally. As the `Location` returned is automatically

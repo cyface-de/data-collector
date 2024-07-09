@@ -21,7 +21,7 @@
 package de.cyface.collector.storage
 
 import de.cyface.collector.model.ContentRange
-import de.cyface.collector.model.RequestMetaData
+import de.cyface.collector.model.Uploadable
 import de.cyface.collector.model.User
 import io.vertx.core.Future
 import io.vertx.core.Vertx
@@ -46,9 +46,9 @@ interface DataStorageService {
      * @param uploadMetaData Information required to store the uploaded data properly.
      * @return A `Future` providing the ``Status`` of the upload, when it has finished.
      */
-    fun <T : RequestMetaData.MeasurementIdentifier> store(
+    fun store(
         sourceData: ReadStream<Buffer>,
-        uploadMetaData: UploadMetaData<T>,
+        uploadMetaData: UploadMetaData,
     ): Future<Status>
 
     /**
@@ -108,12 +108,12 @@ interface DataStorageService {
  * @property user The user who took the measurement.
  * @property contentRange The content range of the uploaded data as provided by the content-range HTTP header.
  * @property uploadIdentifier The cluster wide unique identifier of the upload.
- * @property metaData Meta information provided alongside the measurement, to get insights into the measurement,
+ * @property uploadable Meta information provided for the Uploadable, to get insights into the measurement,
  * without the need to deserialize the data.
  */
-class UploadMetaData<T : RequestMetaData.MeasurementIdentifier>(
+data class UploadMetaData(
     val user: User,
     val contentRange: ContentRange,
     val uploadIdentifier: UUID,
-    val metaData: RequestMetaData<T>
+    val uploadable: Uploadable
 )

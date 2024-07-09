@@ -19,7 +19,7 @@
 package de.cyface.collector.storage.cloud
 
 import de.cyface.collector.handler.FormAttributes
-import de.cyface.collector.model.RequestMetaData
+import de.cyface.collector.storage.UploadMetaData
 import de.cyface.collector.storage.exception.DuplicatesInDatabase
 import io.vertx.core.Future
 import io.vertx.core.Promise
@@ -42,10 +42,10 @@ class MongoDatabase(private val mongoClient: MongoClient, private val collection
      */
     private val logger = LoggerFactory.getLogger(MongoDatabase::class.java)
 
-    override fun <T : RequestMetaData.MeasurementIdentifier> storeMetadata(
-        metaData: RequestMetaData<T>
+    override fun storeMetadata(
+        metaData: UploadMetaData
     ): Future<String> {
-        return mongoClient.insert(collectionName, metaData.toGeoJson())
+        return mongoClient.insert(collectionName, metaData.uploadable.toGeoJson())
     }
 
     /**
@@ -96,13 +96,13 @@ class MongoDatabase(private val mongoClient: MongoClient, private val collection
      * Checks if the provided combination of deviceIdentifier, measurementIdentifier and attachmentId is already stored
      * in the database.
      */
-    override fun exists(deviceIdentifier: String, measurementIdentifier: Long, attachmentIdentifier: Long):
+    override fun exists(deviceIdentifier: String, measurementIdentifier: Long, attachmentId: Long):
         Future<Boolean> {
         val ret = Promise.promise<Boolean>()
         val query = JsonObject()
         query.put("features.0.properties.${FormAttributes.DEVICE_ID.value}", deviceIdentifier)
         query.put("features.0.properties.${FormAttributes.MEASUREMENT_ID.value}", measurementIdentifier)
-        query.put("features.0.properties.${FormAttributes.ATTACHMENT_ID.value}", attachmentIdentifier)
+        query.put("features.0.properties.${FormAttributes.ATTACHMENT_ID.value}", attachmentId)
 
         val queryCall = mongoClient.find(collectionName, query)
         queryCall.onSuccess { ids ->
@@ -112,7 +112,7 @@ class MongoDatabase(private val mongoClient: MongoClient, private val collection
                         "More than one attachment found for did {} mid {} aid {}",
                         deviceIdentifier,
                         measurementIdentifier,
-                        attachmentIdentifier
+                        attachmentId
                     )
                     ret.fail(
                         DuplicatesInDatabase(
@@ -122,7 +122,7 @@ class MongoDatabase(private val mongoClient: MongoClient, private val collection
                                 ids.size,
                                 deviceIdentifier,
                                 measurementIdentifier,
-                                attachmentIdentifier
+                                attachmentId
                             )
                         )
                     )

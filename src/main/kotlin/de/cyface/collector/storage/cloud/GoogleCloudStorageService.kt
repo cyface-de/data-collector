@@ -20,7 +20,6 @@
 
 package de.cyface.collector.storage.cloud
 
-import de.cyface.collector.model.RequestMetaData
 import de.cyface.collector.storage.CleanupOperation
 import de.cyface.collector.storage.DataStorageService
 import de.cyface.collector.storage.Status
@@ -63,9 +62,9 @@ class GoogleCloudStorageService(
      */
     private val logger = LoggerFactory.getLogger(GoogleCloudStorageService::class.java)
 
-    override fun <T : RequestMetaData.MeasurementIdentifier> store(
+    override fun store(
         sourceData: ReadStream<Buffer>,
-        uploadMetaData: UploadMetaData<T>
+        uploadMetaData: UploadMetaData
     ): Future<Status> {
         val ret = Promise.promise<Status>()
         val pipe = sourceData.pipe().endOnSuccess(false)
@@ -100,7 +99,7 @@ class GoogleCloudStorageService(
                             bytesUploaded
                         )
                     )
-                    dao.storeMetadata(uploadMetaData.metaData)
+                    dao.storeMetadata(uploadMetaData)
                 } else {
                     ret.complete(
                         Status(

@@ -18,7 +18,6 @@
  */
 package de.cyface.collector.storage.gridfs
 
-import de.cyface.collector.model.RequestMetaData
 import de.cyface.collector.model.Upload
 import de.cyface.collector.storage.exception.DuplicatesInDatabase
 import io.vertx.core.CompositeFuture
@@ -83,7 +82,7 @@ open class GridFsDao(private val mongoClient: MongoClient) {
      * @param fileName The filename to use in Grid FS.
      * @return A [Future] that is notified of the success or failure, upon completion of this operation.
      */
-    open fun <T : RequestMetaData.MeasurementIdentifier> store(upload: Upload<T>, fileName: String, data: AsyncFile):
+    open fun store(upload: Upload, fileName: String, data: AsyncFile):
         Future<ObjectId> {
         val promise = Promise.promise<ObjectId>()
         val bucketServiceCreationCall = mongoClient.createDefaultGridFsBucketService()

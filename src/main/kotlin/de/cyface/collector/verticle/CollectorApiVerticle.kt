@@ -19,18 +19,13 @@
 package de.cyface.collector.verticle
 
 import de.cyface.collector.auth.AuthHandlerBuilder
-import de.cyface.collector.handler.AttachmentMetaDataService
-import de.cyface.collector.handler.AttachmentPreRequestHandler
-import de.cyface.collector.handler.AttachmentRequestService
-import de.cyface.collector.handler.AttachmentStatusHandler
-import de.cyface.collector.handler.AttachmentUploadHandler
 import de.cyface.collector.handler.AuthorizationHandler
 import de.cyface.collector.handler.FailureHandler
-import de.cyface.collector.handler.MeasurementMetaDataService
-import de.cyface.collector.handler.MeasurementPreRequestHandler
-import de.cyface.collector.handler.MeasurementRequestService
-import de.cyface.collector.handler.MeasurementStatusHandler
-import de.cyface.collector.handler.MeasurementUploadHandler
+import de.cyface.collector.handler.upload.PreRequestHandler
+import de.cyface.collector.handler.upload.StatusHandler
+import de.cyface.collector.handler.upload.UploadHandler
+import de.cyface.collector.model.AttachmentFactory
+import de.cyface.collector.model.MeasurementFactory
 import de.cyface.collector.storage.DataStorageService
 import io.vertx.core.AbstractVerticle
 import io.vertx.core.Future
@@ -68,7 +63,9 @@ class CollectorApiVerticle(
     /**
      * Logger used by objects of this class. Configure it using "src/main/resources/logback.xml".
      */
-    val logger: Logger = LoggerFactory.getLogger(CollectorApiVerticle::class.java)
+    private val logger: Logger = LoggerFactory.getLogger(CollectorApiVerticle::class.java)
+    private val measurementFactory = MeasurementFactory()
+    private val attachmentFactory = AttachmentFactory()
 
     @Throws(Exception::class)
     override fun start(startPromise: Promise<Void>) {
@@ -190,11 +187,9 @@ class CollectorApiVerticle(
         authorizationHandler: AuthorizationHandler,
         failureHandler: FailureHandler
     ) {
-        val measurementRequestService = MeasurementRequestService(storageService)
-        val measurementMetaService = MeasurementMetaDataService()
-        val measurementPreRequestHandler = MeasurementPreRequestHandler(
-            measurementRequestService,
-            measurementMetaService,
+        val measurementPreRequestHandler = PreRequestHandler(
+            measurementFactory,
+            storageService,
             serverConfiguration.measurementPayloadLimit,
             serverConfiguration.httpEndpoint
         )
@@ -205,15 +200,13 @@ class CollectorApiVerticle(
             failureHandler,
             measurementPreRequestHandler,
         )
-        val measurementUploadHandler = MeasurementUploadHandler(
-            measurementRequestService,
-            measurementMetaService,
+        val measurementUploadHandler = UploadHandler(
+            measurementFactory,
             storageService,
             serverConfiguration.measurementPayloadLimit,
         )
-        val measurementStatusHandler = MeasurementStatusHandler(
-            measurementRequestService,
-            measurementMetaService,
+        val measurementStatusHandler = StatusHandler(
+            measurementFactory,
             storageService,
         )
         registerMeasurementUploadHandler(
@@ -233,11 +226,9 @@ class CollectorApiVerticle(
         authorizationHandler: AuthorizationHandler,
         failureHandler: FailureHandler
     ) {
-        val attachmentRequestService = AttachmentRequestService(storageService)
-        val attachmentMetaService = AttachmentMetaDataService()
-        val attachmentPreRequestHandler = AttachmentPreRequestHandler(
-            attachmentRequestService,
-            attachmentMetaService,
+        val attachmentPreRequestHandler = PreRequestHandler(
+            attachmentFactory,
+            storageService,
             serverConfiguration.measurementPayloadLimit,
             serverConfiguration.httpEndpoint
         )
@@ -248,15 +239,13 @@ class CollectorApiVerticle(
             failureHandler,
             attachmentPreRequestHandler,
         )
-        val attachmentUploadHandler = AttachmentUploadHandler(
-            attachmentRequestService,
-            attachmentMetaService,
+        val attachmentUploadHandler = UploadHandler(
+            attachmentFactory,
             storageService,
             serverConfiguration.measurementPayloadLimit,
         )
-        val attachmentStatusHandler = AttachmentStatusHandler(
-            attachmentRequestService,
-            attachmentMetaService,
+        val attachmentStatusHandler = StatusHandler(
+            attachmentFactory,
             storageService,
         )
         registerAttachmentUploadHandler(
@@ -283,7 +272,7 @@ class CollectorApiVerticle(
         oauth2Handler: OAuth2AuthHandler,
         authorizationHandler: AuthorizationHandler,
         failureHandler: ErrorHandler,
-        requestHandler: MeasurementPreRequestHandler,
+        requestHandler: PreRequestHandler,
     ) {
         val preRequestBodyHandler = BodyHandler.create().setBodyLimit(BYTES_IN_ONE_KILOBYTE)
         router.post(MEASUREMENTS_ENDPOINT)
@@ -311,8 +300,8 @@ class CollectorApiVerticle(
         oauth2Handler: OAuth2AuthHandler,
         authorizationHandler: AuthorizationHandler,
         failureHandler: ErrorHandler,
-        requestHandler: MeasurementUploadHandler,
-        statusHandler: MeasurementStatusHandler,
+        requestHandler: UploadHandler,
+        statusHandler: StatusHandler,
     ) {
         // The path pattern ../(sid)/.. was chosen because of the documentation of Vert.X SessionHandler
         // https://vertx.io/docs/vertx-web/java/#_handling_sessions
@@ -340,7 +329,7 @@ class CollectorApiVerticle(
         oauth2Handler: OAuth2AuthHandler,
         authorizationHandler: AuthorizationHandler,
         failureHandler: ErrorHandler,
-        requestHandler: AttachmentPreRequestHandler,
+        requestHandler: PreRequestHandler,
     ) {
         val preRequestBodyHandler = BodyHandler.create().setBodyLimit(BYTES_IN_ONE_KILOBYTE)
         router.postWithRegex(
@@ -376,8 +365,8 @@ class CollectorApiVerticle(
         oauth2Handler: OAuth2AuthHandler,
         authorizationHandler: AuthorizationHandler,
         failureHandler: ErrorHandler,
-        requestHandler: AttachmentUploadHandler,
-        statusHandler: AttachmentStatusHandler,
+        requestHandler: UploadHandler,
+        statusHandler: StatusHandler,
     ) {
         // The path pattern ../(sid)/.. was chosen because of the documentation of Vert.X SessionHandler
         // https://vertx.io/docs/vertx-web/java/#_handling_sessions

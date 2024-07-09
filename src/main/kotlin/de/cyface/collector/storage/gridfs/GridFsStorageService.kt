@@ -18,7 +18,6 @@
  */
 package de.cyface.collector.storage.gridfs
 
-import de.cyface.collector.model.RequestMetaData
 import de.cyface.collector.model.Upload
 import de.cyface.collector.storage.CleanupOperation
 import de.cyface.collector.storage.DataStorageService
@@ -60,9 +59,9 @@ class GridFsStorageService(
     private val uploadFolder: Path
 ) : DataStorageService {
 
-    override fun <T : RequestMetaData.MeasurementIdentifier> store(
+    override fun store(
         sourceData: ReadStream<Buffer>,
-        uploadMetaData: UploadMetaData<T>
+        uploadMetaData: UploadMetaData
     ): Future<Status> {
         val ret = Promise.promise<Status>()
         val sourceToTempPipe = sourceData.pipe()
@@ -139,10 +138,10 @@ class GridFsStorageService(
      * @param upload The measured data to write to the Mongo database.
      * @param temporaryStorage The temporary storage for the uploaded data to store.
      */
-    private fun <T : RequestMetaData.MeasurementIdentifier> storeToMongoDB(upload: Upload<T>, temporaryStorage: Path):
+    private fun storeToMongoDB(upload: Upload, temporaryStorage: Path):
         Future<ObjectId> {
         val promise = Promise.promise<ObjectId>()
-        LOGGER.debug("Insert upload with id {}!", upload.metaData.identifier)
+        LOGGER.debug("Insert upload {}!", upload.uploadable)
 
         val temporaryFileOpenCall = fs.open(temporaryStorage.absolutePathString(), OpenOptions())
         temporaryFileOpenCall.onFailure(promise::fail)
@@ -158,10 +157,10 @@ class GridFsStorageService(
      * Called when opening the local temporary storage has been completed.
      * This function continues with storing the uploaded data provided as a Vertx `Pipe`.
      */
-    private fun <T : RequestMetaData.MeasurementIdentifier> onTemporaryFileOpened(
+    private fun onTemporaryFileOpened(
         asyncFile: AsyncFile,
         sourceToTempPipe: Pipe<Buffer>,
-        uploadMetaData: UploadMetaData<T>
+        uploadMetaData: UploadMetaData
     ): Future<Status> {
         val ret = Promise.promise<Status>()
 
@@ -194,10 +193,10 @@ class GridFsStorageService(
     /**
      * Handles storage of data that is already inside temporary storage on the local disc.
      */
-    private fun <T : RequestMetaData.MeasurementIdentifier> onFilePropsLoaded(
+    private fun onFilePropsLoaded(
         props: FileProps,
         promise: Promise<Status>,
-        uploadMetaData: UploadMetaData<T>
+        uploadMetaData: UploadMetaData
     ) {
         // Checking that the data was actually written successfully.
         LOGGER.debug(
@@ -232,16 +231,16 @@ class GridFsStorageService(
         } else {
             // Persist data
             val temporaryStorageFile = pathToTemporaryFile(uploadIdentifier)
-            val metaData = uploadMetaData.metaData
+            val metaData = uploadMetaData.uploadable
             val user = uploadMetaData.user
             val upload = Upload(metaData, user.idString, temporaryStorageFile.toFile())
             val storeToMongoDBResult = storeToMongoDB(upload, temporaryStorageFile)
             storeToMongoDBResult.onSuccess {
-                LOGGER.debug("Stored upload {} under object id {}!", upload.metaData.identifier, it.toString())
+                LOGGER.debug("Stored upload {} under object id {}!", upload, it.toString())
                 promise.complete(Status(uploadIdentifier, StatusType.COMPLETE, byteSize))
             }
             storeToMongoDBResult.onFailure {
-                LOGGER.debug("Failed to store upload {}!", upload.metaData.identifier)
+                LOGGER.debug("Failed to store upload {}!", upload)
                 promise.fail(it)
             }
         }

@@ -18,7 +18,7 @@
  */
 package de.cyface.collector.storage.cloud
 
-import de.cyface.collector.model.RequestMetaData
+import de.cyface.collector.storage.UploadMetaData
 import io.vertx.core.Future
 
 /**
@@ -30,7 +30,7 @@ interface Database {
     /**
      * Stores the metadata asynchronously and returns a [Future], that is called on completion of that operation.
      */
-    fun <T : RequestMetaData.MeasurementIdentifier> storeMetadata(metaData: RequestMetaData<T>): Future<String>
+    fun storeMetadata(metaData: UploadMetaData): Future<String>
 
     /**
      * Queries the database asynchronously for the existence of an upload with the provided `deviceIdentifier` and

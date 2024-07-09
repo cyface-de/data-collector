@@ -1,5 +1,5 @@
 /*
- * Copyright 2021-2024 Cyface GmbH
+ * Copyright 2024 Cyface GmbH
  *
  * This file is part of the Cyface Data Collector.
  *
@@ -16,7 +16,7 @@
  * You should have received a copy of the GNU General Public License
  * along with the Cyface Data Collector. If not, see <http://www.gnu.org/licenses/>.
  */
-package de.cyface.collector.handler
+package de.cyface.collector.handler.upload
 
 import de.cyface.collector.handler.HTTPStatus.ENTITY_UNPARSABLE
 import de.cyface.collector.handler.HTTPStatus.HTTP_CONFLICT
@@ -25,7 +25,7 @@ import de.cyface.collector.handler.HTTPStatus.RESUME_INCOMPLETE
 import de.cyface.collector.handler.SessionFields.UPLOAD_PATH_FIELD
 import de.cyface.collector.handler.exception.InvalidMetaData
 import de.cyface.collector.handler.exception.SkipUpload
-import de.cyface.collector.model.RequestMetaData
+import de.cyface.collector.model.UploadableFactory
 import de.cyface.collector.storage.DataStorageService
 import io.vertx.core.Handler
 import io.vertx.ext.web.RoutingContext
@@ -34,53 +34,59 @@ import java.util.Locale
 import java.util.UUID
 
 /**
- * A handler for receiving HTTP PUT requests with an empty body on the "measurements" end point.
+ * A handler for receiving HTTP PUT requests with an empty body on the "attachments" end point.
  *
  * This request type is used by clients to ask the upload status and, thus, where to continue the upload.
  *
  * @author Armin Schnabel
- * @property requestService The service to be used to check the request.
- * @property metaService The service to be used to check metadata.
- * @property storageService Service used to write and interact with received data.
+ * @author Klemens Muthmann
+ * @property uploadableFactory Used to create instances of the object representing this upload
+ * @property storage Service used to write and interact with received data.
  */
-class MeasurementStatusHandler(
-    private val requestService: MeasurementRequestService,
-    private val metaService: MeasurementMetaDataService,
-    private val storageService: DataStorageService,
+class StatusHandler(
+    private val uploadableFactory: UploadableFactory,
+    private val storage: DataStorageService,
 ) : Handler<RoutingContext> {
+
+    /**
+     * The logger for objects of this class. You can change its configuration by
+     * adapting the values in `src/main/resources/logback.xml`.
+     */
+    private val logger = LoggerFactory.getLogger(StatusHandler::class.java)
 
     override fun handle(ctx: RoutingContext) {
         val session = ctx.session()
         try {
-            LOGGER.info("Received new measurement upload status request.")
+            logger.info("Received new attachment upload status request.")
             val request = ctx.request()
 
             // Check request
-            if (!requestService.checkContentRange(request.headers())) {
+            if (!request.hasValidContentRange()) {
+                logger.error("Content-Range request not supported: {}", request.headers()["Content-Range"])
                 ctx.fail(ENTITY_UNPARSABLE)
                 return
             }
 
             // Check upload conflict with existing data
-            val metaData = metaService.metaData<RequestMetaData.MeasurementIdentifier>(request.headers())
-            LOGGER.debug("Status of {}", metaData.identifier)
-            requestService.checkConflict(metaData.identifier)
+            val uploadable = uploadableFactory.from(request.headers())
+            logger.debug("Status of {}", uploadable)
+            uploadable.checkConflict(storage)
                 .onSuccess { conflict ->
                     val uploadIdentifier = session.get<UUID>(UPLOAD_PATH_FIELD)
 
                     if (conflict) {
-                        LOGGER.debug("Upload {} is already stored.", metaData.identifier)
+                        logger.debug("Upload {} is already stored.", uploadable)
                         ctx.response().setStatusCode(OK).end()
                     } else if (uploadIdentifier == null) {
                         // If no bytes have been received, return 308 but without a `Range` header to indicate this
-                        LOGGER.debug("Response: 308, no Range (no path)")
+                        logger.debug("Response: 308, no Range (no path)")
                         ctx.response().putHeader("Content-Length", "0")
                         ctx.response().setStatusCode(RESUME_INCOMPLETE).end()
                     } else {
-                        storageService.bytesUploaded(uploadIdentifier).onSuccess { byteSize ->
+                        storage.bytesUploaded(uploadIdentifier).onSuccess { byteSize ->
                             // Indicate that, e.g. for 100 received bytes, bytes 0-99 have been received
                             val range = String.format(Locale.GERMAN, "bytes=0-%d", byteSize - 1)
-                            LOGGER.debug(String.format(Locale.GERMAN, "Response: 308, Range %s", range))
+                            logger.debug(String.format(Locale.GERMAN, "Response: 308, Range %s", range))
                             ctx.response().putHeader("Range", range)
                             ctx.response().putHeader("Content-Length", "0")
                             ctx.response().setStatusCode(RESUME_INCOMPLETE).end()
@@ -90,7 +96,7 @@ class MeasurementStatusHandler(
 
                             // If no bytes have been received, return 308 but without a `Range` header to
                             // indicate this
-                            LOGGER.debug("Response: 308, no Range (path, no file)")
+                            logger.debug("Response: 308, no Range (path, no file)")
                             ctx.response().putHeader("Content-Length", "0")
                             ctx.response().setStatusCode(RESUME_INCOMPLETE).end()
                         }
@@ -102,13 +108,5 @@ class MeasurementStatusHandler(
         } catch (e: InvalidMetaData) {
             ctx.fail(ENTITY_UNPARSABLE, e)
         }
-    }
-
-    companion object {
-        /**
-         * The logger for objects of this class. You can change its configuration by
-         * adapting the values in `src/main/resources/logback.xml`.
-         */
-        private val LOGGER = LoggerFactory.getLogger(MeasurementStatusHandler::class.java)
     }
 }
