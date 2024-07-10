@@ -79,8 +79,8 @@ data class Measurement(
 
     override fun checkValidity(session: Session) {
         // Ensure this session was accepted by PreRequestHandler and bound to this measurement
-        val sessionMeasurementId = session.get<Long>(MEASUREMENT_ID_FIELD)
         val sessionDeviceId = session.get<UUID>(DEVICE_ID_FIELD)
+        val sessionMeasurementId = session.get<Long>(MEASUREMENT_ID_FIELD)
         if (sessionMeasurementId == null || sessionDeviceId == null) {
             throw SessionExpired("Mid/did missing, session maybe expired, request upload restart (404).")
         }

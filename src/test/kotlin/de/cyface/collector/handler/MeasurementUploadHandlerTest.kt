@@ -66,6 +66,10 @@ class MeasurementUploadHandlerTest {
     @Mock
     lateinit var mockUser: User
 
+    private lateinit var deviceIdentifier: UUID
+
+    private var measurementIdentifier: Long? = null
+
     private lateinit var mockRequest: HttpServerRequest
 
     private lateinit var mockSession: Session
@@ -79,9 +83,9 @@ class MeasurementUploadHandlerTest {
     @BeforeEach
     fun setUp() {
         headers = MultiMap.caseInsensitiveMultiMap()
-        val deviceIdentifier = UUID.randomUUID()
-        val measurementIdentifier = 1L
-        metadata(headers, deviceIdentifier, measurementIdentifier)
+        deviceIdentifier = UUID.randomUUID()
+        measurementIdentifier = 1L
+        metadata(headers, deviceIdentifier, measurementIdentifier!!)
 
         val payloadLimit = 10L
 
@@ -108,6 +112,8 @@ class MeasurementUploadHandlerTest {
     @Test
     fun `Fail resume upload with no previous data`() {
         // Arrange
+        whenever(mockSession.get<UUID>("device-id")).thenReturn(deviceIdentifier)
+        whenever(mockSession.get<Long>("measurement-id")).thenReturn(measurementIdentifier)
         // Set from index to something larger than zero.
         headers.add("content-range", "bytes 5-9/5")
         headers.add("content-length", "5")
@@ -124,6 +130,8 @@ class MeasurementUploadHandlerTest {
     fun `Test resume upload from existing data`() {
         // Arrange
         val uploadIdentifier = UUID.randomUUID()
+        whenever(mockSession.get<UUID>("device-id")).thenReturn(deviceIdentifier)
+        whenever(mockSession.get<Long>("measurement-id")).thenReturn(measurementIdentifier)
         whenever(mockSession.get<UUID>("upload-path")).thenReturn(uploadIdentifier)
         headers.add("content-range", "bytes 5-9/5")
         headers.add("content-length", "5")
@@ -155,6 +163,8 @@ class MeasurementUploadHandlerTest {
     fun `Fail if client tries to start new upload but temporary data exists`() {
         // Arrange
         val uploadIdentifier = UUID.randomUUID()
+        whenever(mockSession.get<UUID>("device-id")).thenReturn(deviceIdentifier)
+        whenever(mockSession.get<Long>("measurement-id")).thenReturn(measurementIdentifier)
         whenever(mockSession.get<UUID>("upload-path")).thenReturn(uploadIdentifier)
         headers.add("content-range", "bytes 0-9/10")
         headers.add("content-length", "10")
@@ -170,6 +180,8 @@ class MeasurementUploadHandlerTest {
     @Test
     fun `Test start happy path upload`() {
         // Arrange
+        whenever(mockSession.get<UUID>("device-id")).thenReturn(deviceIdentifier)
+        whenever(mockSession.get<Long>("measurement-id")).thenReturn(measurementIdentifier)
         headers.add("content-range", "bytes 0-9/10")
         headers.add("content-length", "10")
 

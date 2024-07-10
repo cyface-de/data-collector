@@ -92,9 +92,9 @@ data class Attachment(
     }
 
     override fun checkValidity(session: Session) {
-        val sessionMeasurementId = session.get<Long>(MEASUREMENT_ID_FIELD)
         val sessionDeviceId = session.get<UUID>(DEVICE_ID_FIELD)
-        val sessionAttachmentId = session.get<String>(ATTACHMENT_ID_FIELD)
+        val sessionMeasurementId = session.get<Long>(MEASUREMENT_ID_FIELD)
+        val sessionAttachmentId = session.get<Long>(ATTACHMENT_ID_FIELD)
         if (sessionMeasurementId == null || sessionDeviceId == null || sessionAttachmentId == null) {
             throw SessionExpired("Did/mid/aid missing, session maybe expired, request upload restart (404).")
         }
@@ -116,7 +116,7 @@ data class Attachment(
                 )
             )
         }
-        if (sessionAttachmentId.toLongOrNull() != identifier.attachmentIdentifier) {
+        if (sessionAttachmentId != identifier.attachmentIdentifier) {
             throw IllegalSession(
                 String.format(
                     Locale.ENGLISH,
