@@ -105,7 +105,7 @@ class UploadHandler(
             // Handle first chunk
             val contentRange = request.contentRange(bodySize)
             checkAndStore(session, loggedInUser, request, contentRange, uploadable, storageService)
-                .onSuccess { onCheckSuccessful(it, ctx, session, uploadable) }
+                .onSuccess { onCheckSuccessful(it, ctx, session) }
                 .onFailure(UploadFailureHandler(ctx))
         } catch (e: InvalidMetaData) {
             logger.error("Response: 422", e)
@@ -235,9 +235,8 @@ class UploadHandler(
      * @param status: The return status of the check.
      * @param context: The `RoutingContext` used by the current request.
      * @param session: The current HTTP session.
-     * @param uploadable The object uploaded
      */
-    private fun onCheckSuccessful(status: Status, context: RoutingContext, session: Session, uploadable: Uploadable) {
+    private fun onCheckSuccessful(status: Status, context: RoutingContext, session: Session) {
         when (status.type) {
             StatusType.INCOMPLETE -> {
                 val byteSize = status.byteSize

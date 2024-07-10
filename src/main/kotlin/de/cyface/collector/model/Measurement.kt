@@ -26,7 +26,6 @@ import de.cyface.collector.handler.exception.SessionExpired
 import de.cyface.collector.handler.exception.SkipUpload
 import de.cyface.collector.handler.exception.TooFewLocations
 import de.cyface.collector.handler.exception.UnknownFormatVersion
-import de.cyface.collector.model.Attachment.Companion.ATTACHMENT_ID_FIELD
 import de.cyface.collector.model.Uploadable.Companion.DEVICE_ID_FIELD
 import de.cyface.collector.model.Uploadable.Companion.MEASUREMENT_ID_FIELD
 import de.cyface.collector.model.metadata.ApplicationMetaData

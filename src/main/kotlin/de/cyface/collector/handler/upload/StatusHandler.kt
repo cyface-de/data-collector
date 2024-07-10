@@ -25,7 +25,6 @@ import de.cyface.collector.handler.HTTPStatus.RESUME_INCOMPLETE
 import de.cyface.collector.handler.SessionFields.UPLOAD_PATH_FIELD
 import de.cyface.collector.handler.exception.InvalidMetaData
 import de.cyface.collector.handler.exception.SkipUpload
-import de.cyface.collector.model.Uploadable.Companion.DEVICE_ID_FIELD
 import de.cyface.collector.model.UploadableFactory
 import de.cyface.collector.storage.DataStorageService
 import io.vertx.core.Handler
