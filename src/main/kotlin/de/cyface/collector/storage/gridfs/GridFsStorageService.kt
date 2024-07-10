@@ -138,8 +138,7 @@ class GridFsStorageService(
      * @param upload The measured data to write to the Mongo database.
      * @param temporaryStorage The temporary storage for the uploaded data to store.
      */
-    private fun storeToMongoDB(upload: Upload, temporaryStorage: Path):
-        Future<ObjectId> {
+    private fun storeToMongoDB(upload: Upload, temporaryStorage: Path): Future<ObjectId> {
         val promise = Promise.promise<ObjectId>()
         LOGGER.debug("Insert upload {}!", upload.uploadable)
 

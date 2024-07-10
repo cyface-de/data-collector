@@ -74,6 +74,7 @@ class UploadHandler(
      * adapting the values in `src/main/resources/logback.xml`.
      */
     private val logger = LoggerFactory.getLogger(UploadHandler::class.java)
+
     init {
         Validate.isTrue(payloadLimit > 0)
     }
@@ -137,75 +138,75 @@ class UploadHandler(
         }
     }
 
-        /**
-         * Check the request for validity and either fail the response or continue with handling the request.
-         *
-         * @param session The HTTP session used as a context for this request.
-         * @param user The user trying to upload the data.
-         * @param sourceData The `ReadStream` containing the data to upload.
-         * @param contentRange Range information about the data to upload.
-         * This data should have been provided via HTTP content-range parameter.
-         * @param uploadable Meta information about the measurement to handle.
-         * @param storageService A service used to store the received data to some persistent data store.
-         */
-        private fun checkAndStore(
-            session: Session,
-            user: User,
-            sourceData: ReadStream<Buffer>,
-            contentRange: ContentRange,
-            uploadable: Uploadable,
-            storageService: DataStorageService,
-        ): Future<Status> {
-            val ret = Promise.promise<Status>()
-            val uploadIdentifier = session.get<UUID?>(UPLOAD_PATH_FIELD)
+    /**
+     * Check the request for validity and either fail the response or continue with handling the request.
+     *
+     * @param session The HTTP session used as a context for this request.
+     * @param user The user trying to upload the data.
+     * @param sourceData The `ReadStream` containing the data to upload.
+     * @param contentRange Range information about the data to upload.
+     * This data should have been provided via HTTP content-range parameter.
+     * @param uploadable Meta information about the measurement to handle.
+     * @param storageService A service used to store the received data to some persistent data store.
+     */
+    private fun checkAndStore(
+        session: Session,
+        user: User,
+        sourceData: ReadStream<Buffer>,
+        contentRange: ContentRange,
+        uploadable: Uploadable,
+        storageService: DataStorageService,
+    ): Future<Status> {
+        val ret = Promise.promise<Status>()
+        val uploadIdentifier = session.get<UUID?>(UPLOAD_PATH_FIELD)
 
-            if (uploadIdentifier == null && contentRange.fromIndex != 0L) {
-                // I.e. the server received data in a previous request but now cannot find the `path` session value.
-                // Unsure when this can happen. Not accepting the data. Asking to restart upload (`404`).
-                val message = String.format(
-                    Locale.ENGLISH,
-                    "Response: 404, path is null and unexpected content range: %s",
-                    contentRange
-                )
-                logger.warn(message)
-                ret.fail(UnexpectedContentRange(message))
-            } else if (uploadIdentifier != null && contentRange.fromIndex == 0L) {
-                // Server received data in a previous request but the chunk file was probably cleaned by cleaner task.
-                // Can't return 308. Google API client lib throws `Preconditions` on subsequent chunk upload.
-                // This makes sense as the server reported before that bytes (>0) were received.
-                val message = String.format(
-                    Locale.ENGLISH,
-                    "Response: 404, Unexpected content range: %s",
-                    contentRange
-                )
-                logger.warn(message)
-                ret.fail(UnexpectedContentRange(message))
-            } else if (uploadIdentifier == null) {
-                acceptNewUpload(session, ret, sourceData, user, contentRange, uploadable, storageService)
-            } else {
-                // Search for previous upload chunk
-                storageService.bytesUploaded(uploadIdentifier).onSuccess { byteSize ->
-                    // Wrong chunk uploaded
-                    if (contentRange.fromIndex != byteSize) {
-                        // Ask client to resume from the correct position
-                        val range = String.format(Locale.ENGLISH, "bytes=0-%d", byteSize - 1)
-                        logger.debug("Response: 308, Range {} (partial data)", range)
-                        ret.complete(Status(uploadIdentifier, StatusType.INCOMPLETE, byteSize))
-                    } else {
-                        val uploadMetaData = UploadMetaData(user, contentRange, uploadIdentifier, uploadable)
-                        logger.debug("Storing $byteSize bytes to storage service.")
-                        val acceptUploadResult = storageService.store(sourceData, uploadMetaData)
-                        acceptUploadResult.onSuccess { result -> ret.complete(result) }
-                        acceptUploadResult.onFailure { cause -> ret.fail(cause) }
-                    }
-                }.onFailure {
-                    session.remove<Any>(UPLOAD_PATH_FIELD) // was linked to non-existing file
-                    acceptNewUpload(session, ret, sourceData, user, contentRange, uploadable, storageService)
+        if (uploadIdentifier == null && contentRange.fromIndex != 0L) {
+            // I.e. the server received data in a previous request but now cannot find the `path` session value.
+            // Unsure when this can happen. Not accepting the data. Asking to restart upload (`404`).
+            val message = String.format(
+                Locale.ENGLISH,
+                "Response: 404, path is null and unexpected content range: %s",
+                contentRange
+            )
+            logger.warn(message)
+            ret.fail(UnexpectedContentRange(message))
+        } else if (uploadIdentifier != null && contentRange.fromIndex == 0L) {
+            // Server received data in a previous request but the chunk file was probably cleaned by cleaner task.
+            // Can't return 308. Google API client lib throws `Preconditions` on subsequent chunk upload.
+            // This makes sense as the server reported before that bytes (>0) were received.
+            val message = String.format(
+                Locale.ENGLISH,
+                "Response: 404, Unexpected content range: %s",
+                contentRange
+            )
+            logger.warn(message)
+            ret.fail(UnexpectedContentRange(message))
+        } else if (uploadIdentifier == null) {
+            acceptNewUpload(session, ret, sourceData, user, contentRange, uploadable, storageService)
+        } else {
+            // Search for previous upload chunk
+            storageService.bytesUploaded(uploadIdentifier).onSuccess { byteSize ->
+                // Wrong chunk uploaded
+                if (contentRange.fromIndex != byteSize) {
+                    // Ask client to resume from the correct position
+                    val range = String.format(Locale.ENGLISH, "bytes=0-%d", byteSize - 1)
+                    logger.debug("Response: 308, Range {} (partial data)", range)
+                    ret.complete(Status(uploadIdentifier, StatusType.INCOMPLETE, byteSize))
+                } else {
+                    val uploadMetaData = UploadMetaData(user, contentRange, uploadIdentifier, uploadable)
+                    logger.debug("Storing $byteSize bytes to storage service.")
+                    val acceptUploadResult = storageService.store(sourceData, uploadMetaData)
+                    acceptUploadResult.onSuccess { result -> ret.complete(result) }
+                    acceptUploadResult.onFailure { cause -> ret.fail(cause) }
                 }
+            }.onFailure {
+                session.remove<Any>(UPLOAD_PATH_FIELD) // was linked to non-existing file
+                acceptNewUpload(session, ret, sourceData, user, contentRange, uploadable, storageService)
             }
-
-            return ret.future()
         }
+
+        return ret.future()
+    }
 
     private fun acceptNewUpload(
         session: Session,

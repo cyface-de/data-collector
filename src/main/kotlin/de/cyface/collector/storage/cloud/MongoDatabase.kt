@@ -96,8 +96,7 @@ class MongoDatabase(private val mongoClient: MongoClient, private val collection
      * Checks if the provided combination of deviceIdentifier, measurementIdentifier and attachmentId is already stored
      * in the database.
      */
-    override fun exists(deviceIdentifier: String, measurementIdentifier: Long, attachmentId: Long):
-        Future<Boolean> {
+    override fun exists(deviceIdentifier: String, measurementIdentifier: Long, attachmentId: Long): Future<Boolean> {
         val ret = Promise.promise<Boolean>()
         val query = JsonObject()
         query.put("features.0.properties.${FormAttributes.DEVICE_ID.value}", deviceIdentifier)

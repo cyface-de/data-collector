@@ -113,6 +113,7 @@ class PreRequestHandler(
          * The header field which contains the number of bytes of the "requested" upload.
          */
         const val X_UPLOAD_CONTENT_LENGTH_FIELD = "x-upload-content-length"
+
         /**
          * Assembles the `Uri` for the `Location` header required by the client who sent the upload request.
          *
@@ -131,7 +132,7 @@ class PreRequestHandler(
          */
         @Deprecated(
             "This requires knowledge about the applications deployment behind a proxy and thus should " +
-                    "not be used. Instead make the location header relative and avoid rewriting this URL here."
+                "not be used. Instead make the location header relative and avoid rewriting this URL here."
         )
         fun locationUri(httpPath: String, requestUri: URL, protocol: String?, sessionId: String): URI {
             // Our current setup forwards https requests to http internally. As the `Location` returned is automatically

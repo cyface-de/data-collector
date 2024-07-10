@@ -82,8 +82,7 @@ open class GridFsDao(private val mongoClient: MongoClient) {
      * @param fileName The filename to use in Grid FS.
      * @return A [Future] that is notified of the success or failure, upon completion of this operation.
      */
-    open fun store(upload: Upload, fileName: String, data: AsyncFile):
-        Future<ObjectId> {
+    open fun store(upload: Upload, fileName: String, data: AsyncFile): Future<ObjectId> {
         val promise = Promise.promise<ObjectId>()
         val bucketServiceCreationCall = mongoClient.createDefaultGridFsBucketService()
         bucketServiceCreationCall.onFailure(promise::fail)

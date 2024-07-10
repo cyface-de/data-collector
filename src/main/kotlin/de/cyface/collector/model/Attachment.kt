@@ -1,3 +1,21 @@
+/*
+ * Copyright 2024 Cyface GmbH
+ *
+ * This file is part of the Cyface Data Collector.
+ *
+ * The Cyface Data Collector is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * The Cyface Data Collector is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with the Cyface Data Collector. If not, see <http://www.gnu.org/licenses/>.
+ */
 package de.cyface.collector.model
 
 import de.cyface.collector.handler.FormAttributes
@@ -31,7 +49,7 @@ data class Attachment(
     private val attachmentMetaData: AttachmentMetaData,
     private val deviceMetaData: DeviceMetaData,
     private val measurementMetaData: MeasurementMetaData
-): Uploadable {
+) : Uploadable {
     override fun bindTo(session: Session) {
         session.put(DEVICE_ID_FIELD, identifier.deviceIdentifier)
         session.put(MEASUREMENT_ID_FIELD, identifier.measurementIdentifier)
@@ -74,7 +92,6 @@ data class Attachment(
     }
 
     override fun checkValidity(session: Session) {
-        // Ensure this session was accepted by PreRequestHandler and bound to this measurement
         val sessionMeasurementId = session.get<Long>(MEASUREMENT_ID_FIELD)
         val sessionDeviceId = session.get<String>(DEVICE_ID_FIELD)
         val sessionAttachmentId = session.get<String>(ATTACHMENT_ID_FIELD)
@@ -151,7 +168,7 @@ data class AttachmentIdentifier(
     val attachmentIdentifier: Long
 )
 
-class AttachmentFactory: UploadableFactory {
+class AttachmentFactory : UploadableFactory {
     override fun from(json: JsonObject): Uploadable {
         try {
             val deviceIdentifier = UUID.fromString(json.getString(FormAttributes.DEVICE_ID.value))
@@ -197,7 +214,7 @@ class AttachmentFactory: UploadableFactory {
                 deviceMetaData,
                 measurementMetaData
             )
-        } catch(e: IllegalArgumentException) {
+        } catch (e: IllegalArgumentException) {
             throw InvalidMetaData("Data incomplete!", e)
         } catch (e: NumberFormatException) {
             throw InvalidMetaData("Data incomplete!", e)

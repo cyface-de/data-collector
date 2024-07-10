@@ -32,7 +32,7 @@ import java.io.Serializable
  * @property userId The id of the user uploading the data.
  * @property binary The actual data uploaded.
  */
-data class Upload (
+data class Upload(
     val uploadable: Uploadable,
     val userId: String,
     val binary: File,
