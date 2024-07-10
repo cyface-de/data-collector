@@ -25,6 +25,7 @@ import de.cyface.collector.handler.HTTPStatus.RESUME_INCOMPLETE
 import de.cyface.collector.handler.SessionFields.UPLOAD_PATH_FIELD
 import de.cyface.collector.handler.exception.InvalidMetaData
 import de.cyface.collector.handler.exception.SkipUpload
+import de.cyface.collector.model.Uploadable.Companion.DEVICE_ID_FIELD
 import de.cyface.collector.model.UploadableFactory
 import de.cyface.collector.storage.DataStorageService
 import io.vertx.core.Handler
@@ -78,7 +79,10 @@ class StatusHandler(
                         logger.debug("Upload {} is already stored.", uploadable)
                         ctx.response().setStatusCode(OK).end()
                     } else if (uploadIdentifier == null) {
-                        // If no bytes have been received, return 308 but without a `Range` header to indicate this
+                        // When the upload already completed and the UPLOAD_PATH_FIELD was removed from the session
+                        // the conflict check above should have resolved to true, so we should not end up here.
+
+                        // Only if no bytes have been received yet (return 308 but w/o `Range` header to indicate this)
                         logger.debug("Response: 308, no Range (no path)")
                         ctx.response().putHeader("Content-Length", "0")
                         ctx.response().setStatusCode(RESUME_INCOMPLETE).end()

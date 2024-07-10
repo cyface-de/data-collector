@@ -237,7 +237,7 @@ interface ApplicationMetaDataFactory {
      */
     fun applicationMetaData(json: JsonObject): ApplicationMetaData {
         val appVersion = json.getString(FormAttributes.APPLICATION_VERSION.value)
-        val formatVersion = json.getInteger(FormAttributes.FORMAT_VERSION.value)
+        val formatVersion = json.getString(FormAttributes.FORMAT_VERSION.value).toInt()
         return ApplicationMetaData(appVersion, formatVersion)
     }
 

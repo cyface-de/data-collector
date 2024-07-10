@@ -105,7 +105,7 @@ class UploadHandler(
             // Handle first chunk
             val contentRange = request.contentRange(bodySize)
             checkAndStore(session, loggedInUser, request, contentRange, uploadable, storageService)
-                .onSuccess { onCheckSuccessful(it, ctx, session) }
+                .onSuccess { onCheckSuccessful(it, ctx, session, uploadable) }
                 .onFailure(UploadFailureHandler(ctx))
         } catch (e: InvalidMetaData) {
             logger.error("Response: 422", e)
@@ -200,7 +200,7 @@ class UploadHandler(
                     acceptUploadResult.onFailure { cause -> ret.fail(cause) }
                 }
             }.onFailure {
-                session.remove<Any>(UPLOAD_PATH_FIELD) // was linked to non-existing file
+                session.remove<UUID>(UPLOAD_PATH_FIELD) // was linked to non-existing file
                 acceptNewUpload(session, ret, sourceData, user, contentRange, uploadable, storageService)
             }
         }
@@ -235,8 +235,9 @@ class UploadHandler(
      * @param status: The return status of the check.
      * @param context: The `RoutingContext` used by the current request.
      * @param session: The current HTTP session.
+     * @param uploadable The object uploaded
      */
-    private fun onCheckSuccessful(status: Status, context: RoutingContext, session: Session) {
+    private fun onCheckSuccessful(status: Status, context: RoutingContext, session: Session, uploadable: Uploadable) {
         when (status.type) {
             StatusType.INCOMPLETE -> {
                 val byteSize = status.byteSize
@@ -250,7 +251,7 @@ class UploadHandler(
                 // In case the response does not arrive at the client, the client will receive a 409 on a reupload.
                 // In case of the 409, the client can handle the successful upload. Therefore, the session is
                 // removed here to avoid dangling session references.
-                session.remove<Any>(UPLOAD_PATH_FIELD)
+                session.remove<UUID>(UPLOAD_PATH_FIELD)
                 context.response().setStatusCode(HTTPStatus.CREATED).end()
             }
         }

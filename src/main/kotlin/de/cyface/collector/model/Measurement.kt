@@ -26,6 +26,7 @@ import de.cyface.collector.handler.exception.SessionExpired
 import de.cyface.collector.handler.exception.SkipUpload
 import de.cyface.collector.handler.exception.TooFewLocations
 import de.cyface.collector.handler.exception.UnknownFormatVersion
+import de.cyface.collector.model.Attachment.Companion.ATTACHMENT_ID_FIELD
 import de.cyface.collector.model.Uploadable.Companion.DEVICE_ID_FIELD
 import de.cyface.collector.model.Uploadable.Companion.MEASUREMENT_ID_FIELD
 import de.cyface.collector.model.metadata.ApplicationMetaData
@@ -79,7 +80,7 @@ data class Measurement(
     override fun checkValidity(session: Session) {
         // Ensure this session was accepted by PreRequestHandler and bound to this measurement
         val sessionMeasurementId = session.get<Long>(MEASUREMENT_ID_FIELD)
-        val sessionDeviceId = session.get<String>(DEVICE_ID_FIELD)
+        val sessionDeviceId = session.get<UUID>(DEVICE_ID_FIELD)
         if (sessionMeasurementId == null || sessionDeviceId == null) {
             throw SessionExpired("Mid/did missing, session maybe expired, request upload restart (404).")
         }
@@ -92,7 +93,7 @@ data class Measurement(
                 )
             )
         }
-        if (UUID.fromString(sessionDeviceId) != identifier.deviceIdentifier) {
+        if (sessionDeviceId != identifier.deviceIdentifier) {
             throw IllegalSession(
                 String.format(
                     Locale.ENGLISH,
@@ -105,13 +106,13 @@ data class Measurement(
 
     override fun toJson(): JsonObject {
         val ret = JsonObject()
-        ret.put(FormAttributes.DEVICE_ID.value, identifier.deviceIdentifier)
-        ret.put(FormAttributes.MEASUREMENT_ID.value, identifier.measurementIdentifier)
+        ret.put(FormAttributes.DEVICE_ID.value, identifier.deviceIdentifier.toString())
+        ret.put(FormAttributes.MEASUREMENT_ID.value, identifier.measurementIdentifier.toString())
         ret
-            .mergeIn(applicationMetaData.toJson(), true)
-            .mergeIn(attachmentMetaData.toJson(), true)
             .mergeIn(deviceMetaData.toJson(), true)
+            .mergeIn(applicationMetaData.toJson(), true)
             .mergeIn(measurementMetaData.toJson(), true)
+            .mergeIn(attachmentMetaData.toJson(), true)
         return ret
     }
 
@@ -132,7 +133,7 @@ class MeasurementFactory : UploadableFactory {
     override fun from(json: JsonObject): Uploadable {
         try {
             val deviceIdentifier = UUID.fromString(json.getString(FormAttributes.DEVICE_ID.value))
-            val measurementIdentifier = json.getLong(FormAttributes.MEASUREMENT_ID.value)
+            val measurementIdentifier = json.getString(FormAttributes.MEASUREMENT_ID.value).toLong()
 
             val applicationMetaData = applicationMetaData(json)
             val attachmentMetaData = attachmentMetaData(json)

@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Cyface GmbH
+ * Copyright 2022-2024 Cyface GmbH
  *
  * This file is part of the Cyface Data Collector.
  *
@@ -22,13 +22,12 @@ package de.cyface.collector.handler
  * HTTP header field names used by the Cyface Data Collector, as constants.
  *
  * @author Klemens Muthmann
- * @version 1.0.0
  */
 object SessionFields {
     /**
      * The field name for the session entry which contains the path of the temp file containing the upload binary.
      *
-     * This field is set in the [MeasurementUploadHandler] to support resumable upload.
+     * This field is set in the `UploadHandler` to support resumable upload.
      */
     const val UPLOAD_PATH_FIELD = "upload-path"
 }

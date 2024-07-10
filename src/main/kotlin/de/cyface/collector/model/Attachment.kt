@@ -93,7 +93,7 @@ data class Attachment(
 
     override fun checkValidity(session: Session) {
         val sessionMeasurementId = session.get<Long>(MEASUREMENT_ID_FIELD)
-        val sessionDeviceId = session.get<String>(DEVICE_ID_FIELD)
+        val sessionDeviceId = session.get<UUID>(DEVICE_ID_FIELD)
         val sessionAttachmentId = session.get<String>(ATTACHMENT_ID_FIELD)
         if (sessionMeasurementId == null || sessionDeviceId == null || sessionAttachmentId == null) {
             throw SessionExpired("Did/mid/aid missing, session maybe expired, request upload restart (404).")
@@ -107,7 +107,7 @@ data class Attachment(
                 )
             )
         }
-        if (UUID.fromString(sessionDeviceId) != identifier.deviceIdentifier) {
+        if (sessionDeviceId != identifier.deviceIdentifier) {
             throw IllegalSession(
                 String.format(
                     Locale.ENGLISH,
@@ -129,14 +129,14 @@ data class Attachment(
 
     override fun toJson(): JsonObject {
         val ret = JsonObject()
-        ret.put(FormAttributes.DEVICE_ID.value, identifier.deviceIdentifier)
-        ret.put(FormAttributes.MEASUREMENT_ID.value, identifier.measurementIdentifier)
-        ret.put(FormAttributes.ATTACHMENT_ID.value, identifier.attachmentIdentifier)
+        ret.put(FormAttributes.DEVICE_ID.value, identifier.deviceIdentifier.toString())
+        ret.put(FormAttributes.MEASUREMENT_ID.value, identifier.measurementIdentifier.toString())
+        ret.put(FormAttributes.ATTACHMENT_ID.value, identifier.attachmentIdentifier.toString())
         ret
-            .mergeIn(applicationMetaData.toJson(), true)
-            .mergeIn(attachmentMetaData.toJson(), true)
             .mergeIn(deviceMetaData.toJson(), true)
+            .mergeIn(applicationMetaData.toJson(), true)
             .mergeIn(measurementMetaData.toJson(), true)
+            .mergeIn(attachmentMetaData.toJson(), true)
         return ret
     }
 
@@ -172,8 +172,8 @@ class AttachmentFactory : UploadableFactory {
     override fun from(json: JsonObject): Uploadable {
         try {
             val deviceIdentifier = UUID.fromString(json.getString(FormAttributes.DEVICE_ID.value))
-            val measurementIdentifier = json.getLong(FormAttributes.MEASUREMENT_ID.value)
-            val attachmentIdentifier = json.getLong(FormAttributes.ATTACHMENT_ID.value)
+            val measurementIdentifier = json.getString(FormAttributes.MEASUREMENT_ID.value).toLong()
+            val attachmentIdentifier = json.getString(FormAttributes.ATTACHMENT_ID.value).toLong()
 
             val applicationMetaData = applicationMetaData(json)
             val attachmentMetaData = attachmentMetaData(json)
