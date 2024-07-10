@@ -18,11 +18,16 @@
  */
 package de.cyface.collector.storage.gridfs
 
-import de.cyface.collector.handler.MetaDataService.Companion.CURRENT_TRANSFER_FILE_FORMAT_VERSION
 import de.cyface.collector.model.ContentRange
-import de.cyface.collector.model.RequestMetaData
-import de.cyface.collector.model.RequestMetaData.MeasurementMetaData.GeoLocation
+import de.cyface.collector.model.Measurement
+import de.cyface.collector.model.MeasurementIdentifier
 import de.cyface.collector.model.User
+import de.cyface.collector.model.metadata.ApplicationMetaData
+import de.cyface.collector.model.metadata.ApplicationMetaData.Companion.CURRENT_TRANSFER_FILE_FORMAT_VERSION
+import de.cyface.collector.model.metadata.AttachmentMetaData
+import de.cyface.collector.model.metadata.DeviceMetaData
+import de.cyface.collector.model.metadata.GeoLocation
+import de.cyface.collector.model.metadata.MeasurementMetaData
 import de.cyface.collector.storage.StatusType
 import de.cyface.collector.storage.UploadMetaData
 import io.vertx.core.Future
@@ -94,7 +99,7 @@ class GridFSStorageServiceTest {
         val contentRange = ContentRange(0L, 4L, 5L)
         val uploadIdentifier = UUID.randomUUID()
         val deviceIdentifier = UUID.randomUUID()
-        val measurementIdentifier = "1L"
+        val measurementIdentifier = 1L
         val operatingSystemVersion = "15.3.1"
         val deviceType = "iPhone"
         val applicationVersion = "6.0.0"
@@ -104,18 +109,18 @@ class GridFSStorageServiceTest {
         val endLocation = GeoLocation(2L, 12.0, 12.0)
         val modality = "BICYCLE"
         val formatVersion = CURRENT_TRANSFER_FILE_FORMAT_VERSION
-        val metaData = RequestMetaData(
-            RequestMetaData.MeasurementIdentifier(deviceIdentifier.toString(), measurementIdentifier),
-            RequestMetaData.DeviceMetaData(operatingSystemVersion, deviceType),
-            RequestMetaData.ApplicationMetaData(applicationVersion, formatVersion),
-            RequestMetaData.MeasurementMetaData(length, locationCount, startLocation, endLocation, modality),
-            RequestMetaData.AttachmentMetaData(0, 0, 0, 0L),
+        val measurement = Measurement(
+            MeasurementIdentifier(deviceIdentifier, measurementIdentifier),
+            DeviceMetaData(operatingSystemVersion, deviceType),
+            ApplicationMetaData(applicationVersion, formatVersion),
+            MeasurementMetaData(length, locationCount, startLocation, endLocation, modality),
+            AttachmentMetaData(0, 0, 0, 0L),
         )
         val oocut = GridFsStorageService(GridFsDao(mockMongoClient), fileSystem, Path.of("upload-folder"))
 
         // Act
         val countDownLatch = CountDownLatch(1)
-        val uploadMetaData = UploadMetaData(user, contentRange, uploadIdentifier, metaData)
+        val uploadMetaData = UploadMetaData(user, contentRange, uploadIdentifier, measurement)
         val result = oocut.store(mockFile, uploadMetaData)
         result.onFailure { cause ->
             fail("Failed Storing test data", cause)
@@ -170,7 +175,7 @@ class GridFSStorageServiceTest {
         argumentCaptor<GridFsUploadOptions> {
             verify(mockMongoGridFSClient).uploadByFileNameWithOptions(any(), any(), capture())
 
-            val expectedMetaData = metaData.toJson()
+            val expectedMetaData = measurement.toJson()
             val metadata = firstValue.metadata
             assertThat(metadata.getString("deviceId"), equalTo(expectedMetaData.getString("deviceId")))
             assertThat(metadata.getString("measurementId"), equalTo(expectedMetaData.getString("measurementId")))
@@ -188,7 +193,7 @@ class GridFSStorageServiceTest {
         // Arrange
         val storeCall = mock<Future<ObjectId>> {}
         val mockDao = mock<GridFsDao> {
-            on { store<RequestMetaData.MeasurementIdentifier>(any(), anyString(), any()) } doReturn storeCall
+            on { store(any(), anyString(), any()) } doReturn storeCall
         }
         val mockTemporaryFileOpenCall01 = mock<Future<AsyncFile>> {}
         val mockTemporaryFileOpenCall02 = mock<Future<AsyncFile>> {}
@@ -233,18 +238,18 @@ class GridFSStorageServiceTest {
             on { idString } doReturn "testuser"
         }
         val uploadIdentifier = UUID.randomUUID()
-        val metaData = metadata()
+        val measurement = measurement()
         val contentRange01 = ContentRange(0L, 4L, 15L)
         val contentRange02 = ContentRange(5L, 9L, 15L)
         val contentRange03 = ContentRange(10L, 14L, 15L)
         val oocut = GridFsStorageService(mockDao, mockFileSystem, Path.of("upload-folder"))
 
         // Act
-        val uploadMetaData01 = UploadMetaData(mockUser, contentRange01, uploadIdentifier, metaData)
+        val uploadMetaData01 = UploadMetaData(mockUser, contentRange01, uploadIdentifier, measurement)
         val storeCall01 = oocut.store(mockRequest, uploadMetaData01)
-        val uploadMetaData02 = UploadMetaData(mockUser, contentRange02, uploadIdentifier, metaData)
+        val uploadMetaData02 = UploadMetaData(mockUser, contentRange02, uploadIdentifier, measurement)
         val storeCall02 = oocut.store(mockRequest, uploadMetaData02)
-        val uploadMetaData03 = UploadMetaData(mockUser, contentRange03, uploadIdentifier, metaData)
+        val uploadMetaData03 = UploadMetaData(mockUser, contentRange03, uploadIdentifier, measurement)
         val storeCall03 = oocut.store(mockRequest, uploadMetaData03)
 
         // Assert
@@ -319,22 +324,22 @@ class GridFSStorageServiceTest {
         }
 
         // Verify that the file is actually stored at the end.
-        verify(mockDao).store<RequestMetaData.MeasurementIdentifier>(any(), anyString(), any())
+        verify(mockDao).store(any(), anyString(), any())
     }
 
-    private fun metadata(): RequestMetaData<RequestMetaData.MeasurementIdentifier> {
-        return RequestMetaData(
-            RequestMetaData.MeasurementIdentifier("78370516-4f7e-11ed-bdc3-0242ac120002", "1"),
-            RequestMetaData.DeviceMetaData("iOS", "iPhone16"),
-            RequestMetaData.ApplicationMetaData("3.2.1", 3),
-            RequestMetaData.MeasurementMetaData(
+    private fun measurement(): Measurement {
+        return Measurement(
+            MeasurementIdentifier(UUID.fromString("78370516-4f7e-11ed-bdc3-0242ac120002"), 1L),
+            DeviceMetaData("iOS", "iPhone16"),
+            ApplicationMetaData("3.2.1", 3),
+            MeasurementMetaData(
                 20.0,
                 434,
                 GeoLocation(512367323L, 51.0, 13.0),
                 GeoLocation(512377323L, 51.5, 13.2),
                 "BICYCLE",
             ),
-            RequestMetaData.AttachmentMetaData(0, 0, 0, 0L),
+            AttachmentMetaData(0, 0, 0, 0L),
         )
     }
 }

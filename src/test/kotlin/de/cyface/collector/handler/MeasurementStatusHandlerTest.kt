@@ -18,6 +18,8 @@
  */
 package de.cyface.collector.handler
 
+import de.cyface.collector.handler.upload.StatusHandler
+import de.cyface.collector.model.MeasurementFactory
 import de.cyface.collector.storage.DataStorageService
 import io.vertx.core.Future
 import io.vertx.core.Handler
@@ -37,7 +39,7 @@ import org.mockito.kotlin.verify
 import java.util.UUID
 
 /**
- * Tests the correct workings of the [MeasurementStatusHandler].
+ * Tests the correct workings of the [StatusHandler].
  *
  * @author Klemens Muthmann
  */
@@ -96,11 +98,7 @@ class MeasurementStatusHandlerTest {
             on { request() } doReturn mockRequest
             on { session() } doReturn mockSession
         }
-        val oocut = MeasurementStatusHandler(
-            MeasurementRequestService(storageService),
-            MeasurementMetaDataService(),
-            storageService
-        )
+        val oocut = StatusHandler(MeasurementFactory(), storageService)
 
         // Act
         oocut.handle(mockRoutingContext)

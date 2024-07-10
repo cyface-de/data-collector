@@ -21,10 +21,16 @@ package de.cyface.collector.storage.gridfs
 import com.natpryce.hamkrest.assertion.assertThat
 import com.natpryce.hamkrest.equalTo
 import de.cyface.collector.commons.MongoTest
-import de.cyface.collector.handler.MetaDataService.Companion.CURRENT_TRANSFER_FILE_FORMAT_VERSION
 import de.cyface.collector.model.ContentRange
-import de.cyface.collector.model.RequestMetaData
+import de.cyface.collector.model.Measurement
+import de.cyface.collector.model.MeasurementIdentifier
 import de.cyface.collector.model.User
+import de.cyface.collector.model.metadata.ApplicationMetaData
+import de.cyface.collector.model.metadata.ApplicationMetaData.Companion.CURRENT_TRANSFER_FILE_FORMAT_VERSION
+import de.cyface.collector.model.metadata.AttachmentMetaData
+import de.cyface.collector.model.metadata.DeviceMetaData
+import de.cyface.collector.model.metadata.GeoLocation
+import de.cyface.collector.model.metadata.MeasurementMetaData
 import de.cyface.collector.storage.StatusType
 import de.cyface.collector.storage.UploadMetaData
 import io.vertx.core.Vertx
@@ -101,12 +107,7 @@ class GridFSStorageIT {
                 val user = User(UUID.randomUUID(), "test-user")
                 val uploadIdentifier = UUID.randomUUID()
                 val contentRange = ContentRange(0L, 3L, 4L)
-                val uploadMetaData = UploadMetaData(
-                    user,
-                    contentRange,
-                    uploadIdentifier,
-                    metaData
-                )
+                val uploadMetaData = UploadMetaData(user, contentRange, uploadIdentifier, measurement)
                 oocut.store(
                     it,
                     uploadMetaData
@@ -122,26 +123,26 @@ class GridFSStorageIT {
         )
     }
 
-    private val metaData: RequestMetaData<RequestMetaData.MeasurementIdentifier>
+    private val measurement: Measurement
         get() {
             val deviceIdentifier = UUID.randomUUID()
-            val measurementIdentifier = "1L"
+            val measurementIdentifier = 1L
             val operatingSystemVersion = "15.3.1"
             val deviceType = "iPhone"
             val applicationVersion = "6.0.0"
             val length = 13.0
             val locationCount = 666L
-            val startLocation = RequestMetaData.MeasurementMetaData.GeoLocation(1L, 10.0, 10.0)
-            val endLocation = RequestMetaData.MeasurementMetaData.GeoLocation(2L, 12.0, 12.0)
+            val startLocation = GeoLocation(1L, 10.0, 10.0)
+            val endLocation = GeoLocation(2L, 12.0, 12.0)
             val modality = "BICYCLE"
             val formatVersion = CURRENT_TRANSFER_FILE_FORMAT_VERSION
 
-            return RequestMetaData(
-                RequestMetaData.MeasurementIdentifier(deviceIdentifier.toString(), measurementIdentifier),
-                RequestMetaData.DeviceMetaData(operatingSystemVersion, deviceType),
-                RequestMetaData.ApplicationMetaData(applicationVersion, formatVersion),
-                RequestMetaData.MeasurementMetaData(length, locationCount, startLocation, endLocation, modality),
-                RequestMetaData.AttachmentMetaData(0, 0, 0, 0L),
+            return Measurement(
+                MeasurementIdentifier(deviceIdentifier, measurementIdentifier),
+                DeviceMetaData(operatingSystemVersion, deviceType),
+                ApplicationMetaData(applicationVersion, formatVersion),
+                MeasurementMetaData(length, locationCount, startLocation, endLocation, modality),
+                AttachmentMetaData(0, 0, 0, 0L),
             )
         }
 

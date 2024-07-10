@@ -43,10 +43,10 @@ import java.util.UUID
 
 data class Measurement(
     val identifier: MeasurementIdentifier,
-    private val applicationMetaData: ApplicationMetaData,
-    private val attachmentMetaData: AttachmentMetaData,
     private val deviceMetaData: DeviceMetaData,
-    private val measurementMetaData: MeasurementMetaData
+    private val applicationMetaData: ApplicationMetaData,
+    private val measurementMetaData: MeasurementMetaData,
+    private val attachmentMetaData: AttachmentMetaData,
 ) : Uploadable {
     override fun bindTo(session: Session) {
         session.put(DEVICE_ID_FIELD, identifier.deviceIdentifier)
@@ -141,10 +141,10 @@ class MeasurementFactory : UploadableFactory {
 
             return Measurement(
                 MeasurementIdentifier(deviceIdentifier, measurementIdentifier),
-                applicationMetaData,
-                attachmentMetaData,
                 deviceMetaData,
+                applicationMetaData,
                 measurementMetaData,
+                attachmentMetaData,
             )
         } catch (e: TooFewLocations) {
             throw SkipUpload(e)
@@ -211,10 +211,10 @@ class MeasurementFactory : UploadableFactory {
 
             return Measurement(
                 measurementIdentifier,
-                applicationMetaData,
-                attachmentMetaData,
                 deviceMetaData,
-                measurementMetaData
+                applicationMetaData,
+                measurementMetaData,
+                attachmentMetaData,
             )
         } catch (e: IllegalArgumentException) {
             throw InvalidMetaData("Data incomplete!", e)

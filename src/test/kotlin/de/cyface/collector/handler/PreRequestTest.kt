@@ -19,6 +19,8 @@
 package de.cyface.collector.handler
 
 import de.cyface.collector.handler.exception.PayloadTooLarge
+import de.cyface.collector.handler.upload.PreRequestHandler
+import de.cyface.collector.model.MeasurementFactory
 import de.cyface.collector.storage.DataStorageService
 import io.vertx.core.Future
 import io.vertx.core.MultiMap
@@ -42,7 +44,7 @@ import org.mockito.kotlin.whenever
 import java.util.UUID
 
 /**
- * Tests for running the [MeasurementPreRequestHandler] in isolation.
+ * Tests for running the [PreRequestHandler] in isolation.
  *
  * @author Klemens Muthmann
  */
@@ -93,7 +95,7 @@ class PreRequestTest {
     /**
      * The object of the class under test.
      */
-    private lateinit var oocut: MeasurementPreRequestHandler
+    private lateinit var oocut: PreRequestHandler
 
     @BeforeEach
     fun setUp() {
@@ -101,12 +103,7 @@ class PreRequestTest {
         whenever(mockRoutingContext.request()).thenReturn(mockRequest)
         whenever(mockRoutingContext.session()).thenReturn(mockSession)
 
-        oocut = MeasurementPreRequestHandler(
-            MeasurementRequestService(mockStorageService),
-            MeasurementMetaDataService(),
-            100L,
-            "/"
-        )
+        oocut = PreRequestHandler(MeasurementFactory(), mockStorageService, 100L, "/")
     }
 
     @Test

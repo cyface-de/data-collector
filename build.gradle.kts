@@ -214,7 +214,6 @@ publishing {
 
 // The following repositories are used to load artifacts from.
 repositories {
-  mavenLocal()
   mavenCentral()
   maven {
     name = "local"

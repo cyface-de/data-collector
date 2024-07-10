@@ -171,10 +171,10 @@ interface Uploadable {
  * @author Klemens Muthmann
  */
 interface UploadableFactory :
-    AttachmentMetaDataFactory,
     DeviceMetaDataFactory,
     ApplicationMetaDataFactory,
-    MeasurementMetaDataFactory {
+    MeasurementMetaDataFactory,
+    AttachmentMetaDataFactory {
     /**
      * Creates an uploadable object from the metadata body.
      *
@@ -190,57 +190,6 @@ interface UploadableFactory :
      * @return The created uploadable object.
      */
     fun from(headers: MultiMap): Uploadable
-}
-
-/**
- * Factory for creating attachment-specific metadata objects.
- *
- * @author Klemens Muthmann
- */
-interface AttachmentMetaDataFactory {
-    /**
-     * Creates an attachment metadata object from the given values.
-     *
-     * @param logCount The number of log files captured for this measurement.
-     * @param imageCount The number of image files captured for this measurement.
-     * @param videoCount The number of video files captured for this measurement.
-     * @param filesSize The number of bytes of the attachment files.
-     * @return The created attachment metadata object.
-     */
-    fun attachmentMetaData(
-        logCount: String?,
-        imageCount: String?,
-        videoCount: String?,
-        filesSize: String?,
-    ): AttachmentMetaData
-
-    /**
-     * Extracts the attachment specific metadata from the request body.
-     *
-     * @param body The request body containing the metadata.
-     * @return The extracted metadata.
-     */
-    fun attachmentMetaData(body: JsonObject): AttachmentMetaData {
-        val logCount = body.getString(FormAttributes.LOG_COUNT.value)
-        val imageCount = body.getString(FormAttributes.IMAGE_COUNT.value)
-        val videoCount = body.getString(FormAttributes.VIDEO_COUNT.value)
-        val filesSize = body.getString(FormAttributes.FILES_SIZE.value)
-        return attachmentMetaData(logCount, imageCount, videoCount, filesSize)
-    }
-
-    /**
-     * Extracts the attachment specific metadata from the request headers.
-     *
-     * @param headers The request headers containing the metadata.
-     * @return The extracted metadata.
-     */
-    fun attachmentMetaData(headers: MultiMap): AttachmentMetaData {
-        val logCount = headers.get(FormAttributes.LOG_COUNT.value)
-        val imageCount = headers.get(FormAttributes.IMAGE_COUNT.value)
-        val videoCount = headers.get(FormAttributes.VIDEO_COUNT.value)
-        val filesSize = headers.get(FormAttributes.FILES_SIZE.value)
-        return attachmentMetaData(logCount, imageCount, videoCount, filesSize)
-    }
 }
 
 /**
@@ -362,5 +311,56 @@ interface MeasurementMetaDataFactory {
             endLocation,
             modality
         )
+    }
+}
+
+/**
+ * Factory for creating attachment-specific metadata objects.
+ *
+ * @author Klemens Muthmann
+ */
+interface AttachmentMetaDataFactory {
+    /**
+     * Creates an attachment metadata object from the given values.
+     *
+     * @param logCount The number of log files captured for this measurement.
+     * @param imageCount The number of image files captured for this measurement.
+     * @param videoCount The number of video files captured for this measurement.
+     * @param filesSize The number of bytes of the attachment files.
+     * @return The created attachment metadata object.
+     */
+    fun attachmentMetaData(
+        logCount: String?,
+        imageCount: String?,
+        videoCount: String?,
+        filesSize: String?,
+    ): AttachmentMetaData
+
+    /**
+     * Extracts the attachment specific metadata from the request body.
+     *
+     * @param body The request body containing the metadata.
+     * @return The extracted metadata.
+     */
+    fun attachmentMetaData(body: JsonObject): AttachmentMetaData {
+        val logCount = body.getString(FormAttributes.LOG_COUNT.value)
+        val imageCount = body.getString(FormAttributes.IMAGE_COUNT.value)
+        val videoCount = body.getString(FormAttributes.VIDEO_COUNT.value)
+        val filesSize = body.getString(FormAttributes.FILES_SIZE.value)
+        return attachmentMetaData(logCount, imageCount, videoCount, filesSize)
+    }
+
+    /**
+     * Extracts the attachment specific metadata from the request headers.
+     *
+     * @param headers The request headers containing the metadata.
+     * @return The extracted metadata.
+     */
+    fun attachmentMetaData(headers: MultiMap): AttachmentMetaData {
+        val logCount = headers.get(FormAttributes.LOG_COUNT.value)
+        val imageCount = headers.get(FormAttributes.IMAGE_COUNT.value)
+        val videoCount = headers.get(FormAttributes.VIDEO_COUNT.value)
+        val filesSize = headers.get(FormAttributes.FILES_SIZE.value)
+        return attachmentMetaData(logCount, imageCount, videoCount, filesSize)
     }
 }

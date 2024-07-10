@@ -23,7 +23,14 @@ import de.cyface.collector.auth.MockedHandlerBuilder
 import de.cyface.collector.commons.MongoTest
 import de.cyface.collector.configuration.GoogleCloudStorageType
 import de.cyface.collector.model.ContentRange
+import de.cyface.collector.model.Measurement
+import de.cyface.collector.model.MeasurementIdentifier
 import de.cyface.collector.model.User
+import de.cyface.collector.model.metadata.ApplicationMetaData
+import de.cyface.collector.model.metadata.AttachmentMetaData
+import de.cyface.collector.model.metadata.DeviceMetaData
+import de.cyface.collector.model.metadata.GeoLocation
+import de.cyface.collector.model.metadata.MeasurementMetaData
 import de.cyface.collector.storage.UploadMetaData
 import de.cyface.collector.verticle.CollectorApiVerticle
 import de.cyface.collector.verticle.ServerConfiguration
@@ -309,35 +316,35 @@ class UploadPictureIT {
                     val exampleFile = result.resultAt<AsyncFile>(0)
                     val dataStorageService = result.resultAt<GoogleCloudStorageService>(1)
                     val fileSize = exampleFile.sizeBlocking()
-                    val metaData = de.cyface.collector.model.RequestMetaData(
-                        de.cyface.collector.model.RequestMetaData.MeasurementIdentifier(
-                            UUID.randomUUID().toString(),
-                            "0",
+                    val measurement = Measurement(
+                        MeasurementIdentifier(
+                            UUID.randomUUID(),
+                            0L,
                         ),
-                        de.cyface.collector.model.RequestMetaData.DeviceMetaData(
+                        DeviceMetaData(
                             operatingSystemVersion = "1",
                             deviceType = "test",
                         ),
-                        de.cyface.collector.model.RequestMetaData.ApplicationMetaData(
+                        ApplicationMetaData(
                             applicationVersion = "1",
                             formatVersion = 3,
                         ),
-                        de.cyface.collector.model.RequestMetaData.MeasurementMetaData(
+                        MeasurementMetaData(
                             length = 200.0,
                             locationCount = 20L,
-                            startLocation = de.cyface.collector.model.RequestMetaData.MeasurementMetaData.GeoLocation(
+                            startLocation = GeoLocation(
                                 System.currentTimeMillis(),
                                 13.707209,
                                 51.044796
                             ),
-                            endLocation = de.cyface.collector.model.RequestMetaData.MeasurementMetaData.GeoLocation(
+                            endLocation = GeoLocation(
                                 System.currentTimeMillis(),
                                 13.718708,
                                 51.051013
                             ),
                             modality = "BICYCLE",
                         ),
-                        de.cyface.collector.model.RequestMetaData.AttachmentMetaData(
+                        AttachmentMetaData(
                             logCount = 0,
                             imageCount = 0,
                             videoCount = 0,
@@ -349,7 +356,7 @@ class UploadPictureIT {
                         user = user,
                         contentRange = ContentRange(0, fileSize - 1, fileSize),
                         uploadIdentifier = testUploadIdentifier,
-                        metaData = metaData
+                        uploadable = measurement
                     )
 
                     dataStorageService.store(exampleFile, uploadMetaData)

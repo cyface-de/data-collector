@@ -19,8 +19,14 @@
 package de.cyface.collector.storage.cloud
 
 import de.cyface.collector.model.ContentRange
-import de.cyface.collector.model.RequestMetaData
+import de.cyface.collector.model.Measurement
+import de.cyface.collector.model.MeasurementIdentifier
 import de.cyface.collector.model.User
+import de.cyface.collector.model.metadata.ApplicationMetaData
+import de.cyface.collector.model.metadata.AttachmentMetaData
+import de.cyface.collector.model.metadata.DeviceMetaData
+import de.cyface.collector.model.metadata.GeoLocation
+import de.cyface.collector.model.metadata.MeasurementMetaData
 import de.cyface.collector.storage.StatusType
 import de.cyface.collector.storage.UploadMetaData
 import de.cyface.collector.storage.exception.ContentRangeNotMatchingFileSize
@@ -73,7 +79,7 @@ class GoogleCloudStorageVertxTest {
         val user: User = mock()
         val contentRange = ContentRange(0L, 9L, 10L)
         val uploadIdentifier = UUID.randomUUID()
-        val metaData: RequestMetaData<RequestMetaData.MeasurementIdentifier> = metadata()
+        val metaData = measurement()
         val uploadMetaData = UploadMetaData(user, contentRange, uploadIdentifier, metaData)
 
         // Act
@@ -107,7 +113,7 @@ class GoogleCloudStorageVertxTest {
             on { create(any<UUID>()) } doReturn mockCloudStorage
         }
         val oocut = GoogleCloudStorageService(database, vertx, cloudStorageFactory)
-        val metadata: UploadMetaData<RequestMetaData.MeasurementIdentifier> = mock {
+        val measurement: UploadMetaData = mock {
             on { contentRange } doReturn ContentRange(5, 7, 3)
             on { uploadIdentifier } doReturn UUID.randomUUID()
         }
@@ -115,7 +121,7 @@ class GoogleCloudStorageVertxTest {
         val readStream = vertx.fileSystem().openBlocking(exampleImage, OpenOptions())
 
         // Act
-        val result = oocut.store(readStream, metadata)
+        val result = oocut.store(readStream, measurement)
 
         // Assert
         result.onComplete(
@@ -175,28 +181,28 @@ class GoogleCloudStorageVertxTest {
     /**
      * Provide some example metadata usable by tests.
      */
-    private fun metadata(): RequestMetaData<RequestMetaData.MeasurementIdentifier> {
-        return RequestMetaData(
-            RequestMetaData.MeasurementIdentifier(
-                "78370516-4f7e-11ed-bdc3-0242ac120002",
-                "1",
+    private fun measurement(): Measurement {
+        return Measurement(
+            MeasurementIdentifier(
+                UUID.fromString("78370516-4f7e-11ed-bdc3-0242ac120002"),
+                1L,
             ),
-            RequestMetaData.DeviceMetaData(
+            DeviceMetaData(
                 "iOS",
                 "iPhone 16",
             ),
-            RequestMetaData.ApplicationMetaData(
+            ApplicationMetaData(
                 applicationVersion = "3.2.1",
                 formatVersion = 3,
             ),
-            RequestMetaData.MeasurementMetaData(
+            MeasurementMetaData(
                 length = 20.0,
                 locationCount = 434,
-                startLocation = RequestMetaData.MeasurementMetaData.GeoLocation(512367323L, 51.0, 13.0),
-                endLocation = RequestMetaData.MeasurementMetaData.GeoLocation(512377323L, 51.5, 13.2),
+                startLocation = GeoLocation(512367323L, 51.0, 13.0),
+                endLocation = GeoLocation(512377323L, 51.5, 13.2),
                 modality = "BICYCLE",
             ),
-            RequestMetaData.AttachmentMetaData(
+            AttachmentMetaData(
                 logCount = 0,
                 imageCount = 0,
                 videoCount = 0,

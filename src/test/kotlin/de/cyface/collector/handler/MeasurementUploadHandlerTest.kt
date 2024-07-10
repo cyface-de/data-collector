@@ -18,8 +18,9 @@
  */
 package de.cyface.collector.handler
 
+import de.cyface.collector.handler.upload.UploadHandler
 import de.cyface.collector.model.ContentRange
-import de.cyface.collector.model.RequestMetaData
+import de.cyface.collector.model.MeasurementFactory
 import de.cyface.collector.model.User
 import de.cyface.collector.storage.DataStorageService
 import de.cyface.collector.storage.Status
@@ -49,7 +50,7 @@ import java.util.UUID
 import kotlin.test.assertEquals
 
 /**
- * Run tests on the [MeasurementUploadHandler] directly without a Vert.x environment.
+ * Run tests on the [UploadHandler] directly without a Vert.x environment.
  *
  * @author Klemens Muthmann
  */
@@ -73,7 +74,7 @@ class MeasurementUploadHandlerTest {
 
     private lateinit var headers: MultiMap
 
-    private lateinit var oocut: MeasurementUploadHandler
+    private lateinit var oocut: UploadHandler
 
     @BeforeEach
     fun setUp() {
@@ -84,12 +85,7 @@ class MeasurementUploadHandlerTest {
 
         val payloadLimit = 10L
 
-        oocut = MeasurementUploadHandler(
-            MeasurementRequestService(mockStorageService),
-            MeasurementMetaDataService(),
-            mockStorageService,
-            payloadLimit
-        )
+        oocut = UploadHandler(MeasurementFactory(), mockStorageService, payloadLimit)
 
         mockRequest = mock {
             on { headers() } doReturn headers
@@ -137,7 +133,7 @@ class MeasurementUploadHandlerTest {
         whenever(
             mockStorageService.store(
                 any<ReadStream<Buffer>>(),
-                any<UploadMetaData<RequestMetaData.MeasurementIdentifier>>()
+                any<UploadMetaData>()
             )
         ).thenReturn(mockStoreCall)
 
@@ -181,7 +177,7 @@ class MeasurementUploadHandlerTest {
         oocut.handle(mockRoutingContext)
 
         // Assert
-        argumentCaptor<UploadMetaData<RequestMetaData.MeasurementIdentifier>> {
+        argumentCaptor<UploadMetaData> {
             verify(mockStorageService).store(eq(mockRequest), capture())
 
             assertEquals(mockUser, firstValue.user)
