@@ -61,66 +61,94 @@ class GoogleCloudStorageService(
      * Logger used by objects of this class. Configure it using `/src/main/resources/logback.xml`.
      */
     private val logger = LoggerFactory.getLogger(GoogleCloudStorageService::class.java)
+    private val bufferSize = 500 * 1024 // 500 KB
 
     override fun store(
         sourceData: ReadStream<Buffer>,
         uploadMetaData: UploadMetaData
     ): Future<Status> {
         val ret = Promise.promise<Status>()
-        val pipe = sourceData.pipe().endOnSuccess(false)
-        val targetStream = ReactiveWriteStream.writeStream<Buffer>(vertx)
+        var buffer = Buffer.buffer()
+
         val uploadIdentifier = uploadMetaData.uploadIdentifier
         val cloud = cloudStorageFactory.create(uploadIdentifier)
         val subscriber = CloudStorageSubscriber<Buffer>(cloud, uploadMetaData.contentRange.totalBytes, vertx)
+        val targetStream = ReactiveWriteStream.writeStream<Buffer>(vertx)
+        targetStream.subscribe(subscriber)
         subscriber.dataWrittenListener = object : CloudStorageSubscriber.DataWrittenListener {
             override fun dataWritten() {
-                logger.debug("Finished writing chunk for upload: {}.", uploadIdentifier)
-                // if finished store the metadata to Mongo and delete the tmp file.
-                val bytesUploaded = cloud.bytesUploaded()
-                logger.debug("Wrote $bytesUploaded")
-                val contentRange = uploadMetaData.contentRange
-                logger.debug("Expected {}", contentRange)
-                if (bytesUploaded != contentRange.toIndex + 1) {
-                    ret.fail(
-                        ContentRangeNotMatchingFileSize(
-                            String.format(
-                                Locale.getDefault(),
-                                "Response: 500, Content-Range (%s) not matching file size (%s)",
-                                contentRange,
-                                bytesUploaded
-                            )
-                        )
-                    )
-                } else if (contentRange.totalBytes == contentRange.toIndex + 1) {
-                    ret.complete(
-                        Status(
-                            uploadIdentifier,
-                            StatusType.COMPLETE,
-                            bytesUploaded
-                        )
-                    )
-                    dao.storeMetadata(uploadMetaData)
-                } else {
-                    ret.complete(
-                        Status(
-                            uploadIdentifier,
-                            StatusType.INCOMPLETE,
-                            bytesUploaded
-                        )
-                    )
-                }
+                handleDataWritten(cloud, uploadMetaData, ret)
             }
         }
 
-        logger.debug("Piping ${uploadMetaData.contentRange.totalBytes} bytes to Google Cloud.")
-        targetStream.subscribe(subscriber)
-        // This End-Handler is crucial!!!. Without the pipe does not provide all the data available.
-        sourceData.endHandler { logger.debug("All data read for upload {}!", uploadIdentifier) }
-        val pipeToProcess = pipe.to(targetStream)
-        pipeToProcess.onSuccess { logger.debug("Pipe finished for upload {}!", uploadIdentifier) }
-        pipeToProcess.onFailure(ret::fail)
+        // Collect chunks from the ReadStream (here: HttpRequest with fixed chunk size of 8 KB).
+        // Process and reset buffer if it exceeds a certain size. This reduces number of uploads to Google Cloud.
+        sourceData.handler { chunk: Buffer ->
+            buffer.appendBuffer(chunk)
+            if (buffer.length() >= bufferSize) {
+                logger.debug("Processing buffer of size: ${buffer.length()} bytes")
+                process(buffer, uploadMetaData, targetStream)
+                buffer = Buffer.buffer()
+            }
+        }
+
+        // Process the final bytes still in the buffer after we read all data.
+        sourceData.endHandler {
+            if (buffer.length() > 0) {
+                logger.debug("Processing final buffer of size ${buffer.length()} bytes")
+                process(buffer, uploadMetaData, targetStream)
+            }
+            logger.debug("All data read")
+        }
+
+        sourceData.exceptionHandler { throwable ->
+            logger.error("Error during upload for {}: {}", uploadIdentifier, throwable.message)
+            ret.fail(throwable)
+        }
 
         return ret.future()
+    }
+
+    private fun process(buffer: Buffer, uploadMetaData: UploadMetaData, targetStream: ReactiveWriteStream<Buffer>) {
+        targetStream.write(buffer).onComplete {
+            if (it.succeeded()) {
+                // logger.debug("Buffer of size ${buffer.length()} processed successfully")
+            } else {
+                val uploadIdentifier = uploadMetaData.uploadIdentifier
+                logger.error("Failed to process buffer for upload {}.", uploadIdentifier, it.cause())
+            }
+        }
+    }
+
+    private fun handleDataWritten(cloud: CloudStorage, uploadMetaData: UploadMetaData, resultPromise: Promise<Status>) {
+        val uploadIdentifier = uploadMetaData.uploadIdentifier
+        val bytesUploaded = cloud.bytesUploaded()
+        val contentRange = uploadMetaData.contentRange
+
+        logger.debug("Finished uploading {} bytes of total {}", bytesUploaded, contentRange)
+
+        if (bytesUploaded != contentRange.toIndex + 1) {
+            resultPromise.fail(
+                ContentRangeNotMatchingFileSize(
+                    String.format(
+                        Locale.getDefault(),
+                        "Response: 500, Content-Range (%s) not matching file size (%s)",
+                        contentRange,
+                        bytesUploaded
+                    )
+                )
+            )
+        } else if (contentRange.totalBytes == contentRange.toIndex + 1) {
+            dao.storeMetadata(uploadMetaData)
+                .onSuccess {
+                    resultPromise.complete(Status(uploadIdentifier, StatusType.COMPLETE, bytesUploaded))
+                }
+                .onFailure {
+                    resultPromise.fail(it)
+                }
+        } else {
+            resultPromise.complete(Status(uploadIdentifier, StatusType.INCOMPLETE, bytesUploaded))
+        }
     }
 
     override fun bytesUploaded(uploadIdentifier: UUID): Future<Long> {
@@ -202,7 +230,7 @@ class CloudStorageSubscriber<in T : Buffer>(
     /**
      * The number of bytes that have been streamed.
      */
-    private var streamedBytes = 0
+    private var streamedBytes = 0L
 
     /**
      * A listener that is informed if all data received was written successfully.
@@ -214,6 +242,7 @@ class CloudStorageSubscriber<in T : Buffer>(
      * If no error occurred, this property remains `null``
      */
     var error: Throwable? = null
+
     override fun onSubscribe(subscription: Subscription) {
         logger.debug("Subscribing to data!")
         this.subscription = subscription
@@ -240,7 +269,7 @@ class CloudStorageSubscriber<in T : Buffer>(
         vertx.executeBlocking(
             Callable {
                 cloudStorage.write(t.bytes)
-                logger.debug("Progress: ${streamedBytes.toDouble() / totalBytes.toDouble() * oneHundredPercent} %")
+                logger.debug("Progress: ${streamedBytes.toDouble() / totalBytes.toDouble() * ONE_HUNDRED_PERCENT} %")
                 if (streamedBytes >= totalBytes) {
                     dataWrittenListener?.dataWritten()
                 } else {
@@ -262,6 +291,6 @@ class CloudStorageSubscriber<in T : Buffer>(
         /**
          * Constant used to display the upload progress in percent.
          */
-        private const val oneHundredPercent = 100.0
+        private const val ONE_HUNDRED_PERCENT = 100.0
     }
 }
