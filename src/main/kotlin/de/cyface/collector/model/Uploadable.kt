@@ -85,16 +85,16 @@ interface Uploadable {
     /**
      * Transform this object into a GeoJSON FeatureCollection.
      *
-     * @param measurementMetaData The metadata of the measurement.
      * @param deviceMetaData The metadata of the device.
      * @param applicationMetaData The metadata of the application.
+     * @param measurementMetaData The metadata of the measurement.
      * @param attachmentMetaData The metadata of the attachments.
      * @return The GeoJSON representation of this object.
      */
     fun toGeoJson(
-        measurementMetaData: MeasurementMetaData,
         deviceMetaData: DeviceMetaData,
         applicationMetaData: ApplicationMetaData,
+        measurementMetaData: MeasurementMetaData,
         attachmentMetaData: AttachmentMetaData,
     ): JsonObject {
         val feature = JsonObject()

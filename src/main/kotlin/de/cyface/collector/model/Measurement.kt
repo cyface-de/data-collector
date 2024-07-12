@@ -116,11 +116,14 @@ data class Measurement(
     }
 
     override fun toGeoJson(): JsonObject {
-        val geoJson = toGeoJson(measurementMetaData, deviceMetaData, applicationMetaData, attachmentMetaData)
+        val geoJson = toGeoJson(deviceMetaData, applicationMetaData, measurementMetaData, attachmentMetaData)
 
-        val properties = geoJson.getJsonObject("properties")
-        properties.put(FormAttributes.DEVICE_ID.value, identifier.deviceIdentifier)
-        properties.put(FormAttributes.MEASUREMENT_ID.value, identifier.measurementIdentifier)
+        geoJson
+            .getJsonArray("features")
+            .getJsonObject(0)
+            .getJsonObject("properties")
+            .put(FormAttributes.DEVICE_ID.value, identifier.deviceIdentifier.toString())
+            .put(FormAttributes.MEASUREMENT_ID.value, identifier.measurementIdentifier.toString())
 
         return geoJson
     }
@@ -186,13 +189,11 @@ class MeasurementFactory : UploadableFactory {
         if (imageCount == null) throw InvalidMetaData("Data incomplete imageCount was null!")
         if (videoCount == null) throw InvalidMetaData("Data incomplete videoCount was null!")
         if (filesSize == null) throw InvalidMetaData("Data incomplete filesSize was null!")
-        if (logCount.toInt() == 0 && imageCount.toInt() == 0 && videoCount.toInt() == 0) {
-            throw InvalidMetaData("No files registered for attachment.")
-        }
         if (logCount.toInt() < 0 || imageCount.toInt() < 0 || videoCount.toInt() < 0) {
             throw InvalidMetaData("Invalid file count for attachment.")
         }
-        if (filesSize.toLong() <= 0L) {
+        val attachmentCount = logCount.toInt() + imageCount.toInt() + videoCount.toInt()
+        if ( attachmentCount > 0 && filesSize.toLong() <= 0L) {
             throw InvalidMetaData("Files size for attachment must be greater than 0.")
         }
     }

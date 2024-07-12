@@ -57,7 +57,7 @@ class StatusHandler(
     override fun handle(ctx: RoutingContext) {
         val session = ctx.session()
         try {
-            logger.info("Received new attachment upload status request.")
+            logger.info("Received new upload status request.")
             val request = ctx.request()
 
             // Check request

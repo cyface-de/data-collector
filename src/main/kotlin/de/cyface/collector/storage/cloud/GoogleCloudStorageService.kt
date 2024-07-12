@@ -74,7 +74,7 @@ class GoogleCloudStorageService(
         val subscriber = CloudStorageSubscriber<Buffer>(cloud, uploadMetaData.contentRange.totalBytes, vertx)
         subscriber.dataWrittenListener = object : CloudStorageSubscriber.DataWrittenListener {
             override fun dataWritten() {
-                logger.debug("Finished writing upload: {}.", uploadIdentifier)
+                logger.debug("Finished writing chunk for upload: {}.", uploadIdentifier)
                 // if finished store the metadata to Mongo and delete the tmp file.
                 val bytesUploaded = cloud.bytesUploaded()
                 logger.debug("Wrote $bytesUploaded")

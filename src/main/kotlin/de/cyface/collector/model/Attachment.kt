@@ -45,10 +45,10 @@ import java.util.UUID
 
 data class Attachment(
     val identifier: AttachmentIdentifier,
-    private val applicationMetaData: ApplicationMetaData,
-    private val attachmentMetaData: AttachmentMetaData,
     private val deviceMetaData: DeviceMetaData,
-    private val measurementMetaData: MeasurementMetaData
+    private val applicationMetaData: ApplicationMetaData,
+    private val measurementMetaData: MeasurementMetaData,
+    private val attachmentMetaData: AttachmentMetaData,
 ) : Uploadable {
     override fun bindTo(session: Session) {
         session.put(DEVICE_ID_FIELD, identifier.deviceIdentifier)
@@ -141,7 +141,7 @@ data class Attachment(
     }
 
     override fun toGeoJson(): JsonObject {
-        val geoJson = toGeoJson(measurementMetaData, deviceMetaData, applicationMetaData, attachmentMetaData)
+        val geoJson = toGeoJson(deviceMetaData, applicationMetaData, measurementMetaData, attachmentMetaData)
 
         val properties = geoJson.getJsonObject("properties")
         properties.put(FormAttributes.DEVICE_ID.value, identifier.deviceIdentifier)
@@ -182,10 +182,10 @@ class AttachmentFactory : UploadableFactory {
 
             return Attachment(
                 AttachmentIdentifier(deviceIdentifier, measurementIdentifier, attachmentIdentifier),
-                applicationMetaData,
-                attachmentMetaData,
                 deviceMetaData,
+                applicationMetaData,
                 measurementMetaData,
+                attachmentMetaData,
             )
         } catch (e: TooFewLocations) {
             throw SkipUpload(e)
@@ -209,10 +209,10 @@ class AttachmentFactory : UploadableFactory {
 
             return Attachment(
                 AttachmentIdentifier(deviceId, measurementId, attachmentIdentifier),
-                applicationMetaData,
-                attachmentMetaData,
                 deviceMetaData,
-                measurementMetaData
+                applicationMetaData,
+                measurementMetaData,
+                attachmentMetaData,
             )
         } catch (e: IllegalArgumentException) {
             throw InvalidMetaData("Data incomplete!", e)

@@ -26,6 +26,8 @@ import io.vertx.core.Promise
 import io.vertx.core.json.JsonObject
 import io.vertx.ext.mongo.MongoClient
 import org.slf4j.LoggerFactory
+import java.time.Instant
+import java.time.format.DateTimeFormatter
 import java.util.Locale
 
 /**
@@ -45,7 +47,28 @@ class MongoDatabase(private val mongoClient: MongoClient, private val collection
     override fun storeMetadata(
         metaData: UploadMetaData
     ): Future<String> {
-        return mongoClient.insert(collectionName, metaData.uploadable.toGeoJson())
+        val document = databaseFormat(metaData)
+        return mongoClient.insert(collectionName, document)
+    }
+
+    /**
+     * Formats the provided [UploadMetaData] into a [JsonObject] which can be stored in the database.
+     *
+     * Keeping the schema consistent with the one used with the GridFS storage to use the existing toolchain.
+     * Only the `chunkSize` is left out as we store the blobs as one file in the object store.
+     *
+     * @param metaData The [UploadMetaData] to format.
+     * @return The [JsonObject] representation of the [UploadMetaData].
+     */
+    fun databaseFormat(metaData: UploadMetaData): JsonObject {
+        val isoDate = DateTimeFormatter.ISO_INSTANT.format(Instant.now())
+        val storageMeta = metaData.uploadable.toJson()
+            .put(USER_ID_DATABASE_FIELD, metaData.user.id.toString())
+        return JsonObject()
+            .put("filename", metaData.uploadIdentifier.toString()) // The id/name of the file in the object storage
+            .put("length", metaData.contentRange.totalBytes) // blob size in Bytes (Long)
+            .put("uploadDate", JsonObject().put("\$date", isoDate))
+            .put("metadata", storageMeta)
     }
 
     /**
@@ -137,5 +160,12 @@ class MongoDatabase(private val mongoClient: MongoClient, private val collection
         queryCall.onFailure(ret::fail)
 
         return ret.future()
+    }
+
+    companion object {
+        /**
+         * The field name for the database entry which contains the user id.
+         */
+        private const val USER_ID_DATABASE_FIELD = "userId"
     }
 }

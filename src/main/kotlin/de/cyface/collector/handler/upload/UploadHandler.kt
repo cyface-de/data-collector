@@ -82,7 +82,7 @@ class UploadHandler(
     override fun handle(ctx: RoutingContext) {
         val session = ctx.session()
         try {
-            logger.info("Received new measurement upload request.")
+            logger.info("Received new upload request.")
             val request = ctx.request()
 
             // Load authenticated user
