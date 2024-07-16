@@ -40,6 +40,16 @@ import io.vertx.ext.web.Session
 import java.util.Locale
 import java.util.UUID
 
+/**
+ * Data which describes an uploadable measurement.
+ *
+ * @author Klemens Muthmann
+ * @property identifier The identifier of the measurement.
+ * @property deviceMetaData The metadata of the device.
+ * @property applicationMetaData The metadata of the application.
+ * @property measurementMetaData The metadata of the measurement.
+ * @property attachmentMetaData The metadata of the attachments.
+ */
 data class Measurement(
     val identifier: MeasurementIdentifier,
     private val deviceMetaData: DeviceMetaData,
@@ -128,8 +138,18 @@ data class Measurement(
     }
 }
 
+/**
+ * World-unique identifier for a measurement captured by a specific device.
+ *
+ * @author Klemens Muthmann
+ * @property deviceIdentifier The identifier of the device.
+ * @property measurementIdentifier The identifier of the measurement.
+ */
 data class MeasurementIdentifier(val deviceIdentifier: UUID, val measurementIdentifier: Long)
 
+/**
+ * Factory for creating measurements from JSON objects.
+ */
 class MeasurementFactory : UploadableFactory {
     override fun from(json: JsonObject): Uploadable {
         try {

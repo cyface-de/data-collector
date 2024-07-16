@@ -42,6 +42,16 @@ import io.vertx.ext.web.Session
 import java.util.Locale
 import java.util.UUID
 
+/**
+ * Data which describes an uploadable attachment to a measurement.
+ *
+ * @author Klemens Muthmann
+ * @property identifier The identifier of the attachment.
+ * @property deviceMetaData The metadata of the device.
+ * @property applicationMetaData The metadata of the application.
+ * @property measurementMetaData The metadata of the measurement.
+ * @property attachmentMetaData The metadata of the attachment.
+ */
 data class Attachment(
     val identifier: AttachmentIdentifier,
     private val deviceMetaData: DeviceMetaData,
@@ -161,12 +171,23 @@ data class Attachment(
     }
 }
 
+/**
+ * World-unique identifier for an attachment captured by a specific device and for a specific measurement.
+ *
+ * @author Klemens Muthmann
+ * @property deviceIdentifier The identifier of the device.
+ * @property measurementIdentifier The identifier of the measurement.
+ * @property attachmentIdentifier The identifier of the attachment.
+ */
 data class AttachmentIdentifier(
     val deviceIdentifier: UUID,
     val measurementIdentifier: Long,
     val attachmentIdentifier: Long
 )
 
+/**
+ * Factory for creating [Attachment] instances from JSON objects.
+ */
 class AttachmentFactory : UploadableFactory {
     override fun from(json: JsonObject): Uploadable {
         try {
