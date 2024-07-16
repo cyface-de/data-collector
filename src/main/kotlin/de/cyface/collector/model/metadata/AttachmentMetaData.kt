@@ -1,6 +1,6 @@
 package de.cyface.collector.model.metadata
 
-import de.cyface.collector.handler.FormAttributes
+import de.cyface.collector.model.FormAttributes
 import io.vertx.core.json.JsonObject
 import java.io.Serializable
 

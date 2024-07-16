@@ -16,7 +16,7 @@
  * You should have received a copy of the GNU General Public License
  * along with the Cyface Data Collector. If not, see <http://www.gnu.org/licenses/>.
  */
-package de.cyface.collector.handler
+package de.cyface.collector.model
 
 /**
  * Attributes supported by the APIs upload endpoint.

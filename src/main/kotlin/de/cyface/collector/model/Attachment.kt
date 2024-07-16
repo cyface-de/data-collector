@@ -18,7 +18,6 @@
  */
 package de.cyface.collector.model
 
-import de.cyface.collector.handler.FormAttributes
 import de.cyface.collector.handler.exception.AttachmentWithoutMeasurement
 import de.cyface.collector.handler.exception.DeprecatedFormatVersion
 import de.cyface.collector.handler.exception.IllegalSession

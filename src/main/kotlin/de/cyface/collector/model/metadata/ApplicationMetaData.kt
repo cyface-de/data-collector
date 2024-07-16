@@ -1,8 +1,8 @@
 package de.cyface.collector.model.metadata
 
-import de.cyface.collector.handler.FormAttributes
 import de.cyface.collector.handler.exception.DeprecatedFormatVersion
 import de.cyface.collector.handler.exception.UnknownFormatVersion
+import de.cyface.collector.model.FormAttributes
 import de.cyface.collector.model.metadata.MetaData.Companion.MAX_GENERIC_METADATA_FIELD_LENGTH
 import io.vertx.core.json.JsonObject
 import java.io.Serializable

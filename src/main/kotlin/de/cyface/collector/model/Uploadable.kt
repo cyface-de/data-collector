@@ -18,7 +18,6 @@
  */
 package de.cyface.collector.model
 
-import de.cyface.collector.handler.FormAttributes
 import de.cyface.collector.handler.upload.PreRequestHandler
 import de.cyface.collector.model.metadata.ApplicationMetaData
 import de.cyface.collector.model.metadata.AttachmentMetaData

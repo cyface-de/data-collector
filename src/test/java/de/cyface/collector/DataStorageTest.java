@@ -19,7 +19,7 @@
 package de.cyface.collector;
 
 import de.cyface.collector.commons.MongoTest;
-import de.cyface.collector.handler.FormAttributes;
+import de.cyface.collector.model.FormAttributes;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.core.file.OpenOptions;

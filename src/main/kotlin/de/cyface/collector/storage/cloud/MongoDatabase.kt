@@ -18,7 +18,7 @@
  */
 package de.cyface.collector.storage.cloud
 
-import de.cyface.collector.handler.FormAttributes
+import de.cyface.collector.model.FormAttributes
 import de.cyface.collector.storage.UploadMetaData
 import de.cyface.collector.storage.exception.DuplicatesInDatabase
 import io.vertx.core.Future
@@ -98,7 +98,9 @@ class MongoDatabase(private val mongoClient: MongoClient, private val collection
         val ret = Promise.promise<Boolean>()
         val query = JsonObject()
             .put("metadata.${FormAttributes.DEVICE_ID.value}", deviceIdentifier)
-            .put("metadata.${FormAttributes.MEASUREMENT_ID.value}", measurementIdentifier)
+            .put("metadata.${FormAttributes.MEASUREMENT_ID.value}", measurementIdentifier.toString())
+            // Ensure we don't interpret attachments as measurements
+            .put("metadata.${FormAttributes.ATTACHMENT_ID.value}", JsonObject().put("\$exists", false))
         //query.put("features.0.properties.${FormAttributes.DEVICE_ID.value}", deviceIdentifier)
         //query.put("features.0.properties.${FormAttributes.MEASUREMENT_ID.value}", measurementIdentifier)
 
@@ -144,8 +146,8 @@ class MongoDatabase(private val mongoClient: MongoClient, private val collection
         val ret = Promise.promise<Boolean>()
         val query = JsonObject()
             .put("metadata.${FormAttributes.DEVICE_ID.value}", deviceIdentifier)
-            .put("metadata.${FormAttributes.MEASUREMENT_ID.value}", measurementIdentifier)
-            .put("metadata.${FormAttributes.ATTACHMENT_ID.value}", attachmentId)
+            .put("metadata.${FormAttributes.MEASUREMENT_ID.value}", measurementIdentifier.toString())
+            .put("metadata.${FormAttributes.ATTACHMENT_ID.value}", attachmentId.toString())
         //query.put("features.0.properties.${FormAttributes.DEVICE_ID.value}", deviceIdentifier)
         //query.put("features.0.properties.${FormAttributes.MEASUREMENT_ID.value}", measurementIdentifier)
         //query.put("features.0.properties.${FormAttributes.ATTACHMENT_ID.value}", attachmentId)
