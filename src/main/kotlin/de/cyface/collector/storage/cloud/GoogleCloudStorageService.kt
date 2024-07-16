@@ -61,6 +61,8 @@ class GoogleCloudStorageService(
      * Logger used by objects of this class. Configure it using `/src/main/resources/logback.xml`.
      */
     private val logger = LoggerFactory.getLogger(GoogleCloudStorageService::class.java)
+
+    @SuppressWarnings("MagicNumber")
     private val bufferSize = 500 * 1024 // 500 KB
 
     override fun store(

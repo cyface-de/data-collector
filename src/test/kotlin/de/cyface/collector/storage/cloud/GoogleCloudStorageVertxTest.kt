@@ -30,6 +30,7 @@ import de.cyface.collector.model.metadata.MeasurementMetaData
 import de.cyface.collector.storage.StatusType
 import de.cyface.collector.storage.UploadMetaData
 import de.cyface.collector.storage.exception.ContentRangeNotMatchingFileSize
+import io.vertx.core.Future
 import io.vertx.core.Vertx
 import io.vertx.core.buffer.Buffer
 import io.vertx.core.file.OpenOptions
@@ -64,7 +65,9 @@ class GoogleCloudStorageVertxTest {
     @Test
     fun `Happy Path Test for Storing some Data`(vertx: Vertx, vertxTestContext: VertxTestContext) {
         // Arrange
-        val mockDatabase: MongoDatabase = mock()
+        val mockDatabase: MongoDatabase = mock {
+            on { storeMetadata(any()) } doReturn Future.succeededFuture("someId")
+        }
         val cloudStorage: CloudStorage = mock {
             on { bytesUploaded() } doReturn 10L
         }

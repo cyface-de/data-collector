@@ -192,7 +192,7 @@ class MeasurementFactory : UploadableFactory {
             throw InvalidMetaData("Invalid file count for attachment.")
         }
         val attachmentCount = logCount.toInt() + imageCount.toInt() + videoCount.toInt()
-        if ( attachmentCount > 0 && filesSize.toLong() <= 0L) {
+        if (attachmentCount > 0 && filesSize.toLong() <= 0L) {
             throw InvalidMetaData("Files size for attachment must be greater than 0.")
         }
     }

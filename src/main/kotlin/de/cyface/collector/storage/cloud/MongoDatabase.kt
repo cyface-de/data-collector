@@ -57,25 +57,6 @@ class MongoDatabase(private val mongoClient: MongoClient, private val collection
      * Currently, we maintain a schema consistent with the one used in GridFS storage to leverage existing toolchains.
      * Note that `chunkSize` is omitted as blobs are stored as single files in the object store.
      *
-     * TODO: Discussion:
-     * - Should we keep the old schema like in fs.files?
-     *   - Preferred until a clear use case necessitates a change.
-     *   - Allows reuse of existing tools for deserialization and checks.
-     *   - Question: Where to store filenames and sizes of attachments?
-     *     - Option 1: In document.attachments: [{filename: "", length: 123, type: "log" or "image"}]
-     *     - Option 2: As a separate document with the same meta as measurement but with metadata.attachmentId
-     *       - Preferred for querying images for a specific region. (How will we actually access attachments?)
-     * - Alternatively, should we use GeoJSON?
-     *   - Advantage: Enables spatial queries for measurements/attachments.
-     *   - Measurement: GeoJSON with start-end as geometry.
-     *   - Attachment: GeoJSON with file geo ref as geometry or as currently implemented (measurement).
-     *   - Challenge: Where to store additional metadata like filename and size in bytes? See current schema.
-     * - Or ... we currently use StorageType "folder" for measurements in object storage.
-     *   - does it make sense to store the attachments in there? What would be the benefit?
-     *   - but we still cannot quickly check just with this structure if an attachment with id X exists
-     *   - the file metadata in object storage does not seem to be made for this according to a comment of K w/source:
-     *   https://stackoverflow.com/questions/55337912/is-it-possible-to-query-google-cloud-storage-custom-metadata
-     *
      * @param metaData The [UploadMetaData] to format.
      * @return The [JsonObject] representation of the [UploadMetaData].
      */
@@ -101,8 +82,8 @@ class MongoDatabase(private val mongoClient: MongoClient, private val collection
             .put("metadata.${FormAttributes.MEASUREMENT_ID.value}", measurementIdentifier.toString())
             // Ensure we don't interpret attachments as measurements
             .put("metadata.${FormAttributes.ATTACHMENT_ID.value}", JsonObject().put("\$exists", false))
-        //query.put("features.0.properties.${FormAttributes.DEVICE_ID.value}", deviceIdentifier)
-        //query.put("features.0.properties.${FormAttributes.MEASUREMENT_ID.value}", measurementIdentifier)
+        // query.put("features.0.properties.${FormAttributes.DEVICE_ID.value}", deviceIdentifier)
+        // query.put("features.0.properties.${FormAttributes.MEASUREMENT_ID.value}", measurementIdentifier)
 
         val queryCall = mongoClient.find(collectionName, query)
         queryCall.onSuccess { ids ->
@@ -148,9 +129,9 @@ class MongoDatabase(private val mongoClient: MongoClient, private val collection
             .put("metadata.${FormAttributes.DEVICE_ID.value}", deviceIdentifier)
             .put("metadata.${FormAttributes.MEASUREMENT_ID.value}", measurementIdentifier.toString())
             .put("metadata.${FormAttributes.ATTACHMENT_ID.value}", attachmentId.toString())
-        //query.put("features.0.properties.${FormAttributes.DEVICE_ID.value}", deviceIdentifier)
-        //query.put("features.0.properties.${FormAttributes.MEASUREMENT_ID.value}", measurementIdentifier)
-        //query.put("features.0.properties.${FormAttributes.ATTACHMENT_ID.value}", attachmentId)
+        // query.put("features.0.properties.${FormAttributes.DEVICE_ID.value}", deviceIdentifier)
+        // query.put("features.0.properties.${FormAttributes.MEASUREMENT_ID.value}", measurementIdentifier)
+        // query.put("features.0.properties.${FormAttributes.ATTACHMENT_ID.value}", attachmentId)
 
         val queryCall = mongoClient.find(collectionName, query)
         queryCall.onSuccess { ids ->

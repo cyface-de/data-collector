@@ -23,21 +23,20 @@ import de.cyface.collector.auth.MockedHandlerBuilder
 import de.cyface.collector.commons.MongoTest
 import de.cyface.collector.configuration.GoogleCloudStorageType
 import de.cyface.collector.model.ContentRange
-import de.cyface.collector.model.Measurement
-import de.cyface.collector.model.MeasurementIdentifier
 import de.cyface.collector.model.User
-import de.cyface.collector.model.metadata.ApplicationMetaData
-import de.cyface.collector.model.metadata.AttachmentMetaData
-import de.cyface.collector.model.metadata.DeviceMetaData
-import de.cyface.collector.model.metadata.GeoLocation
-import de.cyface.collector.model.metadata.MeasurementMetaData
 import de.cyface.collector.storage.UploadMetaData
 import de.cyface.collector.verticle.CollectorApiVerticle
 import de.cyface.collector.verticle.ServerConfiguration
-import de.cyface.model.RequestMetaData
 import de.cyface.uploader.DefaultUploader
 import de.cyface.uploader.Result
 import de.cyface.uploader.UploadProgressListener
+import de.cyface.uploader.model.Measurement
+import de.cyface.uploader.model.MeasurementIdentifier
+import de.cyface.uploader.model.metadata.ApplicationMetaData
+import de.cyface.uploader.model.metadata.AttachmentMetaData
+import de.cyface.uploader.model.metadata.DeviceMetaData
+import de.cyface.uploader.model.metadata.GeoLocation
+import de.cyface.uploader.model.metadata.MeasurementMetaData
 import io.vertx.core.AsyncResult
 import io.vertx.core.Future
 import io.vertx.core.MultiMap
@@ -231,26 +230,18 @@ class UploadPictureIT {
             testContext.succeeding {
                 val uploader = DefaultUploader("http://localhost:8080/")
                 val jwtToken = "eyTestToken"
-                val metaData = RequestMetaData(
-                    RequestMetaData.MeasurementIdentifier(UUID.randomUUID().toString(), "0"),
-                    RequestMetaData.DeviceMetaData("iOS17", "iPhone14,1"),
-                    RequestMetaData.ApplicationMetaData("7.6.5", 3),
-                    RequestMetaData.MeasurementMetaData(
+                val uploadable = Measurement(
+                    MeasurementIdentifier(UUID.randomUUID(), 0L),
+                    DeviceMetaData("iOS17", "iPhone14,1"),
+                    ApplicationMetaData("7.6.5", 3),
+                    MeasurementMetaData(
                         200.0,
                         20,
-                        RequestMetaData.MeasurementMetaData.GeoLocation(
-                            System.currentTimeMillis(),
-                            13.711864,
-                            51.047010
-                        ),
-                        RequestMetaData.MeasurementMetaData.GeoLocation(
-                            System.currentTimeMillis(),
-                            13.714954,
-                            51.050895
-                        ),
+                        GeoLocation(System.currentTimeMillis(), 13.711864, 51.047010),
+                        GeoLocation(System.currentTimeMillis(), 13.714954, 51.050895),
                         "BICYCLE",
                     ),
-                    RequestMetaData.AttachmentMetaData(0, 0, 0, 0L),
+                    AttachmentMetaData(0, 0, 0, 0L),
                 )
                 val pathToUpload = this::class.java.getResource("/example-image-enterprise.jpg")?.file
                 if (pathToUpload.isNullOrEmpty()) {
@@ -259,7 +250,7 @@ class UploadPictureIT {
                     val fileToUpload = File(pathToUpload)
                     val result = uploader.uploadMeasurement(
                         jwtToken,
-                        metaData,
+                        uploadable,
                         fileToUpload,
                         object : UploadProgressListener {
                             override fun updatedProgress(percent: Float) {
@@ -316,35 +307,35 @@ class UploadPictureIT {
                     val exampleFile = result.resultAt<AsyncFile>(0)
                     val dataStorageService = result.resultAt<GoogleCloudStorageService>(1)
                     val fileSize = exampleFile.sizeBlocking()
-                    val measurement = Measurement(
-                        MeasurementIdentifier(
+                    val measurement = de.cyface.collector.model.Measurement(
+                        de.cyface.collector.model.MeasurementIdentifier(
                             UUID.randomUUID(),
                             0L,
                         ),
-                        DeviceMetaData(
+                        de.cyface.collector.model.metadata.DeviceMetaData(
                             operatingSystemVersion = "1",
                             deviceType = "test",
                         ),
-                        ApplicationMetaData(
+                        de.cyface.collector.model.metadata.ApplicationMetaData(
                             applicationVersion = "1",
                             formatVersion = 3,
                         ),
-                        MeasurementMetaData(
+                        de.cyface.collector.model.metadata.MeasurementMetaData(
                             length = 200.0,
                             locationCount = 20L,
-                            startLocation = GeoLocation(
+                            startLocation = de.cyface.collector.model.metadata.GeoLocation(
                                 System.currentTimeMillis(),
                                 13.707209,
                                 51.044796
                             ),
-                            endLocation = GeoLocation(
+                            endLocation = de.cyface.collector.model.metadata.GeoLocation(
                                 System.currentTimeMillis(),
                                 13.718708,
                                 51.051013
                             ),
                             modality = "BICYCLE",
                         ),
-                        AttachmentMetaData(
+                        de.cyface.collector.model.metadata.AttachmentMetaData(
                             logCount = 0,
                             imageCount = 0,
                             videoCount = 0,

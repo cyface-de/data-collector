@@ -132,7 +132,7 @@ class PreRequestHandler(
          */
         @Deprecated(
             "This requires knowledge about the applications deployment behind a proxy and thus should " +
-                    "not be used. Instead make the location header relative and avoid rewriting this URL here."
+                "not be used. Instead make the location header relative and avoid rewriting this URL here."
         )
         fun locationUri(httpPath: String, requestUri: URL, protocol: String?, sessionId: String): URI {
             // Our current setup forwards https requests to http internally. As the `Location` returned is automatically
