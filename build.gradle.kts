@@ -102,7 +102,7 @@ val hamKrestVersion = "1.8.0.1"
 val mockitoKotlinVersion = "4.1.0"
 val dokkaVersion = "1.9.10"
 val detektVersion = "1.23.1"
-val cyfaceSynchronizerVersion = "1.4.0-alpha4" // FIXME
+val cyfaceUploaderVersion = "1.4.1"
 val testContainerVersion = "1.19.8"
 
 tasks.wrapper {
@@ -156,7 +156,7 @@ dependencies {
 
   testImplementation("io.vertx:vertx-junit5:$vertxVersion")
   testImplementation("io.vertx:vertx-web-client:$vertxVersion")
-  testImplementation("de.cyface:uploader:$cyfaceSynchronizerVersion")
+  testImplementation("de.cyface:uploader:$cyfaceUploaderVersion")
   testImplementation("org.testcontainers:testcontainers:$testContainerVersion")
 
   // Required to create inline documentation
