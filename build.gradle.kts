@@ -42,6 +42,7 @@ buildscript {
 
 plugins {
   id("idea")
+  // Plugin to create executable jars
   //noinspection SpellCheckingInspection
   id("com.github.johnrengelman.shadow").version("7.1.2")
   // Plugin to display the Gradle task graph
