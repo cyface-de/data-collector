@@ -122,30 +122,3 @@ data class GeoLocation(
         return ret
     }
 }
-
-/**
- * Factory to create [GeoLocation] objects from given parameters.
- *
- * @author Armin Schnabel
- */
-class GeoLocationFactory {
-    /**
-     * Creates a new [GeoLocation] object from the given parameters.
-     *
-     * @param timestamp The timestamp of the location.
-     * @param latitude The latitude of the location.
-     * @param longitude The longitude of the location.
-     * @return The created geographical location object or `null` if any of the parameters is `null`.
-     */
-    fun from(timestamp: String?, latitude: String?, longitude: String?): GeoLocation? {
-        return if (timestamp != null && latitude != null && longitude != null) {
-            GeoLocation(
-                timestamp.toLong(),
-                latitude.toDouble(),
-                longitude.toDouble(),
-            )
-        } else {
-            null
-        }
-    }
-}

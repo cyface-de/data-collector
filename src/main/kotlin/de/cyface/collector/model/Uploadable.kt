@@ -22,7 +22,7 @@ import de.cyface.collector.handler.upload.PreRequestHandler
 import de.cyface.collector.model.metadata.ApplicationMetaData
 import de.cyface.collector.model.metadata.AttachmentMetaData
 import de.cyface.collector.model.metadata.DeviceMetaData
-import de.cyface.collector.model.metadata.GeoLocationFactory
+import de.cyface.collector.model.metadata.GeoLocation
 import de.cyface.collector.model.metadata.MeasurementMetaData
 import de.cyface.collector.storage.DataStorageService
 import io.vertx.core.Future
@@ -276,9 +276,8 @@ interface MeasurementMetaDataFactory {
         val endLocationLat = json.getString(FormAttributes.END_LOCATION_LAT.value)
         val endLocationLon = json.getString(FormAttributes.END_LOCATION_LON.value)
         val endLocationTs = json.getString(FormAttributes.END_LOCATION_TS.value)
-        val locationFactory = GeoLocationFactory()
-        val startLocation = locationFactory.from(startLocationTs, startLocationLat, startLocationLon)
-        val endLocation = locationFactory.from(endLocationTs, endLocationLat, endLocationLon)
+        val startLocation = createLocation(startLocationTs, startLocationLat, startLocationLon)
+        val endLocation = createLocation(endLocationTs, endLocationLat, endLocationLon)
         val modality = json.getString(FormAttributes.MODALITY.value)
         return MeasurementMetaData(length, locationCount, startLocation, endLocation, modality)
     }
@@ -298,9 +297,8 @@ interface MeasurementMetaDataFactory {
         val endLocationLat = headers.get(FormAttributes.END_LOCATION_LAT.value)
         val endLocationLon = headers.get(FormAttributes.END_LOCATION_LON.value)
         val endLocationTs = headers.get(FormAttributes.END_LOCATION_TS.value)
-        val locationFactory = GeoLocationFactory()
-        val startLocation = locationFactory.from(startLocationTs, startLocationLat, startLocationLon)
-        val endLocation = locationFactory.from(endLocationTs, endLocationLat, endLocationLon)
+        val startLocation = createLocation(startLocationTs, startLocationLat, startLocationLon)
+        val endLocation = createLocation(endLocationTs, endLocationLat, endLocationLon)
         val modality = headers.get(FormAttributes.MODALITY.value)
 
         return MeasurementMetaData(
@@ -310,6 +308,26 @@ interface MeasurementMetaDataFactory {
             endLocation,
             modality
         )
+    }
+
+    /**
+     * Creates a new [GeoLocation] object from the given parameters.
+     *
+     * @param timestamp The timestamp of the location.
+     * @param latitude The latitude of the location.
+     * @param longitude The longitude of the location.
+     * @return The created geographical location object or `null` if any of the parameters is `null`.
+     */
+    private fun createLocation(timestamp: String?, latitude: String?, longitude: String?): GeoLocation? {
+        return if (timestamp != null && latitude != null && longitude != null) {
+            GeoLocation(
+                timestamp.toLong(),
+                latitude.toDouble(),
+                longitude.toDouble(),
+            )
+        } else {
+            null
+        }
     }
 }
 
