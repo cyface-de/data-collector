@@ -18,17 +18,17 @@
  */
 package de.cyface.collector.model
 
+import de.cyface.collector.model.metadata.MeasurementMetaData
 import io.vertx.core.json.JsonObject
 import org.junit.jupiter.api.Test
 import kotlin.test.assertEquals
-import de.cyface.collector.model.metadata.MeasurementMetaData
 
 /**
  * Test the creation of [MeasurementMetaData] objects.
  *
  * @author Klemens Muthmann
  */
-class MetaDataFactoryTest {
+class MeasurementMetaDataTest {
 
     /**
      * Test that the happy path for creating measurement meta data works as expected with some example data.
@@ -48,12 +48,8 @@ class MetaDataFactoryTest {
         json.put(FormAttributes.END_LOCATION_TS.value, 1723024336123L)
         json.put(FormAttributes.MODALITY.value, "BICYCLE")
 
-        val oocut = object : MeasurementMetaDataFactory {
-
-        }
-
         // Act
-        val result = oocut.measurementMetaData(json)
+        val result = MeasurementMetaData(json)
 
         // Assert
         assertEquals(1.0, result.length)
@@ -66,5 +62,4 @@ class MetaDataFactoryTest {
         assertEquals(1723024336123L, result.endLocation?.timestamp)
         assertEquals("BICYCLE", result.modality)
     }
-
 }

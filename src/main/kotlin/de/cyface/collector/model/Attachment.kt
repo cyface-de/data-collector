@@ -195,10 +195,10 @@ class AttachmentFactory : UploadableFactory {
             val measurementIdentifier = json.getString(FormAttributes.MEASUREMENT_ID.value).toLong()
             val attachmentIdentifier = json.getString(FormAttributes.ATTACHMENT_ID.value).toLong()
 
-            val applicationMetaData = applicationMetaData(json)
-            val attachmentMetaData = attachmentMetaData(json)
-            val deviceMetaData = deviceMetaData(json)
-            val measurementMetaData = measurementMetaData(json)
+            val applicationMetaData = ApplicationMetaData(json)
+            val attachmentMetaData = AttachmentMetaData(json)
+            val deviceMetaData = DeviceMetaData(json)
+            val measurementMetaData = MeasurementMetaData(json)
 
             return Attachment(
                 AttachmentIdentifier(deviceIdentifier, measurementIdentifier, attachmentIdentifier),
@@ -222,10 +222,10 @@ class AttachmentFactory : UploadableFactory {
             val measurementId = requireNotNull(headers.get(FormAttributes.MEASUREMENT_ID.value)).toLong()
             val attachmentIdentifier = requireNotNull(headers.get(FormAttributes.ATTACHMENT_ID.value)).toLong()
 
-            val attachmentMetaData = attachmentMetaData(headers)
-            val applicationMetaData = applicationMetaData(headers)
-            val measurementMetaData = measurementMetaData(headers)
-            val deviceMetaData = deviceMetaData(headers)
+            val attachmentMetaData = AttachmentMetaData(headers)
+            val applicationMetaData = ApplicationMetaData(headers)
+            val measurementMetaData = MeasurementMetaData(headers)
+            val deviceMetaData = DeviceMetaData(headers)
 
             return Attachment(
                 AttachmentIdentifier(deviceId, measurementId, attachmentIdentifier),

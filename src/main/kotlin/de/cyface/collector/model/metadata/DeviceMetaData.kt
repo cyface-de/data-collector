@@ -20,6 +20,7 @@ package de.cyface.collector.model.metadata
 
 import de.cyface.collector.model.FormAttributes
 import de.cyface.collector.model.metadata.MetaData.Companion.MAX_GENERIC_METADATA_FIELD_LENGTH
+import io.vertx.core.MultiMap
 import io.vertx.core.json.JsonObject
 import java.io.Serializable
 
@@ -34,6 +35,16 @@ data class DeviceMetaData(
     val operatingSystemVersion: String,
     val deviceType: String,
 ) : MetaData, Serializable {
+
+    constructor(json: JsonObject) : this(
+        json.getString(FormAttributes.OS_VERSION.value),
+        json.getString(FormAttributes.DEVICE_TYPE.value)
+    )
+
+    constructor(headers: MultiMap) : this(
+        headers.get(FormAttributes.OS_VERSION.value),
+        headers.get(FormAttributes.DEVICE_TYPE.value)
+    )
 
     init {
         require(

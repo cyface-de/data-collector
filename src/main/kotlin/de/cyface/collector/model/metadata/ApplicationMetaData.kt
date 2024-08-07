@@ -22,6 +22,7 @@ import de.cyface.collector.handler.exception.DeprecatedFormatVersion
 import de.cyface.collector.handler.exception.UnknownFormatVersion
 import de.cyface.collector.model.FormAttributes
 import de.cyface.collector.model.metadata.MetaData.Companion.MAX_GENERIC_METADATA_FIELD_LENGTH
+import io.vertx.core.MultiMap
 import io.vertx.core.json.JsonObject
 import java.io.Serializable
 
@@ -36,6 +37,29 @@ data class ApplicationMetaData(
     val applicationVersion: String,
     val formatVersion: Int,
 ) : MetaData, Serializable {
+
+    /**
+     * Extracts the device specific metadata from the request body.
+     *
+     * @param json The request body containing the metadata.
+     * @return The extracted metadata.
+     */
+    constructor(json: JsonObject) : this(
+        json.getString(FormAttributes.APPLICATION_VERSION.value),
+        json.getString(FormAttributes.FORMAT_VERSION.value).toInt()
+    )
+
+    /**
+     * Extracts the application specific metadata from the request headers.
+     *
+     * @param headers The request headers containing the metadata.
+     * @return The extracted metadata.
+     */
+    constructor(headers: MultiMap) : this(
+        headers.get(FormAttributes.APPLICATION_VERSION.value),
+        headers.get(FormAttributes.FORMAT_VERSION.value).toInt()
+    )
+
     init {
         require(applicationVersion.isNotEmpty() && applicationVersion.length <= MAX_GENERIC_METADATA_FIELD_LENGTH) {
             "Field applicationVersion had an invalid length of ${applicationVersion.length.toLong()}"

@@ -19,6 +19,7 @@
 package de.cyface.collector.model.metadata
 
 import de.cyface.collector.model.FormAttributes
+import io.vertx.core.MultiMap
 import io.vertx.core.json.JsonObject
 import java.io.Serializable
 
@@ -37,6 +38,31 @@ data class AttachmentMetaData(
     val videoCount: Int,
     val filesSize: Long,
 ) : MetaData, Serializable {
+
+    /**
+     * Extracts the attachment specific metadata from the request body.
+     *
+     * @param body The request body containing the metadata.
+     */
+    constructor(body: JsonObject) : this(
+        body.getInteger(FormAttributes.LOG_COUNT.value),
+        body.getInteger(FormAttributes.IMAGE_COUNT.value),
+        body.getInteger(FormAttributes.VIDEO_COUNT.value),
+        body.getLong(FormAttributes.FILES_SIZE.value),
+    )
+
+    /**
+     * Extracts the attachment specific metadata from the request headers.
+     *
+     * @param headers The request headers containing the metadata.
+     */
+    constructor(headers: MultiMap) : this(
+        headers.get(FormAttributes.LOG_COUNT.value).toInt(),
+        headers.get(FormAttributes.IMAGE_COUNT.value).toInt(),
+        headers.get(FormAttributes.VIDEO_COUNT.value).toInt(),
+        headers.get(FormAttributes.FILES_SIZE.value).toLong(),
+    )
+
     init {
         require(logCount >= 0) { "Invalid logCount: $logCount" }
         require(imageCount >= 0) { "Invalid imageCount: $imageCount" }

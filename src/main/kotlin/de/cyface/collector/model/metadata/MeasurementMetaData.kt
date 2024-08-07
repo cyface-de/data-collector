@@ -21,6 +21,7 @@ package de.cyface.collector.model.metadata
 import de.cyface.collector.handler.exception.TooFewLocations
 import de.cyface.collector.model.FormAttributes
 import de.cyface.collector.model.metadata.MetaData.Companion.MAX_GENERIC_METADATA_FIELD_LENGTH
+import io.vertx.core.MultiMap
 import io.vertx.core.json.JsonArray
 import io.vertx.core.json.JsonObject
 import java.io.Serializable
@@ -42,6 +43,34 @@ data class MeasurementMetaData(
     val endLocation: GeoLocation?,
     val modality: String,
 ) : MetaData, Serializable {
+    /**
+     * Extracts the measurement specific metadata from the request body.
+     *
+     * @param json The request body containing the metadata.
+     * @return The extracted metadata.
+     */
+    constructor(json: JsonObject) : this(
+        json.getString(FormAttributes.LENGTH.value).toDouble(),
+        json.getString(FormAttributes.LOCATION_COUNT.value).toLong(),
+        GeoLocation.createStartLocation(json),
+        GeoLocation.createEndLocation(json),
+        json.getString(FormAttributes.MODALITY.value)
+    )
+
+    /**
+     * Extracts the measurement specific metadata from the request headers.
+     *
+     * @param headers The request headers containing the metadata.
+     * @return The extracted metadata.
+     */
+    constructor(headers: MultiMap) : this(
+        headers.get(FormAttributes.LENGTH.value).toDouble(),
+        headers.get(FormAttributes.LOCATION_COUNT.value).toLong(),
+        GeoLocation.createStartLocation(headers),
+        GeoLocation.createEndLocation(headers),
+        headers.get(FormAttributes.MODALITY.value)
+    )
+
     init {
         if (locationCount < MINIMUM_LOCATION_COUNT) {
             throw TooFewLocations("LocationCount smaller than required: $locationCount")
@@ -120,5 +149,56 @@ data class GeoLocation(
             .put("coordinates", JsonArray().add(longitude).add(latitude))
         ret.put("location", geometry)
         return ret
+    }
+
+    companion object {
+
+        fun createStartLocation(json: JsonObject): GeoLocation? {
+            val startLocationLat = json.getString(FormAttributes.START_LOCATION_LAT.value)
+            val startLocationLon = json.getString(FormAttributes.START_LOCATION_LON.value)
+            val startLocationTs = json.getString(FormAttributes.START_LOCATION_TS.value)
+            return createLocation(startLocationTs, startLocationLat, startLocationLon)
+        }
+
+        fun createStartLocation(headers: MultiMap): GeoLocation? {
+            val startLocationLat = headers.get(FormAttributes.START_LOCATION_LAT.value)
+            val startLocationLon = headers.get(FormAttributes.START_LOCATION_LON.value)
+            val startLocationTs = headers.get(FormAttributes.START_LOCATION_TS.value)
+            return createLocation(startLocationTs, startLocationLat, startLocationLon)
+        }
+
+        fun createEndLocation(json: JsonObject): GeoLocation? {
+            val endLocationLat = json.getString(FormAttributes.END_LOCATION_LAT.value)
+            val endLocationLon = json.getString(FormAttributes.END_LOCATION_LON.value)
+            val endLocationTs = json.getString(FormAttributes.END_LOCATION_TS.value)
+            return createLocation(endLocationTs, endLocationLat, endLocationLon)
+        }
+
+        fun createEndLocation(headers: MultiMap): GeoLocation? {
+            val endLocationLat = headers.get(FormAttributes.END_LOCATION_LAT.value)
+            val endLocationLon = headers.get(FormAttributes.END_LOCATION_LON.value)
+            val endLocationTs = headers.get(FormAttributes.END_LOCATION_TS.value)
+            return createLocation(endLocationTs, endLocationLat, endLocationLon)
+        }
+
+        /**
+         * Creates a new [GeoLocation] object from the given parameters.
+         *
+         * @param timestamp The timestamp of the location.
+         * @param latitude The latitude of the location.
+         * @param longitude The longitude of the location.
+         * @return The created geographical location object or `null` if any of the parameters is `null`.
+         */
+        private fun createLocation(timestamp: String?, latitude: String?, longitude: String?): GeoLocation? {
+            return if (timestamp != null && latitude != null && longitude != null) {
+                GeoLocation(
+                    timestamp.toLong(),
+                    latitude.toDouble(),
+                    longitude.toDouble(),
+                )
+            } else {
+                null
+            }
+        }
     }
 }
