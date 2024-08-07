@@ -112,13 +112,11 @@ class GoogleCloudStorageService(
     }
 
     private fun process(buffer: Buffer, uploadMetaData: UploadMetaData, targetStream: ReactiveWriteStream<Buffer>) {
-        targetStream.write(buffer).onComplete {
-            if (it.succeeded()) {
-                // logger.debug("Buffer of size ${buffer.length()} processed successfully")
-            } else {
-                val uploadIdentifier = uploadMetaData.uploadIdentifier
-                logger.error("Failed to process buffer for upload {}.", uploadIdentifier, it.cause())
-            }
+        targetStream.write(buffer).onSuccess {
+            logger.trace("Buffer of size ${buffer.length()} processed successfully")
+        }.onFailure {
+            val uploadIdentifier = uploadMetaData.uploadIdentifier
+            logger.error("Failed to process buffer for upload {}.", uploadIdentifier, it)
         }
     }
 
