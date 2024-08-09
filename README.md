@@ -152,6 +152,11 @@ The following parameters are supported:
     * **project-identifier:** A Google Cloud Storage project identifier to where the upload bucket is located.
     * **bucket-name:** The Google Cloud Storage bucket name to load the data into.
     * **credentials-file:** A credentials file used to authenticate with the Google Cloud Storage account used to upload the data to the Cloud.
+    * **buffer-size** The size of the internal data buffer in bytes. 
+    This is the amount of bytes the system accumulates before sending data to Google. 
+    Low values decrease the possibility of data loss and the memory footprint of the application but increase the number of requests to Google. 
+    Large values increase the memory footprint and may cause data loss in case of a server crash, but also cause a much more efficient communication with Google. 
+    A value of 500 KB is recommended.
 * **auth-type:** The type of authentication service to use. Currently, either `mocked` or `oauth` is supported. Defaults to `oauth`. Both require the following parameters:
   * **oauth.callback**: The callback URL you entered in your provider admin console. This defaults to `http://localhost:8080/callback`.
   * **oauth.client**: The name of the oauth client to contact. This defaults to `collector`.

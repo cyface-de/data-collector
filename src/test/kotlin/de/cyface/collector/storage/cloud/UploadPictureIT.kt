@@ -76,6 +76,17 @@ import kotlin.test.assertEquals
 @Suppress("LongMethod")
 class UploadPictureIT {
     /**
+     * The size of the internal data buffer in bytes.
+     * This is the amount of bytes the system accumulates before sending data to Google.
+     * Low values decrease the possibility of data loss and the memory footprint of the application but increase the
+     * number of requests to Google.
+     * Large values increase the memory footprint and may cause data loss in case of a server crash, but also cause a
+     * much more efficient communication with Google.
+     * A value of 500 KB is recommended.
+     */
+    private val bufferSize = 500 * 1_024
+
+    /**
      * The logger used for objects of this class. Configure it using `src/test/resources/logback-test.xml`.
      */
     private val logger = LoggerFactory.getLogger(javaClass)
@@ -127,7 +138,8 @@ class UploadPictureIT {
             collectionName = collectionName,
             projectIdentifier = projectIdentifier,
             bucketName = bucketName,
-            credentialsFile = credentialsFile
+            credentialsFile = credentialsFile,
+            bufferSize
         )
 
         val oocut = CollectorApiVerticle(
@@ -205,6 +217,7 @@ class UploadPictureIT {
             projectIdentifier = projectIdentifier,
             bucketName = bucketName,
             credentialsFile = credentialsFile,
+            bufferSize,
         )
 
         val authHandlerBuilder = MockedHandlerBuilder()
@@ -294,7 +307,8 @@ class UploadPictureIT {
             projectIdentifier,
             bucketName,
             dao,
-            vertx
+            vertx,
+            bufferSize,
         )
         val createDataStorageServiceBuilderProcess = dataStorageServiceBuilder.create()
 

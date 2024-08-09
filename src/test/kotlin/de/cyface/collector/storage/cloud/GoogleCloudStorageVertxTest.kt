@@ -57,6 +57,17 @@ import kotlin.test.assertTrue
 @ExtendWith(VertxExtension::class)
 class GoogleCloudStorageVertxTest {
     /**
+     * The size of the internal data buffer in bytes.
+     * This is the amount of bytes the system accumulates before sending data to Google.
+     * Low values decrease the possibility of data loss and the memory footprint of the application but increase the
+     * number of requests to Google.
+     * Large values increase the memory footprint and may cause data loss in case of a server crash, but also cause a
+     * much more efficient communication with Google.
+     * A value of 500 KB is recommended.
+     */
+    private val bufferSize = 500 * 1_024
+
+    /**
      * This test checks that storing data results in registering the correct stream to the provided `Pipe`.
      * The test for actually writing the data is included
      * [here][de.cyface.collector.storage.cloud.GoogleCloudStorageTest.Happy Path Test for Getting data from a
@@ -75,9 +86,10 @@ class GoogleCloudStorageVertxTest {
         val oocut = GoogleCloudStorageService(
             mockDatabase,
             vertx,
-            mockCloudStorageFactory
+            mockCloudStorageFactory,
+            bufferSize
         )
-        val exampleImage = this.javaClass.getResource("/example-image.jpg").file
+        val exampleImage = this.javaClass.getResource("/example-image.jpg")?.file
         val readStream = vertx.fileSystem().openBlocking(exampleImage, OpenOptions())
         val user: User = mock()
         val contentRange = ContentRange(0L, 9L, 10L)
@@ -115,12 +127,12 @@ class GoogleCloudStorageVertxTest {
         val cloudStorageFactory: CloudStorageFactory = mock {
             on { create(any<UUID>()) } doReturn mockCloudStorage
         }
-        val oocut = GoogleCloudStorageService(database, vertx, cloudStorageFactory)
+        val oocut = GoogleCloudStorageService(database, vertx, cloudStorageFactory, bufferSize)
         val measurement: UploadMetaData = mock {
             on { contentRange } doReturn ContentRange(5, 7, 3)
             on { uploadIdentifier } doReturn UUID.randomUUID()
         }
-        val exampleImage = this.javaClass.getResource("/example-image.jpg").file
+        val exampleImage = this.javaClass.getResource("/example-image.jpg")?.file
         val readStream = vertx.fileSystem().openBlocking(exampleImage, OpenOptions())
 
         // Act

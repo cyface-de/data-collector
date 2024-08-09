@@ -34,7 +34,6 @@ import io.vertx.core.Vertx
  * A [DataStorageServiceBuilder] for a [GoogleCloudStorageService].
  *
  * @author Klemens Muthmann
- * @version 1.0.1
  * @property credentials The Google Cloud [Credentials] used to authenticate with Google Cloud Storage.
  * For information on how to acquire such an instance see the [Google Cloud documentation]
  * (https://github.com/googleapis/google-auth-library-java/blob/040acefec507f419f6e4ec4eab9645a6e3888a15/samples/snippets/src/main/java/AuthenticateExplicit.java).
@@ -42,6 +41,11 @@ import io.vertx.core.Vertx
  * @property bucketName The name of the Google Cloud Storage bucket used by the created builder to store data.
  * @property dao A data access object to store an uploads metadata.
  * @property vertx The Vertx instance this application runs on.
+ * @property bufferSize The size of the internal data buffer in bytes.
+ *     This is the amount of bytes the system accumulates before sending data to Google.
+ *     Low values decrease the possibility of data loss and the memory footprint of the application but increase the number of requests to Google.
+ *     Large values increase the memory footprint and may cause data loss in case of a server crash, but also cause a much more efficient communication with Google.
+ *     A value of 500 KB is recommended.
  */
 class GoogleCloudStorageServiceBuilder(
     private val credentials: Credentials,
@@ -49,12 +53,13 @@ class GoogleCloudStorageServiceBuilder(
     private val bucketName: String,
     private val dao: Database,
     private val vertx: Vertx,
+    private val bufferSize: Int,
 ) : DataStorageServiceBuilder {
     override fun create(): Future<DataStorageService> {
         val ret = Promise.promise<DataStorageService>()
         vertx.runOnContext {
             val cloudStorageFactory = GoogleCloudStorageFactory(credentials, projectIdentifier, bucketName)
-            ret.complete(GoogleCloudStorageService(dao, vertx, cloudStorageFactory))
+            ret.complete(GoogleCloudStorageService(dao, vertx, cloudStorageFactory, bufferSize))
         }
         return ret.future()
     }

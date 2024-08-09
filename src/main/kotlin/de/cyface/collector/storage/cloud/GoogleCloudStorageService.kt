@@ -49,12 +49,23 @@ import java.util.concurrent.Callable
  * @author Klemens Muthmann
  * @property dao The data access object to write an uploads' metadata.
  * @property vertx A Vertx instance of the current Vertx environment.
- *
+ * @property cloudStorageFactory A factory to create a [GoogleCloudStorage] instance on demand.
+ *      Since the GoogleCloudStorage depends on an upload identifier it can only be created per upload.
+ *      The factory stores all data and does all initialization, that is independent of the individual upload to avoid
+ *      doing these tasks on each upload.
+ * @property bufferSize The size of the internal data buffer in bytes.
+ *     This is the amount of bytes the system accumulates before sending data to Google.
+ *     Low values decrease the possibility of data loss and the memory footprint of the application but increase the
+ *     number of requests to Google.
+ *     Large values increase the memory footprint and may cause data loss in case of a server crash, but also cause a
+ *     much more efficient communication with Google.
+ *     A value of 500 KB is recommended.
  */
 class GoogleCloudStorageService(
     private val dao: Database,
     private val vertx: Vertx,
-    private val cloudStorageFactory: CloudStorageFactory
+    private val cloudStorageFactory: CloudStorageFactory,
+    private val bufferSize: Int
 ) : DataStorageService {
 
     /**
@@ -62,8 +73,8 @@ class GoogleCloudStorageService(
      */
     private val logger = LoggerFactory.getLogger(GoogleCloudStorageService::class.java)
 
-    @SuppressWarnings("MagicNumber")
-    private val bufferSize = 500 * 1024 // 500 KB
+    // @SuppressWarnings("MagicNumber")
+    // private val bufferSize = 500 * 1024 // 500 KB
 
     override fun store(
         sourceData: ReadStream<Buffer>,
