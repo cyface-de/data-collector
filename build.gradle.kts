@@ -104,7 +104,7 @@ val mockitoKotlinVersion = "4.1.0"
 val dokkaVersion = "1.9.10"
 val detektVersion = "1.23.1"
 val cyfaceUploaderVersion = "1.4.1"
-val testContainerVersion = "1.19.8"
+val testContainerVersion = "1.20.1"
 
 tasks.wrapper {
   gradleVersion = project.extra["gradleWrapperVersion"].toString()
