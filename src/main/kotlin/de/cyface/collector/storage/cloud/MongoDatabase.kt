@@ -23,7 +23,6 @@ import de.cyface.collector.storage.UploadMetaData
 import de.cyface.collector.storage.exception.DuplicatesInDatabase
 import io.vertx.core.Future
 import io.vertx.core.Promise
-import io.vertx.core.json.JsonArray
 import io.vertx.core.json.JsonObject
 import io.vertx.ext.mongo.MongoClient
 import org.slf4j.LoggerFactory

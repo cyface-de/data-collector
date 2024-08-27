@@ -109,7 +109,21 @@ interface Uploadable {
         val properties = JsonObject()
         val geometry = JsonObject()
 
+        // DeviceMetaData
+        properties.put(FormAttributes.OS_VERSION.value, deviceMetaData.operatingSystemVersion)
+        properties.put(FormAttributes.DEVICE_TYPE.value, deviceMetaData.deviceType)
+
+        // ApplicationMetaData
+        properties.put(FormAttributes.APPLICATION_VERSION.value, applicationMetaData.applicationVersion)
+        properties.put(FormAttributes.FORMAT_VERSION.value, applicationMetaData.formatVersion)
+
+        // MeasurementMetaData
+        properties.put(FormAttributes.LENGTH.value, measurementMetaData.length)
+        properties.put(FormAttributes.LOCATION_COUNT.value, measurementMetaData.locationCount)
         if (measurementMetaData.startLocation != null && measurementMetaData.endLocation != null) {
+            properties.put(FormAttributes.START_LOCATION_TS.value, measurementMetaData.startLocation.timestamp)
+            properties.put(FormAttributes.END_LOCATION_TS.value, measurementMetaData.endLocation.timestamp)
+
             val startCoordinates = JsonArray(
                 mutableListOf(
                     measurementMetaData.startLocation.longitude,
@@ -131,25 +145,20 @@ interface Uploadable {
                 .put("type", "MultiPoint")
                 .put("coordinates", null)
         }
-
-        // The identifiers are added by the implementations (e.g. `Attachment`)
-        properties.put(FormAttributes.OS_VERSION.value, deviceMetaData.operatingSystemVersion)
-        properties.put(FormAttributes.DEVICE_TYPE.value, deviceMetaData.deviceType)
-        properties.put(FormAttributes.APPLICATION_VERSION.value, applicationMetaData.applicationVersion)
-        properties.put(FormAttributes.LENGTH.value, measurementMetaData.length)
-        properties.put(FormAttributes.LOCATION_COUNT.value, measurementMetaData.locationCount)
         properties.put(FormAttributes.MODALITY.value, measurementMetaData.modality)
-        properties.put(FormAttributes.FORMAT_VERSION.value, applicationMetaData.formatVersion)
+
+        // AttachmentMetaData
         properties.put(FormAttributes.LOG_COUNT.value, attachmentMetaData.logCount)
         properties.put(FormAttributes.IMAGE_COUNT.value, attachmentMetaData.imageCount)
         properties.put(FormAttributes.VIDEO_COUNT.value, attachmentMetaData.videoCount)
         properties.put(FormAttributes.FILES_SIZE.value, attachmentMetaData.filesSize)
 
-        feature
+        // The identifiers are added by the implementations (`Measurement` or `Attachment`)
+
+        return feature
             .put("type", "Feature")
             .put("geometry", geometry)
             .put("properties", properties)
-        return feature
     }
 
     companion object {
