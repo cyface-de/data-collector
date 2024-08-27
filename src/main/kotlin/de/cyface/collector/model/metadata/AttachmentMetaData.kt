@@ -45,10 +45,11 @@ data class AttachmentMetaData(
      * @param body The request body containing the metadata.
      */
     constructor(body: JsonObject) : this(
-        body.getInteger(FormAttributes.LOG_COUNT.value),
-        body.getInteger(FormAttributes.IMAGE_COUNT.value),
-        body.getInteger(FormAttributes.VIDEO_COUNT.value),
-        body.getLong(FormAttributes.FILES_SIZE.value),
+        // The metadata value are strings, so `body.getInteger()` throws a ClassCastException. Thus, we do:
+        body.getString(FormAttributes.LOG_COUNT.value).toInt(),
+        body.getString(FormAttributes.IMAGE_COUNT.value).toInt(),
+        body.getString(FormAttributes.VIDEO_COUNT.value).toInt(),
+        body.getString(FormAttributes.FILES_SIZE.value).toLong(),
     )
 
     /**

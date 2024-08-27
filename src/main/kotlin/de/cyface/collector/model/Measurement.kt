@@ -128,8 +128,6 @@ data class Measurement(
         val geoJson = toGeoJson(deviceMetaData, applicationMetaData, measurementMetaData, attachmentMetaData)
 
         geoJson
-            .getJsonArray("features")
-            .getJsonObject(0)
             .getJsonObject("properties")
             .put(FormAttributes.DEVICE_ID.value, identifier.deviceIdentifier.toString())
             .put(FormAttributes.MEASUREMENT_ID.value, identifier.measurementIdentifier.toString())

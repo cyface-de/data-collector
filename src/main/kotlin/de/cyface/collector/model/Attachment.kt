@@ -153,9 +153,9 @@ data class Attachment(
         val geoJson = toGeoJson(deviceMetaData, applicationMetaData, measurementMetaData, attachmentMetaData)
 
         val properties = geoJson.getJsonObject("properties")
-        properties.put(FormAttributes.DEVICE_ID.value, identifier.deviceIdentifier)
-        properties.put(FormAttributes.MEASUREMENT_ID.value, identifier.measurementIdentifier)
-        properties.put(FormAttributes.ATTACHMENT_ID.value, identifier.attachmentIdentifier)
+        properties.put(FormAttributes.DEVICE_ID.value, identifier.deviceIdentifier.toString())
+        properties.put(FormAttributes.MEASUREMENT_ID.value, identifier.measurementIdentifier.toString())
+        properties.put(FormAttributes.ATTACHMENT_ID.value, identifier.attachmentIdentifier.toString())
 
         return geoJson
     }

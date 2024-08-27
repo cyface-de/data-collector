@@ -74,14 +74,24 @@ interface Uploadable {
     fun toJson(): JsonObject
 
     /**
-     * Transform this object into a GeoJSON Feature.
+     * Transform this object into a valid GeoJSON representation (database format).
+     *
+     * The geometry of the GeoJSON consists of the start and end location as `MultiPoint` feature. The metadata is
+     * stored as properties of that feature.
+     *
+     * See [GEO Json RFC 7946](https://www.rfc-editor.org/rfc/rfc7946) for additional detailed information.
      *
      * @return The GeoJSON representation of this object.
      */
     fun toGeoJson(): JsonObject
 
     /**
-     * Transform this object into a GeoJSON FeatureCollection.
+     * Transform this object into a valid GeoJSON representation (database format).
+     *
+     * The geometry of the GeoJSON consists of the start and end location as `MultiPoint` feature. The metadata is
+     * stored as properties of that feature.
+     *
+     * See [GEO Json RFC 7946](https://www.rfc-editor.org/rfc/rfc7946) for additional detailed information.
      *
      * @param deviceMetaData The metadata of the device.
      * @param applicationMetaData The metadata of the application.
@@ -122,6 +132,7 @@ interface Uploadable {
                 .put("coordinates", null)
         }
 
+        // The identifiers are added by the implementations (e.g. `Attachment`)
         properties.put(FormAttributes.OS_VERSION.value, deviceMetaData.operatingSystemVersion)
         properties.put(FormAttributes.DEVICE_TYPE.value, deviceMetaData.deviceType)
         properties.put(FormAttributes.APPLICATION_VERSION.value, applicationMetaData.applicationVersion)
@@ -138,10 +149,7 @@ interface Uploadable {
             .put("type", "Feature")
             .put("geometry", geometry)
             .put("properties", properties)
-        val ret = JsonObject()
-        ret.put("type", "FeatureCollection")
-        ret.put("features", JsonArray().add(feature))
-        return ret
+        return feature
     }
 
     companion object {

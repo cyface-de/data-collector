@@ -23,6 +23,7 @@ import de.cyface.collector.storage.UploadMetaData
 import de.cyface.collector.storage.exception.DuplicatesInDatabase
 import io.vertx.core.Future
 import io.vertx.core.Promise
+import io.vertx.core.json.JsonArray
 import io.vertx.core.json.JsonObject
 import io.vertx.ext.mongo.MongoClient
 import org.slf4j.LoggerFactory
@@ -52,23 +53,21 @@ class MongoDatabase(private val mongoClient: MongoClient, private val collection
     }
 
     /**
-     * Formats the provided [UploadMetaData] into a [JsonObject] which can be stored in the database.
-     *
-     * Currently, we maintain a schema consistent with the one used in GridFS storage to leverage existing toolchains.
-     * Note that `chunkSize` is omitted as blobs are stored as single files in the object store.
+     * Transforms [UploadMetaData] into a the database format.
      *
      * @param metaData The [UploadMetaData] to format.
-     * @return The [JsonObject] representation of the [UploadMetaData].
+     * @return The GeoJSON representation of the [UploadMetaData].
      */
     fun databaseFormat(metaData: UploadMetaData): JsonObject {
-        val isoDate = DateTimeFormatter.ISO_INSTANT.format(Instant.now())
-        val storageMeta = metaData.uploadable.toJson()
+        val json = metaData.uploadable.toGeoJson()
+
+        json.getJsonObject("properties")
             .put(USER_ID_DATABASE_FIELD, metaData.user.id.toString())
-        return JsonObject()
             .put("filename", metaData.uploadIdentifier.toString()) // The id/name of the file in the object storage
-            .put("length", metaData.contentRange.totalBytes) // blob size in Bytes (Long)
-            .put("uploadDate", JsonObject().put("\$date", isoDate))
-            .put("metadata", storageMeta)
+            .put("uploadLength", metaData.contentRange.totalBytes) // measurement blob size in Bytes (Long)
+            .put("uploadDate", JsonObject().put("\$date", DateTimeFormatter.ISO_INSTANT.format(Instant.now())))
+
+        return json
     }
 
     /**
@@ -78,12 +77,10 @@ class MongoDatabase(private val mongoClient: MongoClient, private val collection
     override fun exists(deviceIdentifier: String, measurementIdentifier: Long): Future<Boolean> {
         val ret = Promise.promise<Boolean>()
         val query = JsonObject()
-            .put("metadata.${FormAttributes.DEVICE_ID.value}", deviceIdentifier)
-            .put("metadata.${FormAttributes.MEASUREMENT_ID.value}", measurementIdentifier.toString())
+            .put("properties.${FormAttributes.DEVICE_ID.value}", deviceIdentifier)
+            .put("properties.${FormAttributes.MEASUREMENT_ID.value}", measurementIdentifier.toString())
             // Ensure we don't interpret attachments as measurements
-            .put("metadata.${FormAttributes.ATTACHMENT_ID.value}", JsonObject().put("\$exists", false))
-        // query.put("features.0.properties.${FormAttributes.DEVICE_ID.value}", deviceIdentifier)
-        // query.put("features.0.properties.${FormAttributes.MEASUREMENT_ID.value}", measurementIdentifier)
+            .put("properties.${FormAttributes.ATTACHMENT_ID.value}", JsonObject().put("\$exists", false))
 
         val queryCall = mongoClient.find(collectionName, query)
         queryCall.onSuccess { ids ->
@@ -126,12 +123,9 @@ class MongoDatabase(private val mongoClient: MongoClient, private val collection
     override fun exists(deviceIdentifier: String, measurementIdentifier: Long, attachmentId: Long): Future<Boolean> {
         val ret = Promise.promise<Boolean>()
         val query = JsonObject()
-            .put("metadata.${FormAttributes.DEVICE_ID.value}", deviceIdentifier)
-            .put("metadata.${FormAttributes.MEASUREMENT_ID.value}", measurementIdentifier.toString())
-            .put("metadata.${FormAttributes.ATTACHMENT_ID.value}", attachmentId.toString())
-        // query.put("features.0.properties.${FormAttributes.DEVICE_ID.value}", deviceIdentifier)
-        // query.put("features.0.properties.${FormAttributes.MEASUREMENT_ID.value}", measurementIdentifier)
-        // query.put("features.0.properties.${FormAttributes.ATTACHMENT_ID.value}", attachmentId)
+            .put("properties.${FormAttributes.DEVICE_ID.value}", deviceIdentifier)
+            .put("properties.${FormAttributes.MEASUREMENT_ID.value}", measurementIdentifier.toString())
+            .put("properties.${FormAttributes.ATTACHMENT_ID.value}", attachmentId.toString())
 
         val queryCall = mongoClient.find(collectionName, query)
         queryCall.onSuccess { ids ->
