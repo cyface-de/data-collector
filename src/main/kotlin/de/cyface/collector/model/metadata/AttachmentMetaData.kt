@@ -45,11 +45,10 @@ data class AttachmentMetaData(
      * @param body The request body containing the metadata.
      */
     constructor(body: JsonObject) : this(
-        // The metadata value are strings, so `body.getInteger()` throws a ClassCastException. Thus, we do:
-        body.getString(FormAttributes.LOG_COUNT.value).toInt(),
-        body.getString(FormAttributes.IMAGE_COUNT.value).toInt(),
-        body.getString(FormAttributes.VIDEO_COUNT.value).toInt(),
-        body.getString(FormAttributes.FILES_SIZE.value).toLong(),
+        body.getString(FormAttributes.LOG_COUNT.value)?.toInt() ?: throw AttachmentCountsMissing(),
+        body.getString(FormAttributes.IMAGE_COUNT.value)?.toInt() ?: throw AttachmentCountsMissing(),
+        body.getString(FormAttributes.VIDEO_COUNT.value)?.toInt() ?: throw AttachmentCountsMissing(),
+        body.getString(FormAttributes.FILES_SIZE.value)?.toLong() ?: throw AttachmentCountsMissing(),
     )
 
     /**
@@ -58,10 +57,10 @@ data class AttachmentMetaData(
      * @param headers The request headers containing the metadata.
      */
     constructor(headers: MultiMap) : this(
-        headers.get(FormAttributes.LOG_COUNT.value).toInt(),
-        headers.get(FormAttributes.IMAGE_COUNT.value).toInt(),
-        headers.get(FormAttributes.VIDEO_COUNT.value).toInt(),
-        headers.get(FormAttributes.FILES_SIZE.value).toLong(),
+        headers.get(FormAttributes.LOG_COUNT.value)?.toInt() ?: throw AttachmentCountsMissing(),
+        headers.get(FormAttributes.IMAGE_COUNT.value)?.toInt() ?: throw AttachmentCountsMissing(),
+        headers.get(FormAttributes.VIDEO_COUNT.value)?.toInt() ?: throw AttachmentCountsMissing(),
+        headers.get(FormAttributes.FILES_SIZE.value)?.toLong() ?: throw AttachmentCountsMissing(),
     )
 
     init {

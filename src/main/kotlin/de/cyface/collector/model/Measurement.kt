@@ -28,6 +28,7 @@ import de.cyface.collector.handler.exception.UnknownFormatVersion
 import de.cyface.collector.model.Uploadable.Companion.DEVICE_ID_FIELD
 import de.cyface.collector.model.Uploadable.Companion.MEASUREMENT_ID_FIELD
 import de.cyface.collector.model.metadata.ApplicationMetaData
+import de.cyface.collector.model.metadata.AttachmentCountsMissing
 import de.cyface.collector.model.metadata.AttachmentMetaData
 import de.cyface.collector.model.metadata.DeviceMetaData
 import de.cyface.collector.model.metadata.MeasurementMetaData
@@ -155,7 +156,12 @@ class MeasurementFactory : UploadableFactory {
             val measurementIdentifier = json.getString(FormAttributes.MEASUREMENT_ID.value).toLong()
 
             val applicationMetaData = ApplicationMetaData(json)
-            val attachmentMetaData = AttachmentMetaData(json)
+            val attachmentMetaData = try {
+                AttachmentMetaData(json)
+            } catch (@SuppressWarnings("SwallowedException") e: AttachmentCountsMissing) {
+                // Ensures to be backward compatible with api V4 (measurements without attachment metadata)
+                AttachmentMetaData(0, 0, 0, 0)
+            }
             val deviceMetaData = DeviceMetaData(json)
             val measurementMetaData = MeasurementMetaData(json)
 
@@ -222,7 +228,12 @@ class MeasurementFactory : UploadableFactory {
 
             val measurementIdentifier = MeasurementIdentifier(deviceId, measurementId)
 
-            val attachmentMetaData = AttachmentMetaData(headers)
+            val attachmentMetaData = try {
+                AttachmentMetaData(headers)
+            } catch (@SuppressWarnings("SwallowedException") e: AttachmentCountsMissing) {
+                // Ensures to be backward compatible with api V4 (measurements without attachment metadata)
+                AttachmentMetaData(0, 0, 0, 0)
+            }
             val applicationMetaData = ApplicationMetaData(headers)
             val measurementMetaData = MeasurementMetaData(headers)
             val deviceMetaData = DeviceMetaData(headers)
