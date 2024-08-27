@@ -22,8 +22,11 @@ MAINTAINER Cyface GmbH <mail@cyface.de>
 # Create user. Unproblematic default id (wikipedia.org/wiki/User_identifier)
 ARG USER_ID=9999
 ARG GROUP_ID=9999
-RUN addgroup --gid $GROUP_ID user
-RUN adduser --disabled-password --gecos '' --uid $USER_ID --gid $GROUP_ID user
+# For some reasons `addgroup` and `adduser` are not available anymore in the base image.
+RUN groupadd --gid $GROUP_ID user
+RUN useradd -c '' --uid $USER_ID --gid $GROUP_ID --no-create-home --shell /usr/sbin/nologin user
+# The `useradd` version does not support `--disabled-password`, so we lock the user password instead:
+RUN passwd -l user
 
 # Set the working directory to /app
 WORKDIR /app
