@@ -52,7 +52,7 @@ class MongoDatabase(private val mongoClient: MongoClient, private val collection
     }
 
     /**
-     * Transforms [UploadMetaData] into a the database format.
+     * Transforms [UploadMetaData] into the database format.
      *
      * @param metaData The [UploadMetaData] to format.
      * @return The GeoJSON representation of the [UploadMetaData].

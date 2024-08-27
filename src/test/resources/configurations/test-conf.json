@@ -15,7 +15,8 @@
     "collection-name": "cyface-data",
     "project-identifier": "cyface-test",
     "bucket-name": "cyface-bucket",
-    "credentials-file": "/path/to/credentials.json"
+    "credentials-file": "/path/to/credentials.json",
+    "buffer-size": 500000
   },
   "auth-type": "mocked",
   "oauth.callback":"http://localhost:8080/callback",
