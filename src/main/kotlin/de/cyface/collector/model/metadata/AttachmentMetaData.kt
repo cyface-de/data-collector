@@ -45,6 +45,8 @@ data class AttachmentMetaData(
      * @param body The request body containing the metadata.
      */
     constructor(body: JsonObject) : this(
+        // The metadata fields are stored as String (as they are also transmitted via header)
+        // Thus, we need to read them as String first before converting them to the correct type.
         body.getString(FormAttributes.LOG_COUNT.value)?.toInt() ?: throw AttachmentCountsMissing(),
         body.getString(FormAttributes.IMAGE_COUNT.value)?.toInt() ?: throw AttachmentCountsMissing(),
         body.getString(FormAttributes.VIDEO_COUNT.value)?.toInt() ?: throw AttachmentCountsMissing(),

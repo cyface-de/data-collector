@@ -50,6 +50,8 @@ data class MeasurementMetaData(
      * @return The extracted metadata.
      */
     constructor(json: JsonObject) : this(
+        // The metadata fields are stored as String (as they are also transmitted via header)
+        // Thus, we need to read them as String first before converting them to the correct type.
         json.getString(FormAttributes.LENGTH.value).toDouble(),
         json.getString(FormAttributes.LOCATION_COUNT.value).toLong(),
         GeoLocation.createStartLocation(json),

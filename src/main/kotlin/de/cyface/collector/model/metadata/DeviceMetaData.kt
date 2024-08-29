@@ -37,6 +37,8 @@ data class DeviceMetaData(
 ) : MetaData, Serializable {
 
     constructor(json: JsonObject) : this(
+        // The metadata fields are stored as String (as they are also transmitted via header)
+        // Thus, we need to read them as String first before converting them to the correct type.
         json.getString(FormAttributes.OS_VERSION.value),
         json.getString(FormAttributes.DEVICE_TYPE.value)
     )

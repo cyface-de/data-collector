@@ -45,6 +45,8 @@ data class ApplicationMetaData(
      * @return The extracted metadata.
      */
     constructor(json: JsonObject) : this(
+        // The metadata fields are stored as String (as they are also transmitted via header)
+        // Thus, we need to read them as String first before converting them to the correct type.
         json.getString(FormAttributes.APPLICATION_VERSION.value),
         json.getString(FormAttributes.FORMAT_VERSION.value).toInt()
     )

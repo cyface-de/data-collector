@@ -152,6 +152,8 @@ data class MeasurementIdentifier(val deviceIdentifier: UUID, val measurementIden
 class MeasurementFactory : UploadableFactory {
     override fun from(json: JsonObject): Uploadable {
         try {
+            // The metadata fields are stored as String (as they are also transmitted via header)
+            // Thus, we need to read them as String first before converting them to the correct type.
             val deviceIdentifier = UUID.fromString(json.getString(FormAttributes.DEVICE_ID.value))
             val measurementIdentifier = json.getString(FormAttributes.MEASUREMENT_ID.value).toLong()
 
