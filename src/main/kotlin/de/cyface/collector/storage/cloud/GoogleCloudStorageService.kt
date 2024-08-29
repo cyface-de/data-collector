@@ -49,12 +49,23 @@ import java.util.concurrent.Callable
  * @author Klemens Muthmann
  * @property dao The data access object to write an uploads' metadata.
  * @property vertx A Vertx instance of the current Vertx environment.
- *
+ * @property cloudStorageFactory A factory to create a [GoogleCloudStorage] instance on demand.
+ *      Since the GoogleCloudStorage depends on an upload identifier it can only be created per upload.
+ *      The factory stores all data and does all initialization, that is independent of the individual upload to avoid
+ *      doing these tasks on each upload.
+ * @property bufferSize The size of the internal data buffer in bytes.
+ *     This is the amount of bytes the system accumulates before sending data to Google.
+ *     Low values decrease the possibility of data loss and the memory footprint of the application but increase the
+ *     number of requests to Google.
+ *     Large values increase the memory footprint and may cause data loss in case of a server crash, but also cause a
+ *     much more efficient communication with Google.
+ *     A value of 500 KB is recommended.
  */
 class GoogleCloudStorageService(
     private val dao: Database,
     private val vertx: Vertx,
-    private val cloudStorageFactory: CloudStorageFactory
+    private val cloudStorageFactory: CloudStorageFactory,
+    private val bufferSize: Int
 ) : DataStorageService {
 
     /**
@@ -62,65 +73,93 @@ class GoogleCloudStorageService(
      */
     private val logger = LoggerFactory.getLogger(GoogleCloudStorageService::class.java)
 
+    // @SuppressWarnings("MagicNumber")
+    // private val bufferSize = 500 * 1024 // 500 KB
+
     override fun store(
         sourceData: ReadStream<Buffer>,
         uploadMetaData: UploadMetaData
     ): Future<Status> {
         val ret = Promise.promise<Status>()
-        val pipe = sourceData.pipe().endOnSuccess(false)
-        val targetStream = ReactiveWriteStream.writeStream<Buffer>(vertx)
+        var buffer = Buffer.buffer()
+
         val uploadIdentifier = uploadMetaData.uploadIdentifier
         val cloud = cloudStorageFactory.create(uploadIdentifier)
         val subscriber = CloudStorageSubscriber<Buffer>(cloud, uploadMetaData.contentRange.totalBytes, vertx)
+        val targetStream = ReactiveWriteStream.writeStream<Buffer>(vertx)
+        targetStream.subscribe(subscriber)
         subscriber.dataWrittenListener = object : CloudStorageSubscriber.DataWrittenListener {
             override fun dataWritten() {
-                logger.debug("Finished writing upload: {}.", uploadIdentifier)
-                // if finished store the metadata to Mongo and delete the tmp file.
-                val bytesUploaded = cloud.bytesUploaded()
-                logger.debug("Wrote $bytesUploaded")
-                val contentRange = uploadMetaData.contentRange
-                logger.debug("Expected {}", contentRange)
-                if (bytesUploaded != contentRange.toIndex + 1) {
-                    ret.fail(
-                        ContentRangeNotMatchingFileSize(
-                            String.format(
-                                Locale.getDefault(),
-                                "Response: 500, Content-Range (%s) not matching file size (%s)",
-                                contentRange,
-                                bytesUploaded
-                            )
-                        )
-                    )
-                } else if (contentRange.totalBytes == contentRange.toIndex + 1) {
-                    ret.complete(
-                        Status(
-                            uploadIdentifier,
-                            StatusType.COMPLETE,
-                            bytesUploaded
-                        )
-                    )
-                    dao.storeMetadata(uploadMetaData.metaData)
-                } else {
-                    ret.complete(
-                        Status(
-                            uploadIdentifier,
-                            StatusType.INCOMPLETE,
-                            bytesUploaded
-                        )
-                    )
-                }
+                handleDataWritten(cloud, uploadMetaData, ret)
             }
         }
 
-        logger.debug("Piping ${uploadMetaData.contentRange.totalBytes} bytes to Google Cloud.")
-        targetStream.subscribe(subscriber)
-        // This End-Handler is crucial!!!. Without the pipe does not provide all the data available.
-        sourceData.endHandler { logger.debug("All data read for upload {}!", uploadIdentifier) }
-        val pipeToProcess = pipe.to(targetStream)
-        pipeToProcess.onSuccess { logger.debug("Pipe finished for upload {}!", uploadIdentifier) }
-        pipeToProcess.onFailure(ret::fail)
+        // Collect chunks from the ReadStream (here: HttpRequest with fixed chunk size of 8 KB).
+        // Process and reset buffer if it exceeds a certain size. This reduces number of uploads to Google Cloud.
+        sourceData.handler { chunk: Buffer ->
+            buffer.appendBuffer(chunk)
+            if (buffer.length() >= bufferSize) {
+                logger.debug("Processing buffer of size: ${buffer.length()} bytes")
+                process(buffer, uploadMetaData, targetStream)
+                buffer = Buffer.buffer()
+            }
+        }
+
+        // Process the final bytes still in the buffer after we read all data.
+        sourceData.endHandler {
+            if (buffer.length() > 0) {
+                logger.debug("Processing final buffer of size ${buffer.length()} bytes")
+                process(buffer, uploadMetaData, targetStream)
+            }
+            logger.debug("All data read")
+        }
+
+        sourceData.exceptionHandler { throwable ->
+            logger.error("Error during upload for {}: {}", uploadIdentifier, throwable.message)
+            ret.fail(throwable)
+        }
 
         return ret.future()
+    }
+
+    private fun process(buffer: Buffer, uploadMetaData: UploadMetaData, targetStream: ReactiveWriteStream<Buffer>) {
+        targetStream.write(buffer).onSuccess {
+            logger.trace("Buffer of size ${buffer.length()} processed successfully")
+        }.onFailure {
+            val uploadIdentifier = uploadMetaData.uploadIdentifier
+            logger.error("Failed to process buffer for upload {}.", uploadIdentifier, it)
+        }
+    }
+
+    private fun handleDataWritten(cloud: CloudStorage, uploadMetaData: UploadMetaData, resultPromise: Promise<Status>) {
+        val uploadIdentifier = uploadMetaData.uploadIdentifier
+        val bytesUploaded = cloud.bytesUploaded()
+        val contentRange = uploadMetaData.contentRange
+
+        logger.debug("Finished uploading {} bytes of total {}", bytesUploaded, contentRange)
+
+        if (bytesUploaded != contentRange.toIndex + 1) {
+            resultPromise.fail(
+                ContentRangeNotMatchingFileSize(
+                    String.format(
+                        Locale.getDefault(),
+                        "Response: 500, Content-Range (%s) not matching file size (%s)",
+                        contentRange,
+                        bytesUploaded
+                    )
+                )
+            )
+        } else if (contentRange.totalBytes == contentRange.toIndex + 1) {
+            dao.storeMetadata(uploadMetaData)
+                .onSuccess {
+                    resultPromise.complete(Status(uploadIdentifier, StatusType.COMPLETE, bytesUploaded))
+                }
+                .onFailure {
+                    resultPromise.fail(it)
+                }
+        } else {
+            resultPromise.complete(Status(uploadIdentifier, StatusType.INCOMPLETE, bytesUploaded))
+        }
     }
 
     override fun bytesUploaded(uploadIdentifier: UUID): Future<Long> {
@@ -161,6 +200,16 @@ class GoogleCloudStorageService(
          */
         return dao.exists(deviceId, measurementId)
     }
+
+    override fun isStored(deviceId: String, measurementId: Long, attachmentId: Long): Future<Boolean> {
+        /*
+        This solution is incorrect. Since I do not store files in gridFS there will be no metadata either.
+        Where should I store the metadata? According to stackoverflow in a separate database. So probably inside the
+        mongo database as well.
+        See: https://stackoverflow.com/questions/55337912/is-it-possible-to-query-google-cloud-storage-custom-metadata
+         */
+        return dao.exists(deviceId, measurementId, attachmentId)
+    }
 }
 
 /**
@@ -192,7 +241,7 @@ class CloudStorageSubscriber<in T : Buffer>(
     /**
      * The number of bytes that have been streamed.
      */
-    private var streamedBytes = 0
+    private var streamedBytes = 0L
 
     /**
      * A listener that is informed if all data received was written successfully.
@@ -204,6 +253,7 @@ class CloudStorageSubscriber<in T : Buffer>(
      * If no error occurred, this property remains `null``
      */
     var error: Throwable? = null
+
     override fun onSubscribe(subscription: Subscription) {
         logger.debug("Subscribing to data!")
         this.subscription = subscription
@@ -230,7 +280,7 @@ class CloudStorageSubscriber<in T : Buffer>(
         vertx.executeBlocking(
             Callable {
                 cloudStorage.write(t.bytes)
-                logger.debug("Progress: ${streamedBytes.toDouble() / totalBytes.toDouble() * oneHundredPercent} %")
+                logger.debug("Progress: ${streamedBytes.toDouble() / totalBytes.toDouble() * ONE_HUNDRED_PERCENT} %")
                 if (streamedBytes >= totalBytes) {
                     dataWrittenListener?.dataWritten()
                 } else {
@@ -252,6 +302,6 @@ class CloudStorageSubscriber<in T : Buffer>(
         /**
          * Constant used to display the upload progress in percent.
          */
-        private const val oneHundredPercent = 100.0
+        private const val ONE_HUNDRED_PERCENT = 100.0
     }
 }

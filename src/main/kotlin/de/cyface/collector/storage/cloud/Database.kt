@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Cyface GmbH
+ * Copyright 2022-2024 Cyface GmbH
  *
  * This file is part of the Serialization.
  *
@@ -18,20 +18,19 @@
  */
 package de.cyface.collector.storage.cloud
 
-import de.cyface.collector.model.RequestMetaData
+import de.cyface.collector.storage.UploadMetaData
 import io.vertx.core.Future
 
 /**
  * The interface to a database storing the metadata of some uploaded data.
  *
  * @author Klemens Muthmann
- * @version 1.0.0
  */
 interface Database {
     /**
      * Stores the metadata asynchronously and returns a [Future], that is called on completion of that operation.
      */
-    fun storeMetadata(metaData: RequestMetaData): Future<String>
+    fun storeMetadata(metaData: UploadMetaData): Future<String>
 
     /**
      * Queries the database asynchronously for the existence of an upload with the provided `deviceIdentifier` and
@@ -40,4 +39,12 @@ interface Database {
      * @return A [Future] that is called upon successful or failed completion of this operation.
      */
     fun exists(deviceIdentifier: String, measurementIdentifier: Long): Future<Boolean>
+
+    /**
+     * Queries the database asynchronously for the existence of an attachment with the provided `deviceIdentifier`,
+     * `measurementIdentifier` and `attachmentId`.
+     *
+     * @return A [Future] that is called upon successful or failed completion of this operation.
+     */
+    fun exists(deviceIdentifier: String, measurementIdentifier: Long, attachmentId: Long): Future<Boolean>
 }

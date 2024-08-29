@@ -1,5 +1,5 @@
 /*
- * Copyright 2021-2024 Cyface GmbH
+ * Copyright 2024 Cyface GmbH
  *
  * This file is part of the Cyface Data Collector.
  *
@@ -16,15 +16,26 @@
  * You should have received a copy of the GNU General Public License
  * along with the Cyface Data Collector. If not, see <http://www.gnu.org/licenses/>.
  */
-package de.cyface.collector.handler.exception
+package de.cyface.collector.model.metadata
+
+import io.vertx.core.json.JsonObject
 
 /**
- * Exception thrown when the upload or pre-request does not contain the expected metadata.
+ * Interface for metadata classes.
  *
- * @author Armin Schnabel
+ * @author Klemens Muthmann
  */
-class InvalidMetaData : Exception {
-    constructor(message: String, cause: Throwable) : super(message, cause)
-    constructor(message: String) : super(message)
-    constructor(cause: Throwable) : super(cause)
+interface MetaData {
+    /**
+     * Converts the metadata to a JSON object.
+     */
+    fun toJson(): JsonObject
+
+    companion object {
+        /**
+         * Maximum size of a metadata field, with plenty space for future development. Prevents attackers from putting
+         * arbitrary long data into these fields.
+         */
+        const val MAX_GENERIC_METADATA_FIELD_LENGTH = 30
+    }
 }

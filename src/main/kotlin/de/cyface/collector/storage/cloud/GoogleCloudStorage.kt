@@ -89,11 +89,11 @@ class GoogleCloudStorage internal constructor(
 
     override fun write(bytes: ByteArray) {
         // Google Cloud does not allow to directly append data.
-        // Thus we need to write everything to a temporary blob, then merge with the data and delete the temporary one.
+        // Thus, we need to write everything to a temporary blob, then merge with the data and delete the temporary one.
         // See for example: https://stackoverflow.com/questions/20876780/how-to-append-write-to-google-cloud-storage-file-from-app-engine
         val tmpBlobInformation = BlobInfo.newBuilder(bucketName, tmpBlobName()).build()
         val dataBlobInformation = BlobInfo.newBuilder(bucketName, dataBlobName()).build()
-        logger.debug("Writing {} to Google Cloud Storage Blob {}", bytes.size, dataBlobInformation.blobId)
+        logger.debug("Writing {} to Google Cloud Storage", bytes.size)
         try {
             val tmpBlob = storage.create(tmpBlobInformation)
             val channel: WritableByteChannel = tmpBlob.writer()
@@ -121,7 +121,7 @@ class GoogleCloudStorage internal constructor(
             // requirements significantly.
             // Should be fixed prior to putting this into production.
             storage.delete(bucketName, tmpBlobName())
-            logger.debug("Wrote {} bytes to Google Cloud Storage Blob {}!", bytes.size, dataBlob.blobId)
+            logger.debug("Wrote {} bytes to Google Cloud Storage!", bytes.size)
         } catch (e: IOException) {
             logger.error(
                 "Error writing {} bytes to Google cloud Storage Blob {}!",

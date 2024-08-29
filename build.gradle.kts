@@ -42,6 +42,7 @@ buildscript {
 
 plugins {
   id("idea")
+  // Plugin to create executable jars
   //noinspection SpellCheckingInspection
   id("com.github.johnrengelman.shadow").version("7.1.2")
   // Plugin to display the Gradle task graph
@@ -99,12 +100,11 @@ val mockitoVersion = "5.2.0"
 // TODO: Remove the following. It belongs to java and should be replaced by hamKrest
 val hamcrestVersion = "2.2"
 val hamKrestVersion = "1.8.0.1"
-val flapdoodleVersion = "3.5.3" // major upgrade available
 val mockitoKotlinVersion = "4.1.0"
 val dokkaVersion = "1.9.10"
 val detektVersion = "1.23.1"
-val cyfaceSynchronizerVersion = "1.3.1"
-val testContainerVersion = "1.19.8"
+val cyfaceUploaderVersion = "1.4.1"
+val testContainerVersion = "1.20.1"
 
 tasks.wrapper {
   gradleVersion = project.extra["gradleWrapperVersion"].toString()
@@ -157,10 +157,7 @@ dependencies {
 
   testImplementation("io.vertx:vertx-junit5:$vertxVersion")
   testImplementation("io.vertx:vertx-web-client:$vertxVersion")
-  // This is required to run an embedded Mongo instance for integration testing.
-  // TODO: Switch to using testcontainers completely.
-  testImplementation("de.flapdoodle.embed:de.flapdoodle.embed.mongo:$flapdoodleVersion")
-  testImplementation("de.cyface:uploader:$cyfaceSynchronizerVersion")
+  testImplementation("de.cyface:uploader:$cyfaceUploaderVersion")
   testImplementation("org.testcontainers:testcontainers:$testContainerVersion")
 
   // Required to create inline documentation

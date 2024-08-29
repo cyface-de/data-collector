@@ -117,11 +117,13 @@ data class Configuration(
                     val projectIdentifier = storageTypeConfig.get<String>("project-identifier")
                     val bucketName = storageTypeConfig.get<String>("bucket-name")
                     val credentialsFile = storageTypeConfig.get<String>("credentials-file")
+                    val bufferSize = storageTypeConfig.get<Int>("buffer-size")
                     return GoogleCloudStorageType(
                         collectionName,
                         projectIdentifier,
                         bucketName,
-                        credentialsFile
+                        credentialsFile,
+                        bufferSize
                     )
                 }
 

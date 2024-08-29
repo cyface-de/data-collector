@@ -20,16 +20,23 @@ package de.cyface.collector.storage.cloud
 
 import com.google.auth.oauth2.GoogleCredentials
 import de.cyface.collector.auth.MockedHandlerBuilder
+import de.cyface.collector.commons.MongoTest
 import de.cyface.collector.configuration.GoogleCloudStorageType
 import de.cyface.collector.model.ContentRange
 import de.cyface.collector.model.User
 import de.cyface.collector.storage.UploadMetaData
 import de.cyface.collector.verticle.CollectorApiVerticle
 import de.cyface.collector.verticle.ServerConfiguration
-import de.cyface.model.RequestMetaData
 import de.cyface.uploader.DefaultUploader
 import de.cyface.uploader.Result
 import de.cyface.uploader.UploadProgressListener
+import de.cyface.uploader.model.Measurement
+import de.cyface.uploader.model.MeasurementIdentifier
+import de.cyface.uploader.model.metadata.ApplicationMetaData
+import de.cyface.uploader.model.metadata.AttachmentMetaData
+import de.cyface.uploader.model.metadata.DeviceMetaData
+import de.cyface.uploader.model.metadata.GeoLocation
+import de.cyface.uploader.model.metadata.MeasurementMetaData
 import io.vertx.core.AsyncResult
 import io.vertx.core.Future
 import io.vertx.core.MultiMap
@@ -48,7 +55,6 @@ import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.extension.ExtendWith
 import org.mockito.kotlin.mock
 import org.slf4j.LoggerFactory
-import org.testcontainers.containers.GenericContainer
 import java.io.File
 import java.io.FileInputStream
 import java.net.URL
@@ -59,7 +65,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 
 /**
- * This tests the whole roundtrip of uploading a picture to a data collector using the Google Cloud Storage service.
+ * This tests the whole round-trip of uploading a picture to a data collector using the Google Cloud Storage service.
  *
  * To get this test running an accessible Mongo database and Google Cloud Storage service is required.
  *
@@ -69,6 +75,17 @@ import kotlin.test.assertEquals
 @ExtendWith(VertxExtension::class)
 @Suppress("LongMethod")
 class UploadPictureIT {
+    /**
+     * The size of the internal data buffer in bytes.
+     * This is the amount of bytes the system accumulates before sending data to Google.
+     * Low values decrease the possibility of data loss and the memory footprint of the application but increase the
+     * number of requests to Google.
+     * Large values increase the memory footprint and may cause data loss in case of a server crash, but also cause a
+     * much more efficient communication with Google.
+     * A value of 500 KB is recommended.
+     */
+    private val bufferSize = 500 * 1_024
+
     /**
      * The logger used for objects of this class. Configure it using `src/test/resources/logback-test.xml`.
      */
@@ -121,7 +138,8 @@ class UploadPictureIT {
             collectionName = collectionName,
             projectIdentifier = projectIdentifier,
             bucketName = bucketName,
-            credentialsFile = credentialsFile
+            credentialsFile = credentialsFile,
+            bufferSize
         )
 
         val oocut = CollectorApiVerticle(
@@ -187,9 +205,8 @@ class UploadPictureIT {
         vertx: Vertx,
         testContext: VertxTestContext
     ) {
-        val mongoPort = 27017
-        val mongo = GenericContainer("mongo:5.0.16").withExposedPorts(mongoPort)
-        mongo.start()
+        val mongoTest = MongoTest()
+        mongoTest.setUpMongoDatabase()
 
         val port = 8080
         val httpEndpoint = "/"
@@ -200,6 +217,7 @@ class UploadPictureIT {
             projectIdentifier = projectIdentifier,
             bucketName = bucketName,
             credentialsFile = credentialsFile,
+            bufferSize,
         )
 
         val authHandlerBuilder = MockedHandlerBuilder()
@@ -212,7 +230,7 @@ class UploadPictureIT {
         )
         val mongoDatabaseConfiguration = JsonObject()
             .put("db_name", "cyface")
-            .put("connection_string", "mongodb://${mongo.getHost()}:${mongo.getMappedPort(mongoPort)}")
+            .put("connection_string", "mongodb://${mongoTest.getMongoHost()}:${mongoTest.getMongoPort()}")
             .put("data_source_name", "cyface")
 
         val verticle = CollectorApiVerticle(
@@ -225,22 +243,18 @@ class UploadPictureIT {
             testContext.succeeding {
                 val uploader = DefaultUploader("http://localhost:8080/")
                 val jwtToken = "eyTestToken"
-                val metaData = RequestMetaData(
-                    deviceIdentifier = UUID.randomUUID().toString(),
-                    measurementIdentifier = "0",
-                    operatingSystemVersion = "iOS17",
-                    deviceType = "iPhone14,1",
-                    applicationVersion = "7.6.5",
-                    length = 200.0,
-                    locationCount = 20,
-                    startLocation = RequestMetaData.GeoLocation(System.currentTimeMillis(), 13.711864, 51.047010),
-                    endLocation = RequestMetaData.GeoLocation(System.currentTimeMillis(), 13.714954, 51.050895),
-                    modality = "BICYCLE",
-                    formatVersion = 3,
-                    logCount = 0,
-                    imageCount = 0,
-                    videoCount = 0,
-                    filesSize = 0,
+                val uploadable = Measurement(
+                    MeasurementIdentifier(UUID.randomUUID(), 0L),
+                    DeviceMetaData("iOS17", "iPhone14,1"),
+                    ApplicationMetaData("7.6.5", 3),
+                    MeasurementMetaData(
+                        200.0,
+                        20,
+                        GeoLocation(System.currentTimeMillis(), 13.711864, 51.047010),
+                        GeoLocation(System.currentTimeMillis(), 13.714954, 51.050895),
+                        "BICYCLE",
+                    ),
+                    AttachmentMetaData(0, 0, 0, 0L),
                 )
                 val pathToUpload = this::class.java.getResource("/example-image-enterprise.jpg")?.file
                 if (pathToUpload.isNullOrEmpty()) {
@@ -249,7 +263,7 @@ class UploadPictureIT {
                     val fileToUpload = File(pathToUpload)
                     val result = uploader.uploadMeasurement(
                         jwtToken,
-                        metaData,
+                        uploadable,
                         fileToUpload,
                         object : UploadProgressListener {
                             override fun updatedProgress(percent: Float) {
@@ -264,7 +278,7 @@ class UploadPictureIT {
                             result
                         )
                     }
-                    mongo.stop()
+                    mongoTest.stopMongoDb()
                     testContext.completeNow()
                 }
             }
@@ -293,7 +307,8 @@ class UploadPictureIT {
             projectIdentifier,
             bucketName,
             dao,
-            vertx
+            vertx,
+            bufferSize,
         )
         val createDataStorageServiceBuilderProcess = dataStorageServiceBuilder.create()
 
@@ -306,33 +321,47 @@ class UploadPictureIT {
                     val exampleFile = result.resultAt<AsyncFile>(0)
                     val dataStorageService = result.resultAt<GoogleCloudStorageService>(1)
                     val fileSize = exampleFile.sizeBlocking()
-                    val metaData = de.cyface.collector.model.RequestMetaData(
-                        deviceIdentifier = UUID.randomUUID().toString(),
-                        measurementIdentifier = "0",
-                        operatingSystemVersion = "1",
-                        deviceType = "test",
-                        applicationVersion = "1",
-                        length = 200.0,
-                        locationCount = 20L,
-                        startLocation = de.cyface.collector.model.RequestMetaData.GeoLocation(
-                            System.currentTimeMillis(),
-                            13.707209,
-                            51.044796
+                    val measurement = de.cyface.collector.model.Measurement(
+                        de.cyface.collector.model.MeasurementIdentifier(
+                            UUID.randomUUID(),
+                            0L,
                         ),
-                        endLocation = de.cyface.collector.model.RequestMetaData.GeoLocation(
-                            System.currentTimeMillis(),
-                            13.718708,
-                            51.051013
+                        de.cyface.collector.model.metadata.DeviceMetaData(
+                            operatingSystemVersion = "1",
+                            deviceType = "test",
                         ),
-                        modality = "BICYCLE",
-                        formatVersion = 3,
+                        de.cyface.collector.model.metadata.ApplicationMetaData(
+                            applicationVersion = "1",
+                            formatVersion = 3,
+                        ),
+                        de.cyface.collector.model.metadata.MeasurementMetaData(
+                            length = 200.0,
+                            locationCount = 20L,
+                            startLocation = de.cyface.collector.model.metadata.GeoLocation(
+                                System.currentTimeMillis(),
+                                13.707209,
+                                51.044796
+                            ),
+                            endLocation = de.cyface.collector.model.metadata.GeoLocation(
+                                System.currentTimeMillis(),
+                                13.718708,
+                                51.051013
+                            ),
+                            modality = "BICYCLE",
+                        ),
+                        de.cyface.collector.model.metadata.AttachmentMetaData(
+                            logCount = 0,
+                            imageCount = 0,
+                            videoCount = 0,
+                            filesSize = 0L,
+                        ),
                     )
 
                     val uploadMetaData = UploadMetaData(
                         user = user,
                         contentRange = ContentRange(0, fileSize - 1, fileSize),
                         uploadIdentifier = testUploadIdentifier,
-                        metaData = metaData
+                        uploadable = measurement
                     )
 
                     dataStorageService.store(exampleFile, uploadMetaData)

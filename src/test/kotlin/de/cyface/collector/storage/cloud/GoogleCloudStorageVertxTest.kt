@@ -19,11 +19,18 @@
 package de.cyface.collector.storage.cloud
 
 import de.cyface.collector.model.ContentRange
-import de.cyface.collector.model.RequestMetaData
+import de.cyface.collector.model.Measurement
+import de.cyface.collector.model.MeasurementIdentifier
 import de.cyface.collector.model.User
+import de.cyface.collector.model.metadata.ApplicationMetaData
+import de.cyface.collector.model.metadata.AttachmentMetaData
+import de.cyface.collector.model.metadata.DeviceMetaData
+import de.cyface.collector.model.metadata.GeoLocation
+import de.cyface.collector.model.metadata.MeasurementMetaData
 import de.cyface.collector.storage.StatusType
 import de.cyface.collector.storage.UploadMetaData
 import de.cyface.collector.storage.exception.ContentRangeNotMatchingFileSize
+import io.vertx.core.Future
 import io.vertx.core.Vertx
 import io.vertx.core.buffer.Buffer
 import io.vertx.core.file.OpenOptions
@@ -50,6 +57,17 @@ import kotlin.test.assertTrue
 @ExtendWith(VertxExtension::class)
 class GoogleCloudStorageVertxTest {
     /**
+     * The size of the internal data buffer in bytes.
+     * This is the amount of bytes the system accumulates before sending data to Google.
+     * Low values decrease the possibility of data loss and the memory footprint of the application but increase the
+     * number of requests to Google.
+     * Large values increase the memory footprint and may cause data loss in case of a server crash, but also cause a
+     * much more efficient communication with Google.
+     * A value of 500 KB is recommended.
+     */
+    private val bufferSize = 500 * 1_024
+
+    /**
      * This test checks that storing data results in registering the correct stream to the provided `Pipe`.
      * The test for actually writing the data is included
      * [here][de.cyface.collector.storage.cloud.GoogleCloudStorageTest.Happy Path Test for Getting data from a
@@ -58,7 +76,9 @@ class GoogleCloudStorageVertxTest {
     @Test
     fun `Happy Path Test for Storing some Data`(vertx: Vertx, vertxTestContext: VertxTestContext) {
         // Arrange
-        val mockDatabase: MongoDatabase = mock()
+        val mockDatabase: MongoDatabase = mock {
+            on { storeMetadata(any()) } doReturn Future.succeededFuture("someId")
+        }
         val cloudStorage: CloudStorage = mock {
             on { bytesUploaded() } doReturn 10L
         }
@@ -66,14 +86,15 @@ class GoogleCloudStorageVertxTest {
         val oocut = GoogleCloudStorageService(
             mockDatabase,
             vertx,
-            mockCloudStorageFactory
+            mockCloudStorageFactory,
+            bufferSize
         )
-        val exampleImage = this.javaClass.getResource("/example-image.jpg").file
+        val exampleImage = this.javaClass.getResource("/example-image.jpg")?.file
         val readStream = vertx.fileSystem().openBlocking(exampleImage, OpenOptions())
         val user: User = mock()
         val contentRange = ContentRange(0L, 9L, 10L)
         val uploadIdentifier = UUID.randomUUID()
-        val metaData: RequestMetaData = metadata()
+        val metaData = measurement()
         val uploadMetaData = UploadMetaData(user, contentRange, uploadIdentifier, metaData)
 
         // Act
@@ -106,16 +127,16 @@ class GoogleCloudStorageVertxTest {
         val cloudStorageFactory: CloudStorageFactory = mock {
             on { create(any<UUID>()) } doReturn mockCloudStorage
         }
-        val oocut = GoogleCloudStorageService(database, vertx, cloudStorageFactory)
-        val metadata: UploadMetaData = mock {
+        val oocut = GoogleCloudStorageService(database, vertx, cloudStorageFactory, bufferSize)
+        val measurement: UploadMetaData = mock {
             on { contentRange } doReturn ContentRange(5, 7, 3)
             on { uploadIdentifier } doReturn UUID.randomUUID()
         }
-        val exampleImage = this.javaClass.getResource("/example-image.jpg").file
+        val exampleImage = this.javaClass.getResource("/example-image.jpg")?.file
         val readStream = vertx.fileSystem().openBlocking(exampleImage, OpenOptions())
 
         // Act
-        val result = oocut.store(readStream, metadata)
+        val result = oocut.store(readStream, measurement)
 
         // Assert
         result.onComplete(
@@ -175,19 +196,33 @@ class GoogleCloudStorageVertxTest {
     /**
      * Provide some example metadata usable by tests.
      */
-    private fun metadata(): RequestMetaData {
-        return RequestMetaData(
-            deviceIdentifier = "78370516-4f7e-11ed-bdc3-0242ac120002",
-            measurementIdentifier = "1",
-            operatingSystemVersion = "iOS",
-            deviceType = "iPhone16",
-            applicationVersion = "3.2.1",
-            length = 20.0,
-            locationCount = 434,
-            startLocation = RequestMetaData.GeoLocation(512367323L, 51.0, 13.0),
-            endLocation = RequestMetaData.GeoLocation(512377323L, 51.5, 13.2),
-            modality = "BICYCLE",
-            formatVersion = 3
+    private fun measurement(): Measurement {
+        return Measurement(
+            MeasurementIdentifier(
+                UUID.fromString("78370516-4f7e-11ed-bdc3-0242ac120002"),
+                1L,
+            ),
+            DeviceMetaData(
+                "iOS",
+                "iPhone 16",
+            ),
+            ApplicationMetaData(
+                applicationVersion = "3.2.1",
+                formatVersion = 3,
+            ),
+            MeasurementMetaData(
+                length = 20.0,
+                locationCount = 434,
+                startLocation = GeoLocation(512367323L, 51.0, 13.0),
+                endLocation = GeoLocation(512377323L, 51.5, 13.2),
+                modality = "BICYCLE",
+            ),
+            AttachmentMetaData(
+                logCount = 0,
+                imageCount = 0,
+                videoCount = 0,
+                filesSize = 0L,
+            )
         )
     }
 }

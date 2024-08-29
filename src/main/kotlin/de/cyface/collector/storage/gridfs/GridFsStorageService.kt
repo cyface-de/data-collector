@@ -18,7 +18,7 @@
  */
 package de.cyface.collector.storage.gridfs
 
-import de.cyface.collector.model.Measurement
+import de.cyface.collector.model.Upload
 import de.cyface.collector.storage.CleanupOperation
 import de.cyface.collector.storage.DataStorageService
 import de.cyface.collector.storage.Status
@@ -88,6 +88,10 @@ class GridFsStorageService(
         return dao.exists(deviceId, measurementId)
     }
 
+    override fun isStored(deviceId: String, measurementId: Long, attachmentId: Long): Future<Boolean> {
+        return dao.exists(deviceId, measurementId, attachmentId)
+    }
+
     override fun bytesUploaded(uploadIdentifier: UUID): Future<Long> {
         val ret = Promise.promise<Long>()
         val temporaryFileName = pathToTemporaryFile(uploadIdentifier).toFile().absolutePath
@@ -128,24 +132,20 @@ class GridFsStorageService(
     }
 
     /**
-     * Stores a [Measurement] to a Mongo database. This method never fails. If a failure occurs it is logged and
+     * Stores a [Upload] to a Mongo database. This method never fails. If a failure occurs it is logged and
      * status code 422 is used for the response.
      *
-     * @param measurement The measured data to write to the Mongo database.
+     * @param upload The measured data to write to the Mongo database.
      * @param temporaryStorage The temporary storage for the uploaded data to store.
      */
-    private fun storeToMongoDB(measurement: Measurement, temporaryStorage: Path): Future<ObjectId> {
+    private fun storeToMongoDB(upload: Upload, temporaryStorage: Path): Future<ObjectId> {
         val promise = Promise.promise<ObjectId>()
-        LOGGER.debug(
-            "Insert measurement with id {}:{}!",
-            measurement.metaData.deviceIdentifier,
-            measurement.metaData.measurementIdentifier
-        )
+        LOGGER.debug("Insert upload {}!", upload.uploadable)
 
         val temporaryFileOpenCall = fs.open(temporaryStorage.absolutePathString(), OpenOptions())
         temporaryFileOpenCall.onFailure(promise::fail)
         temporaryFileOpenCall.onSuccess { temporaryStorageFile ->
-            val storeCall = dao.store(measurement, temporaryStorage.name, temporaryStorageFile)
+            val storeCall = dao.store(upload, temporaryStorage.name, temporaryStorageFile)
             storeCall.onSuccess(promise::complete)
             storeCall.onFailure(promise::fail)
         }
@@ -230,26 +230,16 @@ class GridFsStorageService(
         } else {
             // Persist data
             val temporaryStorageFile = pathToTemporaryFile(uploadIdentifier)
-            val metaData = uploadMetaData.metaData
+            val metaData = uploadMetaData.uploadable
             val user = uploadMetaData.user
-            val measurement =
-                Measurement(metaData, user.idString, temporaryStorageFile.toFile())
-            val storeToMongoDBResult = storeToMongoDB(measurement, temporaryStorageFile)
+            val upload = Upload(metaData, user.idString, temporaryStorageFile.toFile())
+            val storeToMongoDBResult = storeToMongoDB(upload, temporaryStorageFile)
             storeToMongoDBResult.onSuccess {
-                LOGGER.debug(
-                    "Stored measurement {}:{} under object id {}!",
-                    measurement.metaData.deviceIdentifier,
-                    measurement.metaData.measurementIdentifier,
-                    it.toString()
-                )
+                LOGGER.debug("Stored upload {} under object id {}!", upload, it.toString())
                 promise.complete(Status(uploadIdentifier, StatusType.COMPLETE, byteSize))
             }
             storeToMongoDBResult.onFailure {
-                LOGGER.debug(
-                    "Failed to store measurement {}:{}!",
-                    measurement.metaData.deviceIdentifier,
-                    measurement.metaData.measurementIdentifier
-                )
+                LOGGER.debug("Failed to store upload {}!", upload)
                 promise.fail(it)
             }
         }

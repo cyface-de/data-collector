@@ -21,13 +21,13 @@ package de.cyface.collector
 import de.cyface.collector.auth.MockedHandlerBuilder
 import de.cyface.collector.commons.DataCollectorClient
 import de.cyface.collector.commons.MongoTest
-import de.flapdoodle.embed.process.runtime.Network
 import io.vertx.core.AsyncResult
 import io.vertx.core.Handler
 import io.vertx.core.Vertx
 import io.vertx.core.buffer.Buffer
 import io.vertx.core.file.OpenOptions
 import io.vertx.core.json.JsonObject
+import io.vertx.ext.mongo.MongoClient
 import io.vertx.ext.web.client.HttpResponse
 import io.vertx.ext.web.client.WebClient
 import io.vertx.junit5.VertxExtension
@@ -35,6 +35,7 @@ import io.vertx.junit5.VertxTestContext
 import org.hamcrest.MatcherAssert.assertThat
 import org.hamcrest.Matchers
 import org.hamcrest.Matchers.equalTo
+import org.hamcrest.Matchers.greaterThan
 import org.hamcrest.Matchers.`is`
 import org.hamcrest.Matchers.matchesPattern
 import org.hamcrest.Matchers.notNullValue
@@ -54,8 +55,6 @@ import kotlin.test.assertNotNull
  *
  * @author Klemens Muthmann
  * @author Armin Schnabel
- * @version 4.1.3
- * @since 2.0.0
  */
 // This warning is suppressed since it is wrong for Vert.x Tests.
 @ExtendWith(VertxExtension::class)
@@ -98,7 +97,7 @@ class FileUploadTest {
     private fun deployVerticle(vertx: Vertx, ctx: VertxTestContext) {
         collectorClient = DataCollectorClient(140_000L)
         mongoTest = MongoTest()
-        mongoTest.setUpMongoDatabase(Network.freeServerPort(Network.getLocalHost()))
+        mongoTest.setUpMongoDatabase()
         client = collectorClient.createWebClient(vertx, ctx, mongoTest, MockedHandlerBuilder())
     }
 
@@ -285,6 +284,7 @@ class FileUploadTest {
                             ar.statusCode(),
                             `is`(equalTo(201))
                         )
+
                         uploadStatus(
                             uploadUri,
                             "bytes */4",
@@ -296,13 +296,53 @@ class FileUploadTest {
                                         res.statusCode(),
                                         `is`(equalTo(200))
                                     )
-                                    context.completeNow()
+
+                                    checkStoredMeta(vertx, context)
                                 }
                             }
                         )
                     }
                 }
             )
+        }
+    }
+
+    private fun checkStoredMeta(vertx: Vertx, context: VertxTestContext) {
+        // Ensure the metadata was stored in the correct format
+        val mongoClient = MongoClient.createShared(
+            vertx,
+            mongoTest.clientConfiguration(),
+            mongoTest.clientConfiguration().getString("data_source_name")
+        )
+        mongoClient.findOne("fs.files", JsonObject(), JsonObject()) { res ->
+            if (res.succeeded()) {
+                val result = res.result()
+                context.verify {
+                    assertThat(result.getString("filename").length, `is`(greaterThan(0)))
+                    assertThat(result.getLong("length"), `is`(equalTo(4L)))
+                    assertThat(result.getJsonObject("uploadDate").containsKey("\$date"), `is`(equalTo(true)))
+                    val meta = result.getJsonObject("metadata")
+                    assertThat(meta.getString("deviceId"), `is`(equalTo(deviceIdentifier)))
+                    assertThat(meta.getString("measurementId"), `is`(equalTo(measurementIdentifier)))
+                    assertThat(meta.getString("osVersion"), `is`(equalTo("testOsVersion")))
+                    assertThat(meta.getString("deviceType"), `is`(equalTo("testDeviceType")))
+                    assertThat(meta.getString("appVersion"), `is`(equalTo("testAppVersion")))
+                    assertThat(meta.getString("formatVersion"), `is`(equalTo("3")))
+                    assertThat(meta.getInteger("length"), `is`(equalTo(0)))
+                    assertThat(meta.getLong("locationCount"), `is`(equalTo(2L)))
+                    assertThat(meta.getJsonObject("start").containsKey("location"), `is`(equalTo(true)))
+                    assertThat(meta.getJsonObject("end").containsKey("location"), `is`(equalTo(true)))
+                    assertThat(meta.getString("modality"), `is`(equalTo("BICYCLE")))
+                    assertThat(meta.getInteger("logCount"), `is`(equalTo(0)))
+                    assertThat(meta.getInteger("imageCount"), `is`(equalTo(0)))
+                    assertThat(meta.getInteger("videoCount"), `is`(equalTo(0)))
+                    assertThat(meta.getLong("filesSize"), `is`(equalTo(0L)))
+                    assertThat(UUID.fromString(meta.getString("userId")), `is`(notNullValue()))
+                }
+                context.completeNow()
+            } else {
+                context.failNow(res.cause())
+            }
         }
     }
 

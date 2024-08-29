@@ -21,7 +21,7 @@
 package de.cyface.collector.storage
 
 import de.cyface.collector.model.ContentRange
-import de.cyface.collector.model.RequestMetaData
+import de.cyface.collector.model.Uploadable
 import de.cyface.collector.model.User
 import io.vertx.core.Future
 import io.vertx.core.Vertx
@@ -30,8 +30,8 @@ import io.vertx.core.streams.ReadStream
 import java.util.UUID
 
 /**
- * Implementations of this interface realize the storage of uploaded measurements, and provide information about the
- * status of the upload.
+ * Implementations of this interface realize the storage of uploaded measurements or attachments, and provide
+ * information about the status of the upload.
  *
  * Each upload is associated with an `uploadIdentifier`. This identifier can be used to repeat uploads if interrupted
  * and to ask for status information. After an upload is complete, the `uploadIdentifier` becomes invalid.
@@ -48,7 +48,7 @@ interface DataStorageService {
      */
     fun store(
         sourceData: ReadStream<Buffer>,
-        uploadMetaData: UploadMetaData
+        uploadMetaData: UploadMetaData,
     ): Future<Status>
 
     /**
@@ -88,6 +88,17 @@ interface DataStorageService {
      * the result will be `true` and `false` otherwise.
      */
     fun isStored(deviceId: String, measurementId: Long): Future<Boolean>
+
+    /**
+     * Check the data storage on whether some attachment for a measurement is already stored.
+     *
+     * @param deviceId The worldwide unique device identifier of the measurement to check.
+     * @param measurementId The device wide unique identifier of the measurement to check.
+     * @param attachmentId The device wide unique identifier of the attachment to check.
+     * @return A `Future` telling the caller asynchronously whether the attachment is already stored or not. If it is
+     * the result will be `true` and `false` otherwise.
+     */
+    fun isStored(deviceId: String, measurementId: Long, attachmentId: Long): Future<Boolean>
 }
 
 /**
@@ -97,12 +108,12 @@ interface DataStorageService {
  * @property user The user who took the measurement.
  * @property contentRange The content range of the uploaded data as provided by the content-range HTTP header.
  * @property uploadIdentifier The cluster wide unique identifier of the upload.
- * @property metaData Meta information provided alongside the measurement, to get insights into the measurement,
+ * @property uploadable Meta information provided for the Uploadable, to get insights into the measurement,
  * without the need to deserialize the data.
  */
-class UploadMetaData(
+data class UploadMetaData(
     val user: User,
     val contentRange: ContentRange,
     val uploadIdentifier: UUID,
-    val metaData: RequestMetaData
+    val uploadable: Uploadable
 )

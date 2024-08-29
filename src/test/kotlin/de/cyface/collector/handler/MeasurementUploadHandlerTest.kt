@@ -18,7 +18,9 @@
  */
 package de.cyface.collector.handler
 
+import de.cyface.collector.handler.upload.UploadHandler
 import de.cyface.collector.model.ContentRange
+import de.cyface.collector.model.MeasurementFactory
 import de.cyface.collector.model.User
 import de.cyface.collector.storage.DataStorageService
 import de.cyface.collector.storage.Status
@@ -39,7 +41,6 @@ import org.mockito.Mock
 import org.mockito.junit.jupiter.MockitoExtension
 import org.mockito.kotlin.any
 import org.mockito.kotlin.argumentCaptor
-import org.mockito.kotlin.doAnswer
 import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.eq
 import org.mockito.kotlin.mock
@@ -49,12 +50,12 @@ import java.util.UUID
 import kotlin.test.assertEquals
 
 /**
- * Run tests on the [MeasurementHandler] directly without a Vert.x environment.
+ * Run tests on the [UploadHandler] directly without a Vert.x environment.
  *
  * @author Klemens Muthmann
  */
 @ExtendWith(MockitoExtension::class)
-class MeasurementHandlerTest {
+class MeasurementUploadHandlerTest {
 
     @Mock
     lateinit var mockStorageService: DataStorageService
@@ -65,6 +66,10 @@ class MeasurementHandlerTest {
     @Mock
     lateinit var mockUser: User
 
+    private lateinit var deviceIdentifier: UUID
+
+    private var measurementIdentifier: Long? = null
+
     private lateinit var mockRequest: HttpServerRequest
 
     private lateinit var mockSession: Session
@@ -73,24 +78,24 @@ class MeasurementHandlerTest {
 
     private lateinit var headers: MultiMap
 
-    private lateinit var oocut: MeasurementHandler
+    private lateinit var oocut: UploadHandler
 
     @BeforeEach
     fun setUp() {
         headers = MultiMap.caseInsensitiveMultiMap()
-        val deviceIdentifier = UUID.randomUUID()
-        val measurementIdentifier = 1L
-        metadata(headers, deviceIdentifier, measurementIdentifier)
+        deviceIdentifier = UUID.randomUUID()
+        measurementIdentifier = 1L
+        metadata(headers, deviceIdentifier, measurementIdentifier!!)
 
         val payloadLimit = 10L
 
-        oocut = MeasurementHandler(mockStorageService, payloadLimit)
+        oocut = UploadHandler(MeasurementFactory(), mockStorageService, payloadLimit)
 
         mockRequest = mock {
             on { headers() } doReturn headers
-            on { getHeader(any()) } doAnswer { getHeaderCall ->
+            /*on { getHeader(any()) } doAnswer { getHeaderCall ->
                 headers.get(getHeaderCall.getArgument(0, String::class.java))
-            }
+            }*/
         }
 
         mockSession = mock {
@@ -107,6 +112,8 @@ class MeasurementHandlerTest {
     @Test
     fun `Fail resume upload with no previous data`() {
         // Arrange
+        whenever(mockSession.get<UUID>("device-id")).thenReturn(deviceIdentifier)
+        whenever(mockSession.get<Long>("measurement-id")).thenReturn(measurementIdentifier)
         // Set from index to something larger than zero.
         headers.add("content-range", "bytes 5-9/5")
         headers.add("content-length", "5")
@@ -123,13 +130,20 @@ class MeasurementHandlerTest {
     fun `Test resume upload from existing data`() {
         // Arrange
         val uploadIdentifier = UUID.randomUUID()
+        whenever(mockSession.get<UUID>("device-id")).thenReturn(deviceIdentifier)
+        whenever(mockSession.get<Long>("measurement-id")).thenReturn(measurementIdentifier)
         whenever(mockSession.get<UUID>("upload-path")).thenReturn(uploadIdentifier)
         headers.add("content-range", "bytes 5-9/5")
         headers.add("content-length", "5")
         val mockBytesUploadedCall = mock<Future<Long>> {}
         whenever(mockStorageService.bytesUploaded(any())).thenReturn(mockBytesUploadedCall)
         val mockStoreCall = mock<Future<Status>> {}
-        whenever(mockStorageService.store(any<ReadStream<Buffer>>(), any<UploadMetaData>())).thenReturn(mockStoreCall)
+        whenever(
+            mockStorageService.store(
+                any<ReadStream<Buffer>>(),
+                any<UploadMetaData>()
+            )
+        ).thenReturn(mockStoreCall)
 
         // Act
         oocut.handle(mockRoutingContext)
@@ -149,6 +163,8 @@ class MeasurementHandlerTest {
     fun `Fail if client tries to start new upload but temporary data exists`() {
         // Arrange
         val uploadIdentifier = UUID.randomUUID()
+        whenever(mockSession.get<UUID>("device-id")).thenReturn(deviceIdentifier)
+        whenever(mockSession.get<Long>("measurement-id")).thenReturn(measurementIdentifier)
         whenever(mockSession.get<UUID>("upload-path")).thenReturn(uploadIdentifier)
         headers.add("content-range", "bytes 0-9/10")
         headers.add("content-length", "10")
@@ -164,6 +180,8 @@ class MeasurementHandlerTest {
     @Test
     fun `Test start happy path upload`() {
         // Arrange
+        whenever(mockSession.get<UUID>("device-id")).thenReturn(deviceIdentifier)
+        whenever(mockSession.get<Long>("measurement-id")).thenReturn(measurementIdentifier)
         headers.add("content-range", "bytes 0-9/10")
         headers.add("content-length", "10")
 

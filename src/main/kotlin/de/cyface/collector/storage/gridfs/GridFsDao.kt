@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Cyface GmbH
+ * Copyright 2022-2024 Cyface GmbH
  *
  * This file is part of the Serialization.
  *
@@ -18,7 +18,7 @@
  */
 package de.cyface.collector.storage.gridfs
 
-import de.cyface.collector.model.Measurement
+import de.cyface.collector.model.Upload
 import de.cyface.collector.storage.exception.DuplicatesInDatabase
 import io.vertx.core.CompositeFuture
 import io.vertx.core.Future
@@ -39,7 +39,6 @@ import java.util.Locale
  * This class encapsulates all the Mongo client code required by the [GridFsStorageService].
  *
  * @author Klemens Muthmann
- * @version 1.0.0
  * @property mongoClient The Vertx [MongoClient] used to access
  */
 @Suppress("ForbiddenComment")
@@ -78,18 +77,18 @@ open class GridFsDao(private val mongoClient: MongoClient) {
     }
 
     /**
-     * Store the provided [Measurement] to Mongo Grid FS using data from the provided [AsyncFile].
+     * Store the provided [Upload] to Mongo Grid FS using data from the provided [AsyncFile].
      *
      * @param fileName The filename to use in Grid FS.
      * @return A [Future] that is notified of the success or failure, upon completion of this operation.
      */
-    open fun store(measurement: Measurement, fileName: String, data: AsyncFile): Future<ObjectId> {
+    open fun store(upload: Upload, fileName: String, data: AsyncFile): Future<ObjectId> {
         val promise = Promise.promise<ObjectId>()
         val bucketServiceCreationCall = mongoClient.createDefaultGridFsBucketService()
         bucketServiceCreationCall.onFailure(promise::fail)
         bucketServiceCreationCall.onSuccess { gridfs ->
             val options = GridFsUploadOptions()
-            options.metadata = measurement.toJson()
+            options.metadata = upload.toJson()
             val uploadCall = gridfs.uploadByFileNameWithOptions(data, fileName, options)
             uploadCall.onFailure(promise::fail)
             uploadCall.onSuccess { objectId -> promise.complete(ObjectId(objectId)) }
@@ -125,6 +124,61 @@ open class GridFsDao(private val mongoClient: MongoClient) {
                                         ids.size,
                                         deviceId,
                                         measurementId
+                                    )
+                                )
+                            )
+                        } else if (ids.size == 1) {
+                            ret.complete(true)
+                        } else {
+                            ret.complete(false)
+                        }
+                    } catch (exception: RuntimeException) {
+                        ret.fail(exception)
+                    }
+                }
+            } catch (exception: RuntimeException) {
+                ret.fail(exception)
+            }
+        }
+
+        return ret.future()
+    }
+
+    /**
+     * Check for the existence of an attachment with the provided identifier in the database.
+     *
+     * @return A [Future] that is notified of success or failure of this operation on completion.
+     */
+    fun exists(deviceId: String, measurementId: Long, attachmentId: Long): Future<Boolean> {
+        val ret = Promise.promise<Boolean>()
+
+        val access = mongoClient.createDefaultGridFsBucketService()
+        access.onSuccess { gridFs: MongoGridFsClient ->
+            try {
+                val query = JsonObject()
+                query.put("metadata.deviceId", deviceId)
+                query.put("metadata.measurementId", measurementId.toString())
+                query.put("metadata.attachmentId", attachmentId.toString())
+                val findIds = gridFs.findIds(query)
+                findIds.onFailure(ret::fail)
+                findIds.onSuccess { ids: List<String> ->
+                    try {
+                        if (ids.size > 1) {
+                            logger.error(
+                                "More than one attachment found for did {} mid {} aid {}",
+                                deviceId,
+                                measurementId,
+                                attachmentId
+                            )
+                            ret.fail(
+                                DuplicatesInDatabase(
+                                    String.format(
+                                        Locale.ENGLISH,
+                                        "Found %d datasets with did %s, mid %d and aid %d",
+                                        ids.size,
+                                        deviceId,
+                                        measurementId,
+                                        attachmentId
                                     )
                                 )
                             )
