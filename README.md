@@ -84,6 +84,10 @@ For using such a setup in production, you may create your own Docker setup, base
 Running the Cyface Data Collector without Docker, like for example from the terminal or from within your IDE is a little more complex.
 It requires a few set up steps and command knowledge as explained in the following paragraphs.
 
+**Running a Keycloak instance for Authentication:** The keycloak instance needs to be already running and accessible, see `docker-compose.yml`.
+
+Copy the `src/main/resources/logback.xml.template` to `logback.xml` and adjust if needed.
+
 ##### Running a Mongo Database for Data and User Storage
 Before you can run the Cyface data collector you need to set up a Mongo database.
 
