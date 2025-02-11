@@ -154,8 +154,28 @@ class GoogleCloudStorageService(
                 .onSuccess {
                     resultPromise.complete(Status(uploadIdentifier, StatusType.COMPLETE, bytesUploaded))
                 }
-                .onFailure {
-                    resultPromise.fail(it)
+                .onFailure { daoFailure ->
+                    // This probably happens when a file is uploaded, but while it's transferred to Google Cloud the
+                    // client connection is interrupted, so the client is allowed to re-upload the file while the
+                    // `google` collection document was not yet written. [RFR-1188]
+                    // When the second upload writes the file to Google Cloud and tries to create the `google`
+                    // collection document on success, this fails here due to the unique index on the `google`
+                    // collection, but the Google Cloud file still exists. Thus, we clean this file here:
+                    clean(uploadIdentifier)
+                        .onSuccess {
+                            resultPromise.fail(daoFailure)
+                        }
+                        .onFailure {
+                            logger.error(
+                                String.format(
+                                    Locale.getDefault(),
+                                    "Failed to clean %s after dao failure: %s",
+                                    uploadIdentifier,
+                                    it.message
+                                )
+                            )
+                            resultPromise.fail(it)
+                        }
                 }
         } else {
             resultPromise.complete(Status(uploadIdentifier, StatusType.INCOMPLETE, bytesUploaded))
