@@ -86,7 +86,7 @@ class MongoDatabase(private val mongoClient: MongoClient, private val collection
         val queryCall = mongoClient.find(collectionName, query)
         queryCall.onSuccess { ids ->
             try {
-                if (ids.size > 1) {
+                if (ids.size > 1) { // Should not be possible anymore with collection index
                     logger.error(
                         "More than one measurement found for did {} mid {}",
                         deviceIdentifier,
@@ -131,7 +131,7 @@ class MongoDatabase(private val mongoClient: MongoClient, private val collection
         val queryCall = mongoClient.find(collectionName, query)
         queryCall.onSuccess { ids ->
             try {
-                if (ids.size > 1) {
+                if (ids.size > 1) { // Should not be possible anymore with collection index
                     logger.error(
                         "More than one attachment found for did {} mid {} aid {}",
                         deviceIdentifier,

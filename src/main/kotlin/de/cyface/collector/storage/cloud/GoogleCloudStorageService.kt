@@ -1,5 +1,5 @@
 /*
- * Copyright 2022-2024 Cyface GmbH
+ * Copyright 2022-2025 Cyface GmbH
  *
  * This file is part of the Cyface Data Collector.
  *
@@ -20,12 +20,14 @@
 
 package de.cyface.collector.storage.cloud
 
+import com.mongodb.MongoWriteException
 import de.cyface.collector.storage.CleanupOperation
 import de.cyface.collector.storage.DataStorageService
 import de.cyface.collector.storage.Status
 import de.cyface.collector.storage.StatusType
 import de.cyface.collector.storage.UploadMetaData
 import de.cyface.collector.storage.exception.ContentRangeNotMatchingFileSize
+import de.cyface.collector.storage.exception.UploadAlreadyExists
 import io.vertx.core.Future
 import io.vertx.core.Promise
 import io.vertx.core.Vertx
@@ -47,6 +49,7 @@ import java.util.concurrent.Callable
  * [here](https://cloud.google.com/docs/authentication/application-default-credentials).
  *
  * @author Klemens Muthmann
+ * @author Armin Schnabel
  * @property dao The data access object to write an uploads' metadata.
  * @property vertx A Vertx instance of the current Vertx environment.
  * @property cloudStorageFactory A factory to create a [GoogleCloudStorage] instance on demand.
@@ -163,7 +166,11 @@ class GoogleCloudStorageService(
                     // collection, but the Google Cloud file still exists. Thus, we clean this file here:
                     clean(uploadIdentifier)
                         .onSuccess {
-                            resultPromise.fail(daoFailure)
+                            if (daoFailure is MongoWriteException && daoFailure.code == DUPLICATE_KEY) {
+                                resultPromise.fail(UploadAlreadyExists(daoFailure))
+                            } else {
+                                resultPromise.fail(daoFailure)
+                            }
                         }
                         .onFailure {
                             logger.error(
@@ -229,6 +236,13 @@ class GoogleCloudStorageService(
         See: https://stackoverflow.com/questions/55337912/is-it-possible-to-query-google-cloud-storage-custom-metadata
          */
         return dao.exists(deviceId, measurementId, attachmentId)
+    }
+
+    companion object {
+        /**
+         * Mongo Database error code for duplicate key.
+         */
+        private const val DUPLICATE_KEY = 11000
     }
 }
 
