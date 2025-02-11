@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Cyface GmbH
+ * Copyright 2022-2025 Cyface GmbH
  *
  * This file is part of the Cyface Data Collector.
  *
@@ -18,18 +18,21 @@
  */
 package de.cyface.collector.handler
 
+import de.cyface.collector.handler.HTTPStatus.HTTP_CONFLICT
 import de.cyface.collector.handler.HTTPStatus.NOT_FOUND
 import de.cyface.collector.handler.HTTPStatus.SERVER_ERROR
 import de.cyface.collector.handler.exception.UnexpectedContentRange
+import de.cyface.collector.storage.exception.UploadAlreadyExists
 import io.vertx.core.Handler
 import io.vertx.ext.web.RoutingContext
 import org.slf4j.LoggerFactory
 
 /**
- * A handler to process exception occuring during the reception of new measurements.
+ * A handler to process exception occurring during the reception of new measurements.
  *
  * @author Klemens Muthmann
- * @version 1.0.0
+ * @author Armin Schnabel
+ * @version 1.1.0
  * @property ctx The failed routing context, containing the error information.
  */
 class UploadFailureHandler(private val ctx: RoutingContext) : Handler<Throwable> {
@@ -38,6 +41,11 @@ class UploadFailureHandler(private val ctx: RoutingContext) : Handler<Throwable>
             is UnexpectedContentRange -> {
                 // client sends a new pre-request for this upload
                 ctx.response().setStatusCode(NOT_FOUND).end()
+            }
+
+            is UploadAlreadyExists -> {
+                // Android client interprets this error code as "UPLOAD_SUCCESSFUL" and continues with the next upload.
+                ctx.response().setStatusCode(HTTP_CONFLICT)
             }
 
             else -> {

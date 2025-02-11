@@ -71,8 +71,6 @@ class CollectorApiVerticle(
     override fun start(startPromise: Promise<Void>) {
         logger.info("Starting collector API!")
 
-        // Start http server
-
         val mongoClient = MongoClient.createShared(
             vertx,
             mongoDatabaseConfiguration,

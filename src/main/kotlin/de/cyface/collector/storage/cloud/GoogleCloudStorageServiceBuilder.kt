@@ -1,5 +1,5 @@
 /*
- * Copyright 2022-2024 Cyface GmbH
+ * Copyright 2022-2025 Cyface GmbH
  *
  * This file is part of the Serialization.
  *
@@ -39,7 +39,7 @@ import io.vertx.core.Vertx
  * (https://github.com/googleapis/google-auth-library-java/blob/040acefec507f419f6e4ec4eab9645a6e3888a15/samples/snippets/src/main/java/AuthenticateExplicit.java).
  * @property projectIdentifier The Google Cloud project identifier used by the service created from this builder.
  * @property bucketName The name of the Google Cloud Storage bucket used by the created builder to store data.
- * @property dao A data access object to store an uploads metadata.
+ * @property dao A data access object for storing uploads' metadata.
  * @property vertx The Vertx instance this application runs on.
  * @property bufferSize The size of the internal data buffer in bytes.
  *     This is the amount of bytes the system accumulates before sending data to Google.
@@ -58,8 +58,12 @@ class GoogleCloudStorageServiceBuilder(
     override fun create(): Future<DataStorageService> {
         val ret = Promise.promise<DataStorageService>()
         vertx.runOnContext {
-            val cloudStorageFactory = GoogleCloudStorageFactory(credentials, projectIdentifier, bucketName)
-            ret.complete(GoogleCloudStorageService(dao, vertx, cloudStorageFactory, bufferSize))
+            dao.createIndices().onSuccess {
+                val cloudStorageFactory = GoogleCloudStorageFactory(credentials, projectIdentifier, bucketName)
+                ret.complete(GoogleCloudStorageService(dao, vertx, cloudStorageFactory, bufferSize))
+            }.onFailure {
+                ret.fail(it)
+            }
         }
         return ret.future()
     }
