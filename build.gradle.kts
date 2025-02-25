@@ -86,7 +86,7 @@ kotlin {
   jvmToolchain(17)
 }
 
-val vertxVersion = "4.5.8"
+val vertxVersion = "4.5.13"
 val micrometerVersion = "1.10.6"
 val commonsLangVersion = "3.12.0"
 val logbackVersion = "1.4.14"
