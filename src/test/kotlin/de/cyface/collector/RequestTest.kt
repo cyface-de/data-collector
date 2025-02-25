@@ -59,7 +59,7 @@ class RequestTest {
     private var mongoTest: MongoTest = MongoTest()
 
     /**
-     * Deploys the [CollectorApiVerticle] in a test context.
+     * Deploys the [de.cyface.collector.verticle.CollectorApiVerticle] in a test context.
      *
      * @param vertx A `Vertx` instance used for deploying the verticle
      */
@@ -88,19 +88,30 @@ class RequestTest {
     @ParameterizedTest
     fun testGetRoot_returnsApiSpecification(apiEndpoint: String?, context: VertxTestContext) {
         collectorClient.client.get(collectorClient.port, TEST_HOST, apiEndpoint)
-            .send(context.succeeding<HttpResponse<Buffer?>?>(Handler { response: HttpResponse<Buffer?>? ->
-                context.verify(VertxTestContext.ExecutionBlock {
-                    MatcherAssert.assertThat<Int?>(
-                        "Invalid HTTP status code on request for API specification.", response!!.statusCode(),
-                        Matchers.`is`<Int?>(200)
-                    )
-                    val body = response.bodyAsString()
-                    val expectedContent = "<title>Cyface Data Collector</title>"
-                    val assertBodyReason = "Request for API specification seems to be missing a valid body."
-                    MatcherAssert.assertThat<String?>(assertBodyReason, body, Matchers.containsString(expectedContent))
-                    context.completeNow()
-                })
-            }))
+            .send(
+                context.succeeding<HttpResponse<Buffer?>?>(
+                    Handler { response: HttpResponse<Buffer?>? ->
+                        context.verify(
+                            VertxTestContext.ExecutionBlock {
+                                MatcherAssert.assertThat<Int?>(
+                                    "Invalid HTTP status code on request for API specification.",
+                                    response!!.statusCode(),
+                                    Matchers.`is`<Int?>(200)
+                                )
+                                val body = response.bodyAsString()
+                                val expectedContent = "<title>Cyface Data Collector</title>"
+                                val assertBodyReason = "Request for API specification seems to be missing a valid body."
+                                MatcherAssert.assertThat<String?>(
+                                    assertBodyReason,
+                                    body,
+                                    Matchers.containsString(expectedContent)
+                                )
+                                context.completeNow()
+                            }
+                        )
+                    }
+                )
+            )
     }
 
     /**
@@ -112,15 +123,22 @@ class RequestTest {
     @ParameterizedTest
     fun testGetUnknownResource_Returns404(apiEndpoint: String?, ctx: VertxTestContext) {
         collectorClient.client.post(collectorClient.port, TEST_HOST, apiEndpoint + "garbage")
-            .send(ctx.succeeding<HttpResponse<Buffer?>?>(Handler { response: HttpResponse<Buffer?>? ->
-                ctx.verify(VertxTestContext.ExecutionBlock {
-                    MatcherAssert.assertThat<Int?>(
-                        "Invalid HTTP status code on requesting invalid resource!", response!!.statusCode(),
-                        Matchers.`is`<Int?>(404)
-                    )
-                    ctx.completeNow()
-                })
-            }))
+            .send(
+                ctx.succeeding<HttpResponse<Buffer?>?>(
+                    Handler { response: HttpResponse<Buffer?>? ->
+                        ctx.verify(
+                            VertxTestContext.ExecutionBlock {
+                                MatcherAssert.assertThat<Int?>(
+                                    "Invalid HTTP status code on requesting invalid resource!",
+                                    response!!.statusCode(),
+                                    Matchers.`is`<Int?>(404)
+                                )
+                                ctx.completeNow()
+                            }
+                        )
+                    }
+                )
+            )
     }
 
     companion object {

@@ -65,7 +65,7 @@ class FileSystemStorageService(val vertx: Vertx) : DataStorageService {
         vertx: Vertx,
         cleanupOperation: CleanupOperation
     ) {
-       // Not implemented.
+        // Not implemented.
     }
 
     override fun isStored(deviceId: String, measurementId: Long): Future<Boolean> {

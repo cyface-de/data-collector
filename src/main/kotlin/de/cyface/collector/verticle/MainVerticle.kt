@@ -18,6 +18,7 @@
  */
 package de.cyface.collector.verticle
 
+import de.cyface.collector.auth.AuthHandlerBuilder
 import de.cyface.collector.auth.JWKAuthHandlerBuilder
 import de.cyface.collector.auth.OAuth2HandlerBuilder
 import de.cyface.collector.configuration.Configuration
@@ -25,8 +26,10 @@ import de.cyface.collector.configuration.GoogleCloudStorageType
 import de.cyface.collector.configuration.GridFsStorageType
 import de.cyface.collector.configuration.InvalidConfig
 import de.cyface.collector.configuration.LocalStorageType
+import de.cyface.collector.configuration.StorageType
 import io.vertx.core.AbstractVerticle
 import io.vertx.core.Promise
+import io.vertx.core.json.JsonObject
 import io.vertx.ext.auth.oauth2.OAuth2Options
 import io.vertx.ext.mongo.MongoClient
 import io.vertx.kotlin.core.json.get
@@ -78,27 +81,7 @@ class MainVerticle : AbstractVerticle() {
         logger.info("Deploying main verticle!")
 
         val authHandlerBuilder = config.authConfig.getString("type").let {
-            when (it) {
-                "oauth" -> {
-                    val options = OAuth2Options()
-                        .setClientId(config.authConfig.getString("client"))
-                        .setClientSecret(config.authConfig.getString("secret"))
-                        .setSite(config.authConfig.getString("site"))
-                        .setTenant(config.authConfig.getString("tenant"))
-                    OAuth2HandlerBuilder(
-                        vertx,
-                        URL(config.authConfig.getString("callback")),
-                        options
-                    )
-                }
-
-                "jwt" -> {
-                    val jwkJson = config.authConfig.getJsonObject("jwk")
-                    JWKAuthHandlerBuilder(vertx, jwkJson)
-                }
-
-                else -> throw InvalidConfig("Invalid auth type $it!")
-            }
+            authHandlerBuilder(it, config)
         }
         val mongoClient = MongoClient.createShared(
             vertx,
@@ -107,38 +90,7 @@ class MainVerticle : AbstractVerticle() {
         )
 
         val storageTypeConfig = config.storageTypeJson
-        val dataStorageType = when (val storageTypeString = storageTypeConfig.getString("type")) {
-            "gridfs" -> {
-                val uploadFolder = Path.of(storageTypeConfig.getString("uploads-folder", "file-uploads/"))
-                GridFsStorageType(uploadFolder)
-            }
-
-            "google" -> {
-                val collectionName = storageTypeConfig.get<String>("collection-name")
-                val projectIdentifier = storageTypeConfig.get<String>("project-identifier")
-                val bucketName = storageTypeConfig.get<String>("bucket-name")
-                val credentialsFile = storageTypeConfig.get<String>("credentials-file")
-                val bufferSize = storageTypeConfig.get<Int>("buffer-size")
-                GoogleCloudStorageType(
-                    collectionName,
-                    projectIdentifier,
-                    bucketName,
-                    credentialsFile,
-                    bufferSize
-                )
-            }
-
-            "local" -> {
-                LocalStorageType()
-            }
-
-            null -> throw InvalidConfig(
-                "Storage type configuration missing. " +
-                        "Please provide either a Google or GridFS Storage type."
-            )
-
-            else -> throw InvalidConfig("Invalid storage type $storageTypeString!")
-        }
+        val dataStorageType = storageType(storageTypeConfig)
 
         val serverConfiguration = ServerConfiguration(
             config.httpPort,
@@ -170,4 +122,64 @@ class MainVerticle : AbstractVerticle() {
             startFuture.fail(cause)
         }
     }
+
+    private fun authHandlerBuilder(
+        string: String?,
+        config: Configuration
+    ): AuthHandlerBuilder = when (string) {
+        "oauth" -> {
+            val options = OAuth2Options()
+                .setClientId(config.authConfig.getString("client"))
+                .setClientSecret(config.authConfig.getString("secret"))
+                .setSite(config.authConfig.getString("site"))
+                .setTenant(config.authConfig.getString("tenant"))
+            OAuth2HandlerBuilder(
+                vertx,
+                URL(config.authConfig.getString("callback")),
+                options
+            )
+        }
+
+        "jwt" -> {
+            val jwkJson = config.authConfig.getJsonObject("jwk")
+            JWKAuthHandlerBuilder(vertx, jwkJson)
+        }
+
+        else -> throw InvalidConfig("Invalid auth type $string!")
+    }
+
+    private fun storageType(storageTypeConfig: JsonObject): StorageType =
+        when (val storageTypeString = storageTypeConfig.getString("type")) {
+            "gridfs" -> {
+                val uploadFolder = Path.of(storageTypeConfig.getString("uploads-folder", "file-uploads/"))
+                GridFsStorageType(uploadFolder)
+            }
+
+            "google" -> {
+                val collectionName = storageTypeConfig.get<String>("collection-name")
+                val projectIdentifier = storageTypeConfig.get<String>("project-identifier")
+                val bucketName = storageTypeConfig.get<String>("bucket-name")
+                val credentialsFile = storageTypeConfig.get<String>("credentials-file")
+                val bufferSize = storageTypeConfig.get<Int>("buffer-size")
+                GoogleCloudStorageType(
+                    collectionName,
+                    projectIdentifier,
+                    bucketName,
+                    credentialsFile,
+                    bufferSize
+                )
+            }
+
+            "local" -> {
+                LocalStorageType()
+            }
+
+            null -> throw InvalidConfig(
+                """
+                Storage type configuration missing. Please provide either a Google or GridFS Storage type.
+                """.trimIndent()
+            )
+
+            else -> throw InvalidConfig("Invalid storage type $storageTypeString!")
+        }
 }

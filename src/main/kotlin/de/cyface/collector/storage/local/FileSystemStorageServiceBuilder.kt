@@ -29,7 +29,7 @@ import io.vertx.core.Vertx
  *
  * @author Klemens Muthmann
  */
-class FileSystemStorageServiceBuilder(private val vertx: Vertx): DataStorageServiceBuilder {
+class FileSystemStorageServiceBuilder(private val vertx: Vertx) : DataStorageServiceBuilder {
     /**
      * Build the actual service.
      */
@@ -42,9 +42,9 @@ class FileSystemStorageServiceBuilder(private val vertx: Vertx): DataStorageServ
     }
 
     override fun createCleanupOperation(): CleanupOperation {
-        return object: CleanupOperation {
+        return object : CleanupOperation {
             override fun clean(fileExpirationTime: Long) {
-
+                // Nothing to do here at the moment.
             }
         }
     }

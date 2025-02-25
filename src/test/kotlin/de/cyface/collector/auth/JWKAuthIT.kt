@@ -28,8 +28,10 @@ import kotlin.test.Test
  * @author Klemens Muthmann
  */
 @ExtendWith(VertxExtension::class)
-@Disabled("""This test requires a valid token and JWK output to run. 
-    |Since this is sensitive information, it is disabled by default.""")
+@Disabled(
+    """This test requires a valid token and JWK output to run. 
+    |Since this is sensitive information, it is disabled by default."""
+)
 class JWKAuthIT {
 
     @Test

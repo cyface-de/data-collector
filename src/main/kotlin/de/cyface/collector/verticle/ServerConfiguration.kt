@@ -18,8 +18,6 @@
  */
 package de.cyface.collector.verticle
 
-import de.cyface.collector.configuration.StorageType
-
 /**
  * A parameter wrapper object to initialize a [CollectorApiVerticle].
  *

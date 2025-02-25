@@ -26,7 +26,7 @@ import io.vertx.ext.mongo.MongoClient
 /**
  * The [StorageType] if local file storage is used.
  */
-class LocalStorageType: StorageType {
+class LocalStorageType : StorageType {
     override fun dataStorageServiceBuilder(
         vertx: Vertx,
         mongoClient: MongoClient

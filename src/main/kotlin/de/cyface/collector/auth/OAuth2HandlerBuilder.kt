@@ -48,8 +48,8 @@ class OAuth2HandlerBuilder(
             val callbackAddress = apiRouter.get(callbackUrl.path)
             return OAuth2AuthHandler.create(vertx, oAuth2Auth, callbackUrl.toURI().toString())
                 .setupCallback(callbackAddress)
-        } catch(e: Throwable) {
-           throw DiscoveryFailed("Unable to discover Identity Provider from $options", e)
+        } catch (e: Throwable) {
+            throw DiscoveryFailed("Unable to discover Identity Provider from $options", e)
         }
     }
 }

@@ -39,6 +39,7 @@ class HttpServer(
      * `src/main/resources/logback.xml`.
      */
     private val logger = LoggerFactory.getLogger(HttpServer::class.java)
+
     /**
      * Starts the HTTP server provided by this application. This server runs the Cyface Collector REST-API.
      *
@@ -61,7 +62,7 @@ class HttpServer(
                 .requestHandler(router)
                 .listen(port).coAwait()
             logger.info("Successfully started API on Port $port!")
-        } catch(e: Throwable) {
+        } catch (e: Throwable) {
             logger.error("Failed to start API on Port $port!", e)
             throw e
         }

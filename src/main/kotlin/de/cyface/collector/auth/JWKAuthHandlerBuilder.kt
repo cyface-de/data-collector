@@ -38,7 +38,7 @@ import io.vertx.ext.web.handler.JWTAuthHandler
 class JWKAuthHandlerBuilder(
     private val vertx: Vertx,
     private val jwkJson: JsonObject,
-): AuthHandlerBuilder {
+) : AuthHandlerBuilder {
     override suspend fun create(apiRouter: Router): AuthenticationHandler {
         // 2. JWTAuthOptions erstellen
         val jwtAuthOptions = JWTAuthOptions()
@@ -48,5 +48,4 @@ class JWKAuthHandlerBuilder(
         val jwtAuth = JWTAuth.create(vertx, jwtAuthOptions)
         return JWTAuthHandler.create(jwtAuth)
     }
-
 }

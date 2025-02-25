@@ -92,7 +92,7 @@ class CollectorApiVerticle(
             httpServer.start(vertx, router)
 
             logger.info("Successfully started collector API!")
-        } catch(e: Throwable) {
+        } catch (e: Throwable) {
             logger.error("Failed to start collector API!", e)
         }
     }

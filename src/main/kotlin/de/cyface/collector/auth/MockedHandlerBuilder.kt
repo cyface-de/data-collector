@@ -22,8 +22,8 @@ import io.vertx.core.json.JsonObject
 import io.vertx.ext.auth.impl.UserImpl
 import io.vertx.ext.web.Router
 import io.vertx.ext.web.RoutingContext
-import java.util.UUID
 import io.vertx.ext.web.handler.AuthenticationHandler
+import java.util.UUID
 
 /**
  * Mocked OAuth2 builder which creates an OAuth2 handler for testing.

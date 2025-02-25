@@ -150,21 +150,21 @@ class DataCollectorApi(private val measurementLimit: Long, vertx: Vertx) {
     ): JsonObject {
         return json {
             obj(
-                "deviceType" to deviceMetaData.deviceType, //"testDeviceType")
-                "appVersion" to applicationMetaData.applicationVersion, //"testAppVersion")
-                "startLocLat" to measurementMetaData.startLocation?.latitude, //TEST_MEASUREMENT_START_LOCATION_LAT)
+                "deviceType" to deviceMetaData.deviceType,
+                "appVersion" to applicationMetaData.applicationVersion,
+                "startLocLat" to measurementMetaData.startLocation?.latitude,
                 "locationCount" to measurementMetaData.locationCount,
-                "startLocLon" to measurementMetaData.startLocation?.longitude, //TEST_MEASUREMENT_START_LOCATION_LON)
-                "length" to measurementMetaData.length,//"0.0")
-                "endLocLon" to measurementMetaData.endLocation?.longitude, //TEST_MEASUREMENT_END_LOCATION_LON)
-                "deviceId" to measurementIdentifier.deviceIdentifier.toString(), //deviceIdentifier)
-                "endLocTS" to measurementMetaData.endLocation?.timestamp, //"1503055141001")
-                "modality" to measurementMetaData.modality, //"BICYCLE")
-                "startLocTS" to measurementMetaData.startLocation?.timestamp, //"1503055141000")
-                "endLocLat" to measurementMetaData.endLocation?.latitude, //TEST_MEASUREMENT_END_LOCATION_LAT)
-                "osVersion" to deviceMetaData.operatingSystemVersion, //"testOsVersion")
-                "measurementId" to measurementIdentifier.measurementIdentifier, //measurementIdentifier)
-                "formatVersion" to applicationMetaData.formatVersion,//"3")
+                "startLocLon" to measurementMetaData.startLocation?.longitude,
+                "length" to measurementMetaData.length,
+                "endLocLon" to measurementMetaData.endLocation?.longitude,
+                "deviceId" to measurementIdentifier.deviceIdentifier.toString(),
+                "endLocTS" to measurementMetaData.endLocation?.timestamp,
+                "modality" to measurementMetaData.modality,
+                "startLocTS" to measurementMetaData.startLocation?.timestamp,
+                "endLocLat" to measurementMetaData.endLocation?.latitude,
+                "osVersion" to deviceMetaData.operatingSystemVersion,
+                "measurementId" to measurementIdentifier.measurementIdentifier,
+                "formatVersion" to applicationMetaData.formatVersion,
             )
         }
     }

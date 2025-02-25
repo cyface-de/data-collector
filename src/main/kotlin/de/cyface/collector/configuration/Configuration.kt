@@ -21,7 +21,6 @@ package de.cyface.collector.configuration
 import io.vertx.core.json.JsonObject
 import io.vertx.kotlin.core.json.get
 import org.apache.commons.lang3.Validate
-import java.net.URL
 
 @Suppress("ForbiddenComment")
 // TODO: Remove the HTTP Path Parameter by switching to returning a relative Location header.

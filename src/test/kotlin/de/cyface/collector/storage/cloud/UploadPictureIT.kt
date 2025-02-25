@@ -233,7 +233,7 @@ class UploadPictureIT {
             GoogleCloudStorageServiceBuilder(
                 credentials = credentialsFile.let {
                     FileInputStream(it).use { stream -> GoogleCredentials.fromStream(stream) }
-                                                  },
+                },
                 projectIdentifier = projectIdentifier,
                 bucketName = bucketName,
                 dao = MongoDatabase(mongoClient, collectionName),
