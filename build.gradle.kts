@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2024 Cyface GmbH
+ * Copyright 2020-2025 Cyface GmbH
  *
  * This file is part of the Cyface Data Collector.
  *
@@ -51,7 +51,7 @@ plugins {
 
   id("application")
   id("maven-publish")
-  kotlin("jvm").version("1.9.21")
+  kotlin("jvm").version("2.1.0")
 
   // For static code checks
   id("io.gitlab.arturbosch.detekt").version("1.23.0")
@@ -90,7 +90,7 @@ val vertxVersion = "4.5.8"
 val micrometerVersion = "1.10.6"
 val commonsLangVersion = "3.12.0"
 val logbackVersion = "1.4.14"
-val gradleWrapperVersion = "7.6.1"
+val gradleWrapperVersion = "7.6.3"
 val googleCloudLibrariesVersion = "26.35.0"
 
 // Versions of testing dependencies
@@ -107,7 +107,7 @@ val cyfaceUploaderVersion = "1.4.1"
 val testContainerVersion = "1.20.1"
 
 tasks.wrapper {
-  gradleVersion = project.extra["gradleWrapperVersion"].toString()
+  gradleVersion = gradleWrapperVersion.toString()
 }
 
 dependencies {
