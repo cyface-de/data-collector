@@ -1,5 +1,5 @@
 /*
- * Copyright 2022-2024 Cyface GmbH
+ * Copyright 2022-2025 Cyface GmbH
  *
  * This file is part of the Cyface Data Collector.
  *
@@ -22,7 +22,6 @@ import io.vertx.core.json.JsonObject
 import io.vertx.kotlin.core.json.get
 import org.apache.commons.lang3.Validate
 import java.net.URL
-import java.nio.file.Path
 
 @Suppress("ForbiddenComment")
 // TODO: Remove the HTTP Path Parameter by switching to returning a relative Location header.
@@ -32,8 +31,6 @@ import java.nio.file.Path
  *
  * @author Klemens Muthmann
  * @author Armin Schnabel
- * @version 5.0.0
- * @since 1.0.0
  * @property httpHost The host name of the server serving this collector service.
  * @property httpPort The Port providing this collector service.
  * @property httpPath The path under which this service is deployed.
@@ -42,8 +39,8 @@ import java.nio.file.Path
  * @property uploadExpiration The time an upload session stays valid to be resumed in the future, in milliseconds.
  * @property measurementPayloadLimit The maximum size in bytes accepted for a single measurement.
  * @property metricsEnabled `true` if prometheus metrics should be collected; `false` otherwise.
- * @property storageType The type of storage to use for storing the binary data blobs.
- * @property oauthConfig The configuration for the OAuth authentication.
+ * @property storageTypeJson The type of storage to use for storing the binary data blobs.
+ * @property authConfig The configuration for the authentication.
  */
 data class Configuration(
     val httpHost: String,
@@ -53,9 +50,8 @@ data class Configuration(
     val uploadExpiration: Long,
     val measurementPayloadLimit: Long,
     val metricsEnabled: Boolean,
-    val storageType: StorageType,
-    val authType: AuthType,
-    val oauthConfig: OAuthConfig
+    val storageTypeJson: JsonObject,
+    val authConfig: JsonObject
 ) {
     companion object {
         /**
@@ -71,13 +67,7 @@ data class Configuration(
                 val measurementPayloadLimit = json.get<Long>("measurement.payload.limit")
                 val metricsEnabled = json.get<Boolean>("metrics.enabled")
                 val storageTypeJson = json.get<JsonObject>("storage-type")
-                val storageType = storageType(storageTypeJson)
-                val authType = AuthType.valueOf(json.getString("auth-type").replaceFirstChar(Char::titlecase))
-                val oauthCallback = URL(json.get<String>("oauth.callback"))
-                val oauthClient = json.get<String>("oauth.client")
-                val oauthSecret = json.get<String>("oauth.secret")
-                val oauthSite = URL(json.get<String>("oauth.site"))
-                val oauthTenant = json.get<String>("oauth.tenant")
+                val authConfig = json.getJsonObject("auth")
 
                 return Configuration(
                     httpHost,
@@ -87,72 +77,12 @@ data class Configuration(
                     uploadExpiration,
                     measurementPayloadLimit,
                     metricsEnabled,
-                    storageType,
-                    authType,
-                    OAuthConfig(
-                        oauthCallback,
-                        oauthClient,
-                        oauthSecret,
-                        oauthSite,
-                        oauthTenant
-                    )
+                    storageTypeJson,
+                    authConfig,
                 )
             } catch (@Suppress("TooGenericExceptionCaught") e: NullPointerException) {
                 throw InvalidConfig("Some parameters are missing. Refer to the documentation or an example file.", e)
             }
         }
-
-        /**
-         * Provide the [StorageType] configured for this data collector.
-         */
-        private fun storageType(storageTypeConfig: JsonObject): StorageType {
-            when (val storageTypeString = storageTypeConfig.getString("type")) {
-                "gridfs" -> {
-                    val uploadFolder = Path.of(storageTypeConfig.getString("uploads-folder", "file-uploads/"))
-                    return GridFsStorageType(uploadFolder)
-                }
-
-                "google" -> {
-                    val collectionName = storageTypeConfig.get<String>("collection-name")
-                    val projectIdentifier = storageTypeConfig.get<String>("project-identifier")
-                    val bucketName = storageTypeConfig.get<String>("bucket-name")
-                    val credentialsFile = storageTypeConfig.get<String>("credentials-file")
-                    val bufferSize = storageTypeConfig.get<Int>("buffer-size")
-                    return GoogleCloudStorageType(
-                        collectionName,
-                        projectIdentifier,
-                        bucketName,
-                        credentialsFile,
-                        bufferSize
-                    )
-                }
-
-                null -> throw InvalidConfig(
-                    "Storage type configuration missing. " +
-                        "Please provide either a Google or GridFS Storage type."
-                )
-
-                else -> throw InvalidConfig("Invalid storage type $storageTypeString!")
-            }
-        }
     }
-
-    /**
-     * Wrapper class for all the parameters relevant to initialize OAuth.
-     *
-     * @author Klemens Muthmann
-     * @version 1.0.0
-     * @property callback The callback URL you entered in your provider admin console.
-     * @property client The name of the oauth client to contact.
-     * @property secret The secret of the oauth client to contact.
-     * @property site The Root URL for the provider without trailing slashes.
-     * @property tenant The name of the oauth realm to contact.
-     */
-    data class OAuthConfig(
-        val callback: URL,
-        val client: String,
-        val secret: String,
-        val site: URL,
-        val tenant: String
-    )
 }

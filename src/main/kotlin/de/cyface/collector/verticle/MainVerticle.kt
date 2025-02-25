@@ -1,5 +1,5 @@
 /*
- * Copyright 2018-2024 Cyface GmbH
+ * Copyright 2018-2025 Cyface GmbH
  *
  * This file is part of the Cyface Data Collector.
  *
@@ -18,22 +18,29 @@
  */
 package de.cyface.collector.verticle
 
+import de.cyface.collector.auth.JWKAuthHandlerBuilder
 import de.cyface.collector.auth.OAuth2HandlerBuilder
 import de.cyface.collector.configuration.Configuration
+import de.cyface.collector.configuration.GoogleCloudStorageType
+import de.cyface.collector.configuration.GridFsStorageType
+import de.cyface.collector.configuration.InvalidConfig
+import de.cyface.collector.configuration.LocalStorageType
 import io.vertx.core.AbstractVerticle
 import io.vertx.core.Promise
 import io.vertx.ext.auth.oauth2.OAuth2Options
+import io.vertx.ext.mongo.MongoClient
+import io.vertx.kotlin.core.json.get
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.io.IOException
+import java.net.URL
+import java.nio.file.Path
 
 /**
  * This Verticle starts the whole application, by deploying all required child Verticles.
  *
  * @author Klemens Muthmann
  * @author Armin Schnabel
- * @version 2.2.2
- * @since 2.0.0
  */
 class MainVerticle : AbstractVerticle() {
 
@@ -70,27 +77,78 @@ class MainVerticle : AbstractVerticle() {
     private fun deploy(startFuture: Promise<Void>, config: Configuration) {
         logger.info("Deploying main verticle!")
 
-        val options = OAuth2Options()
-            .setClientId(config.oauthConfig.client)
-            .setClientSecret(config.oauthConfig.secret)
-            .setSite(config.oauthConfig.site.toString())
-            .setTenant(config.oauthConfig.tenant)
-        val authHandlerBuilder = OAuth2HandlerBuilder(
+        val authHandlerBuilder = config.authConfig.getString("type").let {
+            when (it) {
+                "oauth" -> {
+                    val options = OAuth2Options()
+                        .setClientId(config.authConfig.getString("client"))
+                        .setClientSecret(config.authConfig.getString("secret"))
+                        .setSite(config.authConfig.getString("site"))
+                        .setTenant(config.authConfig.getString("tenant"))
+                    OAuth2HandlerBuilder(
+                        vertx,
+                        URL(config.authConfig.getString("callback")),
+                        options
+                    )
+                }
+                else -> throw InvalidConfig("Invalid auth type $it!")
+            }
+        }
+        val mongoClient = MongoClient.createShared(
             vertx,
-            config.oauthConfig.callback,
-            options
+            config.mongoDb,
+            config.mongoDb.getString("data_source_name")
+        )
+
+        val storageTypeConfig = config.storageTypeJson
+        val dataStorageType = when (val storageTypeString = storageTypeConfig.getString("type")) {
+            "gridfs" -> {
+                val uploadFolder = Path.of(storageTypeConfig.getString("uploads-folder", "file-uploads/"))
+                GridFsStorageType(uploadFolder)
+            }
+
+            "google" -> {
+                val collectionName = storageTypeConfig.get<String>("collection-name")
+                val projectIdentifier = storageTypeConfig.get<String>("project-identifier")
+                val bucketName = storageTypeConfig.get<String>("bucket-name")
+                val credentialsFile = storageTypeConfig.get<String>("credentials-file")
+                val bufferSize = storageTypeConfig.get<Int>("buffer-size")
+                GoogleCloudStorageType(
+                    collectionName,
+                    projectIdentifier,
+                    bucketName,
+                    credentialsFile,
+                    bufferSize
+                )
+            }
+
+            "local" -> {
+                LocalStorageType()
+            }
+
+            null -> throw InvalidConfig(
+                "Storage type configuration missing. " +
+                        "Please provide either a Google or GridFS Storage type."
+            )
+
+            else -> throw InvalidConfig("Invalid storage type $storageTypeString!")
+        }
+
+        val serverConfiguration = ServerConfiguration(
+            config.httpPort,
+            config.httpPath,
+            config.measurementPayloadLimit,
+            config.uploadExpiration,
+        )
+        val storageServiceBuilder = dataStorageType.dataStorageServiceBuilder(
+            vertx,
+            mongoClient
         )
 
         val collectorApiVerticle = CollectorApiVerticle(
             authHandlerBuilder,
-            ServerConfiguration(
-                config.httpPort,
-                config.httpPath,
-                config.measurementPayloadLimit,
-                config.uploadExpiration,
-                config.storageType,
-            ),
-            config.mongoDb
+            serverConfiguration,
+            storageServiceBuilder
         )
 
         // Start the collector API as first verticle.

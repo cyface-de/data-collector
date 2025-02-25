@@ -1,5 +1,5 @@
 /*
- * Copyright 2022-2024 Cyface GmbH
+ * Copyright 2022-2025 Cyface GmbH
  *
  * This file is part of the Cyface Data Collector.
  *
@@ -18,46 +18,82 @@
  */
 package de.cyface.collector.commons
 
-import de.cyface.collector.configuration.AuthType
 import de.cyface.collector.configuration.Configuration
-import de.cyface.collector.configuration.GridFsStorageType
 import io.vertx.core.json.JsonObject
+import io.vertx.kotlin.core.json.json
+import io.vertx.kotlin.core.json.obj
 import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.mock
-import java.net.URL
-import java.nio.file.Path
 
 /**
  * A factory for the creation of a test fixture [Configuration]
  *
  * @author Klemens Muthmann
  * @author Armin Schnabel
- * @version 1.2.1
  */
 object ConfigurationFactory {
+
+    private var mongoDbConfig = json {
+        obj(
+            "db_name" to "cyface",
+            "connection_string" to "mongodb://localhost:27019",
+            "data_source_name" to "cyface",
+        )
+    }
+
+    private var measurementLimit: Long = 104_857_600L
+
+    private var port = 8080
+
+    private var authConfig = json { obj("type" to "local") }
+
+    /**
+     * The configuration for setting up the Mongo Database configuration.
+     * All possible properties are described as part of the
+     * [Vert.x Mongo documentation](https://vertx.io/docs/vertx-mongo-client/java/#_configuring_the_client).
+     */
+    fun mongoDbConfig(config: JsonObject): ConfigurationFactory {
+        mongoDbConfig = config
+        return this
+    }
+
+    /**
+     * The default limit for the size of a measurement upload in bytes.
+     */
+    fun measurementLimit(limit: Long): ConfigurationFactory {
+        measurementLimit = limit
+        return this
+    }
+
+    /**
+     * The default Port to use during testing.
+     */
+    fun port(port: Int): ConfigurationFactory {
+        this.port = port
+        return this
+    }
+
+    /**
+     * Configuration for the [io.vertx.ext.web.handler.AuthenticationHandler] to use.
+     */
+    fun authConfig(config: JsonObject): ConfigurationFactory {
+        authConfig = config
+        return this
+    }
+
     /**
      * Provide a mocked test fixture configuration.
      */
-    fun mockedConfiguration(port: Int, mongoDbConfig: JsonObject, measurementLimit: Long?): Configuration {
+    fun mockedConfiguration(): Configuration {
         val ret = mock<Configuration> {
             on { mongoDb } doReturn mongoDbConfig
             on { httpPort } doReturn port
             on { uploadExpiration } doReturn 60_000L
             on { metricsEnabled } doReturn false
-            on { storageType } doReturn GridFsStorageType(Path.of("uploadFolder"))
-            if (measurementLimit != null) {
-                on { measurementPayloadLimit } doReturn measurementLimit
-            } else {
-                on { measurementPayloadLimit } doReturn 104_857_600L
-            }
-            on { authType } doReturn AuthType.Mocked
-            on { oauthConfig } doReturn Configuration.OAuthConfig(
-                URL("http://localhost:8080/callback"),
-                "collector-test",
-                "SECRET",
-                URL("https://example.com:8443/realms/{tenant}"),
-                "rfr"
-            )
+            on { storageTypeJson } doReturn json { obj("type" to "local") }
+            on { measurementPayloadLimit } doReturn measurementLimit
+            on { authConfig } doReturn authConfig
+            on { httpPath } doReturn "/"
         }
         return ret
     }

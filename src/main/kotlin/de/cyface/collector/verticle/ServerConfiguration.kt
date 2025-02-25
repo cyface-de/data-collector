@@ -1,5 +1,5 @@
 /*
- * Copyright 2024 Cyface GmbH
+ * Copyright 2024-2025 Cyface GmbH
  *
  * This file is part of the Cyface Data Collector.
  *
@@ -24,19 +24,15 @@ import de.cyface.collector.configuration.StorageType
  * A parameter wrapper object to initialize a [CollectorApiVerticle].
  *
  * @author Klemens Muthmann
- * @version 1.0.0
- * @since 7.1.4
  * @property port The HTTP Server port this service is accessible from.
  * @property httpEndpoint The endpoint this service is accessible at. This is required to set the Location header in
  * PreRequests correctly.
  * @property measurementPayloadLimit The maximum size of measurement sensor data.
  * @property uploadExpirationTimeInMillis The time a request might stay open.
- * @property largeFileStorageType A strategy to store large files such as road images.
  */
 data class ServerConfiguration(
     val port: Int,
     val httpEndpoint: String,
     val measurementPayloadLimit: Long,
     val uploadExpirationTimeInMillis: Long,
-    val largeFileStorageType: StorageType
 )

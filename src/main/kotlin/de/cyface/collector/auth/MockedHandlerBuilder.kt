@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-2024 Cyface GmbH
+ * Copyright 2023-2025 Cyface GmbH
  *
  * This file is part of the Cyface Data Collector.
  *
@@ -18,26 +18,23 @@
  */
 package de.cyface.collector.auth
 
-import io.vertx.core.Future
 import io.vertx.core.json.JsonObject
 import io.vertx.ext.auth.impl.UserImpl
-import io.vertx.ext.web.Route
 import io.vertx.ext.web.Router
 import io.vertx.ext.web.RoutingContext
-import io.vertx.ext.web.handler.OAuth2AuthHandler
 import java.util.UUID
+import io.vertx.ext.web.handler.AuthenticationHandler
 
 /**
  * Mocked OAuth2 builder which creates an OAuth2 handler for testing.
  *
  * @author Armin Schnabel
- * @version 2.0.0
- * @since 7.0.0
+ * @author Klemens Muthmann
  */
 class MockedHandlerBuilder : AuthHandlerBuilder {
 
-    override fun create(apiRouter: Router): Future<OAuth2AuthHandler> {
-        val handler: OAuth2AuthHandler = object : OAuth2AuthHandler {
+    override suspend fun create(apiRouter: Router): AuthenticationHandler {
+        val handler = object : AuthenticationHandler {
             override fun handle(event: RoutingContext) {
                 val principal = JsonObject()
                     .put("username", "test-user")
@@ -58,31 +55,7 @@ class MockedHandlerBuilder : AuthHandlerBuilder {
             private fun postAuthentication(event: RoutingContext) {
                 event.next()
             }
-
-            override fun extraParams(extraParams: JsonObject?): OAuth2AuthHandler {
-                return this
-            }
-
-            override fun withScope(scope: String?): OAuth2AuthHandler {
-                return this
-            }
-
-            override fun withScopes(scopes: MutableList<String>?): OAuth2AuthHandler {
-                return this
-            }
-
-            override fun prompt(prompt: String?): OAuth2AuthHandler {
-                return this
-            }
-
-            override fun pkceVerifierLength(length: Int): OAuth2AuthHandler {
-                return this
-            }
-
-            override fun setupCallback(route: Route?): OAuth2AuthHandler {
-                return this
-            }
         }
-        return Future.succeededFuture(handler)
+        return handler
     }
 }

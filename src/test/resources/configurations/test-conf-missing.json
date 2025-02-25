@@ -17,10 +17,12 @@
     "credentials-file": "/path/to/credentials.json",
     "buffer-size": 500000
   },
-  "auth-type": "mocked",
-  "oauth.callback":"http://localhost:8080/callback",
-  "oauth.client":"collector-test",
-  "oauth.secret":"SECRET",
-  "oauth.site":"https://example.com:8443/realms/{tenant}",
-  "oauth.tenant":"rfr"
+  "auth": {
+    "type": "oauth",
+    "callback": "http://localhost:8080/callback",
+    "client": "collector-test",
+    "secret": "SECRET",
+    "site": "https://example.com:8443/realms/{tenant}",
+    "tenant": "rfr"
+  }
 }

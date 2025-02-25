@@ -1,5 +1,5 @@
 /*
- * Copyright 2022-2024 Cyface GmbH
+ * Copyright 2022-2025 Cyface GmbH
  *
  * This file is part of the Cyface Data Collector.
  *
@@ -65,7 +65,7 @@ class FileSystemStorageService(val vertx: Vertx) : DataStorageService {
         vertx: Vertx,
         cleanupOperation: CleanupOperation
     ) {
-        TODO("Not yet implemented")
+       // Not implemented.
     }
 
     override fun isStored(deviceId: String, measurementId: Long): Future<Boolean> {

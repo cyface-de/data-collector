@@ -105,6 +105,7 @@ val dokkaVersion = "1.9.10"
 val detektVersion = "1.23.1"
 val cyfaceUploaderVersion = "1.4.1"
 val testContainerVersion = "1.20.1"
+val kotlinxVersion = "1.10.1"
 
 tasks.wrapper {
   gradleVersion = gradleWrapperVersion.toString()
@@ -119,6 +120,7 @@ dependencies {
   // Kotlin Support
   implementation("io.vertx:vertx-core:$vertxVersion")
   implementation("io.vertx:vertx-lang-kotlin:$vertxVersion")
+  implementation("io.vertx:vertx-lang-kotlin-coroutines:$vertxVersion")
   implementation(kotlin("stdlib-jdk8"))
 
   // Authentication
@@ -151,6 +153,7 @@ dependencies {
   testImplementation("com.natpryce:hamkrest:$hamKrestVersion")
   testImplementation(kotlin("reflect")) // Required by hamkrest
   testImplementation(kotlin("test"))
+  testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:$kotlinxVersion")
   testImplementation("org.mockito:mockito-core:$mockitoVersion")
   testImplementation("org.mockito:mockito-junit-jupiter:$mockitoVersion")
   testImplementation("org.mockito.kotlin:mockito-kotlin:$mockitoKotlinVersion")
