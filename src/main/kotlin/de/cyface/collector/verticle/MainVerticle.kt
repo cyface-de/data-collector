@@ -91,6 +91,12 @@ class MainVerticle : AbstractVerticle() {
                         options
                     )
                 }
+
+                "jwt" -> {
+                    val jwkJson = config.authConfig.getJsonObject("jwk")
+                    JWKAuthHandlerBuilder(vertx, jwkJson)
+                }
+
                 else -> throw InvalidConfig("Invalid auth type $it!")
             }
         }

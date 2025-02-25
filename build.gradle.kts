@@ -127,6 +127,7 @@ dependencies {
   implementation("io.vertx:vertx-auth-common:$vertxVersion")
   implementation("io.vertx:vertx-auth-mongo:$vertxVersion")
   implementation("io.vertx:vertx-auth-oauth2:$vertxVersion")
+  implementation("io.vertx:vertx-auth-jwt:$vertxVersion")
 
   // Monitoring + Metrics
   implementation("io.vertx:vertx-micrometer-metrics:$vertxVersion")
