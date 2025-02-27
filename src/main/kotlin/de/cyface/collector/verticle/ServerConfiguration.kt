@@ -26,7 +26,7 @@ package de.cyface.collector.verticle
  * @property httpEndpoint The endpoint this service is accessible at. This is required to set the Location header in
  * PreRequests correctly.
  * @property measurementPayloadLimit The maximum size of measurement sensor data.
- * @property uploadExpirationTimeInMillis The time a request might stay open.
+ * @property uploadExpirationTimeInMillis The time after which unfinished uploads are discarded.
  */
 data class ServerConfiguration(
     val port: Int,

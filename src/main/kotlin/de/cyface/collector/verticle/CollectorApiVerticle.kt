@@ -83,7 +83,7 @@ class CollectorApiVerticle(
             logger.info("Created storage service.")
             val uploadExpirationTime = serverConfiguration.uploadExpirationTimeInMillis
             // TODO What does this mean?
-            logger.info("Requests the storage service expire after $uploadExpirationTime milliseconds.")
+            logger.info("Stale Uploads are cleaned after $uploadExpirationTime milliseconds.")
             val cleanUpOperation = storageServiceBuilder.createCleanupOperation()
             storageService.startPeriodicCleaningOfTempData(uploadExpirationTime, vertx, cleanUpOperation)
 
