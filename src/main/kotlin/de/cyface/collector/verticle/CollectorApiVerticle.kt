@@ -1,5 +1,5 @@
 /*
- * Copyright 2018-2024 Cyface GmbH
+ * Copyright 2018-2025 Cyface GmbH
  *
  * This file is part of the Cyface Data Collector.
  *
@@ -27,18 +27,16 @@ import de.cyface.collector.handler.upload.UploadHandler
 import de.cyface.collector.model.AttachmentFactory
 import de.cyface.collector.model.MeasurementFactory
 import de.cyface.collector.storage.DataStorageService
-import io.vertx.core.AbstractVerticle
-import io.vertx.core.Future
-import io.vertx.core.Promise
-import io.vertx.core.json.JsonObject
-import io.vertx.ext.mongo.MongoClient
+import de.cyface.collector.storage.DataStorageServiceBuilder
 import io.vertx.ext.web.Router
+import io.vertx.ext.web.handler.AuthenticationHandler
 import io.vertx.ext.web.handler.BodyHandler
 import io.vertx.ext.web.handler.ErrorHandler
-import io.vertx.ext.web.handler.OAuth2AuthHandler
 import io.vertx.ext.web.handler.SessionHandler
 import io.vertx.ext.web.handler.StaticHandler
 import io.vertx.ext.web.sstore.LocalSessionStore
+import io.vertx.kotlin.coroutines.CoroutineVerticle
+import io.vertx.kotlin.coroutines.coAwait
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.util.Locale
@@ -51,66 +49,51 @@ import java.util.Locale
  * @author Armin Schnabel
  * @property authHandlerBuilder Create a handler for authentication requests.
  * @property serverConfiguration The configuration used by this `CollectorApiVerticle`.
- * @property mongoDatabaseConfiguration Configuration of a mongo database to store sensor data and meta data
- * for a measurement.
+ * @property storageServiceBuilder A builder for a DataStorageService, responsible for storing the submitted
+ * information.
  */
 class CollectorApiVerticle(
     private val authHandlerBuilder: AuthHandlerBuilder,
     private val serverConfiguration: ServerConfiguration,
-    private val mongoDatabaseConfiguration: JsonObject
-) : AbstractVerticle() {
+    private val storageServiceBuilder: DataStorageServiceBuilder,
+) : CoroutineVerticle() {
 
     /**
      * Logger used by objects of this class. Configure it using "src/main/resources/logback.xml".
      */
     private val logger: Logger = LoggerFactory.getLogger(CollectorApiVerticle::class.java)
+
+    /**
+     * Creates [de.cyface.collector.model.Measurement] instances from the raw data received by the API.
+     */
     private val measurementFactory = MeasurementFactory()
+
+    /**
+     * Creates [de.cyface.collector.model.Attachment] instances from the raw data received by the API.
+     */
     private val attachmentFactory = AttachmentFactory()
 
     @Throws(Exception::class)
-    override fun start(startPromise: Promise<Void>) {
-        logger.info("Starting collector API!")
+    override suspend fun start() {
+        try {
+            logger.info("Starting collector API!")
 
-        // Start http server
-
-        val mongoClient = MongoClient.createShared(
-            vertx,
-            mongoDatabaseConfiguration,
-            mongoDatabaseConfiguration.getString("data_source_name")
-        )
-        val storageServiceBuilder = serverConfiguration.largeFileStorageType.dataStorageServiceBuilder(
-            vertx,
-            mongoClient
-        )
-        val storageServiceBuilderCall = storageServiceBuilder.create()
-        val serverStartPromise = Promise.promise<Void>()
-        storageServiceBuilderCall.onSuccess { storageService ->
+            // Start http server
+            val storageService = storageServiceBuilder.create().coAwait()
             logger.info("Created storage service.")
             val uploadExpirationTime = serverConfiguration.uploadExpirationTimeInMillis
-            logger.info("Requests to the storage service expire after $uploadExpirationTime milliseconds.")
+            // TODO What does this mean?
+            logger.info("Stale Uploads are cleaned after $uploadExpirationTime milliseconds.")
             val cleanUpOperation = storageServiceBuilder.createCleanupOperation()
             storageService.startPeriodicCleaningOfTempData(uploadExpirationTime, vertx, cleanUpOperation)
 
-            try {
-                val routerSetup = setupRoutes(storageService)
-                val httpServer = HttpServer(serverConfiguration.port)
-                routerSetup.onSuccess { httpServer.start(vertx, it, serverStartPromise) }
-                routerSetup.onFailure { serverStartPromise.fail(it) }
-            } catch (e: IllegalStateException) {
-                serverStartPromise.fail(e)
-            }
-        }.onFailure {
-            serverStartPromise.fail(it)
-        }
+            val router = setupRoutes(storageService)
+            val httpServer = HttpServer(serverConfiguration.port)
+            httpServer.start(vertx, router)
 
-        // Block until future completed
-        serverStartPromise.future().onSuccess {
             logger.info("Successfully started collector API!")
-            startPromise.complete()
-        }
-        serverStartPromise.future().onFailure { cause: Throwable? ->
-            logger.error("Failed to start collector API!", cause)
-            startPromise.fail(cause)
+        } catch (e: Throwable) {
+            logger.error("Failed to start collector API!", e)
         }
     }
 
@@ -118,23 +101,20 @@ class CollectorApiVerticle(
      * Initializes all the routes available via the Cyface Data Collector.
      *
      * @param storageService The service used to store the received data.
-     * @return the created main `Router`
+     * @return the created main [Router]
      */
-    private fun setupRoutes(
+    private suspend fun setupRoutes(
         storageService: DataStorageService,
-    ): Future<Router> {
+    ): Router {
         // Setup router
         val router = Router.router(vertx)
-        val promise = Promise.promise<Router>()
 
         // API
         setupApiRouter(router, storageService)
-            .onSuccess { promise.complete(router) }
-            .onFailure { promise.fail(it) }
 
         // Setup unknown-resource handler
         router.route("/*").last().handler(FailureHandler(vertx))
-        return promise.future()
+        return router
     }
 
     /**
@@ -144,11 +124,10 @@ class CollectorApiVerticle(
      * @param storageService The service used to store and retrieve data. This is required by the handlers receiving
      * data to store that data.
      */
-    private fun setupApiRouter(
+    private suspend fun setupApiRouter(
         apiRouter: Router,
         storageService: DataStorageService,
-    ): Future<Void> {
-        val promise = Promise.promise<Void>()
+    ) {
         val failureHandler = FailureHandler(vertx)
 
         // Setup session-handler
@@ -158,32 +137,25 @@ class CollectorApiVerticle(
         apiRouter.route().handler(sessionHandler)
 
         // Setup OAuth2 discovery and callback route for token introspection (authentication)
-        authHandlerBuilder.create(apiRouter)
-            .onSuccess {
-                // Register handlers which require authentication
-                val authorizationHandler = AuthorizationHandler()
-                registerMeasurementHandlers(storageService, apiRouter, it, authorizationHandler, failureHandler)
-                // Register attachment endpoints after the measurement endpoints to ensure they can be distinguished
-                // by the router. The measurement endpoint is:
-                // - /measurements/(sessionId)
-                // The attachment endpoint, a subdirectory of the provider measurement endpoint, is:
-                // - /measurements/:did/:mid/attachments/(sessionId)
-                registerAttachmentHandlers(storageService, apiRouter, it, authorizationHandler, failureHandler)
-
-                promise.complete()
-            }
-            .onFailure { promise.fail(it) }
+        val authHandler = authHandlerBuilder.create(apiRouter)
+        // Register handlers which require authentication
+        val authorizationHandler = AuthorizationHandler()
+        registerMeasurementHandlers(storageService, apiRouter, authHandler, authorizationHandler, failureHandler)
+        // Register attachment endpoints after the measurement endpoints to ensure they can be distinguished
+        // by the router. The measurement endpoint is:
+        // - /measurements/(sessionId)
+        // The attachment endpoint, a subdirectory of the provider measurement endpoint, is:
+        // - /measurements/:did/:mid/attachments/(sessionId)
+        registerAttachmentHandlers(storageService, apiRouter, authHandler, authorizationHandler, failureHandler)
 
         // Setup web-api route
         apiRouter.route().handler(StaticHandler.create("webroot/api"))
-
-        return promise.future()
     }
 
     private fun registerMeasurementHandlers(
         storageService: DataStorageService,
         apiRouter: Router,
-        oAuth2AuthHandler: OAuth2AuthHandler,
+        oAuth2AuthHandler: AuthenticationHandler,
         authorizationHandler: AuthorizationHandler,
         failureHandler: FailureHandler
     ) {
@@ -222,7 +194,7 @@ class CollectorApiVerticle(
     private fun registerAttachmentHandlers(
         storageService: DataStorageService,
         apiRouter: Router,
-        oAuth2AuthHandler: OAuth2AuthHandler,
+        oAuth2AuthHandler: AuthenticationHandler,
         authorizationHandler: AuthorizationHandler,
         failureHandler: FailureHandler
     ) {
@@ -262,14 +234,14 @@ class CollectorApiVerticle(
      * Adds a handler for an endpoint and makes sure that handler is wrapped in the correct authentication handlers.
      *
      * @param router The `Router` to register the handler to.
-     * @param oauth2Handler The handler to authenticate the user using an OAuth2 endpoint.
+     * @param authenticationHandler The handler to authenticate the user.
      * @param authorizationHandler The handler used to authorize a user after successful authentication.
      * @param failureHandler The handler to add to handle failures.
      * @param requestHandler The actual handler for the received HTTP request.
      */
     private fun registerMeasurementPreRequestHandler(
         router: Router,
-        oauth2Handler: OAuth2AuthHandler,
+        authenticationHandler: AuthenticationHandler,
         authorizationHandler: AuthorizationHandler,
         failureHandler: ErrorHandler,
         requestHandler: PreRequestHandler,
@@ -279,7 +251,7 @@ class CollectorApiVerticle(
             .consumes("application/json; charset=UTF-8")
             // Read request body only once and before async calls or pause/resume must be used see [DAT-749]
             .handler(preRequestBodyHandler)
-            .handler(oauth2Handler)
+            .handler(authenticationHandler)
             .handler(authorizationHandler)
             .handler(requestHandler)
             .failureHandler(failureHandler)
@@ -289,7 +261,7 @@ class CollectorApiVerticle(
      * Adds a handler for an endpoint and makes sure that handler is wrapped in the correct authentication handlers.
      *
      * @param router The `Router` to register the handler to.
-     * @param oauth2Handler The handler to authenticate the user using an OAuth2 endpoint.
+     * @param authenticationHandler The handler to authenticate the user.
      * @param authorizationHandler The handler used to authorize a user after successful authentication.
      * @param failureHandler The handler to add to handle failures.
      * @param requestHandler The actual handler for upload requests.
@@ -297,7 +269,7 @@ class CollectorApiVerticle(
      */
     private fun registerMeasurementUploadHandler(
         router: Router,
-        oauth2Handler: OAuth2AuthHandler,
+        authenticationHandler: AuthenticationHandler,
         authorizationHandler: AuthorizationHandler,
         failureHandler: ErrorHandler,
         requestHandler: UploadHandler,
@@ -308,7 +280,7 @@ class CollectorApiVerticle(
         router.putWithRegex(String.format(Locale.ENGLISH, "\\%s\\/\\([a-z0-9]{32}\\)\\/", MEASUREMENTS_ENDPOINT))
             .consumes("application/octet-stream")
             // Not using BodyHandler as the `request.body()` can only be read once and the {@code #handler} does so.
-            .handler(oauth2Handler)
+            .handler(authenticationHandler)
             .handler(authorizationHandler)
             .handler(requestHandler)
             .handler(statusHandler)
@@ -319,14 +291,14 @@ class CollectorApiVerticle(
      * Adds a handler for an endpoint and makes sure that handler is wrapped in the correct authentication handlers.
      *
      * @param router The `Router` to register the handler to.
-     * @param oauth2Handler The handler to authenticate the user using an OAuth2 endpoint.
+     * @param authenticationHandler The handler to authenticate the user.
      * @param authorizationHandler The handler used to authorize a user after successful authentication.
      * @param failureHandler The handler to add to handle failures.
      * @param requestHandler The actual handler for the received HTTP request.
      */
     private fun registerAttachmentPreRequestHandler(
         router: Router,
-        oauth2Handler: OAuth2AuthHandler,
+        authenticationHandler: AuthenticationHandler,
         authorizationHandler: AuthorizationHandler,
         failureHandler: ErrorHandler,
         requestHandler: PreRequestHandler,
@@ -344,7 +316,7 @@ class CollectorApiVerticle(
             .consumes("application/json; charset=UTF-8")
             // Read request body only once and before async calls or pause/resume must be used see [DAT-749]
             .handler(preRequestBodyHandler)
-            .handler(oauth2Handler)
+            .handler(authenticationHandler)
             .handler(authorizationHandler)
             .handler(requestHandler)
             .failureHandler(failureHandler)
@@ -354,7 +326,7 @@ class CollectorApiVerticle(
      * Adds a handler for an endpoint and makes sure that handler is wrapped in the correct authentication handlers.
      *
      * @param router The `Router` to register the handler to.
-     * @param oauth2Handler The handler to authenticate the user using an OAuth2 endpoint.
+     * @param authenticationHandler The handler to authenticate the user.
      * @param authorizationHandler The handler used to authorize a user after successful authentication.
      * @param failureHandler The handler to add to handle failures.
      * @param requestHandler The actual handler for upload requests.
@@ -362,7 +334,7 @@ class CollectorApiVerticle(
      */
     private fun registerAttachmentUploadHandler(
         router: Router,
-        oauth2Handler: OAuth2AuthHandler,
+        authenticationHandler: AuthenticationHandler,
         authorizationHandler: AuthorizationHandler,
         failureHandler: ErrorHandler,
         requestHandler: UploadHandler,
@@ -381,7 +353,7 @@ class CollectorApiVerticle(
         )
             .consumes("application/octet-stream")
             // Not using BodyHandler as the `request.body()` can only be read once and the {@code #handler} does so.
-            .handler(oauth2Handler)
+            .handler(authenticationHandler)
             .handler(authorizationHandler)
             .handler(requestHandler)
             .handler(statusHandler)

@@ -1,5 +1,5 @@
 /*
- * Copyright 2021-2024 Cyface GmbH
+ * Copyright 2021-2025 Cyface GmbH
  *
  * This file is part of the Cyface Data Collector.
  *
@@ -22,12 +22,9 @@ import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 
 import java.io.IOException;
 import java.net.ServerSocket;
-import java.net.URL;
-import java.nio.file.Path;
 import java.util.concurrent.TimeUnit;
 
 import de.cyface.collector.auth.MockedHandlerBuilder;
@@ -38,9 +35,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
 import de.cyface.collector.commons.MongoTest;
-import de.cyface.collector.configuration.AuthType;
 import de.cyface.collector.configuration.Configuration;
-import de.cyface.collector.configuration.GridFsStorageType;
 import io.vertx.core.Vertx;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
@@ -86,22 +81,7 @@ public class CollectorApiVerticleTest {
     @DisplayName("Happy Path test for starting the collector API.")
     void test(final Vertx vertx, final VertxTestContext testContext) throws Throwable {
         // Arrange
-        final var port = findFreePort();
         final var configuration = mock(Configuration.class);
-        when(configuration.getHttpPort()).thenReturn(port);
-        when(configuration.getMongoDb()).thenReturn(mongoTest.clientConfiguration());
-        when(configuration.getStorageType()).thenReturn(new GridFsStorageType(Path.of("upload-folder")));
-        when(configuration.getUploadExpiration()).thenReturn(60_000L);
-        when(configuration.getMeasurementPayloadLimit()).thenReturn(1_048_576L);
-        when(configuration.getAuthType()).thenReturn(AuthType.Mocked);
-        when(configuration.getOauthConfig()).thenReturn(new Configuration.OAuthConfig(
-                new URL("http://localhost:8080/callback"),
-                "collector-test",
-                "SECRET",
-                new URL("https://example.com:8443/realms/{tenant}"),
-                "rfr"
-        ));
-
 
         // Act, Assert
         vertx.deployVerticle(new CollectorApiVerticle(
@@ -110,10 +90,9 @@ public class CollectorApiVerticleTest {
                     configuration.getHttpPort(),
                     "/",
                     configuration.getMeasurementPayloadLimit(),
-                    configuration.getUploadExpiration(),
-                    configuration.getStorageType()
+                    configuration.getUploadExpiration()
                 ),
-                configuration.getMongoDb()
+                mock()
         ), testContext.succeedingThenComplete());
 
         // https://vertx.io/docs/vertx-junit5/java/#_a_test_context_for_asynchronous_executions

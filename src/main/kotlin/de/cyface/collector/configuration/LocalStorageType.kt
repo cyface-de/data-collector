@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-2025 Cyface GmbH
+ * Copyright 2025 Cyface GmbH
  *
  * This file is part of the Cyface Data Collector.
  *
@@ -16,24 +16,21 @@
  * You should have received a copy of the GNU General Public License
  * along with the Cyface Data Collector. If not, see <http://www.gnu.org/licenses/>.
  */
-package de.cyface.collector.auth
+package de.cyface.collector.configuration
 
-import io.vertx.ext.web.Router
-import io.vertx.ext.web.handler.AuthenticationHandler
+import de.cyface.collector.storage.DataStorageServiceBuilder
+import de.cyface.collector.storage.local.FileSystemStorageServiceBuilder
+import io.vertx.core.Vertx
+import io.vertx.ext.mongo.MongoClient
 
 /**
- * Interface for the builder which creates an [AuthenticationHandler] used to read authentication information from the
- * request.
- *
- * @author Armin Schnabel
- * @author Klemens Muthmann
+ * The [StorageType] if local file storage is used.
  */
-interface AuthHandlerBuilder {
-
-    /**
-     * Create aa [AuthHandlerBuilder].
-     *
-     * This sometimes requires the API router, for which authentication is going to be created to enable callbacks.
-     */
-    suspend fun create(apiRouter: Router): AuthenticationHandler
+class LocalStorageType : StorageType {
+    override fun dataStorageServiceBuilder(
+        vertx: Vertx,
+        mongoClient: MongoClient
+    ): DataStorageServiceBuilder {
+        return FileSystemStorageServiceBuilder(vertx)
+    }
 }

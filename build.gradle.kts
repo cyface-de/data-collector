@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2024 Cyface GmbH
+ * Copyright 2020-2025 Cyface GmbH
  *
  * This file is part of the Cyface Data Collector.
  *
@@ -51,7 +51,7 @@ plugins {
 
   id("application")
   id("maven-publish")
-  kotlin("jvm").version("1.9.21")
+  kotlin("jvm").version("2.1.0")
 
   // For static code checks
   id("io.gitlab.arturbosch.detekt").version("1.23.0")
@@ -86,11 +86,11 @@ kotlin {
   jvmToolchain(17)
 }
 
-val vertxVersion = "4.5.8"
+val vertxVersion = "4.5.13"
 val micrometerVersion = "1.10.6"
 val commonsLangVersion = "3.12.0"
 val logbackVersion = "1.4.14"
-val gradleWrapperVersion = "7.6.1"
+val gradleWrapperVersion = "7.6.3"
 val googleCloudLibrariesVersion = "26.35.0"
 
 // Versions of testing dependencies
@@ -105,9 +105,10 @@ val dokkaVersion = "1.9.10"
 val detektVersion = "1.23.1"
 val cyfaceUploaderVersion = "1.4.1"
 val testContainerVersion = "1.20.1"
+val kotlinxVersion = "1.10.1"
 
 tasks.wrapper {
-  gradleVersion = project.extra["gradleWrapperVersion"].toString()
+  gradleVersion = gradleWrapperVersion.toString()
 }
 
 dependencies {
@@ -119,12 +120,14 @@ dependencies {
   // Kotlin Support
   implementation("io.vertx:vertx-core:$vertxVersion")
   implementation("io.vertx:vertx-lang-kotlin:$vertxVersion")
+  implementation("io.vertx:vertx-lang-kotlin-coroutines:$vertxVersion")
   implementation(kotlin("stdlib-jdk8"))
 
   // Authentication
   implementation("io.vertx:vertx-auth-common:$vertxVersion")
   implementation("io.vertx:vertx-auth-mongo:$vertxVersion")
   implementation("io.vertx:vertx-auth-oauth2:$vertxVersion")
+  implementation("io.vertx:vertx-auth-jwt:$vertxVersion")
 
   // Monitoring + Metrics
   implementation("io.vertx:vertx-micrometer-metrics:$vertxVersion")
@@ -151,6 +154,7 @@ dependencies {
   testImplementation("com.natpryce:hamkrest:$hamKrestVersion")
   testImplementation(kotlin("reflect")) // Required by hamkrest
   testImplementation(kotlin("test"))
+  testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:$kotlinxVersion")
   testImplementation("org.mockito:mockito-core:$mockitoVersion")
   testImplementation("org.mockito:mockito-junit-jupiter:$mockitoVersion")
   testImplementation("org.mockito.kotlin:mockito-kotlin:$mockitoKotlinVersion")

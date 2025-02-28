@@ -1,15 +1,15 @@
 {
-  "http.host": "localhost",
-  "http.endpoint": "/api/v4",
-  "http.port": 8080,
+  "metrics.enabled": false,
   "mongo.db": {
     "db_name": "cyface",
     "connection_string": "mongodb+srv://user:password@mongodb.net/?retryWrites=true&w=majority",
     "data_source_name": "cyface"
   },
+  "http.port": 8080,
+  "http.host": "localhost",
+  "http.endpoint": "/api/v4",
   "upload.expiration": 60000,
   "measurement.payload.limit": 104857600,
-  "metrics.enabled": false,
   "storage-type": {
     "type": "google",
     "collection-name": "cyface-data",
@@ -18,10 +18,12 @@
     "credentials-file": "/path/to/credentials.json",
     "buffer-size": 500000
   },
-  "auth-type": "mocked",
-  "oauth.callback":"http://localhost:8080/callback",
-  "oauth.client":"collector-test",
-  "oauth.secret":"SECRET",
-  "oauth.site":"https://example.com:8443/realms/{tenant}",
-  "oauth.tenant":"rfr"
+  "auth": {
+    "type": "oauth",
+    "callback": "http://localhost:8080/callback",
+    "client": "collector-test",
+    "secret": "SECRET",
+    "site": "https://example.com:8443/realms/{tenant}",
+    "tenant": "rfr"
+  }
 }

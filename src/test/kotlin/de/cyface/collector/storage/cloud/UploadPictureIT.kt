@@ -1,5 +1,5 @@
 /*
- * Copyright 2024 Cyface GmbH
+ * Copyright 2024-2025 Cyface GmbH
  *
  * This file is part of the Cyface Data Collector.
  *
@@ -21,7 +21,6 @@ package de.cyface.collector.storage.cloud
 import com.google.auth.oauth2.GoogleCredentials
 import de.cyface.collector.auth.MockedHandlerBuilder
 import de.cyface.collector.commons.MongoTest
-import de.cyface.collector.configuration.GoogleCloudStorageType
 import de.cyface.collector.model.ContentRange
 import de.cyface.collector.model.User
 import de.cyface.collector.storage.UploadMetaData
@@ -46,6 +45,7 @@ import io.vertx.core.buffer.Buffer
 import io.vertx.core.file.AsyncFile
 import io.vertx.core.file.OpenOptions
 import io.vertx.core.json.JsonObject
+import io.vertx.ext.mongo.MongoClient
 import io.vertx.ext.web.client.HttpResponse
 import io.vertx.ext.web.client.WebClient
 import io.vertx.junit5.Timeout
@@ -128,18 +128,14 @@ class UploadPictureIT {
     ) {
         val httpHost = "localhost"
         val httpPort = 8080
-        val mongoDb = JsonObject()
-            .put("db_name", "cyface")
-            .put("connection_string", "mongodb://localhost:27019")
-            .put("data_source_name", "cyface")
         val uploadExpiration = 60000L
         val measurementPayloadLimit = 104857600L
-        val storageType = GoogleCloudStorageType(
-            collectionName = collectionName,
-            projectIdentifier = projectIdentifier,
-            bucketName = bucketName,
-            credentialsFile = credentialsFile,
-            bufferSize
+        val mongoClient = MongoClient.createShared(
+            vertx,
+            JsonObject()
+                .put("connection_string", "mongodb://localhost:27017")
+                .put("db_name", "cyface")
+                .put("data_source_name", "cyface")
         )
 
         val oocut = CollectorApiVerticle(
@@ -149,10 +145,15 @@ class UploadPictureIT {
                 "/",
                 measurementPayloadLimit,
                 uploadExpiration,
-                storageType,
             ),
-            mongoDb
-
+            GoogleCloudStorageServiceBuilder(
+                credentials = FileInputStream(credentialsFile).use { stream -> GoogleCredentials.fromStream(stream) },
+                projectIdentifier = projectIdentifier,
+                bucketName = bucketName,
+                dao = MongoDatabase(mongoClient, collectionName),
+                vertx = vertx,
+                bufferSize = bufferSize,
+            )
         )
         val deviceIdentifier = UUID.randomUUID()
         val measurementIdentifier = 0L
@@ -212,13 +213,6 @@ class UploadPictureIT {
         val httpEndpoint = "/"
         val uploadExpirationtimeInMillis = 60000L
         val measurementPayloadLimit = 104857600L
-        val largeFileStorageType = GoogleCloudStorageType(
-            collectionName = collectionName,
-            projectIdentifier = projectIdentifier,
-            bucketName = bucketName,
-            credentialsFile = credentialsFile,
-            bufferSize,
-        )
 
         val authHandlerBuilder = MockedHandlerBuilder()
         val serverConfiguration = ServerConfiguration(
@@ -226,17 +220,26 @@ class UploadPictureIT {
             httpEndpoint,
             measurementPayloadLimit,
             uploadExpirationtimeInMillis,
-            largeFileStorageType
         )
         val mongoDatabaseConfiguration = JsonObject()
             .put("db_name", "cyface")
             .put("connection_string", "mongodb://${mongoTest.getMongoHost()}:${mongoTest.getMongoPort()}")
             .put("data_source_name", "cyface")
+        val mongoClient = MongoClient.createShared(vertx, mongoDatabaseConfiguration)
 
         val verticle = CollectorApiVerticle(
             authHandlerBuilder,
             serverConfiguration,
-            mongoDatabaseConfiguration
+            GoogleCloudStorageServiceBuilder(
+                credentials = credentialsFile.let {
+                    FileInputStream(it).use { stream -> GoogleCredentials.fromStream(stream) }
+                },
+                projectIdentifier = projectIdentifier,
+                bucketName = bucketName,
+                dao = MongoDatabase(mongoClient, collectionName),
+                vertx = vertx,
+                bufferSize = bufferSize,
+            )
         )
 
         vertx.deployVerticle(verticle).onComplete(
@@ -454,7 +457,7 @@ class UploadPictureIT {
     }
 
     /**
-     * Create some static meta data for the test fixture.
+     * Create some static metadata for the test fixture.
      */
     private fun metaData(locationCount: Long, deviceIdentifier: UUID, measurementIdentifier: Long): JsonObject {
         val metaDataBody = JsonObject()

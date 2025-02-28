@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Cyface GmbH
+ * Copyright 2025 Cyface GmbH
  *
  * This file is part of the Cyface Data Collector.
  *
@@ -16,20 +16,36 @@
  * You should have received a copy of the GNU General Public License
  * along with the Cyface Data Collector. If not, see <http://www.gnu.org/licenses/>.
  */
-package de.cyface.collector.configuration
+package de.cyface.collector.storage.local
 
+import de.cyface.collector.storage.CleanupOperation
+import de.cyface.collector.storage.DataStorageService
 import de.cyface.collector.storage.DataStorageServiceBuilder
+import io.vertx.core.Future
 import io.vertx.core.Vertx
-import io.vertx.ext.mongo.MongoClient
 
 /**
- * A configuration for a [de.cyface.collector.storage.DataStorageService].
+ * A builder for the [FileSystemStorageService].
  *
  * @author Klemens Muthmann
  */
-interface StorageType {
+class FileSystemStorageServiceBuilder(private val vertx: Vertx) : DataStorageServiceBuilder {
     /**
-     * Create the [DataStorageServiceBuilder] from this storage configuration.
+     * Build the actual service.
      */
-    fun dataStorageServiceBuilder(vertx: Vertx, mongoClient: MongoClient): DataStorageServiceBuilder
+    private fun build(): FileSystemStorageService {
+        return FileSystemStorageService(vertx)
+    }
+
+    override fun create(): Future<DataStorageService> {
+        return Future.succeededFuture(build())
+    }
+
+    override fun createCleanupOperation(): CleanupOperation {
+        return object : CleanupOperation {
+            override fun clean(fileExpirationTime: Long) {
+                // Nothing to do here at the moment.
+            }
+        }
+    }
 }

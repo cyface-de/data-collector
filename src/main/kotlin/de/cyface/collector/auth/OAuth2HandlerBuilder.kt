@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-2024 Cyface GmbH
+ * Copyright 2023-2025 Cyface GmbH
  *
  * This file is part of the Cyface Data Collector.
  *
@@ -18,22 +18,21 @@
  */
 package de.cyface.collector.auth
 
-import io.vertx.core.Future
-import io.vertx.core.Promise
 import io.vertx.core.Vertx
 import io.vertx.ext.auth.oauth2.OAuth2Options
 import io.vertx.ext.auth.oauth2.providers.KeycloakAuth
 import io.vertx.ext.web.Router
+import io.vertx.ext.web.handler.AuthenticationHandler
 import io.vertx.ext.web.handler.OAuth2AuthHandler
+import io.vertx.kotlin.coroutines.coAwait
 import java.net.URL
 
 /**
  * Keycloak OAuth2 builder which creates an OAuth2 handler.
  *
  * @author Armin Schnabel
- * @version 2.0.0
- * @since 7.0.0
- * @property vertx
+ * @author Klemens Muthmann
+ * @property vertx The [Vertx] instance used by this application.
  * @property callbackUrl The callback URL you entered in your provider admin console.
  * @property options the oauth configuration.
  */
@@ -43,21 +42,15 @@ class OAuth2HandlerBuilder(
     private val options: OAuth2Options,
 ) : AuthHandlerBuilder {
 
-    override fun create(apiRouter: Router): Future<OAuth2AuthHandler> {
-        val promise = Promise.promise<OAuth2AuthHandler>()
-
-        KeycloakAuth.discover(vertx, options)
-            .onSuccess {
-                val callbackAddress = apiRouter.get(callbackUrl.path)
-                val oauth2Handler = OAuth2AuthHandler.create(vertx, it, callbackUrl.toURI().toString())
-                    .setupCallback(callbackAddress)
-                promise.complete(oauth2Handler)
-            }
-            .onFailure {
-                promise.fail(DiscoveryFailed("Unable to discover Identity Provider from $options", it))
-            }
-
-        return promise.future()
+    override suspend fun create(apiRouter: Router): AuthenticationHandler {
+        try {
+            val oAuth2Auth = KeycloakAuth.discover(vertx, options).coAwait()
+            val callbackAddress = apiRouter.get(callbackUrl.path)
+            return OAuth2AuthHandler.create(vertx, oAuth2Auth, callbackUrl.toURI().toString())
+                .setupCallback(callbackAddress)
+        } catch (e: Throwable) {
+            throw DiscoveryFailed("Unable to discover Identity Provider from $options", e)
+        }
     }
 }
 
@@ -65,6 +58,5 @@ class OAuth2HandlerBuilder(
  * Thrown if discovery of the identity server fails for some reason.
  *
  * @author Klemens Muthmann
- * @version 1.0.0
  */
 class DiscoveryFailed(message: String? = null, cause: Throwable? = null) : Exception(message, cause)
