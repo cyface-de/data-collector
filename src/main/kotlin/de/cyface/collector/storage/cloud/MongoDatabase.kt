@@ -1,5 +1,5 @@
 /*
- * Copyright 2022-2024 Cyface GmbH
+ * Copyright 2022-2025 Cyface GmbH
  *
  * This file is part of the Serialization.
  *
@@ -21,9 +21,11 @@ package de.cyface.collector.storage.cloud
 import de.cyface.collector.model.FormAttributes
 import de.cyface.collector.storage.UploadMetaData
 import de.cyface.collector.storage.exception.DuplicatesInDatabase
+import io.vertx.core.CompositeFuture
 import io.vertx.core.Future
 import io.vertx.core.Promise
 import io.vertx.core.json.JsonObject
+import io.vertx.ext.mongo.IndexOptions
 import io.vertx.ext.mongo.MongoClient
 import org.slf4j.LoggerFactory
 import java.time.Instant
@@ -84,7 +86,7 @@ class MongoDatabase(private val mongoClient: MongoClient, private val collection
         val queryCall = mongoClient.find(collectionName, query)
         queryCall.onSuccess { ids ->
             try {
-                if (ids.size > 1) {
+                if (ids.size > 1) { // Should not be possible anymore with collection index
                     logger.error(
                         "More than one measurement found for did {} mid {}",
                         deviceIdentifier,
@@ -129,7 +131,7 @@ class MongoDatabase(private val mongoClient: MongoClient, private val collection
         val queryCall = mongoClient.find(collectionName, query)
         queryCall.onSuccess { ids ->
             try {
-                if (ids.size > 1) {
+                if (ids.size > 1) { // Should not be possible anymore with collection index
                     logger.error(
                         "More than one attachment found for did {} mid {} aid {}",
                         deviceIdentifier,
@@ -158,6 +160,36 @@ class MongoDatabase(private val mongoClient: MongoClient, private val collection
             }
         }
         queryCall.onFailure(ret::fail)
+
+        return ret.future()
+    }
+
+    override fun createIndices(): Future<CompositeFuture> {
+        val ret = Promise.promise<CompositeFuture>()
+
+        // Create indices
+        val unique = IndexOptions().unique(true)
+        val measurementIndex = JsonObject().put("properties.deviceId", 1).put("properties.measurementId", 1)
+        val measurementFilter = JsonObject().put("properties.attachmentId", JsonObject().put("\$exists", false))
+        val measurementIndexCreation = mongoClient.createIndexWithOptions(
+            collectionName,
+            measurementIndex,
+            unique.partialFilterExpression(measurementFilter)
+        )
+        val attachmentIndex = JsonObject()
+            .put("properties.deviceId", 1)
+            .put("properties.measurementId", 1)
+            .put("properties.attachmentId", 1)
+        val attachmentFilter = JsonObject().put("properties.attachmentId", JsonObject().put("\$exists", true))
+        val attachmentIndexCreation = mongoClient.createIndexWithOptions(
+            collectionName,
+            attachmentIndex,
+            unique.partialFilterExpression(attachmentFilter)
+        )
+
+        Future.all(measurementIndexCreation, attachmentIndexCreation).onComplete {
+            ret.complete(it.result())
+        }
 
         return ret.future()
     }

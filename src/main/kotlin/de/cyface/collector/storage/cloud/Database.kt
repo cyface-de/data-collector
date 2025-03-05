@@ -1,5 +1,5 @@
 /*
- * Copyright 2022-2024 Cyface GmbH
+ * Copyright 2022-2025 Cyface GmbH
  *
  * This file is part of the Serialization.
  *
@@ -19,12 +19,14 @@
 package de.cyface.collector.storage.cloud
 
 import de.cyface.collector.storage.UploadMetaData
+import io.vertx.core.CompositeFuture
 import io.vertx.core.Future
 
 /**
  * The interface to a database storing the metadata of some uploaded data.
  *
  * @author Klemens Muthmann
+ * @author Armin Schnabel
  */
 interface Database {
     /**
@@ -47,4 +49,11 @@ interface Database {
      * @return A [Future] that is called upon successful or failed completion of this operation.
      */
     fun exists(deviceIdentifier: String, measurementIdentifier: Long, attachmentId: Long): Future<Boolean>
+
+    /**
+     * Creates indices required by this application asynchronously, if they do not yet exist.
+     *
+     * @return A [Future] that is notified of the success or failure of this application, upon completion.
+     */
+    fun createIndices(): Future<CompositeFuture>
 }

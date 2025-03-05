@@ -1,5 +1,5 @@
 /*
- * Copyright 2022-2025 Cyface GmbH
+ * Copyright 2025 Cyface GmbH
  *
  * This file is part of the Cyface Data Collector.
  *
@@ -18,13 +18,11 @@
  */
 package de.cyface.collector.storage.exception
 
-import java.lang.Exception
-
 /**
- * An `Exception` thrown when a file to upload already more than once in the data store.
+ * An `Exception` thrown when a file to upload already exists in the data store.
  *
- * @author Klemens Muthmann
- * @version 1.0.1
- * @param message A user readable message to display as part of the stack trace.
+ * @author Armin Schnabel
+ * @version 1.0.0
+ * @param e The cause leading to this exception.
  */
-class DuplicatesInDatabase(message: String) : Exception(message)
+class UploadAlreadyExists(e: Throwable) : Exception(e)
