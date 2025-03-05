@@ -1,4 +1,4 @@
-# Copyright 2018-2023 Cyface GmbH
+# Copyright 2018-2025 Cyface GmbH
 #
 # This file is part of the Cyface Data Collector.
 #
@@ -58,7 +58,7 @@ services:
   # The Cyface Collector API Container
   api:
     container_name: collector_api
-    build: .
+    build: container-oauth
     image: data-collector:0.0.0
     ports:
       - "127.0.0.1:8080:8080"
@@ -67,9 +67,9 @@ services:
       - authentication
       - default
     volumes:
-      - ./logs:/app/logs
-      - ./logback.xml:/app/logback.xml:ro # read only
-      - ./file-uploads:/app/file-uploads # for debugging
+      - ./app/logs:/app/logs
+      - ./container-oauth/logback.xml:/app/logback.xml:ro # read only
+      - ./app/file-uploads:/app/file-uploads # for debugging
     depends_on:
       - mongo
       - authentication

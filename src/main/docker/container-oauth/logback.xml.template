@@ -1,13 +1,4 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- Copyright (C) 2021 Cyface GmbH - All Rights Reserved -->
-<!--  -->
-<!--
-This file is part of the Cyface Server Backend.
-Unauthorized copying of this file, via any medium is strictly prohibited
-Proprietary and confidential
-
-Version 1.0.0 -->
-
 <configuration>
   <!-- Reduce mongo logging to INFO or else the console is spammed with repeating lines -->
   <logger name="org.mongodb.driver" level="INFO" />

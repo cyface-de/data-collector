@@ -79,7 +79,7 @@ public class Application extends Launcher {
     public final void afterConfigParsed(final JsonObject config) {
         super.afterConfigParsed(config);
 
-        metricsEnabled = config.getBoolean("metrics.enabled");
+        metricsEnabled = config.getBoolean("metrics.enabled", false);
     }
 
     @Override
