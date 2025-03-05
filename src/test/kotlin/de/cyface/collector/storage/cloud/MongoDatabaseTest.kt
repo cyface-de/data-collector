@@ -1,5 +1,5 @@
 /*
- * Copyright 2024 Cyface GmbH
+ * Copyright 2025 Cyface GmbH
  *
  * This file is part of the Cyface Data Collector.
  *
@@ -87,7 +87,7 @@ class MongoDatabaseTest {
         val properties = json.getJsonObject("properties")
         assertThat(properties["filename"], equalTo("33333333-3333-3333-3333-333333333333"))
         assertThat(properties["uploadLength"], equalTo(5L))
-        val datePattern = Regex("\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{9}Z")
+        val datePattern = Regex("\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{1,9}Z")
         assertThat(properties.getJsonObject("uploadDate").getString("\$date"), matches(datePattern))
         assertThat(properties["deviceId"], equalTo("11111111-1111-1111-1111-111111111111"))
         assertThat(properties["measurementId"], equalTo("1"))

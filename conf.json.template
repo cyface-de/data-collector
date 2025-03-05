@@ -1,23 +1,25 @@
 {
-	"metrics.enabled":false,
-	"mongo.db":{
-	    "db_name":"cyface",
-	    "connection_string":"mongodb://localhost:27019",
-	    "data_source_name":"cyface"
-	},
-	"http.port":8080,
-	"http.host":"localhost",
-	"http.endpoint":"/api/v4",
-	"upload.expiration": 60000,
-	"measurement.payload.limit": 104857600,
-	"storage-type": {
-	  "type": "gridfs",
-	  "uploads-folder": "file-uploads"
-	},
-	"auth-type": "oauth",
-	"oauth.callback":"http://localhost:8080/callback",
-	"oauth.client":"collector",
-	"oauth.secret":"SECRET",
-	"oauth.site":"https://auth.cyface.de:8443/realms/{tenant}",
-	"oauth.tenant":"rfr"
+  "metrics.enabled":false,
+  "mongo.db":{
+    "db_name":"cyface",
+	"connection_string":"mongodb://localhost:27019",
+	"data_source_name":"cyface"
+  },
+  "http.port":8080,
+  "http.host":"localhost",
+  "http.endpoint":"/api/v4",
+  "upload.expiration": 60000,
+  "measurement.payload.limit": 104857600,
+  "storage-type": {
+	"type": "gridfs",
+	"uploads-folder": "file-uploads"
+  },
+  "auth": {
+    "type": "oauth",
+    "callback": "http://localhost:8080/callback",
+    "client": "collector",
+    "secret": "SECRET",
+    "site": "http://localhost:5473/realms/{tenant}",
+    "tenant": "rfr"
+  }
 }

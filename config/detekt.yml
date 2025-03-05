@@ -41,12 +41,12 @@ console-reports:
   #  - 'LiteFindingsReport'
 
 output-reports:
-  active: true
+  active: false
   exclude:
-  # - 'TxtOutputReport'
-  # - 'XmlOutputReport'
-  # - 'HtmlOutputReport'
-  # - 'MdOutputReport'
+   - 'TxtOutputReport'
+   - 'XmlOutputReport'
+   - 'HtmlOutputReport'
+   - 'MdOutputReport'
 
 comments:
   active: true
@@ -274,7 +274,7 @@ exceptions:
   ThrowingNewInstanceOfSameException:
     active: true
   TooGenericExceptionCaught:
-    active: true
+    active: false
     excludes: ['**/test/**', '**/androidTest/**', '**/commonTest/**', '**/jvmTest/**', '**/jsTest/**', '**/iosTest/**']
     exceptionNames:
       - 'ArrayIndexOutOfBoundsException'

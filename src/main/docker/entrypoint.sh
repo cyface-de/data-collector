@@ -136,12 +136,14 @@ loadConfig() {
           \"type\":\"$STORAGE_TYPE\",\
           \"uploads-folder\":\"$STORAGE_UPLOADS_FOLDER\"\
       },\
-      \"auth-type\":\"$CYFACE_AUTH_TYPE\",
-      \"oauth.callback\":\"$CYFACE_OAUTH_CALLBACK\",\
-      \"oauth.client\":\"$CYFACE_OAUTH_CLIENT\",\
-      \"oauth.secret\":\"$CYFACE_OAUTH_SECRET\",\
-      \"oauth.site\":\"$CYFACE_OAUTH_SITE\",\
-      \"oauth.tenant\":\"$CYFACE_OAUTH_TENANT\"\
+      \"auth\":{\
+         \"type\":\"$CYFACE_AUTH_TYPE\",
+         \"callback\":\"$CYFACE_OAUTH_CALLBACK\",\
+         \"client\":\"$CYFACE_OAUTH_CLIENT\",\
+         \"secret\":\"$CYFACE_OAUTH_SECRET\",\
+         \"site\":\"$CYFACE_OAUTH_SITE\",\
+         \"tenant\":\"$CYFACE_OAUTH_TENANT\"\
+      }\
   }"
 }
 

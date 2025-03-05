@@ -1,5 +1,5 @@
 /*
- * Copyright 2022-2023 Cyface GmbH
+ * Copyright 2022-2025 Cyface GmbH
  *
  * This file is part of the Cyface Data Collector.
  *
@@ -19,7 +19,7 @@
 package de.cyface.collector.configuration
 
 import com.natpryce.hamkrest.assertion.assertThat
-import com.natpryce.hamkrest.isA
+import com.natpryce.hamkrest.equalTo
 import io.vertx.core.json.JsonObject
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
@@ -31,7 +31,6 @@ import kotlin.test.assertNotNull
  * A test for parsing Vertx configuration files.
  *
  * @author Klemens Muthmann
- * @version 1.1.0
  */
 class LoadConfigurationFileTest {
 
@@ -47,7 +46,7 @@ class LoadConfigurationFileTest {
         val result = Configuration.deserialize(jsonConfiguration)
 
         // Assert
-        assertThat(result.storageType, isA<GoogleCloudStorageType>())
+        assertThat(result.storageTypeJson.getString("type"), equalTo("google"))
     }
 
     /**
