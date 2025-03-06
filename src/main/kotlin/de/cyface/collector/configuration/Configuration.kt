@@ -20,7 +20,6 @@ package de.cyface.collector.configuration
 
 import io.vertx.core.json.JsonObject
 import io.vertx.kotlin.core.json.get
-import org.apache.commons.lang3.Validate
 
 @Suppress("ForbiddenComment")
 // TODO: Remove the HTTP Path Parameter by switching to returning a relative Location header.
@@ -58,15 +57,33 @@ data class Configuration(
          */
         fun deserialize(json: JsonObject): Configuration {
             try {
-                val httpHost = Validate.notEmpty(json.get<String>("http.host"))
-                val httpPort = json.get<Int>("http.port")
-                val httpPath = json.get<String>("http.endpoint")
-                val mongoDb = json.get<JsonObject>("mongo.db")
-                val uploadExpiration = json.get<Long>("upload.expiration")
-                val measurementPayloadLimit = json.get<Long>("measurement.payload.limit")
-                val metricsEnabled = json.get<Boolean>("metrics.enabled")
-                val storageTypeJson = json.get<JsonObject>("storage-type")
-                val authConfig = json.getJsonObject("auth")
+                val httpHost = requireNotNull(json.get<String?>("http.host")) {
+                    "The http.host parameter is missing. Refer to the documentation or an example file."
+                }
+                val httpPort = requireNotNull(json.get<Int?>("http.port")) {
+                    "The http.port parameter is missing. Refer to the documentation or an example file."
+                }
+                val httpPath = requireNotNull(json.get<String?>("http.endpoint")) {
+                    "The http.endpoint parameter is missing. Refer to the documentation or an example file."
+                }
+                val mongoDb = requireNotNull(json.get<JsonObject?>("mongo.db")) {
+                    "The mongo.db parameter is missing. Refer to the documentation or an example file."
+                }
+                val uploadExpiration = requireNotNull(json.get<Long?>("upload.expiration")) {
+                    "The upload.expiration parameter is missing. Refer to the documentation or an example file."
+                }
+                val measurementPayloadLimit = requireNotNull(json.get<Long?>("measurement.payload.limit")) {
+                    "The measurement.payload.limit parameter is missing. Refer to the documentation or an example file."
+                }
+                val metricsEnabled = requireNotNull(json.get<Boolean?>("metrics.enabled")) {
+                    "The metrics.enabled parameter is missing. Refer to the documentation or an example file."
+                }
+                val storageTypeJson = requireNotNull(json.get<JsonObject?>("storage-type")) {
+                    "The storage-type parameter is missing. Refer to the documentation or an example file."
+                }
+                val authConfig = requireNotNull(json.get<JsonObject?>("auth")) {
+                    "The auth parameter is missing. Refer to the documentation or an example file."
+                }
 
                 return Configuration(
                     httpHost,
@@ -79,7 +96,7 @@ data class Configuration(
                     storageTypeJson,
                     authConfig,
                 )
-            } catch (@Suppress("TooGenericExceptionCaught") e: NullPointerException) {
+            } catch (e: IllegalArgumentException) {
                 throw InvalidConfig("Some parameters are missing. Refer to the documentation or an example file.", e)
             }
         }

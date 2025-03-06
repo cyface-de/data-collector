@@ -17,7 +17,6 @@
 #
 # version 3.1.0
 
-version: "3.8"
 name: collector
 services:
 
@@ -29,7 +28,10 @@ services:
     volumes:
       - ./proxy/default.conf:/etc/nginx/conf.d/default.conf
     networks:
-      - proxy
+      - default
+    depends_on:
+      api:
+        condition: service_healthy
 
   # Mongo Database Container
   mongo:
@@ -75,6 +77,8 @@ services:
       - CYFACE_OAUTH_SECRET=**********
       - CYFACE_OAUTH_SITE=http://authentication:8080/realms/{tenant}
       - CYFACE_OAUTH_CALLBACK=http://api:8080/callback
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8080/" ]
 
 
   # Keycloak Authentication Server
