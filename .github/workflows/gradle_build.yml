@@ -58,7 +58,7 @@ jobs:
       - name: Build and start Docker dev environment
         run: |
           cd src/main/docker
-          mkdir           app/logs app/file-uploads keycloak/providers keycloak/data/h2
+          mkdir -p        app/logs app/file-uploads keycloak/providers keycloak/data/h2
           sudo chmod o+w  app/logs app/file-uploads keycloak keycloak/data keycloak/data/h2 keycloak/providers
           cd ../../../
           ./gradlew :copyToDockerBuildFolder
