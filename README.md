@@ -312,7 +312,7 @@ Those implementations provide support for storing data in GridFS, on the local f
 
 The following image shows an overview of the interface and how it is embedded in the Cyface data collector.
 
-<img src="images/storage-service.png" alt="Test" width="1128px" height="292px">
+<img src="doc/storage-service.png" alt="Test" width="1128px" height="292px">
 
 # Package de.cyface.collector
 
