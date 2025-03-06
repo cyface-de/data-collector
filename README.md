@@ -58,17 +58,24 @@ For these execution variants you need the parameters explained in the preceding 
 
 #### Running from Docker
 
-Configure logback or use the sample configuration: `cp src/main/docker/logback.xml.template src/main/docker/logback.xml`
+Decide if you need JWT or OAuth Authentication.
+
+Configure logback or use the sample configuration for either JWT or OAuth: 
+* `cp src/main/docker/container-jwt/logback.xml.template src/main/docker/container-jwt/logback.xml` 
+* `cp src/main/docker/container-oauth/logback.xml.template src/main/docker/container-oauth/logback.xml`
 
 The app is executed by a non-privileged user inside the Docker container. To allow this user to
-write data to `logs` and `file-uploads` you need to create two folders and then set the permissions for both folders to `chmod o+w`, see [DAT-797]:
-`mkdir src/main/docker/logs src/main/docker/file-uploads && sudo chmod  o+w src/main/docker/file-uploads src/main/docker/logs`
+write data to `logs` and `file-uploads` you need to create two folders and then set the permissions for both folders to `chmod o+w`, see [DAT-797].
+Do this for either JWT or OAuth authentication using one of the two following commands:
+* `mkdir src/main/docker/container-jwt/logs src/main/docker/container-jwt/file-uploads && sudo chmod  o+w src/main/docker/container-jwt/file-uploads src/main/docker/container-jwt/logs`
+* `mkdir src/main/docker/container-oauth/logs src/main/docker/container-oauth/file-uploads && sudo chmod  o+w src/main/docker/container-oauth/file-uploads src/main/docker/container-oauth/logs`
 
 Now build the system as described in the "Building" section above:
 `./gradlew :clean :build :copyToDockerBuildFolder`
 
-Then simply run `docker-compose up` inside `build/docker`:
-`cd build/docker/ && docker-compose up -d`
+Then simply run `docker-compose up` inside `build/docker` for either JWT or OAuth authentication:
+* `cd build/docker/ && docker-compose -f compose-jwt.yaml up -d`
+* `cd build/docker/ && docker-compose -f compose-oauth.yaml up -d`
 
 This calls docker to bring up a Mongo-database container and a container running the Cyface data collector API. 
 The Collector API is by default available via port 8080. 
@@ -305,7 +312,7 @@ Those implementations provide support for storing data in GridFS, on the local f
 
 The following image shows an overview of the interface and how it is embedded in the Cyface data collector.
 
-<img src="images/storage-service.png" alt="Test" width="1128px" height="292px">
+<img src="doc/storage-service.png" alt="Test" width="1128px" height="292px">
 
 # Package de.cyface.collector
 
