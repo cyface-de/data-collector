@@ -48,6 +48,7 @@ gradle.properties
 **/conf.json
 **/*.log
 ./cyface-test*.json
+**/logs
 
 # Temporary Git Files
 **/*.orig
