@@ -1,5 +1,5 @@
 /*
- * Copyright 2018-2021 Cyface GmbH
+ * Copyright 2018-2025 Cyface GmbH
  *
  * This file is part of the Cyface Data Collector.
  *
@@ -79,7 +79,7 @@ public class Application extends Launcher {
     public final void afterConfigParsed(final JsonObject config) {
         super.afterConfigParsed(config);
 
-        metricsEnabled = config.getBoolean("metrics.enabled");
+        metricsEnabled = config.getBoolean("metrics.enabled", false);
     }
 
     @Override

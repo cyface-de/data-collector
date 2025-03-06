@@ -1,5 +1,5 @@
 #
-# Copyright 2018 Cyface GmbH
+# Copyright 2018-2025 Cyface GmbH
 # 
 # This file is part of the Cyface Data Collector.
 # 
@@ -48,6 +48,7 @@ gradle.properties
 **/conf.json
 **/*.log
 ./cyface-test*.json
+**/logs
 
 # Temporary Git Files
 **/*.orig
@@ -66,3 +67,4 @@ gradle.properties
 src/main/docker/keycloak/data/h2
 src/main/docker/keycloak/data/tmp
 /cyface-test-9807604229c0.json
+/src/main/docker/.env

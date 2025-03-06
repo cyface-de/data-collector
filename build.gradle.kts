@@ -242,17 +242,29 @@ repositories {
   }
 }
 
+tasks.register<Copy>("copyCollectorToJwtCollector") {
+  dependsOn(tasks.shadowJar)
+  from(tasks.shadowJar.get().outputs)
+  into("./build/docker/container-jwt/")
+  rename("collector-(.*)-all.jar","collector-all.jar")
+}
+
+tasks.register<Copy>("copyCollectorToOAuthCollector") {
+  dependsOn(tasks.shadowJar)
+  from(tasks.shadowJar.get().outputs)
+  into("./build/docker/container-oauth/")
+  rename("collector-(.*)-all.jar","collector-all.jar")
+}
+
 /**
  * This is only used in dev environment.
  * <p>
  * This avoids copying a JAR into `src`.
  */
 tasks.register<Copy>("copyToDockerBuildFolder") {
-  dependsOn(tasks.shadowJar)
+  dependsOn("copyCollectorToJwtCollector", "copyCollectorToOAuthCollector")
   into("./build/docker/")
   from("./src/main/docker/")
-  from(tasks.shadowJar.get().outputs)
-  rename("collector-(.*)-all.jar","collector-all.jar")
 }
 
 publishing {
