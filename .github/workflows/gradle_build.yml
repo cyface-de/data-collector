@@ -58,12 +58,12 @@ jobs:
       - name: Build and start Docker dev environment
         run: |
           cd src/main/docker
-          mkdir           logs file-uploads keycloak/providers keycloak/data/h2
-          sudo chmod o+w  logs file-uploads keycloak keycloak/data keycloak/data/h2 keycloak/providers
+          mkdir           app/logs app/file-uploads keycloak/providers keycloak/data/h2
+          sudo chmod o+w  app/logs app/file-uploads keycloak keycloak/data keycloak/data/h2 keycloak/providers
           cd ../../../
           ./gradlew :copyToDockerBuildFolder
           cd build/docker/
-          docker compose up -d
+          docker compose -f compose-oauth.yaml up -d
         env:        # required for ./gradlew :copyToDockerBuildFolder
           USERNAME: ${{ github.actor }}
           PASSWORD: ${{ secrets.GITHUB_TOKEN }}
