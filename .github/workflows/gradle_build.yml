@@ -72,7 +72,7 @@ jobs:
       # until the dependencies are up, and the API to started [RFR-566]
       - name: Wait for API to be online (log file created)
         run: |
-          FILE_PATH="build/docker/logs/collector.log"
+          FILE_PATH="build/docker/app/logs/collector.log"
           MAX_TIMEOUT=90 # 1.5 minutes
           SLEEP_INTERVAL=5 # Check every 5 seconds
 
@@ -106,7 +106,7 @@ jobs:
         run: |
           cd src/main/docker
           echo "----- src/main/docker ..." && ls -alih ./
-          echo "----- logs ..." && ls -alih logs/
+          echo "----- logs ..." && ls -alih app/logs/
           cd keycloak
           echo "----- keycloak ..." && ls -alih ./
           [ -d "providers/" ] && echo "----- providers ..." && ls -alih providers/
@@ -116,7 +116,7 @@ jobs:
           cd ../../../../
           cd build/docker
           echo "----- build/docker ..." && ls -alih ./
-          [ -d "logs/" ] && echo "----- logs ..." && ls -alih logs/
+          [ -d "app/logs/" ] && echo "----- logs ..." && ls -alih app/logs/
           [ -d "keycloak/" ] && echo "----- keycloak ..." && ls -alih keycloak/
           [ -d "keycloak/data" ] && echo "----- keycloak/data ..." && ls -alih keycloak/data
           [ -d "keycloak/data/h2" ] && echo "----- keycloak/data/h2 ..." && ls -alih keycloak/data/h2
@@ -126,7 +126,7 @@ jobs:
           echo "----- docker logs collactor_api"
           docker logs collector_api
           echo
-          [ -f build/docker/logs/collector.log ] && echo "----- collector.log -----" && cat build/docker/logs/collector.log
-          [ -f build/docker/logs/collector-out.log ] && echo "----- collector-out.log -----" && cat build/docker/logs/collector-out.log
+          [ -f build/docker/app/logs/collector.log ] && echo "----- collector.log -----" && cat build/docker/app/logs/collector.log
+          [ -f build/docker/app/logs/collector-out.log ] && echo "----- collector-out.log -----" && cat build/docker/app/logs/collector-out.log
           echo && echo "----- curl ***/"
           curl http://localhost:8080/
