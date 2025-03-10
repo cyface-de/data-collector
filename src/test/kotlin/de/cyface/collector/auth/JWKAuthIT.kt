@@ -41,7 +41,9 @@ class JWKAuthIT {
         val authToken = "" // See Confluence for how to get this
         val jwkJson = json {
             obj(
-                // Add JWK here. See Confluence for how to get this
+                // Add JWK here. See Confluence for how to get this. The format should look like this:
+                // "kty" to "***",
+                // ...
             )
         }
 
