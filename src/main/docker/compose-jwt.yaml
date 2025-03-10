@@ -72,6 +72,9 @@ services:
     environment:
       - CYFACE_AUTH_TYPE=jwt
       - CYFACE_JWK=$CYFACE_JWK
+      # Set to `/` or else the openapi listens by default at `/` but the pre-request `response.header.location` points
+      # to `/api/v4` as `entrypoint.sh` defaults to `CYFACE_API_ENDPOINT=/api/v4`.
+      - CYFACE_API_ENDPOINT=/
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8080/"]
 

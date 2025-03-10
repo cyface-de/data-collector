@@ -77,6 +77,9 @@ services:
       - CYFACE_OAUTH_SECRET=**********
       - CYFACE_OAUTH_SITE=http://authentication:8080/realms/{tenant}
       - CYFACE_OAUTH_CALLBACK=http://api:8080/callback
+      # Set to `/` or else the openapi listens by default at `/` but the pre-request `response.header.location` points
+      # to `/api/v4` as `entrypoint.sh` defaults to `CYFACE_API_ENDPOINT=/api/v4`.
+      - CYFACE_API_ENDPOINT=/
     healthcheck:
       test: [ "CMD", "curl", "-f", "http://localhost:8080/" ]
 
