@@ -90,6 +90,7 @@ val vertxVersion = "4.5.13"
 val micrometerVersion = "1.10.6"
 val commonsLangVersion = "3.12.0"
 val logbackVersion = "1.4.14"
+val janinoVersion = "3.1.10"
 val gradleWrapperVersion = "7.6.3"
 val googleCloudLibrariesVersion = "26.35.0"
 
@@ -134,8 +135,9 @@ dependencies {
   implementation("io.micrometer:micrometer-registry-prometheus:$micrometerVersion")
 
   // Logging
-  implementation("ch.qos.logback:logback-classic:$logbackVersion")
+  implementation("ch.qos.logback:logback-classic:$logbackVersion") // for EvaluatorFilter (e.g. Monitoring requests)
   implementation("ch.qos.logback:logback-core:$logbackVersion")
+  implementation("org.codehaus.janino:janino:$janinoVersion")
 
   // Google Cloud Storage
   implementation(platform("com.google.cloud:libraries-bom:$googleCloudLibrariesVersion"))

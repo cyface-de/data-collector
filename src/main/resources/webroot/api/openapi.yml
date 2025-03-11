@@ -4,6 +4,15 @@ info:
   description: This is a Cyface data collection endpoint, that receives traffic data from Cyface measurement devices, and stores them for further processing.
   version: 0.0.0
 
+servers:
+  - url: /
+    description: Development
+  # Or else the OpenAPI requests contact /measurement on production even though it runs on /api/v*
+  - url: /api/v4
+    description: Production V4
+  - url: /api/v5
+    description: Production V5
+
 components:
   securitySchemes:
     bearerAuth:
