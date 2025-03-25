@@ -233,7 +233,7 @@ this problem by setting the "frontendUrl" to "http://authentication:8080". If yo
 
 To obtain an authentication token from outside the Docker network, you can use the following command:
 ```
-$ curl -d 'client_id=ios-app' -d 'username=test@cyface.de' -d 'password=test' -d 'grant_type=password' 'http://localhost:8081/realms/rfr/protocol/openid-connect/token'
+$ curl -d 'scope=openid' -d 'client_id=ios-app' -d 'username=test@cyface.de' -d 'password=test' -d 'grant_type=password' 'http://localhost:8081/realms/rfr/protocol/openid-connect/token'
 ```
 
 The output will look similar to this:
