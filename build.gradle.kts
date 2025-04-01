@@ -97,9 +97,7 @@ val googleCloudLibrariesVersion = "26.58.0"
 // Versions of testing dependencies
 val junitVersion = "5.9.2"
 val mockitoVersion = "5.2.0"
-@Suppress("ForbiddenComment")
-// TODO: Remove the following. It belongs to java and should be replaced by hamKrest
-val hamcrestVersion = "2.2"
+@Suppress("SpellCheckingInspection")
 val hamKrestVersion = "1.8.0.1"
 val mockitoKotlinVersion = "4.1.0"
 val dokkaVersion = "1.9.10"
@@ -151,8 +149,6 @@ dependencies {
   testImplementation("org.junit.jupiter:junit-jupiter-params")  // Required for parameterized tests
   testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine")
   testImplementation("org.junit.jupiter:junit-jupiter:$junitVersion")
-  // Hamcrest and HamKrest for Kotlin
-  testImplementation("org.hamcrest:hamcrest:$hamcrestVersion")
   testImplementation("com.natpryce:hamkrest:$hamKrestVersion")
   testImplementation(kotlin("reflect")) // Required by hamkrest
   testImplementation(kotlin("test"))

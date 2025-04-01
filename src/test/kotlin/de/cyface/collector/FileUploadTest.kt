@@ -35,12 +35,11 @@ import io.vertx.kotlin.core.json.obj
 import io.vertx.kotlin.coroutines.coAwait
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runTest
+import org.hamcrest.CoreMatchers.equalTo
 import org.hamcrest.MatcherAssert.assertThat
-import org.hamcrest.Matchers
-import org.hamcrest.Matchers.equalTo
-import org.hamcrest.Matchers.greaterThan
-import org.hamcrest.Matchers.`is`
-import org.hamcrest.Matchers.notNullValue
+import org.hamcrest.core.Is.`is`
+import org.hamcrest.core.IsNull.notNullValue
+import org.hamcrest.core.IsNull.nullValue
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -226,7 +225,7 @@ class FileUploadTest {
         )
         val range = response.getHeader("Range")
         // As we did not upload data yet, the server should respond without Range header
-        assertThat("Unexpected Range header!", range, Matchers.nullValue())
+        assertThat("Unexpected Range header!", range, nullValue())
     }
 
     @Test
@@ -353,7 +352,7 @@ class FileUploadTest {
             mongoTest.clientConfiguration().getString("data_source_name")
         )
         val result = mongoClient.findOne("fs.files", JsonObject(), JsonObject()).coAwait()
-        assertThat(result.getString("filename").length, `is`(greaterThan(0)))
+        assertThat(result.getString("filename").length, `is`(36))
         assertThat(result.getLong("length"), `is`(equalTo(4L)))
         assertThat(result.getJsonObject("uploadDate").containsKey("\$date"), `is`(equalTo(true)))
         val meta = result.getJsonObject("metadata")
