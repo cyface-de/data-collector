@@ -51,7 +51,7 @@ plugins {
 
   id("application")
   id("maven-publish")
-  kotlin("jvm").version("2.1.0")
+  kotlin("jvm").version("2.1.20")
 
   // For static code checks
   id("io.gitlab.arturbosch.detekt").version("1.23.0")
@@ -92,7 +92,7 @@ val commonsLangVersion = "3.12.0"
 val logbackVersion = "1.4.14"
 val janinoVersion = "3.1.10"
 val gradleWrapperVersion = "7.6.3"
-val googleCloudLibrariesVersion = "26.35.0"
+val googleCloudLibrariesVersion = "26.58.0"
 
 // Versions of testing dependencies
 val junitVersion = "5.9.2"
