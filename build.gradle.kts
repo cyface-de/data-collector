@@ -109,7 +109,7 @@ val testContainerVersion = "1.20.1"
 val kotlinxVersion = "1.10.1"
 
 tasks.wrapper {
-  gradleVersion = gradleWrapperVersion.toString()
+  gradleVersion = gradleWrapperVersion
 }
 
 dependencies {
