@@ -224,15 +224,7 @@ repositories {
   }
   maven {
     name = "github"
-    url = uri("https://maven.pkg.github.com/cyface-de/serializer")
-    credentials {
-      username = (project.findProperty("gpr.user") ?: System.getenv("USERNAME")) as String
-      password = (project.findProperty("gpr.key") ?: System.getenv("PASSWORD")) as String
-    }
-  }
-  maven {
-    name = "github"
-    url = uri("https://maven.pkg.github.com/cyface-de/api")
+    url = uri("https://maven.pkg.github.com/cyface-de/uploader")
     credentials {
       username = (project.findProperty("gpr.user") ?: System.getenv("USERNAME")) as String
       password = (project.findProperty("gpr.key") ?: System.getenv("PASSWORD")) as String
