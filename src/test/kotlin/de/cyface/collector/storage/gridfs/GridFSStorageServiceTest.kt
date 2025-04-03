@@ -42,9 +42,9 @@ import io.vertx.ext.mongo.GridFsUploadOptions
 import io.vertx.ext.mongo.MongoClient
 import io.vertx.ext.mongo.MongoGridFsClient
 import org.bson.types.ObjectId
+import org.hamcrest.CoreMatchers.`is`
 import org.hamcrest.MatcherAssert.assertThat
-import org.hamcrest.Matchers.equalTo
-import org.hamcrest.Matchers.`is`
+import org.hamcrest.core.IsEqual.equalTo
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.fail
 import org.mockito.ArgumentMatchers.anyString

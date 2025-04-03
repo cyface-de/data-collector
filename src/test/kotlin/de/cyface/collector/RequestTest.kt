@@ -21,7 +21,6 @@ package de.cyface.collector
 import de.cyface.collector.auth.MockedHandlerBuilder
 import de.cyface.collector.commons.DataCollectorApi
 import de.cyface.collector.commons.MongoTest
-import io.vertx.core.Handler
 import io.vertx.core.Vertx
 import io.vertx.core.buffer.Buffer
 import io.vertx.ext.web.client.HttpResponse
@@ -29,7 +28,8 @@ import io.vertx.junit5.VertxExtension
 import io.vertx.junit5.VertxTestContext
 import kotlinx.coroutines.runBlocking
 import org.hamcrest.MatcherAssert
-import org.hamcrest.Matchers
+import org.hamcrest.core.Is.`is`
+import org.hamcrest.core.StringContains.containsString
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.extension.ExtendWith
@@ -89,28 +89,24 @@ class RequestTest {
     fun testGetRoot_returnsApiSpecification(apiEndpoint: String?, context: VertxTestContext) {
         collectorClient.client.get(collectorClient.port, TEST_HOST, apiEndpoint)
             .send(
-                context.succeeding<HttpResponse<Buffer?>?>(
-                    Handler { response: HttpResponse<Buffer?>? ->
-                        context.verify(
-                            VertxTestContext.ExecutionBlock {
-                                MatcherAssert.assertThat<Int?>(
-                                    "Invalid HTTP status code on request for API specification.",
-                                    response!!.statusCode(),
-                                    Matchers.`is`<Int?>(200)
-                                )
-                                val body = response.bodyAsString()
-                                val expectedContent = "<title>Cyface Data Collector</title>"
-                                val assertBodyReason = "Request for API specification seems to be missing a valid body."
-                                MatcherAssert.assertThat<String?>(
-                                    assertBodyReason,
-                                    body,
-                                    Matchers.containsString(expectedContent)
-                                )
-                                context.completeNow()
-                            }
+                context.succeeding<HttpResponse<Buffer?>?> { response: HttpResponse<Buffer?>? ->
+                    context.verify {
+                        MatcherAssert.assertThat(
+                            "Invalid HTTP status code on request for API specification.",
+                            response!!.statusCode(),
+                            `is`(200)
                         )
+                        val body = response.bodyAsString()
+                        val expectedContent = "<title>Cyface Data Collector</title>"
+                        val assertBodyReason = "Request for API specification seems to be missing a valid body."
+                        MatcherAssert.assertThat(
+                            assertBodyReason,
+                            body,
+                            containsString(expectedContent)
+                        )
+                        context.completeNow()
                     }
-                )
+                }
             )
     }
 
@@ -124,20 +120,16 @@ class RequestTest {
     fun testGetUnknownResource_Returns404(apiEndpoint: String?, ctx: VertxTestContext) {
         collectorClient.client.post(collectorClient.port, TEST_HOST, apiEndpoint + "garbage")
             .send(
-                ctx.succeeding<HttpResponse<Buffer?>?>(
-                    Handler { response: HttpResponse<Buffer?>? ->
-                        ctx.verify(
-                            VertxTestContext.ExecutionBlock {
-                                MatcherAssert.assertThat<Int?>(
-                                    "Invalid HTTP status code on requesting invalid resource!",
-                                    response!!.statusCode(),
-                                    Matchers.`is`<Int?>(404)
-                                )
-                                ctx.completeNow()
-                            }
+                ctx.succeeding<HttpResponse<Buffer?>?> { response: HttpResponse<Buffer?>? ->
+                    ctx.verify {
+                        MatcherAssert.assertThat(
+                            "Invalid HTTP status code on requesting invalid resource!",
+                            response!!.statusCode(),
+                            `is`(404)
                         )
+                        ctx.completeNow()
                     }
-                )
+                }
             )
     }
 

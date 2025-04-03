@@ -45,10 +45,9 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 import static de.cyface.collector.model.Upload.USER_ID_FIELD;
+import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.equalTo;
-import static org.hamcrest.Matchers.greaterThan;
-import static org.hamcrest.Matchers.is;
+import static org.hamcrest.core.IsEqual.equalTo;
 
 /**
  * Tests that storing data to an underlying Mongo database works.
@@ -63,7 +62,7 @@ public final class DataStorageTest {
      * not forget to set the Java property:
      * <tt>-Dvertx.logger-delegate-factory-class-name=io.vertx.core.logging.SLF4JLogDelegateFactory</tt>.
      */
-    @SuppressWarnings("unused")
+    @SuppressWarnings({"unused", "SpellCheckingInspection"})
     private static final Logger LOGGER = LoggerFactory.getLogger(DataStorageTest.class);
     /**
      * The version of the app used for the test measurements.
@@ -150,7 +149,7 @@ public final class DataStorageTest {
                 final var metaData = loadedResult.get(0).getJsonObject("metadata");
                 ctx.verify(() -> {
                     assertThat("Expect to receive a file with more than zero bytes!", downloadedBytes,
-                            is(greaterThan(0L)));
+                            is(134697L));
                     assertThat("Test for an example meta datum, but expected value was not found!",
                             metaData.getValue(FormAttributes.APPLICATION_VERSION.getValue()),
                             is(equalTo(TEST_DEVICE_APP_VERSION)));
@@ -161,7 +160,7 @@ public final class DataStorageTest {
     }
 
     /**
-     * @return Some meta data used for testing
+     * @return Some metadata used for testing
      */
     private JsonObject fixtureMetaData() {
         final var ret = new JsonObject();

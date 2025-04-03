@@ -51,7 +51,7 @@ plugins {
 
   id("application")
   id("maven-publish")
-  kotlin("jvm").version("2.1.0")
+  kotlin("jvm").version("2.1.20")
 
   // For static code checks
   id("io.gitlab.arturbosch.detekt").version("1.23.0")
@@ -92,14 +92,12 @@ val commonsLangVersion = "3.12.0"
 val logbackVersion = "1.4.14"
 val janinoVersion = "3.1.10"
 val gradleWrapperVersion = "7.6.3"
-val googleCloudLibrariesVersion = "26.35.0"
+val googleCloudLibrariesVersion = "26.58.0"
 
 // Versions of testing dependencies
 val junitVersion = "5.9.2"
 val mockitoVersion = "5.2.0"
-@Suppress("ForbiddenComment")
-// TODO: Remove the following. It belongs to java and should be replaced by hamKrest
-val hamcrestVersion = "2.2"
+@Suppress("SpellCheckingInspection")
 val hamKrestVersion = "1.8.0.1"
 val mockitoKotlinVersion = "4.1.0"
 val dokkaVersion = "1.9.10"
@@ -109,7 +107,7 @@ val testContainerVersion = "1.20.1"
 val kotlinxVersion = "1.10.1"
 
 tasks.wrapper {
-  gradleVersion = gradleWrapperVersion.toString()
+  gradleVersion = gradleWrapperVersion
 }
 
 dependencies {
@@ -151,8 +149,6 @@ dependencies {
   testImplementation("org.junit.jupiter:junit-jupiter-params")  // Required for parameterized tests
   testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine")
   testImplementation("org.junit.jupiter:junit-jupiter:$junitVersion")
-  // Hamcrest and HamKrest for Kotlin
-  testImplementation("org.hamcrest:hamcrest:$hamcrestVersion")
   testImplementation("com.natpryce:hamkrest:$hamKrestVersion")
   testImplementation(kotlin("reflect")) // Required by hamkrest
   testImplementation(kotlin("test"))
@@ -228,15 +224,7 @@ repositories {
   }
   maven {
     name = "github"
-    url = uri("https://maven.pkg.github.com/cyface-de/serializer")
-    credentials {
-      username = (project.findProperty("gpr.user") ?: System.getenv("USERNAME")) as String
-      password = (project.findProperty("gpr.key") ?: System.getenv("PASSWORD")) as String
-    }
-  }
-  maven {
-    name = "github"
-    url = uri("https://maven.pkg.github.com/cyface-de/api")
+    url = uri("https://maven.pkg.github.com/cyface-de/uploader")
     credentials {
       username = (project.findProperty("gpr.user") ?: System.getenv("USERNAME")) as String
       password = (project.findProperty("gpr.key") ?: System.getenv("PASSWORD")) as String
