@@ -133,9 +133,9 @@ dependencies {
   implementation("io.micrometer:micrometer-registry-prometheus:$micrometerVersion")
 
   // Logging
-  implementation("ch.qos.logback:logback-classic:$logbackVersion") // for EvaluatorFilter (e.g. Monitoring requests)
+  implementation("ch.qos.logback:logback-classic:$logbackVersion")
   implementation("ch.qos.logback:logback-core:$logbackVersion")
-  implementation("org.codehaus.janino:janino:$janinoVersion")
+  implementation("org.codehaus.janino:janino:$janinoVersion") // logback.xml/EvaluatorFilter
 
   // Google Cloud Storage
   implementation(platform("com.google.cloud:libraries-bom:$googleCloudLibrariesVersion"))
