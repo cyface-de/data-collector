@@ -56,6 +56,10 @@ If you are not using the Docker environment, you will probably have to set a few
 The last two sections provide explanations on how to run the software directly from the terminal or from within an IDE such as Eclipse or IntelliJ.
 For these execution variants you need the parameters explained in the preceding section.
 
+#### Authentication
+
+The Cyface Data Collector supports two authentication methods:
+
 #### Running from Docker
 
 Decide if you need JWT or OAuth Authentication.
@@ -73,11 +77,19 @@ Do this for either JWT or OAuth authentication using one of the two following co
 Now build the system as described in the "Building" section above:
 `./gradlew :clean :build :copyToDockerBuildFolder`
 
+For the JWT Setup you need to create an environment variable named `CYFACE_JWK` and set it to the JWK from the auth server issuing your keys.
+For example use something like this:
+```
+export CYFACE_JWK="{\"kty\":\"RSA\",\"alg\":\"RS256\",\"use\":\"sig\",\"kid\":\"1\",\"n\":\"a-very-long-string-containing-the-actual-public-key\",\"e\":\"AQAB\"}"
+```
+Remember to mask all the quotation marks, so they are kept verbatim.
+
 Then simply run `docker-compose up` inside `build/docker` for either JWT or OAuth authentication:
-* `cd build/docker/ && docker-compose -f compose-jwt.yaml up -d`
-* `cd build/docker/ && docker-compose -f compose-oauth.yaml up -d`
+* `cd build/docker/ && docker compose -f compose-jwt.yaml up -d --build --force-recreate`
+* `cd build/docker/ && docker compose -f compose-oauth.yaml up -d --build --force-recreate`
 
 This calls docker to bring up a Mongo-database container and a container running the Cyface data collector API. 
+The Options `--build` and `--force-recreate` ensure that the latest version of the Cyface data collector is used and that the containers are recreated, even if they already exist.
 The Collector API is by default available via port 8080. 
 This means if you boot up everything using the default settings, the Collector API is accessible via `http://localhost:8080/api/v4/`.
 
