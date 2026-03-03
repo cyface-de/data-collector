@@ -61,7 +61,7 @@ services:
     build: container-jwt
     image: data-collector:0.0.0
     ports:
-      - "127.0.0.1:8080:8080"
+      - "8080:8080"
     networks:
       - database
       - default
