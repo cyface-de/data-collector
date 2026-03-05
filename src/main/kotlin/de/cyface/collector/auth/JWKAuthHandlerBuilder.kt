@@ -25,6 +25,7 @@ import io.vertx.ext.auth.jwt.JWTAuthOptions
 import io.vertx.ext.web.Router
 import io.vertx.ext.web.handler.AuthenticationHandler
 import io.vertx.ext.web.handler.JWTAuthHandler
+import org.slf4j.LoggerFactory
 
 /**
  * A Builder for an AuthenticationHandler, that takes all the necessary information directly from configuration
@@ -39,10 +40,13 @@ class JWKAuthHandlerBuilder(
     private val vertx: Vertx,
     private val jwkJson: JsonObject,
 ) : AuthHandlerBuilder {
+    private val logger = LoggerFactory.getLogger(JWKAuthHandlerBuilder::class.java)
+
     override suspend fun create(apiRouter: Router): AuthenticationHandler {
         // 2. JWTAuthOptions erstellen
         val jwtAuthOptions = JWTAuthOptions()
-        jwtAuthOptions.jwks = listOf<JsonObject>(jwkJson)
+        logger.debug("Creating JWTAuthOptions with JWK: {}", jwkJson.encodePrettily())
+        jwtAuthOptions.jwks = listOf(jwkJson)
 
         // 3. JWTAuth erstellen
         val jwtAuth = JWTAuth.create(vertx, jwtAuthOptions)

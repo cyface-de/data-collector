@@ -24,7 +24,7 @@ services:
     container_name: collector_proxy
     image: nginx
     ports:
-      - "127.0.0.1:8889:80"
+      - "8889:80"
     volumes:
       - ./proxy/default.conf:/etc/nginx/conf.d/default.conf
     networks:
@@ -80,6 +80,7 @@ services:
       # Set to `/` or else the openapi listens by default at `/` but the pre-request `response.header.location` points
       # to `/api/v4` as `entrypoint.sh` defaults to `CYFACE_API_ENDPOINT=/api/v4`.
       - CYFACE_API_ENDPOINT=/
+      - CYFACE_HTTP_PORT=8889
     healthcheck:
       test: [ "CMD", "curl", "-f", "http://localhost:8080/" ]
 
