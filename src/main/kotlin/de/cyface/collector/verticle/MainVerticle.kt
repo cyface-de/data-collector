@@ -1,5 +1,5 @@
 /*
- * Copyright 2018-2025 Cyface GmbH
+ * Copyright 2018-2026 Cyface GmbH
  *
  * This file is part of the Cyface Data Collector.
  *
@@ -19,7 +19,7 @@
 package de.cyface.collector.verticle
 
 import de.cyface.collector.auth.AuthHandlerBuilder
-import de.cyface.collector.auth.JWKAuthHandlerBuilder
+import de.cyface.collector.auth.MultiJWKAuthHandlerBuilder
 import de.cyface.collector.auth.OAuth2HandlerBuilder
 import de.cyface.collector.configuration.Configuration
 import de.cyface.collector.configuration.GoogleCloudStorageType
@@ -141,8 +141,9 @@ class MainVerticle : AbstractVerticle() {
         }
 
         "jwt" -> {
-            val jwkJson = config.authConfig.getJsonObject("jwk")
-            JWKAuthHandlerBuilder(vertx, jwkJson)
+            val jwkArray = config.authConfig.getJsonArray("jwks")
+                ?: throw InvalidConfig("auth.jwks is missing. Provide a JSON array of JWK objects.")
+            MultiJWKAuthHandlerBuilder(vertx, jwkArray.map { it as JsonObject })
         }
 
         else -> throw InvalidConfig("Invalid auth type $string!")

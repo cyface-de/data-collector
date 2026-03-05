@@ -1,5 +1,5 @@
 #!/bin/bash
-# Copyright 2018-2025 Cyface GmbH
+# Copyright 2018-2026 Cyface GmbH
 # 
 # This file is part of the Cyface Data Collector.
 #
@@ -54,12 +54,17 @@ loadAuthParameters() {
   if [ -z "$CYFACE_AUTH_TYPE" ]; then
     CYFACE_AUTH_TYPE="oauth"
   fi
-  if [ -z "$CYFACE_JWK" ]; then
-    echo "Unable to find JWK. Please set the environment variable CYFACE_JWK to an appropriate value! API will not start!"
+
+  if [ -n "$CYFACE_JWKS" ]; then
+    JWK_CONFIG="$CYFACE_JWKS"
+  elif [ -n "$CYFACE_JWK" ]; then
+    JWK_CONFIG="[$CYFACE_JWK]"
+  else
+    echo "Unable to find JWK(s). Set CYFACE_JWKS (JSON array) or CYFACE_JWK (single JSON object)! API will not start!"
   fi
 
   echo "Using Auth type: $CYFACE_AUTH_TYPE"
-  echo "Using JWK $CYFACE_JWK"
+  echo "Using JWKs: $JWK_CONFIG"
 }
 
 loadCollectorParameters() {
@@ -119,7 +124,7 @@ loadConfig() {
       },\
       \"auth\":{\
          \"type\":\"$CYFACE_AUTH_TYPE\",\
-         \"jwk\":$CYFACE_JWK\
+         \"jwks\":$JWK_CONFIG\
       }\
   }"
 }

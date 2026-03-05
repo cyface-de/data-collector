@@ -1,4 +1,4 @@
-# Copyright 2018-2025 Cyface GmbH
+# Copyright 2018-2026 Cyface GmbH
 #
 # This file is part of the Cyface Data Collector.
 #
@@ -71,7 +71,7 @@ services:
       - ./app/file-uploads:/app/file-uploads # for debugging
     environment:
       - CYFACE_AUTH_TYPE=jwt
-      - CYFACE_JWK=$CYFACE_JWK
+      - CYFACE_JWKS=$CYFACE_JWKS
       # Set to `/` or else the openapi listens by default at `/` but the pre-request `response.header.location` points
       # to `/api/v4` as `entrypoint.sh` defaults to `CYFACE_API_ENDPOINT=/api/v4`.
       - CYFACE_API_ENDPOINT=/
