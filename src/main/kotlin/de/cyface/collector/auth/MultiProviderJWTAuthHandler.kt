@@ -18,6 +18,7 @@
  */
 package de.cyface.collector.auth
 
+import de.cyface.collector.handler.HTTPStatus
 import io.vertx.core.json.JsonObject
 import io.vertx.ext.auth.jwt.JWTAuth
 import io.vertx.ext.web.RoutingContext
@@ -37,9 +38,11 @@ class MultiProviderJWTAuthHandler(
     private val providers: List<JWTAuth>,
 ) : AuthenticationHandler {
 
+    private val validTokenStartString = "Bearer "
+
     override fun handle(ctx: RoutingContext) {
         val token = extractToken(ctx) ?: run {
-            ctx.fail(401)
+            ctx.fail(HTTPStatus.UNAUTHORIZED)
             return
         }
         tryNext(ctx, JsonObject().put("token", token), providers.iterator())
@@ -47,7 +50,7 @@ class MultiProviderJWTAuthHandler(
 
     private fun tryNext(ctx: RoutingContext, credentials: JsonObject, remaining: Iterator<JWTAuth>) {
         if (!remaining.hasNext()) {
-            ctx.fail(401)
+            ctx.fail(HTTPStatus.UNAUTHORIZED)
             return
         }
         remaining.next()
@@ -61,6 +64,6 @@ class MultiProviderJWTAuthHandler(
 
     private fun extractToken(ctx: RoutingContext): String? {
         val header = ctx.request().getHeader("Authorization") ?: return null
-        return if (header.startsWith("Bearer ")) header.substring(7) else null
+        return if (header.startsWith(validTokenStartString)) header.substring(validTokenStartString.length) else null
     }
 }
