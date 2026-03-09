@@ -59,10 +59,10 @@ class FailureHandler(
             LOGGER.error("Failure in closed response. Unable to inform client! ", ctx.failure())
         } else if (ctx.statusCode() == -1) {
             ctx.response().setStatusCode(HTTPStatus.NOT_FOUND).end("You seem to have reached an invalid resource.")
+        } else {
+            // Respond to client with pretty error page
+            super.handle(ctx)
         }
-
-        // Respond to client with pretty error page
-        super.handle(ctx)
     }
 
     companion object {
