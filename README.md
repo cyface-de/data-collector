@@ -94,7 +94,21 @@ The Collector API is by default available via port 8080.
 This means if you boot up everything using the default settings, the Collector API is accessible via `http://localhost:8080/api/v4/`.
 
 **ATTENTION: The docker setup should only be used for development purposes.**
-It exposes the Cyface data collector as well as the ports of the Mongo database instance freely on the local network.
+
+By default the API port is bound to `127.0.0.1` (localhost only).
+To reach the collector from a physical phone on the same Wi-Fi network, copy the
+environment template and enable LAN exposure:
+
+```bash
+cp src/main/docker/.env.template src/main/docker/.env
+# Then uncomment API_BIND_ADDRESS=0.0.0.0 in .env
+```
+
+The `.env` file also lets you select JWT or OAuth via `COMPOSE_FILE` so you can
+run plain `docker compose up` without `-f` flags. See `.env.template` for details.
+
+**Do not set `API_BIND_ADDRESS=0.0.0.0` on shared or public Wi-Fi** -- it opens
+the port to everyone on the network.
 
 Use `docker-compose ps` to see which ports are mapped to which by Docker.
 For using such a setup in production, you may create your own Docker setup, based on our development one.
