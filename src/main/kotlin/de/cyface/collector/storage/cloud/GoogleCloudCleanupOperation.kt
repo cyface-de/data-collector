@@ -81,5 +81,4 @@ class GoogleCloudCleanupOperation(
             storage.delete(dataName)
         }
     }
-
 }
