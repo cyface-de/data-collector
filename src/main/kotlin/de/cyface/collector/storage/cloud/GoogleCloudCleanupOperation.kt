@@ -64,16 +64,11 @@ class GoogleCloudCleanupOperation(
 
         val bucket = storage.get(bucketName)
         require(bucket != null) { String.format(Locale.getDefault(), "Bucket with name %s not found", bucketName) }
-        val expirationTime = fileExpirationTime * NANO_SECONDS_IN_A_MILLISECOND
 
         val updateTime = bucket.updateTimeOffsetDateTime
-        val expiredTimeSinceLastUpdate = currentTime.minus(
-            updateTime.toEpochSecond() * MILLI_SECONDS_IN_A_SECOND,
-            ChronoUnit.MILLIS
-        )
-        val expiredTimeInNanos = expiredTimeSinceLastUpdate.nano
+        val millisSinceLastUpdate = ChronoUnit.MILLIS.between(updateTime, currentTime)
 
-        if (expiredTimeInNanos < expirationTime) {
+        if (millisSinceLastUpdate < fileExpirationTime) {
             return
         }
 
@@ -87,15 +82,4 @@ class GoogleCloudCleanupOperation(
         }
     }
 
-    companion object {
-        /**
-         * The amount of nanoseconds in a single second. This is required to convert the file expiration time.
-         */
-        const val NANO_SECONDS_IN_A_MILLISECOND = 1_000_000L
-
-        /**
-         * The amount of milliseconds in a single second. This is required to convert the update time of a bucket.
-         */
-        const val MILLI_SECONDS_IN_A_SECOND = 1_000L
-    }
 }
