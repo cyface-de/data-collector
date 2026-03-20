@@ -61,7 +61,9 @@ services:
     build: container-oauth
     image: data-collector:0.0.0
     ports:
-      - "127.0.0.1:8080:8080"
+      # Binds to localhost by default. Set API_BIND_ADDRESS=0.0.0.0 in .env
+      # to expose to LAN (see .env.template).
+      - "${API_BIND_ADDRESS:-127.0.0.1}:8080:8080"
     networks:
       - database
       - authentication

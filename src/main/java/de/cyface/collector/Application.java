@@ -18,6 +18,7 @@
  */
 package de.cyface.collector;
 
+import io.vertx.micrometer.Label;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -29,6 +30,8 @@ import io.vertx.core.json.JsonObject;
 import io.vertx.core.logging.SLF4JLogDelegateFactory;
 import io.vertx.micrometer.MicrometerMetricsOptions;
 import io.vertx.micrometer.VertxPrometheusOptions;
+
+import java.util.EnumSet;
 
 // ATTENTION: This class must not be converted to Kotlin. As a Kotlin class it does not call the correct main method.
 /**
@@ -86,7 +89,17 @@ public class Application extends Launcher {
     public final void beforeStartingVertx(final VertxOptions options) {
         if (metricsEnabled) {
             LOGGER.info("Enabling metrics capturing to prometheus!");
-            options.setMetricsOptions(new MicrometerMetricsOptions()
+            var micrometerOptions = new MicrometerMetricsOptions()
+                    .setEnabled(true)
+                    .setLabels(EnumSet.of(
+                            Label.HTTP_METHOD, // z.B. GET, POST
+                            Label.HTTP_CODE,   // z.B. 200, 404, 500
+                            Label.HTTP_PATH,   // The called path
+                            Label.EB_ADDRESS,  // The event bus address
+                            Label.POOL_TYPE,   // Thread-Pool Type (i.e. worker)
+                            Label.POOL_NAME    // Thread-Pool Name
+                    ));
+            options.setMetricsOptions(micrometerOptions
                     .setPrometheusOptions(new VertxPrometheusOptions().setEnabled(true).setStartEmbeddedServer(true)
                             .setEmbeddedServerOptions(new HttpServerOptions().setPort(PROMETHEUS_SERVER_PORT))
                             .setEmbeddedServerEndpoint("/metrics"))
