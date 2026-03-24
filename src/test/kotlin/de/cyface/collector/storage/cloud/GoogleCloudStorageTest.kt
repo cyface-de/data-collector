@@ -19,9 +19,9 @@
 package de.cyface.collector.storage.cloud
 
 import com.google.api.gax.paging.Page
+import com.google.cloud.storage.Blob
 import com.google.cloud.storage.Bucket
 import com.google.cloud.storage.Storage
-import com.google.cloud.storage.Storage.BucketListOption
 import org.mockito.kotlin.any
 import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.mock
@@ -46,25 +46,24 @@ class GoogleCloudStorageTest {
     fun `Periodic Data Cleaning should Delete Stale Files`() {
         // Arrange
         val testUploadIdentifier = UUID.randomUUID().toString()
-        val testTemporaryFile = "$testUploadIdentifier.tmp"
-        val testDataFile = "$testUploadIdentifier.data"
+        val testTemporaryFile = "$testUploadIdentifier/tmp"
+        val testDataFile = "$testUploadIdentifier/data"
         val currentTime = OffsetDateTime.now()
         val fileExpirationTime = 100L
         val rejectTime = currentTime.minus(fileExpirationTime + 1L, ChronoUnit.MILLIS)
         val acceptTime = currentTime.minus(fileExpirationTime / 2, ChronoUnit.MILLIS)
-        val mockBucket01 = mock<Bucket> {
+        val mockBlob01 = mock<Blob> {
             on { updateTimeOffsetDateTime } doReturn rejectTime
             on { name } doReturn testTemporaryFile
         }
-        val mockBucket02 = mock<Bucket> {
+        val mockBlob02 = mock<Blob> {
             on { updateTimeOffsetDateTime } doReturn acceptTime
             on { name } doReturn testDataFile
         }
-        val mockStorage: Storage = mock {
-            on { get(any<String>()) } doReturn mockBucket01
-            on { list(any<BucketListOption>()) } doReturn object : Page<Bucket> {
+        val mockBucket = mock<Bucket> {
+            on { list() } doReturn object : Page<Blob> {
 
-                private val data = mutableListOf(mockBucket01, mockBucket02)
+                private val data = mutableListOf(mockBlob01, mockBlob02)
 
                 override fun hasNextPage(): Boolean {
                     throw NotImplementedError("Nothing to do here!")
@@ -74,18 +73,21 @@ class GoogleCloudStorageTest {
                     throw NotImplementedError("Nothing to do here!")
                 }
 
-                override fun getNextPage(): Page<Bucket> {
+                override fun getNextPage(): Page<Blob> {
                     throw NotImplementedError("Nothing to do here!")
                 }
 
-                override fun iterateAll(): MutableIterable<Bucket> {
+                override fun iterateAll(): MutableIterable<Blob> {
                     return data
                 }
 
-                override fun getValues(): MutableIterable<Bucket> {
+                override fun getValues(): MutableIterable<Blob> {
                     throw NotImplementedError("Nothing to do here!")
                 }
             }
+        }
+        val mockStorage: Storage = mock {
+            on { get(any<String>()) } doReturn mockBucket
         }
         val oocut = GoogleCloudCleanupOperation(mockStorage, "test")
 
@@ -93,7 +95,7 @@ class GoogleCloudStorageTest {
         oocut.clean(fileExpirationTime)
 
         // Assert
-        verify(mockStorage).delete(testTemporaryFile)
-        verify(mockStorage).delete(testDataFile)
+        verify(mockStorage).delete("test", testTemporaryFile)
+        verify(mockStorage).delete("test", testDataFile)
     }
 }

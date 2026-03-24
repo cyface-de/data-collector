@@ -48,37 +48,21 @@ class GoogleCloudCleanupOperation(
     private val bucketName: String
 ) : CleanupOperation {
 
-    /**
-     * A regular expression for finding the name of an upload from it temporary representation.
-     */
-    private val nameExtraction = "(.+)\\.tmp".toRegex()
-
     override fun clean(fileExpirationTime: Long) {
         val currentTime = OffsetDateTime.now()
-        // Even when we assign a custom Role with `storage.buckets.list` to the service account, we get the error:
-        // `does not have storage.buckets.list access` (even with all storage permission)
-        // Thus, we only clean up the bucket with the name injected, and add a custom role with `storage.buckets.get`.
-        // It anyway makes more sense to only clean up the bucket used by this collector, not all buckets.
-        // val storedFiles = storage.list(Storage.BucketListOption.pageSize(pagingSize))
-        // storedFiles.iterateAll().forEach { bucket ->
-
         val bucket = storage.get(bucketName)
         require(bucket != null) { String.format(Locale.getDefault(), "Bucket with name %s not found", bucketName) }
 
-        val updateTime = bucket.updateTimeOffsetDateTime
-        val millisSinceLastUpdate = ChronoUnit.MILLIS.between(updateTime, currentTime)
+        bucket.list().iterateAll().forEach { blob ->
+            if (!blob.name.endsWith("/tmp")) return@forEach
 
-        if (millisSinceLastUpdate < fileExpirationTime) {
-            return
-        }
+            val updateTime = blob.updateTimeOffsetDateTime ?: return@forEach
+            val millisSinceLastUpdate = ChronoUnit.MILLIS.between(updateTime, currentTime)
+            if (millisSinceLastUpdate < fileExpirationTime) return@forEach
 
-        if (bucket.name.endsWith(".tmp")) {
-            val uploadIdentifier = nameExtraction.matchEntire(bucket.name)?.groups?.get(1)?.value ?: return
-
-            val dataName = "$uploadIdentifier.data"
-
-            storage.delete(bucket.name)
-            storage.delete(dataName)
+            val uploadIdentifier = blob.name.removeSuffix("/tmp")
+            storage.delete(bucketName, blob.name)
+            storage.delete(bucketName, "$uploadIdentifier/data")
         }
     }
 }
