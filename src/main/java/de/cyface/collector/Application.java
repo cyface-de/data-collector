@@ -18,18 +18,25 @@
  */
 package de.cyface.collector;
 
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.binder.jvm.JvmGcMetrics;
+import io.micrometer.core.instrument.binder.jvm.JvmMemoryMetrics;
+import io.micrometer.core.instrument.binder.jvm.JvmThreadMetrics;
+import io.micrometer.core.instrument.binder.system.ProcessorMetrics;
 import io.vertx.micrometer.Label;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import de.cyface.collector.verticle.MainVerticle;
 import io.vertx.core.Launcher;
+import io.vertx.core.Vertx;
 import io.vertx.core.VertxOptions;
 import io.vertx.core.http.HttpServerOptions;
 import io.vertx.core.json.JsonObject;
 import io.vertx.core.logging.SLF4JLogDelegateFactory;
 import io.vertx.micrometer.MicrometerMetricsOptions;
 import io.vertx.micrometer.VertxPrometheusOptions;
+import io.vertx.micrometer.backends.BackendRegistries;
 
 import java.util.EnumSet;
 
@@ -106,6 +113,24 @@ public class Application extends Launcher {
                     .setEnabled(true));
         } else {
             LOGGER.info("Starting without capturing metrics");
+        }
+    }
+
+    @Override
+    public final void afterStartingVertx(final Vertx vertx) {
+        if (metricsEnabled) {
+            // Bind JVM metrics to the Vert.x Micrometer registry (not the global one)
+            // so they appear on the /metrics endpoint served by the embedded Prometheus server.
+            MeterRegistry registry = BackendRegistries.getDefaultNow();
+            if (registry != null) {
+                new JvmMemoryMetrics().bindTo(registry);
+                new JvmGcMetrics().bindTo(registry);
+                new JvmThreadMetrics().bindTo(registry);
+                new ProcessorMetrics().bindTo(registry);
+                LOGGER.info("JVM metrics bound to Vert.x Prometheus registry");
+            } else {
+                LOGGER.warn("Could not bind JVM metrics: Vert.x metrics registry not available");
+            }
         }
     }
 }
