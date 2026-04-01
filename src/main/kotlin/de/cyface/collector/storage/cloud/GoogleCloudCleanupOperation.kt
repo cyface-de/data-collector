@@ -48,54 +48,21 @@ class GoogleCloudCleanupOperation(
     private val bucketName: String
 ) : CleanupOperation {
 
-    /**
-     * A regular expression for finding the name of an upload from it temporary representation.
-     */
-    private val nameExtraction = "(.+)\\.tmp".toRegex()
-
     override fun clean(fileExpirationTime: Long) {
         val currentTime = OffsetDateTime.now()
-        // Even when we assign a custom Role with `storage.buckets.list` to the service account, we get the error:
-        // `does not have storage.buckets.list access` (even with all storage permission)
-        // Thus, we only clean up the bucket with the name injected, and add a custom role with `storage.buckets.get`.
-        // It anyway makes more sense to only clean up the bucket used by this collector, not all buckets.
-        // val storedFiles = storage.list(Storage.BucketListOption.pageSize(pagingSize))
-        // storedFiles.iterateAll().forEach { bucket ->
-
         val bucket = storage.get(bucketName)
         require(bucket != null) { String.format(Locale.getDefault(), "Bucket with name %s not found", bucketName) }
-        val expirationTime = fileExpirationTime * NANO_SECONDS_IN_A_MILLISECOND
 
-        val updateTime = bucket.updateTimeOffsetDateTime
-        val expiredTimeSinceLastUpdate = currentTime.minus(
-            updateTime.toEpochSecond() * MILLI_SECONDS_IN_A_SECOND,
-            ChronoUnit.MILLIS
-        )
-        val expiredTimeInNanos = expiredTimeSinceLastUpdate.nano
+        bucket.list().iterateAll().forEach { blob ->
+            if (!blob.name.endsWith("/tmp")) return@forEach
 
-        if (expiredTimeInNanos < expirationTime) {
-            return
+            val updateTime = blob.updateTimeOffsetDateTime ?: return@forEach
+            val millisSinceLastUpdate = ChronoUnit.MILLIS.between(updateTime, currentTime)
+            if (millisSinceLastUpdate < fileExpirationTime) return@forEach
+
+            val uploadIdentifier = blob.name.removeSuffix("/tmp")
+            storage.delete(bucketName, blob.name)
+            storage.delete(bucketName, "$uploadIdentifier/data")
         }
-
-        if (bucket.name.endsWith(".tmp")) {
-            val uploadIdentifier = nameExtraction.matchEntire(bucket.name)?.groups?.get(1)?.value ?: return
-
-            val dataName = "$uploadIdentifier.data"
-
-            storage.delete(bucket.name)
-            storage.delete(dataName)
-        }
-    }
-
-    companion object {
-        /**
-         * The amount of nanoseconds in a single second. This is required to convert the file expiration time.
-         */
-        const val NANO_SECONDS_IN_A_MILLISECOND = 1_000_000L
-
-        /**
-         * The amount of milliseconds in a single second. This is required to convert the update time of a bucket.
-         */
-        const val MILLI_SECONDS_IN_A_SECOND = 1_000L
     }
 }
