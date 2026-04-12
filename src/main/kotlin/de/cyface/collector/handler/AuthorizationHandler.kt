@@ -22,7 +22,6 @@ import de.cyface.collector.handler.HTTPStatus.ENTITY_UNPARSABLE
 import de.cyface.collector.model.User
 import io.vertx.core.Handler
 import io.vertx.core.http.HttpServerRequest
-import io.vertx.ext.auth.oauth2.Oauth2Credentials
 import io.vertx.ext.web.RoutingContext
 import org.slf4j.LoggerFactory
 import java.util.UUID
@@ -43,12 +42,13 @@ class AuthorizationHandler : Handler<RoutingContext> {
             val headers = request.headers()
             LOGGER.debug("Request headers: {}", headers)
 
-            // Inform next handler which user is authenticated
-            val contextUser = context.user()
-            val principal = contextUser.principal()
-            val username = Oauth2Credentials(principal).username
-            // The "sub" is the subject claim which represents the unique id of the authenticated user.
-            val uuid = principal.getString("sub")
+            // Read identity from decoded JWT claims (not principal, which only contains the raw token)
+            val claims = context.user()?.attributes()?.getJsonObject("accessToken")
+                ?: error("Missing decoded access token (JWT audience validation may have failed)")
+            val username = claims.getString("preferred_username")
+                ?: error("Missing preferred_username in access token")
+            val uuid = claims.getString("sub")
+                ?: error("Missing sub in access token")
             val user = User(UUID.fromString(uuid), username)
             context.put("logged-in-user", user)
 
