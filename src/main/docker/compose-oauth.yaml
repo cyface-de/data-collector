@@ -98,13 +98,31 @@ services:
     networks:
       - authentication
     environment:
-      - KEYCLOAK_ADMIN=admin 
+      - KEYCLOAK_ADMIN=admin
       - KEYCLOAK_ADMIN_PASSWORD=admin
     command: start-dev --import-realm
     volumes:
       - ./keycloak/providers:/opt/keycloak/providers
       - ./keycloak/data:/opt/keycloak/data
       - ./keycloak/themes:/opt/keycloak/themes
+    depends_on:
+      - mailpit
+
+  # Fake SMTP server that captures every outgoing email and exposes a web UI.
+  # Inspect mails at http://localhost:8025 (subject, from, to, body, HTML).
+  # Keycloak is configured to deliver mail to mailpit:1025 via the realm's
+  # smtpServer block (see keycloak/data/import/rfr-realm.json).
+  mailpit:
+    container_name: collector_mailpit
+    image: axllent/mailpit:latest
+    ports:
+      - "127.0.0.1:8025:8025"  # Web UI
+      - "127.0.0.1:1025:1025"  # SMTP (also reachable from host for debugging)
+    networks:
+      - authentication
+    environment:
+      MP_SMTP_AUTH_ACCEPT_ANY: "true"
+      MP_SMTP_AUTH_ALLOW_INSECURE: "true"
 
 volumes:
   collector_mongo-db:
