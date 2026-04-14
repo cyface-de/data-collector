@@ -7,8 +7,8 @@
   "defaultSignatureAlgorithm" : "RS256",
   "revokeRefreshToken" : false,
   "refreshTokenMaxReuse" : 0,
-  "accessTokenLifespan" : 300,
-  "accessTokenLifespanForImplicitFlow" : 900,
+  "accessTokenLifespan" : 900,
+  "accessTokenLifespanForImplicitFlow" : 1800,
   "ssoSessionIdleTimeout" : 86313600,
   "ssoSessionMaxLifespan" : 86313600,
   "ssoSessionIdleTimeoutRememberMe" : 0,
@@ -65,6 +65,14 @@
           "account" : [ "view-profile", "manage-account" ]
         }
       },
+      "clientRole" : false,
+      "containerId" : "400a0f2d-f9ea-4c00-b3fa-2e8bdbc6f4b0",
+      "attributes" : { }
+    }, {
+      "id" : "ddf515c1-5e1a-416d-8343-770ee799a801",
+      "name" : "municipality-presenter",
+      "description" : "Each municipality may have multiple municipality-manager users. Only one of them may have the municipality-presenter role, which defines whose processed data the non-manager users of the municipality see.",
+      "composite" : false,
       "clientRole" : false,
       "containerId" : "400a0f2d-f9ea-4c00-b3fa-2e8bdbc6f4b0",
       "attributes" : { }
@@ -284,6 +292,7 @@
       "collector" : [ ],
       "web-app" : [ ],
       "incentives" : [ ],
+      "postman" : [ ],
       "demo-client" : [ ],
       "provider" : [ {
         "id" : "c0b51032-84e2-4465-b747-bc781203b4c9",
@@ -389,7 +398,7 @@
   "otpPolicyLookAheadWindow" : 1,
   "otpPolicyPeriod" : 30,
   "otpPolicyCodeReusable" : false,
-  "otpSupportedApplications" : [ "totpAppFreeOTPName", "totpAppMicrosoftAuthenticatorName", "totpAppGoogleName" ],
+  "otpSupportedApplications" : [ "totpAppGoogleName", "totpAppFreeOTPName", "totpAppMicrosoftAuthenticatorName" ],
   "webAuthnPolicyRpEntityName" : "keycloak",
   "webAuthnPolicySignatureAlgorithms" : [ "ES256" ],
   "webAuthnPolicyRpId" : "",
@@ -411,6 +420,33 @@
   "webAuthnPolicyPasswordlessAvoidSameAuthenticatorRegister" : false,
   "webAuthnPolicyPasswordlessAcceptableAaguids" : [ ],
   "users" : [ {
+    "id" : "33f9d9d1-4fa5-4ce9-965d-0f523aaf3a44",
+    "createdTimestamp" : 1716385809973,
+    "username" : "test@cyface.de",
+    "enabled" : true,
+    "totp" : false,
+    "emailVerified" : true,
+    "firstName" : "Test",
+    "lastName" : "User",
+    "email" : "test@cyface.de",
+    "attributes" : {
+      "terms_and_conditions" : [ "1710776138" ],
+      "municipality" : [ "schkeuditz" ]
+    },
+    "credentials" : [ {
+      "id" : "72121d74-7218-4ee3-bf19-3e4a1ffc0d9f",
+      "type" : "password",
+      "userLabel" : "My password",
+      "createdDate" : 1716385830573,
+      "secretData" : "{\"value\":\"9SBIG9DXiXEtQP2d7gvljBfjU9eyfYpKdHhE6BPFUTw=\",\"salt\":\"8aW5/SP4T4fzO1mYzCHGmg==\",\"additionalParameters\":{}}",
+      "credentialData" : "{\"hashIterations\":27500,\"algorithm\":\"pbkdf2-sha256\",\"additionalParameters\":{}}"
+    } ],
+    "disableableCredentialTypes" : [ ],
+    "requiredActions" : [ ],
+    "realmRoles" : [ "default-roles-rfr" ],
+    "notBefore" : 0,
+    "groups" : [ ]
+  }, {
     "id" : "d7b0e1b6-a15d-4652-af9f-e06ff8d31d78",
     "createdTimestamp" : 1691670709280,
     "username" : "service-account-provider",
@@ -423,31 +459,8 @@
     "requiredActions" : [ ],
     "realmRoles" : [ "default-roles-rfr" ],
     "clientRoles" : {
-      "realm-management" : [ "query-users", "view-users" ]
+      "realm-management" : [ "view-realm", "query-users", "view-users", "manage-users" ]
     },
-    "notBefore" : 0,
-    "groups" : [ ]
-  }, {
-    "id" : "2c02f28e-00b8-421a-921f-be670b9d9330",
-    "createdTimestamp" : 1692882353775,
-    "username" : "test@cyface.de",
-    "enabled" : true,
-    "totp" : false,
-    "emailVerified" : true,
-    "firstName" : "Test",
-    "lastName" : "Tester",
-    "email" : "test@cyface.de",
-    "credentials" : [ {
-      "id" : "5eb073d5-366f-4395-b657-20d3aecbd9cb",
-      "type" : "password",
-      "userLabel" : "My password",
-      "createdDate" : 1692882374232,
-      "secretData" : "{\"value\":\"9SBIG9DXiXEtQP2d7gvljBfjU9eyfYpKdHhE6BPFUTw=\",\"salt\":\"8aW5/SP4T4fzO1mYzCHGmg==\",\"additionalParameters\":{}}",
-      "credentialData" : "{\"hashIterations\":27500,\"algorithm\":\"pbkdf2-sha256\",\"additionalParameters\":{}}"
-    } ],
-    "disableableCredentialTypes" : [ ],
-    "requiredActions" : [ ],
-    "realmRoles" : [ "default-roles-rfr" ],
     "notBefore" : 0,
     "groups" : [ ]
   } ],
@@ -530,7 +543,6 @@
     } ],
     "defaultClientScopes" : [ "web-origins", "acr", "profile", "roles", "email" ],
     "optionalClientScopes" : [ "address", "phone", "offline_access", "microprofile-jwt" ]
-
   }, {
     "id" : "47aad148-751e-4e8a-8b13-dfe50ffcc20a",
     "clientId" : "admin-cli",
@@ -838,6 +850,7 @@
     "protocol" : "openid-connect",
     "attributes" : {
       "client.secret.creation.time" : "1686578386",
+      "login_theme" : "ios-app",
       "post.logout.redirect.uris" : "+",
       "oauth2.device.authorization.grant.enabled" : "false",
       "backchannel.logout.revoke.offline.tokens" : "false",
@@ -931,9 +944,45 @@
     "defaultClientScopes" : [ "web-origins", "acr", "profile", "roles", "email" ],
     "optionalClientScopes" : [ "address", "phone", "offline_access", "microprofile-jwt" ]
   }, {
+    "id" : "03f4eed0-6ee8-4973-83e7-b642987aae39",
+    "clientId" : "postman",
+    "name" : "Postman",
+    "description" : "Postman API Testing and Debugging Tool",
+    "rootUrl" : "",
+    "adminUrl" : "",
+    "baseUrl" : "",
+    "surrogateAuthRequired" : false,
+    "enabled" : true,
+    "alwaysDisplayInConsole" : false,
+    "clientAuthenticatorType" : "client-secret",
+    "redirectUris" : [ "/*" ],
+    "webOrigins" : [ "/*" ],
+    "notBefore" : 0,
+    "bearerOnly" : false,
+    "consentRequired" : false,
+    "standardFlowEnabled" : true,
+    "implicitFlowEnabled" : false,
+    "directAccessGrantsEnabled" : false,
+    "serviceAccountsEnabled" : false,
+    "publicClient" : true,
+    "frontchannelLogout" : true,
+    "protocol" : "openid-connect",
+    "attributes" : {
+      "oidc.ciba.grant.enabled" : "false",
+      "post.logout.redirect.uris" : "+",
+      "oauth2.device.authorization.grant.enabled" : "false",
+      "backchannel.logout.session.required" : "true",
+      "backchannel.logout.revoke.offline.tokens" : "false"
+    },
+    "authenticationFlowBindingOverrides" : { },
+    "fullScopeAllowed" : true,
+    "nodeReRegistrationTimeout" : -1,
+    "defaultClientScopes" : [ "web-origins", "acr", "profile", "roles", "email" ],
+    "optionalClientScopes" : [ "address", "phone", "offline_access", "microprofile-jwt" ]
+  }, {
     "id" : "537901a6-524e-44ac-b125-93deb6bdb5a5",
     "clientId" : "provider",
-    "name" : "",
+    "name" : "Provider",
     "description" : "",
     "rootUrl" : "http://localhost:8086",
     "adminUrl" : "http://localhost:8086",
@@ -1098,7 +1147,7 @@
     "enabled" : true,
     "alwaysDisplayInConsole" : false,
     "clientAuthenticatorType" : "client-secret",
-    "redirectUris" : [ "https://app.cyface.de/callback", "https://staging.cyface.de/callback" ],
+    "redirectUris" : [ "https://app.cyface.de/callback", "https://staging.cyface.de/callback", "https://app.ready-for-robots.de/callback", "https://staging.ready-for-robots.de/callback" ],
     "webOrigins" : [ "+" ],
     "notBefore" : 0,
     "bearerOnly" : false,
@@ -1141,7 +1190,7 @@
     "defaultClientScopes" : [ "web-origins", "acr", "profile", "roles", "email" ],
     "optionalClientScopes" : [ "address", "phone", "offline_access", "microprofile-jwt" ]
   }, {
-    "id" : "008ffc0f-634b-43f6-bef4-9e7fba868cf2",
+    "id" : "e068c8dc-df5c-4272-bf18-70b3c3597e55",
     "clientId" : "web-app_dev",
     "name" : "",
     "description" : "",
@@ -1166,9 +1215,10 @@
     "protocol" : "openid-connect",
     "attributes" : {
       "oidc.ciba.grant.enabled" : "false",
-      "post.logout.redirect.uris" : "+",
-      "oauth2.device.authorization.grant.enabled" : "false",
       "backchannel.logout.session.required" : "true",
+      "post.logout.redirect.uris" : "+",
+      "display.on.consent.screen" : "false",
+      "oauth2.device.authorization.grant.enabled" : "false",
       "backchannel.logout.revoke.offline.tokens" : "false"
     },
     "authenticationFlowBindingOverrides" : { },
@@ -1385,8 +1435,8 @@
       "consentRequired" : false,
       "config" : {
         "aggregate.attrs" : "false",
-        "multivalued" : "false",
         "userinfo.token.claim" : "true",
+        "multivalued" : "false",
         "user.attribute" : "municipality",
         "id.token.claim" : "false",
         "access.token.claim" : "true",
@@ -1674,7 +1724,7 @@
     "referrerPolicy" : "no-referrer",
     "xRobotsTag" : "none",
     "xFrameOptions" : "SAMEORIGIN",
-    "contentSecurityPolicy" : "frame-src 'self'; frame-ancestors 'self'; object-src 'none';",
+    "contentSecurityPolicy" : "frame-ancestors 'self'; object-src 'none';",
     "xXSSProtection" : "1; mode=block",
     "strictTransportSecurity" : "max-age=31536000; includeSubDomains"
   },
@@ -1700,7 +1750,30 @@
   "enabledEventTypes" : [ "SEND_RESET_PASSWORD", "UPDATE_CONSENT_ERROR", "GRANT_CONSENT", "VERIFY_PROFILE_ERROR", "REMOVE_TOTP", "REVOKE_GRANT", "UPDATE_TOTP", "LOGIN_ERROR", "CLIENT_LOGIN", "RESET_PASSWORD_ERROR", "IMPERSONATE_ERROR", "CODE_TO_TOKEN_ERROR", "CUSTOM_REQUIRED_ACTION", "OAUTH2_DEVICE_CODE_TO_TOKEN_ERROR", "RESTART_AUTHENTICATION", "IMPERSONATE", "UPDATE_PROFILE_ERROR", "LOGIN", "OAUTH2_DEVICE_VERIFY_USER_CODE", "UPDATE_PASSWORD_ERROR", "CLIENT_INITIATED_ACCOUNT_LINKING", "TOKEN_EXCHANGE", "AUTHREQID_TO_TOKEN", "LOGOUT", "REGISTER", "DELETE_ACCOUNT_ERROR", "CLIENT_REGISTER", "IDENTITY_PROVIDER_LINK_ACCOUNT", "DELETE_ACCOUNT", "UPDATE_PASSWORD", "CLIENT_DELETE", "FEDERATED_IDENTITY_LINK_ERROR", "IDENTITY_PROVIDER_FIRST_LOGIN", "CLIENT_DELETE_ERROR", "VERIFY_EMAIL", "CLIENT_LOGIN_ERROR", "RESTART_AUTHENTICATION_ERROR", "EXECUTE_ACTIONS", "REMOVE_FEDERATED_IDENTITY_ERROR", "TOKEN_EXCHANGE_ERROR", "PERMISSION_TOKEN", "SEND_IDENTITY_PROVIDER_LINK_ERROR", "EXECUTE_ACTION_TOKEN_ERROR", "SEND_VERIFY_EMAIL", "OAUTH2_DEVICE_AUTH", "EXECUTE_ACTIONS_ERROR", "REMOVE_FEDERATED_IDENTITY", "OAUTH2_DEVICE_CODE_TO_TOKEN", "IDENTITY_PROVIDER_POST_LOGIN", "IDENTITY_PROVIDER_LINK_ACCOUNT_ERROR", "OAUTH2_DEVICE_VERIFY_USER_CODE_ERROR", "UPDATE_EMAIL", "REGISTER_ERROR", "REVOKE_GRANT_ERROR", "EXECUTE_ACTION_TOKEN", "LOGOUT_ERROR", "UPDATE_EMAIL_ERROR", "CLIENT_UPDATE_ERROR", "AUTHREQID_TO_TOKEN_ERROR", "UPDATE_PROFILE", "CLIENT_REGISTER_ERROR", "FEDERATED_IDENTITY_LINK", "SEND_IDENTITY_PROVIDER_LINK", "SEND_VERIFY_EMAIL_ERROR", "RESET_PASSWORD", "CLIENT_INITIATED_ACCOUNT_LINKING_ERROR", "OAUTH2_DEVICE_AUTH_ERROR", "UPDATE_CONSENT", "REMOVE_TOTP_ERROR", "VERIFY_EMAIL_ERROR", "SEND_RESET_PASSWORD_ERROR", "CLIENT_UPDATE", "CUSTOM_REQUIRED_ACTION_ERROR", "IDENTITY_PROVIDER_POST_LOGIN_ERROR", "UPDATE_TOTP_ERROR", "CODE_TO_TOKEN", "VERIFY_PROFILE", "GRANT_CONSENT_ERROR", "IDENTITY_PROVIDER_FIRST_LOGIN_ERROR" ],
   "adminEventsEnabled" : true,
   "adminEventsDetailsEnabled" : false,
-  "identityProviders" : [ ],
+  "identityProviders" : [ {
+    "alias" : "google",
+    "internalId" : "d68ac15d-14c0-4b5a-b9fb-c1236447d0dc",
+    "providerId" : "google",
+    "enabled" : true,
+    "updateProfileFirstLoginMode" : "on",
+    "trustEmail" : false,
+    "storeToken" : false,
+    "addReadTokenRoleOnCreate" : false,
+    "authenticateByDefault" : false,
+    "linkOnly" : false,
+    "firstBrokerLoginFlowAlias" : "first broker login",
+    "config" : {
+      "hideOnLoginPage" : "false",
+      "offlineAccess" : "false",
+      "acceptsPromptNoneForwardFromClient" : "false",
+      "clientId" : "440863438456-k6k2eab84b3t3ptpkbp210k2vpbqb3jq.apps.googleusercontent.com",
+      "disableUserInfo" : "false",
+      "filteredByClaim" : "false",
+      "syncMode" : "IMPORT",
+      "userIp" : "false",
+      "clientSecret" : "**********"
+    }
+  } ],
   "identityProviderMappers" : [ ],
   "components" : {
     "org.keycloak.services.clientregistration.policy.ClientRegistrationPolicy" : [ {
@@ -1710,7 +1783,7 @@
       "subType" : "authenticated",
       "subComponents" : { },
       "config" : {
-        "allowed-protocol-mapper-types" : [ "saml-user-property-mapper", "oidc-usermodel-property-mapper", "oidc-address-mapper", "saml-role-list-mapper", "oidc-usermodel-attribute-mapper", "saml-user-attribute-mapper", "oidc-sha256-pairwise-sub-mapper", "oidc-full-name-mapper" ]
+        "allowed-protocol-mapper-types" : [ "oidc-usermodel-attribute-mapper", "saml-user-property-mapper", "oidc-usermodel-property-mapper", "saml-role-list-mapper", "oidc-sha256-pairwise-sub-mapper", "oidc-full-name-mapper", "oidc-address-mapper", "saml-user-attribute-mapper" ]
       }
     }, {
       "id" : "929c0fd6-03d4-4e73-9fca-057d61927468",
@@ -1751,7 +1824,7 @@
       "subType" : "anonymous",
       "subComponents" : { },
       "config" : {
-        "allowed-protocol-mapper-types" : [ "oidc-usermodel-attribute-mapper", "oidc-full-name-mapper", "saml-user-property-mapper", "oidc-sha256-pairwise-sub-mapper", "saml-user-attribute-mapper", "oidc-address-mapper", "oidc-usermodel-property-mapper", "saml-role-list-mapper" ]
+        "allowed-protocol-mapper-types" : [ "oidc-usermodel-attribute-mapper", "oidc-usermodel-property-mapper", "oidc-full-name-mapper", "oidc-address-mapper", "saml-role-list-mapper", "oidc-sha256-pairwise-sub-mapper", "saml-user-attribute-mapper", "saml-user-property-mapper" ]
       }
     }, {
       "id" : "7ba11778-4a82-493c-9a22-cac0ebbf1372",
@@ -1772,6 +1845,12 @@
       "config" : {
         "allow-default-scopes" : [ "true" ]
       }
+    } ],
+    "org.keycloak.userprofile.UserProfileProvider" : [ {
+      "id" : "e0f6474b-132d-4967-b050-19a3b0335bca",
+      "providerId" : "declarative-user-profile",
+      "subComponents" : { },
+      "config" : { }
     } ],
     "org.keycloak.keys.KeyProvider" : [ {
       "id" : "5192df73-3104-42be-9ab9-e86af74e7f05",
@@ -2637,18 +2716,23 @@
     "clientOfflineSessionMaxLifespan" : "0",
     "oauth2DevicePollingInterval" : "5",
     "clientSessionIdleTimeout" : "0",
+    "actionTokenGeneratedByUserLifespan-execute-actions" : "",
+    "actionTokenGeneratedByUserLifespan-verify-email" : "",
     "clientOfflineSessionIdleTimeout" : "0",
+    "actionTokenGeneratedByUserLifespan-reset-credentials" : "",
     "cibaInterval" : "5",
     "realmReusableOtpCode" : "false",
     "cibaExpiresIn" : "120",
     "oauth2DeviceCodeLifespan" : "600",
+    "actionTokenGeneratedByUserLifespan-idp-verify-account-via-email" : "",
     "parRequestUriLifespan" : "60",
     "clientSessionMaxLifespan" : "0",
-    "frontendUrl": "http://authentication:8080",
+    "frontendUrl" : "http://authentication:8080",
     "acr.loa.map" : "{}",
-    "adminEventsExpiration" : "864000"
+    "adminEventsExpiration" : "864000",
+    "shortVerificationUri" : ""
   },
-  "keycloakVersion" : "22.0.1",
+  "keycloakVersion" : "22.0.0",
   "userManagedAccessAllowed" : false,
   "clientProfiles" : {
     "profiles" : [ ]
