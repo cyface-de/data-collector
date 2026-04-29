@@ -1,5 +1,5 @@
 /*
- * Copyright 2025 Cyface GmbH
+ * Copyright 2026 Cyface GmbH
  *
  * This file is part of the Cyface Data Collector.
  *
@@ -37,57 +37,56 @@ import java.util.Base64
 import kotlin.test.Test
 
 /**
- * Integration test verifying that [MultiJWKAuthHandlerBuilder] accepts tokens from two identity
- * providers whose JWKs have distinct `kid` values, relying on Vert.x's native kid-based key
- * selection.
+ * Documents what Vert.x does when two JWKs share the same `kid` value and are both loaded
+ * into a single [io.vertx.ext.auth.jwt.JWTAuth] instance via [MultiJWKAuthHandlerBuilder].
  *
- * RSA key pairs and JWTs are generated entirely at runtime using the JDK so that no real keys or
- * tokens need to be committed to the repository.
+ * This scenario no longer occurs in production now that the partner's OAuth server issues JWKs
+ * with unique `kid` values. The test is kept to record the observed Vert.x behaviour so that
+ * future maintainers understand what happens if duplicate kids are ever encountered again.
+ *
+ * Observed behaviour: Vert.x stores keys in a map keyed by `kid`. When two keys share the same
+ * `kid`, the last key in the list overwrites the first. Only tokens signed by the last key with
+ * the colliding `kid` are accepted; tokens signed by earlier keys with the same `kid` are
+ * rejected, because Vert.x resolves the kid to the last-registered public key.
  *
  * @author Klemens Muthmann
  */
 @ExtendWith(VertxExtension::class)
-class MultiJWKAuthIT {
+class CollidingKidJWKIT {
 
     @Test
-    fun `tokens from two IdPs with distinct kids are both accepted`(vertx: Vertx) = runTest {
+    fun `when two JWKs share the same kid only the last-registered key accepts tokens`(vertx: Vertx) = runTest {
         val keyGen = KeyPairGenerator.getInstance("RSA").also { it.initialize(2048) }
         val keyPair1 = keyGen.generateKeyPair()
         val keyPair2 = keyGen.generateKeyPair()
-        val unknownKeyPair = keyGen.generateKeyPair()
 
-        val token1 = generateToken(keyPair1, "kid-1")
-        val token2 = generateToken(keyPair2, "kid-2")
-        // Signed by a key that is not registered — Vert.x returns 401 for an unknown kid.
-        val unknownToken = generateToken(unknownKeyPair, "kid-unknown")
+        // Both JWKs intentionally share the same kid to document the collision behaviour.
+        val sharedKid = "shared-kid"
+        val token1 = generateToken(keyPair1, sharedKid)
+        val token2 = generateToken(keyPair2, sharedKid)
 
-        val jwk1 = toJwk(keyPair1.public as RSAPublicKey, "kid-1")
-        val jwk2 = toJwk(keyPair2.public as RSAPublicKey, "kid-2")
+        val jwk1 = toJwk(keyPair1.public as RSAPublicKey, sharedKid)
+        val jwk2 = toJwk(keyPair2.public as RSAPublicKey, sharedKid)
 
         val router = Router.router(vertx)
+        // jwk1 is registered first, jwk2 second — jwk2 overwrites jwk1 for "shared-kid".
         val authHandler = MultiJWKAuthHandlerBuilder(vertx, listOf(jwk1, jwk2)).create(router)
         router.get("/test").handler(authHandler).handler { ctx -> ctx.response().setStatusCode(200).end() }
         val port = vertx.createHttpServer().requestHandler(router).listen(0).coAwait().actualPort()
 
         val client = WebClient.create(vertx)
 
-        val response1 = client.get(port, "localhost", "/test")
-            .putHeader("Authorization", "Bearer $token1").send().coAwait()
-        assertThat("token from IdP 1 should be accepted", response1.statusCode(), equalTo(200))
-
+        // token2 is signed by keyPair2, whose public key is stored as "shared-kid" → accepted.
         val response2 = client.get(port, "localhost", "/test")
             .putHeader("Authorization", "Bearer $token2").send().coAwait()
-        assertThat("token from IdP 2 should be accepted", response2.statusCode(), equalTo(200))
+        assertThat("token from last-registered key should be accepted", response2.statusCode(), equalTo(200))
 
-        val response3 = client.get(port, "localhost", "/test")
-            .putHeader("Authorization", "Bearer $unknownToken").send().coAwait()
-        assertThat("token from unregistered key should be rejected", response3.statusCode(), equalTo(401))
+        // token1 is signed by keyPair1, but "shared-kid" now maps to keyPair2's public key → rejected.
+        val response1 = client.get(port, "localhost", "/test")
+            .putHeader("Authorization", "Bearer $token1").send().coAwait()
+        assertThat("token from overwritten key should be rejected", response1.statusCode(), equalTo(401))
     }
 
-    /**
-     * Builds a minimal RS256 JWT signed with the given key pair's private key.
-     * Uses only JDK APIs to avoid any dependency on Vert.x's internal token generation.
-     */
     private fun generateToken(keyPair: KeyPair, kid: String): String {
         val header = base64Url("""{"alg":"RS256","typ":"JWT","kid":"$kid"}""")
         val payload = base64Url("""{"sub":"test-user","iat":${System.currentTimeMillis() / 1000}}""")
@@ -113,10 +112,6 @@ class MultiJWKAuthIT {
     private fun base64Url(json: String): String =
         Base64.getUrlEncoder().withoutPadding().encodeToString(json.toByteArray(Charsets.UTF_8))
 
-    /**
-     * Encodes a [BigInteger] as a Base64url string without padding, stripping the leading zero byte
-     * that [BigInteger.toByteArray] may add for the two's-complement sign bit.
-     */
     private fun encodeBase64Url(value: BigInteger): String {
         var bytes = value.toByteArray()
         if (bytes.isNotEmpty() && bytes[0] == 0.toByte()) {

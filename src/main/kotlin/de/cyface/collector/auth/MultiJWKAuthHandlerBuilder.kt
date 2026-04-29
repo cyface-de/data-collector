@@ -24,17 +24,18 @@ import io.vertx.ext.auth.jwt.JWTAuth
 import io.vertx.ext.auth.jwt.JWTAuthOptions
 import io.vertx.ext.web.Router
 import io.vertx.ext.web.handler.AuthenticationHandler
+import io.vertx.ext.web.handler.JWTAuthHandler
 
 /**
  * An [AuthHandlerBuilder] that verifies JWT tokens against a list of JWKs.
  *
- * A token is accepted if it validates against any one of the provided keys. This supports
- * scenarios where multiple identity providers are in use, including cases where providers
- * share the same `kid` value.
+ * All JWKs are loaded into a single [JWTAuth] instance. Vert.x natively selects the correct
+ * key by matching the `kid` field in the JWT header against the `kid` of each loaded JWK.
+ * Each JWK in the list must therefore carry a unique `kid`.
  *
  * @author Klemens Muthmann
- * @property vertx The Vertx instance used to create the authentication providers.
- * @property jwkList The JWK objects to verify tokens against.
+ * @property vertx The Vertx instance used to create the authentication provider.
+ * @property jwkList The JWK objects to verify tokens against. Each entry must have a unique `kid`.
  */
 class MultiJWKAuthHandlerBuilder(
     private val vertx: Vertx,
@@ -42,9 +43,7 @@ class MultiJWKAuthHandlerBuilder(
 ) : AuthHandlerBuilder {
 
     override suspend fun create(apiRouter: Router): AuthenticationHandler {
-        val providers = jwkList.map { jwk ->
-            JWTAuth.create(vertx, JWTAuthOptions().apply { jwks = listOf(jwk) })
-        }
-        return MultiProviderJWTAuthHandler(providers)
+        val jwtAuth = JWTAuth.create(vertx, JWTAuthOptions().apply { jwks = jwkList })
+        return JWTAuthHandler.create(jwtAuth)
     }
 }
