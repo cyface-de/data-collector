@@ -45,7 +45,7 @@ class UploadFailureHandler(private val ctx: RoutingContext) : Handler<Throwable>
 
             is UploadAlreadyExists -> {
                 // Android client interprets this error code as "UPLOAD_SUCCESSFUL" and continues with the next upload.
-                ctx.response().setStatusCode(HTTP_CONFLICT)
+                ctx.response().setStatusCode(HTTP_CONFLICT).end()
             }
 
             else -> {
