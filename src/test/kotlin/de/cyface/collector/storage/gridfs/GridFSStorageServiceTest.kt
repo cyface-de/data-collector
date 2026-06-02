@@ -57,6 +57,8 @@ import java.nio.file.Path
 import java.util.UUID
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
+import java.util.function.Supplier
+import kotlin.properties.Delegates
 
 /**
  * Tests that storing data to Mongo Grid FS works as expected.
@@ -64,6 +66,9 @@ import java.util.concurrent.TimeUnit
  * @author Klemens Muthmann
  */
 class GridFSStorageServiceTest {
+
+    private var startTime by Delegates.notNull<Long>()
+
     // Explicit Type Arguments are required by Mockito.
     @Suppress("RemoveExplicitTypeArguments", "RedundantSuppression", "LongMethod")
     @Test
@@ -91,36 +96,18 @@ class GridFSStorageServiceTest {
         val mockPipe: Pipe<Buffer> = mock {
             on { to(any<AsyncFile>()) } doReturn pipeToResultMock
         }
+        val mockCloseCall: Future<Void> = Future.succeededFuture()
         val mockFile: AsyncFile = mock {
             on { pipe() } doReturn mockPipe
+            on { close() } doReturn mockCloseCall
         }
 
-        val user = User(UUID.randomUUID(), "testUser")
-        val contentRange = ContentRange(0L, 4L, 5L)
-        val uploadIdentifier = UUID.randomUUID()
-        val deviceIdentifier = UUID.randomUUID()
-        val measurementIdentifier = 1L
-        val operatingSystemVersion = "15.3.1"
-        val deviceType = "iPhone"
-        val applicationVersion = "6.0.0"
-        val length = 13.0
-        val locationCount = 666L
-        val startLocation = GeoLocation(1L, 10.0, 10.0)
-        val endLocation = GeoLocation(2L, 12.0, 12.0)
-        val modality = "BICYCLE"
-        val formatVersion = CURRENT_TRANSFER_FILE_FORMAT_VERSION
-        val measurement = Measurement(
-            MeasurementIdentifier(deviceIdentifier, measurementIdentifier),
-            DeviceMetaData(operatingSystemVersion, deviceType),
-            ApplicationMetaData(applicationVersion, formatVersion),
-            MeasurementMetaData(length, locationCount, startLocation, endLocation, modality),
-            AttachmentMetaData(0, 0, 0, 0L),
-        )
         val oocut = GridFsStorageService(GridFsDao(mockMongoClient), fileSystem, Path.of("upload-folder"))
 
         // Act
         val countDownLatch = CountDownLatch(1)
-        val uploadMetaData = UploadMetaData(user, contentRange, uploadIdentifier, measurement)
+
+        val uploadMetaData = uploadMetaData()
         val result = oocut.store(mockFile, uploadMetaData)
         result.onFailure { cause ->
             fail("Failed Storing test data", cause)
@@ -132,55 +119,110 @@ class GridFSStorageServiceTest {
         }
 
         // Assert
+
+        // Step 1 - temporary write-file opened
         argumentCaptor<Handler<AsyncFile>> {
             // Temporary storage successfully opened?
             verify(fsOpenResult).onSuccess(capture())
 
             firstValue.handle(mockFile)
-
-            argumentCaptor<Handler<Void>> {
-                // Data successfully written to temporary storage?
-                verify(pipeToResultMock).onSuccess(capture())
-
-                firstValue.handle(null)
-
-                argumentCaptor<Handler<FileProps>> {
-                    // Check on whether upload was complete or just a chunk.
-                    verify(fsPropsResultMock).onSuccess(capture())
-
-                    firstValue.handle(mockFsProps)
-
-                    argumentCaptor<Handler<AsyncFile>> {
-                        verify(temporaryStorageOpenResult).onSuccess(capture())
-
-                        firstValue.handle(mockFile)
-
-                        argumentCaptor<Handler<MongoGridFsClient>> {
-                            verify(mockMongoGridFSClientResult).onSuccess(capture())
-
-                            firstValue.handle(mockMongoGridFSClient)
-
-                            argumentCaptor<Handler<String>> {
-                                verify(uploadFileResultMock).onSuccess(capture())
-
-                                firstValue.handle("632c541b7021f939b7521e39")
-                            }
-                        }
-                    }
-                }
-            }
         }
+
+        // Step 2 - pipe to temp file completed
+        argumentCaptor<Handler<Void>> {
+            // Data successfully written to temporary storage?
+            verify(pipeToResultMock).onSuccess(capture())
+
+            firstValue.handle(null)
+        }
+
+        // Step 3 - file props read
+        argumentCaptor<Handler<FileProps>> {
+            // Check on whether upload was complete or just a chunk.
+            verify(fsPropsResultMock).onSuccess(capture())
+
+            firstValue.handle(mockFsProps)
+        }
+
+        // Step 4 - temporary read-file opened
+        argumentCaptor<Handler<AsyncFile>> {
+            verify(temporaryStorageOpenResult).onSuccess(capture())
+
+            firstValue.handle(mockFile)
+        }
+
+        // Step 5 - GridFS client obtained
+        argumentCaptor<Handler<MongoGridFsClient>> {
+            verify(mockMongoGridFSClientResult).onSuccess(capture())
+
+            firstValue.handle(mockMongoGridFSClient)
+        }
+
+        // Step 6 - upload complete
+        argumentCaptor<Handler<String>> {
+            verify(uploadFileResultMock).onSuccess(capture())
+
+            firstValue.handle("632c541b7021f939b7521e39")
+        }
+
         assertThat(countDownLatch.await(2, TimeUnit.SECONDS), `is`(true))
 
         argumentCaptor<GridFsUploadOptions> {
             verify(mockMongoGridFSClient).uploadByFileNameWithOptions(any(), any(), capture())
 
-            val expectedMetaData = measurement.toJson()
+            val uploadable = uploadMetaData.uploadable
+            val expectedMetaData = uploadable.toJson()
             val metadata = firstValue.metadata
             assertThat(metadata.getString("deviceId"), equalTo(expectedMetaData.getString("deviceId")))
             assertThat(metadata.getString("measurementId"), equalTo(expectedMetaData.getString("measurementId")))
             // Ensure timestamp is stored as long [RFR-430]
-            assertThat(metadata.getJsonObject("start").getLong("timestamp"), equalTo(startLocation.timestamp))
+            assertThat(metadata.getJsonObject("start").getLong("timestamp"), equalTo(startTime))
+        }
+
+        // At the end of the Assert section, after all the existing callbacks are driven:
+        argumentCaptor<Supplier<Future<Void>>> {
+            verify(pipeToResultMock).eventually(capture())
+            firstValue.get() // invokes the lambda --> calls asyncFile.close()
+            verify(mockFile).close() // proves the lambda body is what we expect
+        }
+    }
+
+    @Test
+    fun `Temporary file is closed even when pipe fails`() {
+        // Arrange - same setup as happy path but no need to drive the full chain
+        val pipeToResultMock: Future<Void> = mock()
+        val mockCloseCall: Future<Void> = Future.succeededFuture()
+        val mockFile: AsyncFile = mock {
+            on { close() } doReturn mockCloseCall
+        }
+        val mockPipe: Pipe<Buffer> = mock {
+            on { to(any<AsyncFile>()) } doReturn pipeToResultMock
+        }
+        val mockRequest: HttpServerRequest = mock {
+            on { pipe() } doReturn mockPipe
+        }
+
+        val fsOpenResult: Future<AsyncFile> = mock()
+        val fileSystem: FileSystem = mock {
+            on { open(anyString(), any()) } doReturn fsOpenResult
+        }
+        val oocut = GridFsStorageService(GridFsDao(mock()), fileSystem, Path.of("upload-folder"))
+        val uploadMetaData = uploadMetaData()
+
+        // Act
+        oocut.store(mockRequest, uploadMetaData)
+
+        // Drive fsOpenResult --> asyncFile is handed to onTemporaryFileOpened
+        argumentCaptor<Handler<AsyncFile>> {
+            verify(fsOpenResult).onSuccess(capture())
+            firstValue.handle(mockFile)
+        }
+
+        // Assert: even without driving onSuccess, the eventually handler must call close()
+        argumentCaptor<Supplier<Future<Void>>> {
+            verify(pipeToResultMock).eventually(capture())
+            firstValue.get()
+            verify(mockFile).close()
         }
     }
 
@@ -233,7 +275,6 @@ class GridFSStorageServiceTest {
             on { pipe() } doReturn mockPipe
         }
 
-        @Suppress("SpellCheckingInspection")
         val mockUser = mock<User> {
             on { idString } doReturn "testuser"
         }
@@ -275,15 +316,16 @@ class GridFSStorageServiceTest {
             verify(mockTemporaryFileOpenCall01).onSuccess(capture())
 
             firstValue.handle(mockTemporaryFile)
-            argumentCaptor<Handler<Void>> {
-                verify(mockStorePipeCall01).onSuccess(capture())
-                firstValue.handle(null)
+        }
 
-                argumentCaptor<Handler<FileProps>> {
-                    verify(mockPropsCall01).onSuccess(capture())
-                    firstValue.handle(mockProps01)
-                }
-            }
+        argumentCaptor<Handler<Void>> {
+            verify(mockStorePipeCall01).onSuccess(capture())
+            firstValue.handle(null)
+        }
+
+        argumentCaptor<Handler<FileProps>> {
+            verify(mockPropsCall01).onSuccess(capture())
+            firstValue.handle(mockProps01)
         }
 
         // Handle second chunk
@@ -291,15 +333,16 @@ class GridFSStorageServiceTest {
             verify(mockTemporaryFileOpenCall02).onSuccess(capture())
 
             firstValue.handle(mockTemporaryFile)
-            argumentCaptor<Handler<Void>> {
-                verify(mockStorePipeCall02).onSuccess(capture())
-                firstValue.handle(null)
+        }
 
-                argumentCaptor<Handler<FileProps>> {
-                    verify(mockPropsCall02).onSuccess(capture())
-                    firstValue.handle(mockProps02)
-                }
-            }
+        argumentCaptor<Handler<Void>> {
+            verify(mockStorePipeCall02).onSuccess(capture())
+            firstValue.handle(null)
+        }
+
+        argumentCaptor<Handler<FileProps>> {
+            verify(mockPropsCall02).onSuccess(capture())
+            firstValue.handle(mockProps02)
         }
 
         // Handle third and final chunk
@@ -325,6 +368,33 @@ class GridFSStorageServiceTest {
 
         // Verify that the file is actually stored at the end.
         verify(mockDao).store(any(), anyString(), any())
+    }
+
+    private fun uploadMetaData(): UploadMetaData {
+        val user = User(UUID.randomUUID(), "testUser")
+        val contentRange = ContentRange(0L, 4L, 5L)
+        val uploadIdentifier = UUID.randomUUID()
+        val deviceIdentifier = UUID.randomUUID()
+        val measurementIdentifier = 1L
+        val operatingSystemVersion = "15.3.1"
+        val deviceType = "iPhone"
+        val applicationVersion = "6.0.0"
+        val length = 13.0
+        val locationCount = 666L
+        startTime = 1L
+        val startLocation = GeoLocation(startTime, 10.0, 10.0)
+        val endLocation = GeoLocation(2L, 12.0, 12.0)
+        val modality = "BICYCLE"
+        val formatVersion = CURRENT_TRANSFER_FILE_FORMAT_VERSION
+        val measurement = Measurement(
+            MeasurementIdentifier(deviceIdentifier, measurementIdentifier),
+            DeviceMetaData(operatingSystemVersion, deviceType),
+            ApplicationMetaData(applicationVersion, formatVersion),
+            MeasurementMetaData(length, locationCount, startLocation, endLocation, modality),
+            AttachmentMetaData(0, 0, 0, 0L),
+        )
+
+        return UploadMetaData(user, contentRange, uploadIdentifier, measurement)
     }
 
     private fun measurement(): Measurement {

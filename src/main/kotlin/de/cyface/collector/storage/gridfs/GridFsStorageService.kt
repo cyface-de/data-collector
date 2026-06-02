@@ -186,6 +186,7 @@ class GridFsStorageService(
             LOGGER.error("Response: 500", cause)
             ret.fail(cause)
         }
+        pipeToCall.eventually { -> asyncFile.close() }
         return ret.future()
     }
 
