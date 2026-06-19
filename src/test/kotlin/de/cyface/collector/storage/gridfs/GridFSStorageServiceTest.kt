@@ -175,6 +175,89 @@ class GridFSStorageServiceTest {
             // Ensure timestamp is stored as long [RFR-430]
             assertThat(metadata.getJsonObject("start").getLong("timestamp"), equalTo(startTime))
         }
+
+        // The read-mode temp file is closed exactly once, after the GridFS upload settles.
+        verify(mockFile).close()
+    }
+
+    @Suppress("RemoveExplicitTypeArguments", "RedundantSuppression", "LongMethod")
+    @Test
+    fun `Temporary read file is closed even when GridFS upload fails`() {
+        // Arrange
+        val mockMongoGridFSClientResult: Future<MongoGridFsClient> = mock()
+        val mockMongoClient: MongoClient = mock {
+            on { createDefaultGridFsBucketService() } doReturn mockMongoGridFSClientResult
+        }
+        val uploadFileResultMock: Future<String> = mock()
+        val mockMongoGridFSClient: MongoGridFsClient = mock {
+            on { uploadByFileNameWithOptions(any(), any(), any()) } doReturn uploadFileResultMock
+        }
+        val fsOpenResult: Future<AsyncFile> = mock()
+        val temporaryStorageOpenResult: Future<AsyncFile> = mock()
+        val fsPropsResultMock: Future<FileProps> = mock()
+        val mockFsProps: FileProps = mock {
+            on { size() } doReturn 5
+        }
+        val fileSystem: FileSystem = mock {
+            on { open(anyString(), any()) } doReturn fsOpenResult doReturn temporaryStorageOpenResult
+            on { props(anyString()) } doReturn fsPropsResultMock
+        }
+        val pipeToResultMock: Future<Void> = mock()
+        val mockPipe: Pipe<Buffer> = mock {
+            on { to(any<AsyncFile>()) } doReturn pipeToResultMock
+        }
+        val mockCloseCall: Future<Void> = Future.succeededFuture()
+        val mockFile: AsyncFile = mock {
+            on { pipe() } doReturn mockPipe
+            on { close() } doReturn mockCloseCall
+        }
+
+        val oocut = GridFsStorageService(GridFsDao(mockMongoClient), fileSystem, Path.of("upload-folder"))
+
+        // Act
+        val result = oocut.store(mockFile, uploadMetaData())
+        result.onSuccess {
+            fail("Expected the upload to fail, but it succeeded")
+        }
+
+        // Step 1 - temporary write-file opened
+        argumentCaptor<Handler<AsyncFile>> {
+            verify(fsOpenResult).onSuccess(capture())
+            firstValue.handle(mockFile)
+        }
+
+        // Step 2 - pipe to temp file completed
+        argumentCaptor<Handler<Void>> {
+            verify(pipeToResultMock).onSuccess(capture())
+            firstValue.handle(null)
+        }
+
+        // Step 3 - file props read
+        argumentCaptor<Handler<FileProps>> {
+            verify(fsPropsResultMock).onSuccess(capture())
+            firstValue.handle(mockFsProps)
+        }
+
+        // Step 4 - temporary read-file opened
+        argumentCaptor<Handler<AsyncFile>> {
+            verify(temporaryStorageOpenResult).onSuccess(capture())
+            firstValue.handle(mockFile)
+        }
+
+        // Step 5 - GridFS client obtained
+        argumentCaptor<Handler<MongoGridFsClient>> {
+            verify(mockMongoGridFSClientResult).onSuccess(capture())
+            firstValue.handle(mockMongoGridFSClient)
+        }
+
+        // Step 6 - GridFS upload fails
+        argumentCaptor<Handler<Throwable>> {
+            verify(uploadFileResultMock).onFailure(capture())
+            firstValue.handle(RuntimeException("GridFS upload failed"))
+        }
+
+        // Assert: the read-mode temp file is still closed, even though the upload failed
+        verify(mockFile).close()
     }
 
     /**
