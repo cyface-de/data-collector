@@ -58,7 +58,6 @@ import java.util.UUID
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import java.util.function.Supplier
-import kotlin.properties.Delegates
 
 /**
  * Tests that storing data to Mongo Grid FS works as expected.
@@ -66,8 +65,6 @@ import kotlin.properties.Delegates
  * @author Klemens Muthmann
  */
 class GridFSStorageServiceTest {
-
-    private var startTime by Delegates.notNull<Long>()
 
     // Explicit Type Arguments are required by Mockito.
     @Suppress("RemoveExplicitTypeArguments", "RedundantSuppression", "LongMethod")
@@ -107,7 +104,8 @@ class GridFSStorageServiceTest {
         // Act
         val countDownLatch = CountDownLatch(1)
 
-        val uploadMetaData = uploadMetaData()
+        val startTime = 1L
+        val uploadMetaData = uploadMetaData(startTime)
         val result = oocut.store(mockFile, uploadMetaData)
         result.onFailure { cause ->
             fail("Failed Storing test data", cause)
@@ -189,14 +187,14 @@ class GridFSStorageServiceTest {
 
     @Test
     fun `Temporary file is closed even when pipe fails`() {
-        // Arrange - same setup as happy path but no need to drive the full chain
-        val pipeToResultMock: Future<Void> = mock()
+        // Arrange
         val mockCloseCall: Future<Void> = Future.succeededFuture()
         val mockFile: AsyncFile = mock {
             on { close() } doReturn mockCloseCall
         }
+        val realPipeFuture = Future.failedFuture<Void>(RuntimeException("pipe broke"))
         val mockPipe: Pipe<Buffer> = mock {
-            on { to(any<AsyncFile>()) } doReturn pipeToResultMock
+            on { to(any<AsyncFile>()) } doReturn realPipeFuture
         }
         val mockRequest: HttpServerRequest = mock {
             on { pipe() } doReturn mockPipe
@@ -207,23 +205,18 @@ class GridFSStorageServiceTest {
             on { open(anyString(), any()) } doReturn fsOpenResult
         }
         val oocut = GridFsStorageService(GridFsDao(mock()), fileSystem, Path.of("upload-folder"))
-        val uploadMetaData = uploadMetaData()
 
         // Act
-        oocut.store(mockRequest, uploadMetaData)
+        oocut.store(mockRequest, uploadMetaData())
 
-        // Drive fsOpenResult --> asyncFile is handed to onTemporaryFileOpened
+        // Drive the file-open callback; the failed pipe future triggers eventually immediately
         argumentCaptor<Handler<AsyncFile>> {
             verify(fsOpenResult).onSuccess(capture())
             firstValue.handle(mockFile)
         }
 
-        // Assert: even without driving onSuccess, the eventually handler must call close()
-        argumentCaptor<Supplier<Future<Void>>> {
-            verify(pipeToResultMock).eventually(capture())
-            firstValue.get()
-            verify(mockFile).close()
-        }
+        // Assert: close() was called by the eventually handler on pipe failure
+        verify(mockFile).close()
     }
 
     /**
@@ -370,7 +363,7 @@ class GridFSStorageServiceTest {
         verify(mockDao).store(any(), anyString(), any())
     }
 
-    private fun uploadMetaData(): UploadMetaData {
+    private fun uploadMetaData(startTime: Long = 1L): UploadMetaData {
         val user = User(UUID.randomUUID(), "testUser")
         val contentRange = ContentRange(0L, 4L, 5L)
         val uploadIdentifier = UUID.randomUUID()
@@ -381,7 +374,6 @@ class GridFSStorageServiceTest {
         val applicationVersion = "6.0.0"
         val length = 13.0
         val locationCount = 666L
-        startTime = 1L
         val startLocation = GeoLocation(startTime, 10.0, 10.0)
         val endLocation = GeoLocation(2L, 12.0, 12.0)
         val modality = "BICYCLE"
