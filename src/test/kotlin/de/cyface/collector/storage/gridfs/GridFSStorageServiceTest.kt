@@ -57,7 +57,6 @@ import java.nio.file.Path
 import java.util.UUID
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
-import java.util.function.Supplier
 
 /**
  * Tests that storing data to Mongo Grid FS works as expected.
@@ -176,47 +175,6 @@ class GridFSStorageServiceTest {
             // Ensure timestamp is stored as long [RFR-430]
             assertThat(metadata.getJsonObject("start").getLong("timestamp"), equalTo(startTime))
         }
-
-        // At the end of the Assert section, after all the existing callbacks are driven:
-        argumentCaptor<Supplier<Future<Void>>> {
-            verify(pipeToResultMock).eventually(capture())
-            firstValue.get() // invokes the lambda --> calls asyncFile.close()
-            verify(mockFile).close() // proves the lambda body is what we expect
-        }
-    }
-
-    @Test
-    fun `Temporary file is closed even when pipe fails`() {
-        // Arrange
-        val mockCloseCall: Future<Void> = Future.succeededFuture()
-        val mockFile: AsyncFile = mock {
-            on { close() } doReturn mockCloseCall
-        }
-        val realPipeFuture = Future.failedFuture<Void>(RuntimeException("pipe broke"))
-        val mockPipe: Pipe<Buffer> = mock {
-            on { to(any<AsyncFile>()) } doReturn realPipeFuture
-        }
-        val mockRequest: HttpServerRequest = mock {
-            on { pipe() } doReturn mockPipe
-        }
-
-        val fsOpenResult: Future<AsyncFile> = mock()
-        val fileSystem: FileSystem = mock {
-            on { open(anyString(), any()) } doReturn fsOpenResult
-        }
-        val oocut = GridFsStorageService(GridFsDao(mock()), fileSystem, Path.of("upload-folder"))
-
-        // Act
-        oocut.store(mockRequest, uploadMetaData())
-
-        // Drive the file-open callback; the failed pipe future triggers eventually immediately
-        argumentCaptor<Handler<AsyncFile>> {
-            verify(fsOpenResult).onSuccess(capture())
-            firstValue.handle(mockFile)
-        }
-
-        // Assert: close() was called by the eventually handler on pipe failure
-        verify(mockFile).close()
     }
 
     /**
