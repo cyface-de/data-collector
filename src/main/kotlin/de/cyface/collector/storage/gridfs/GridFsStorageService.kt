@@ -148,6 +148,13 @@ class GridFsStorageService(
             val storeCall = dao.store(upload, temporaryStorage.name, temporaryStorageFile)
             storeCall.onSuccess(promise::complete)
             storeCall.onFailure(promise::fail)
+            // GridFS never closes the read handle it is given, so we must close it ourselves once done.
+            storeCall.eventually { ->
+                temporaryStorageFile.close().recover { cause ->
+                    LOGGER.warn("Failed to close temporary file after upload to GridFS.", cause)
+                    Future.succeededFuture()
+                }
+            }
         }
         return promise.future()
     }
