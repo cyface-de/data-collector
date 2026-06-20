@@ -1,5 +1,5 @@
 /*
- * Copyright 2018-2025 Cyface GmbH
+ * Copyright 2018-2026 Cyface GmbH
  *
  * This file is part of the Cyface Data Collector.
  *
@@ -19,6 +19,7 @@
 package de.cyface.collector;
 
 import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Tag;
 import io.micrometer.core.instrument.binder.jvm.JvmGcMetrics;
 import io.micrometer.core.instrument.binder.jvm.JvmMemoryMetrics;
 import io.micrometer.core.instrument.binder.jvm.JvmThreadMetrics;
@@ -39,6 +40,8 @@ import io.vertx.micrometer.VertxPrometheusOptions;
 import io.vertx.micrometer.backends.BackendRegistries;
 
 import java.util.EnumSet;
+import java.util.List;
+import java.util.regex.Pattern;
 
 // ATTENTION: This class must not be converted to Kotlin. As a Kotlin class it does not call the correct main method.
 /**
@@ -50,11 +53,6 @@ import java.util.EnumSet;
  * You may also provide additional parameters in JSON format as described in the <code>README.md</code> file.
  * <p>
  * This class allows setting up things which need to be set up before the Verticle start, like logging.
- *
- * @author Klemens Muthmann
- * @author Armin Schnabel
- * @version 1.0.5
- * @since 2.0.0
  */
 public class Application extends Launcher {
 
@@ -63,6 +61,9 @@ public class Application extends Launcher {
      * <code>src/main/resources/logback.xml</code>.
      */
     private static final Logger LOGGER = LoggerFactory.getLogger(Application.class);
+    // Matches /measurements/<id> or /measurements/(<id>)/ with a long hex/uuid segment
+    private static final Pattern MEASUREMENT_ID =
+            Pattern.compile("/measurements/\\(?[0-9a-fA-F-]{16,}\\)?/?");
     /**
      * Port used by Prometheus to request logging information from this server.
      */
@@ -83,6 +84,19 @@ public class Application extends Launcher {
                 SLF4JLogDelegateFactory.class.getName());
 
         new Application().dispatch(args);
+    }
+
+    /**
+     * Reformat a specific measurements uri to a generic templated one.
+     * <p>
+     * This is necessary for monitoring the group of routes, fitting to "/measurements/:id" as one entry, instead of one per id.
+     * Monitoring per ID creates way too much data and grows indefinitely, which causes monitoring to grind to a halt after some time.
+     */
+    static String templateFor(String uri) {
+        if (uri == null || uri.isEmpty()) return "unknown";
+        int q = uri.indexOf('?');                       // drop any query string
+        String path = (q >= 0) ? uri.substring(0, q) : uri;
+        return MEASUREMENT_ID.matcher(path).replaceAll("/measurements/:id");
     }
 
     @Override
@@ -106,6 +120,9 @@ public class Application extends Launcher {
                             Label.POOL_TYPE,   // Thread-Pool Type (i.e. worker)
                             Label.POOL_NAME    // Thread-Pool Name
                     ));
+            micrometerOptions.setServerRequestTagsProvider(req ->
+                    List.of(Tag.of("path", templateFor(req.uri())))  // e.g. "/measurements/:id"
+            );
             options.setMetricsOptions(micrometerOptions
                     .setPrometheusOptions(new VertxPrometheusOptions().setEnabled(true).setStartEmbeddedServer(true)
                             .setEmbeddedServerOptions(new HttpServerOptions().setPort(PROMETHEUS_SERVER_PORT))
