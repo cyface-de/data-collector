@@ -28,10 +28,15 @@ import de.cyface.collector.handler.exception.InvalidMetaData
 import de.cyface.collector.handler.exception.PayloadTooLarge
 import de.cyface.collector.handler.exception.SkipUpload
 import de.cyface.collector.handler.exception.Unparsable
+import de.cyface.collector.model.FormAttributes
 import de.cyface.collector.model.UploadableFactory
 import de.cyface.collector.storage.DataStorageService
+import io.micrometer.core.instrument.Counter
+import io.micrometer.core.instrument.MeterRegistry
 import io.vertx.core.Handler
+import io.vertx.core.json.JsonObject
 import io.vertx.ext.web.RoutingContext
+import io.vertx.micrometer.backends.BackendRegistries
 import org.slf4j.LoggerFactory
 import java.net.URI
 import java.net.URL
@@ -77,6 +82,7 @@ class PreRequestHandler(
                 .onSuccess { conflict ->
                     if (conflict) {
                         logger.debug("Response: 409, attachment already exists, no upload needed")
+                        recordPreRequest(RESULT_CONFLICT, metaDataJson)
                         ctx.response().setStatusCode(HTTP_CONFLICT).end()
                     } else {
                         // Bind session to this attachment and mark as "pre-request accepted"
@@ -87,6 +93,7 @@ class PreRequestHandler(
                         val locationUri = locationUri(httpPath, requestUri, protocol, session.id())
 
                         logger.debug("Response 200, Location: {}", locationUri)
+                        recordPreRequest(RESULT_ACCEPTED, metaDataJson)
                         ctx.response()
                             .putHeader("Location", locationUri.toURL().toExternalForm())
                             .putHeader("Content-Length", "0")
@@ -108,11 +115,71 @@ class PreRequestHandler(
         }
     }
 
+    /**
+     * Records one pre-request outcome as a Prometheus counter, tagged by the client's app version and the
+     * [result] (accepted vs. conflict).
+     *
+     * This makes the duplicate-upload (HTTP 409) storm observable per app version, which the access log cannot
+     * provide: nginx only sees the Dart runtime user-agent, not the app version, and the 409 itself is not logged
+     * at all (it is a suppressed DEBUG line). The metric rides on the same embedded `/metrics` endpoint as the
+     * Vert.x metrics and is a no-op when metrics are disabled (`metrics.enabled=false`), i.e. when no Vert.x
+     * Micrometer registry exists yet.
+     *
+     * @param result One of [RESULT_ACCEPTED] or [RESULT_CONFLICT].
+     * @param metaDataJson The parsed pre-request body, used to read the client's `appVersion`.
+     */
+    private fun recordPreRequest(result: String, metaDataJson: JsonObject) {
+        val registry: MeterRegistry = BackendRegistries.getDefaultNow() ?: return
+        Counter.builder(PRE_REQUEST_METRIC)
+            .description("Upload pre-requests by client app version and outcome (accepted vs. duplicate conflict).")
+            .tag("result", result)
+            .tag("app_version", appVersionLabel(metaDataJson))
+            .register(registry)
+            .increment()
+    }
+
+    /**
+     * Reduces the client-supplied `appVersion` to a bounded metric label so a malformed or hostile value cannot
+     * explode the metric cardinality (cf. the historic Vert.x per-UUID path-label problem). Only the leading
+     * `major.minor.patch` is kept (build suffixes are dropped); a missing value becomes `unknown`, anything that
+     * does not start with a `major.minor.patch` becomes `other`.
+     *
+     * @param metaDataJson The parsed pre-request body.
+     * @return A bounded label value safe to use as a Prometheus tag.
+     */
+    private fun appVersionLabel(metaDataJson: JsonObject): String {
+        val raw = metaDataJson.getString(FormAttributes.APPLICATION_VERSION.value)
+        if (raw.isNullOrBlank()) return "unknown"
+        return APP_VERSION_PATTERN.find(raw)?.groupValues?.get(1) ?: "other"
+    }
+
     companion object {
         /**
          * The header field which contains the number of bytes of the "requested" upload.
          */
         const val X_UPLOAD_CONTENT_LENGTH_FIELD = "x-upload-content-length"
+
+        /**
+         * Name of the pre-request outcome counter. Micrometer exposes it on `/metrics` as
+         * `collector_prerequest_total`, tagged with `result` and `app_version`.
+         */
+        private const val PRE_REQUEST_METRIC = "collector.prerequest"
+
+        /**
+         * `result` tag value for an accepted pre-request (the client may follow up with the actual upload).
+         */
+        private const val RESULT_ACCEPTED = "accepted"
+
+        /**
+         * `result` tag value for a duplicate pre-request answered with HTTP 409 (measurement already stored).
+         */
+        private const val RESULT_CONFLICT = "conflict"
+
+        /**
+         * Matches the leading `major.minor.patch` of an app version. The captured group is used as the metric
+         * label, which bounds the `app_version` tag cardinality to the set of real released versions.
+         */
+        private val APP_VERSION_PATTERN = Regex("""^(\d{1,4}\.\d{1,4}\.\d{1,4})""")
 
         /**
          * Assembles the `Uri` for the `Location` header required by the client who sent the upload request.
