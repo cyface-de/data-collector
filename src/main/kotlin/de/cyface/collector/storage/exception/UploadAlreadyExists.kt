@@ -21,8 +21,6 @@ package de.cyface.collector.storage.exception
 /**
  * An `Exception` thrown when a file to upload already exists in the data store.
  *
- * @author Armin Schnabel
- * @version 1.0.0
  * @param e The cause leading to this exception.
  */
-class UploadAlreadyExists(e: Throwable) : Exception(e)
+class UploadAlreadyExists(message: String? = null, e: Throwable? = null) : Exception(message, e)

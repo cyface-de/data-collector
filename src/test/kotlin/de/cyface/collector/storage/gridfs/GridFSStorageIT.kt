@@ -31,8 +31,11 @@ import de.cyface.collector.model.metadata.AttachmentMetaData
 import de.cyface.collector.model.metadata.DeviceMetaData
 import de.cyface.collector.model.metadata.GeoLocation
 import de.cyface.collector.model.metadata.MeasurementMetaData
+import de.cyface.collector.storage.Status
 import de.cyface.collector.storage.StatusType
 import de.cyface.collector.storage.UploadMetaData
+import de.cyface.collector.storage.exception.UploadAlreadyExists
+import io.vertx.core.Future
 import io.vertx.core.Vertx
 import io.vertx.core.file.OpenOptions
 import io.vertx.ext.mongo.MongoClient
@@ -121,6 +124,50 @@ class GridFSStorageIT {
                 )
             }
         )
+    }
+
+    @Test
+    fun `storing the same measurement twice fails with UploadAlreadyExists`(vertx: Vertx, context: VertxTestContext) {
+        val config = mongoTest.clientConfiguration()
+            .put("connectTimeoutMS", 3000)
+            .put("socketTimeoutMS", 3000)
+            .put("waitQueueTimeoutMS", 3000)
+            .put("serverSelectionTimeoutMS", 1000)
+        val mongoClient = MongoClient.createShared(vertx, config)
+        val dao = GridFsDao(mongoClient)
+        val oocut = GridFsStorageService(dao, vertx.fileSystem(), uploadFolder)
+        // Reuse the SAME identifier on both stores so the second insert collides on the
+        // unique fs.files index (metadata.deviceId, measurementId, fileType).
+        val duplicate = measurement
+
+        dao.createIndices()
+            .compose { storeOnce(vertx, oocut, duplicate) }
+            .compose { storeOnce(vertx, oocut, duplicate) }
+            .onComplete(
+                context.failing { failure ->
+                    context.verify {
+                        assertThat(failure is UploadAlreadyExists, equalTo(true))
+                    }
+                    context.completeNow()
+                }
+            )
+    }
+
+    /**
+     * Open the test fixture and run a single [GridFsStorageService.store], using the provided [measurement] metadata
+     * and a fresh upload identifier.
+     */
+    private fun storeOnce(vertx: Vertx, oocut: GridFsStorageService, measurement: Measurement): Future<Status> {
+        val fileSystem = vertx.fileSystem()
+        val testFileURI = GridFSStorageIT::class.java.getResource("/test.bin")?.toURI()?.let { Paths.get(it) }
+        assertNotNull(testFileURI)
+        return fileSystem.open(testFileURI.absolutePathString(), OpenOptions()).compose { asyncFile ->
+            val user = User(UUID.randomUUID(), "test-user")
+            val uploadIdentifier = UUID.randomUUID()
+            val contentRange = ContentRange(0L, 3L, 4L)
+            val uploadMetaData = UploadMetaData(user, contentRange, uploadIdentifier, measurement)
+            oocut.store(asyncFile, uploadMetaData)
+        }
     }
 
     private val measurement: Measurement

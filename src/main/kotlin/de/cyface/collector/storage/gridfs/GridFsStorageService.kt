@@ -18,6 +18,7 @@
  */
 package de.cyface.collector.storage.gridfs
 
+import com.mongodb.MongoWriteException
 import de.cyface.collector.model.Upload
 import de.cyface.collector.storage.CleanupOperation
 import de.cyface.collector.storage.DataStorageService
@@ -25,6 +26,7 @@ import de.cyface.collector.storage.Status
 import de.cyface.collector.storage.StatusType
 import de.cyface.collector.storage.UploadMetaData
 import de.cyface.collector.storage.exception.ContentRangeNotMatchingFileSize
+import de.cyface.collector.storage.exception.UploadAlreadyExists
 import io.vertx.core.Future
 import io.vertx.core.Promise
 import io.vertx.core.Vertx
@@ -74,7 +76,19 @@ class GridFsStorageService(
                 uploadMetaData
             )
             onTemporaryFileOpenedCall.onSuccess(ret::complete)
-            onTemporaryFileOpenedCall.onFailure(ret::fail)
+            onTemporaryFileOpenedCall.onFailure { cause ->
+                if (cause is MongoWriteException && cause.code == MONGO_DUPLICATE_ENTRY_ERROR_CODE) {
+                    ret.fail(
+                        UploadAlreadyExists(
+                            "Duplicate entry in database for upload ${uploadMetaData.uploadable}!",
+                            cause
+                        )
+                    )
+                } else {
+                    LOGGER.error("Internal Server Error during database access!", cause)
+                    ret.fail(cause)
+                }
+            }
         }
         fsOpenCall.onFailure { cause: Throwable ->
             LOGGER.error("Unable to open temporary file to stream request to!", cause)
@@ -184,15 +198,9 @@ class GridFsStorageService(
                     uploadMetaData
                 )
             }
-            fsPropsCall.onFailure { cause: Throwable ->
-                LOGGER.error("Response: 500, failed to read props from temp file")
-                ret.fail(cause)
-            }
+            fsPropsCall.onFailure(ret::fail)
         }
-        pipeToCall.onFailure { cause: Throwable ->
-            LOGGER.error("Response: 500", cause)
-            ret.fail(cause)
-        }
+        pipeToCall.onFailure(ret::fail)
         return ret.future()
     }
 
@@ -257,5 +265,6 @@ class GridFsStorageService(
          * The logger used by objects of this class. Configure it using `src/main/resources/logback.xml`.
          */
         private val LOGGER = LoggerFactory.getLogger(GridFsStorageService::class.java)
+        private const val MONGO_DUPLICATE_ENTRY_ERROR_CODE = 11000
     }
 }
