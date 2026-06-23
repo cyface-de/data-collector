@@ -167,7 +167,7 @@ class GoogleCloudStorageService(
                     clean(uploadIdentifier)
                         .onSuccess {
                             if (daoFailure is MongoWriteException && daoFailure.code == DUPLICATE_KEY) {
-                                resultPromise.fail(UploadAlreadyExists(daoFailure))
+                                resultPromise.fail(UploadAlreadyExists(e = daoFailure))
                             } else {
                                 resultPromise.fail(daoFailure)
                             }
