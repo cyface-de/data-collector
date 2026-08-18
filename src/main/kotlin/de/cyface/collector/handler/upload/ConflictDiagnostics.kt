@@ -52,6 +52,13 @@ import kotlin.math.abs
  * costs a single flag check while it is disabled, and the storage lookup for the already stored upload happens
  * only for those requests that are actually going to be reported.
  *
+ * **What ends up in the log.** Switching this on writes device identifiers, the client's device type and software
+ * versions, and the extent of a measurement — its first and last timestamp, its number of locations and its length
+ * — into the ordinary application log, for as long as that log is retained. It deliberately carries neither
+ * coordinates nor the identity of the user the upload belongs to. Operators who retain logs longer than they
+ * retain measurements, or who ship them somewhere the measurements do not go, should weigh that before enabling
+ * it, which is the reason it is a switch rather than a permanent fixture.
+ *
  * @author Klemens Muthmann
  * @property windowMillis How long a reported upload stays suppressed before it is reported again.
  * @property trackedUploadLimit The largest number of uploads to remember for deduplication. Reaching it means
@@ -90,11 +97,19 @@ class ConflictDiagnostics(
      */
     fun record(requestMetaData: JsonObject, storedMetaData: () -> Future<StoredMetaData?>) {
         if (!logger.isInfoEnabled) return
-        val rejections = claimReport(deduplicationKey(requestMetaData) ?: return) ?: return
+        try {
+            val rejections = claimReport(deduplicationKey(requestMetaData) ?: return) ?: return
 
-        storedMetaData()
-            .onSuccess { stored -> logger.info(report(requestMetaData, stored, rejections)) }
-            .onFailure { cause -> logger.info(report(requestMetaData, null, rejections, cause)) }
+            storedMetaData()
+                .onSuccess { stored -> logger.info(report(requestMetaData, stored, rejections)) }
+                .onFailure { cause -> logger.info(report(requestMetaData, null, rejections, cause)) }
+        } catch (cause: Exception) {
+            // The caller has already answered its client and turned to us only to have a report written. Anything
+            // going wrong from here on is therefore ours to absorb: a storage lookup which throws instead of
+            // failing its future would otherwise surface as an unhandled exception in the request handler. A
+            // diagnostic that can disturb the path it observes is worse than no diagnostic.
+            logger.warn("Failed to report a rejected upload.", cause)
+        }
     }
 
     /**
@@ -142,8 +157,12 @@ class ConflictDiagnostics(
      *
      * Uploads whose window has passed are of no further use, so they go first. If dropping them is not enough, the
      * state is abandoned wholesale rather than searched for the best candidates: this is a diagnostic, and paying
-     * for an eviction strategy with request latency would be the wrong trade. The cost of being wrong is a handful
-     * of lines reported earlier than the window would suggest.
+     * for an eviction strategy with request latency would be the wrong trade.
+     *
+     * Being wrong costs two things. Some uploads are reported again sooner than their window would suggest, which
+     * is harmless. More importantly, the rejections those windows had counted but not yet reported are gone, so
+     * the reported counts understate reality afterwards — the same caveat as an unclosed window, only triggered by
+     * memory pressure rather than by a client falling silent.
      */
     private fun forgetSurplusUploads(timestamp: Long) {
         if (windows.size <= trackedUploadLimit) return
