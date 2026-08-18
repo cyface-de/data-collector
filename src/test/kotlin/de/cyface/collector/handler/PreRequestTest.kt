@@ -19,6 +19,7 @@
 package de.cyface.collector.handler
 
 import de.cyface.collector.handler.exception.PayloadTooLarge
+import de.cyface.collector.handler.upload.ConflictDiagnostics
 import de.cyface.collector.handler.upload.PreRequestHandler
 import de.cyface.collector.model.MeasurementFactory
 import de.cyface.collector.storage.DataStorageService
@@ -103,7 +104,7 @@ class PreRequestTest {
         whenever(mockRoutingContext.request()).thenReturn(mockRequest)
         whenever(mockRoutingContext.session()).thenReturn(mockSession)
 
-        oocut = PreRequestHandler(MeasurementFactory(), mockStorageService, 100L, "/")
+        oocut = PreRequestHandler(MeasurementFactory(), mockStorageService, 100L, "/", ConflictDiagnostics())
     }
 
     @Test

@@ -51,12 +51,14 @@ import java.net.URL
  * @property storage The storage containing already uploaded data.
  * @property uploadLimit The maximal number of `Byte`s which may be uploaded in the upload request.
  * @property httpPath The path of the URL under which the Collector is deployed. To ensemble the "Location" header.
+ * @property conflictDiagnostics Reports the uploads rejected as duplicates, while it is switched on.
  */
 class PreRequestHandler(
     private val uploadableFactory: UploadableFactory,
     private val storage: DataStorageService,
     private val uploadLimit: Long,
     private val httpPath: String,
+    private val conflictDiagnostics: ConflictDiagnostics,
 ) : Handler<RoutingContext> {
 
     /**
@@ -84,6 +86,8 @@ class PreRequestHandler(
                         logger.debug("Response: 409, attachment already exists, no upload needed")
                         recordPreRequest(RESULT_CONFLICT, metaDataJson)
                         ctx.response().setStatusCode(HTTP_CONFLICT).end()
+                        // Only after the client has its answer: a diagnostic must not delay the response.
+                        conflictDiagnostics.record(metaDataJson) { uploadable.storedMetaData(storage) }
                     } else {
                         // Bind session to this attachment and mark as "pre-request accepted"
                         uploadable.bindTo(session)

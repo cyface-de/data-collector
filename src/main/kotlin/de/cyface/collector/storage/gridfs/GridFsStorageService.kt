@@ -19,9 +19,12 @@
 package de.cyface.collector.storage.gridfs
 
 import com.mongodb.MongoWriteException
+import de.cyface.collector.model.AttachmentIdentifier
+import de.cyface.collector.model.MeasurementIdentifier
 import de.cyface.collector.storage.CleanupOperation
 import de.cyface.collector.storage.DataStorageService
 import de.cyface.collector.storage.Status
+import de.cyface.collector.storage.StoredMetaData
 import de.cyface.collector.storage.UploadMetaData
 import de.cyface.collector.storage.exception.UploadAlreadyExists
 import io.vertx.core.Future
@@ -102,6 +105,14 @@ class GridFsStorageService(
 
     override fun isStored(deviceId: String, measurementId: Long, attachmentId: Long): Future<Boolean> {
         return dao.exists(deviceId, measurementId, attachmentId)
+    }
+
+    override fun storedMetaData(identifier: MeasurementIdentifier): Future<StoredMetaData?> {
+        return dao.metaData(identifier)
+    }
+
+    override fun storedMetaData(identifier: AttachmentIdentifier): Future<StoredMetaData?> {
+        return dao.metaData(identifier)
     }
 
     override fun bytesUploaded(uploadIdentifier: UUID): Future<Long> {
