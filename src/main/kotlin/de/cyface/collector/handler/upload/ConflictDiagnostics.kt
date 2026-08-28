@@ -111,9 +111,9 @@ class ConflictDiagnostics(
             logger.warn("Failed to report a rejected upload.", cause)
         } catch (cause: NotImplementedError) {
             logger.error(
-                    """
-                        You have used an unimplemented storage backend. Please ensure to use an implemented one to avoid loosing data!
-                    """,
+                """
+                    You have used an unimplemented storage backend. Please ensure to use an implemented one to avoid losing data!
+                """.trimIndent(),
                 cause
             )
         }
