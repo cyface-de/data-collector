@@ -109,6 +109,13 @@ class ConflictDiagnostics(
             // failing its future would otherwise surface as an unhandled exception in the request handler. A
             // diagnostic that can disturb the path it observes is worse than no diagnostic.
             logger.warn("Failed to report a rejected upload.", cause)
+        } catch (cause: NotImplementedError) {
+            logger.error(
+                    """
+                        You have used an unimplemented storage backend. Please ensure to use an implemented one to avoid loosing data!
+                    """,
+                cause
+            )
         }
     }
 
