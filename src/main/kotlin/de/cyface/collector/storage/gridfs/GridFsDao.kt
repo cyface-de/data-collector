@@ -217,6 +217,8 @@ open class GridFsDao(private val mongoClient: MongoClient) {
         val query = JsonObject()
             .put("metadata.deviceId", identifier.deviceIdentifier.toString())
             .put("metadata.measurementId", identifier.measurementIdentifier.toString())
+            // Ensure we don't interpret attachments as measurements
+            .put("metadata.attachmentId", JsonObject().put("\$exists", false))
         return metaData(query)
     }
 
