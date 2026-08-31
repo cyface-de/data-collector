@@ -19,8 +19,10 @@
 package de.cyface.collector.handler
 
 import de.cyface.collector.handler.exception.PayloadTooLarge
+import de.cyface.collector.handler.upload.ConflictDiagnostics
 import de.cyface.collector.handler.upload.PreRequestHandler
 import de.cyface.collector.model.MeasurementFactory
+import de.cyface.collector.model.MeasurementIdentifier
 import de.cyface.collector.storage.DataStorageService
 import io.vertx.core.Future
 import io.vertx.core.MultiMap
@@ -103,7 +105,7 @@ class PreRequestTest {
         whenever(mockRoutingContext.request()).thenReturn(mockRequest)
         whenever(mockRoutingContext.session()).thenReturn(mockSession)
 
-        oocut = PreRequestHandler(MeasurementFactory(), mockStorageService, 100L, "/")
+        oocut = PreRequestHandler(MeasurementFactory(), mockStorageService, 100L, "/", ConflictDiagnostics())
     }
 
     @Test
@@ -124,6 +126,48 @@ class PreRequestTest {
 
         // Assert
         verify(mockResponse).statusCode = 200
+    }
+
+    @Test
+    fun `PreRequest for an already stored measurement returns status 409`() {
+        // Arrange
+        arrangeConflictingPreRequest()
+
+        // Act
+        oocut.handle(mockRoutingContext)
+
+        // Assert
+        verify(mockResponse).statusCode = 409
+    }
+
+    @Test
+    fun `Conflicting PreRequest is answered before the diagnostic reads the stored measurement`() {
+        // Arrange
+        arrangeConflictingPreRequest()
+
+        // Act
+        oocut.handle(mockRoutingContext)
+
+        // Assert
+        // The diagnostic reads a document, which the conflict check itself does not. Doing so before the response
+        // was sent would put that read into the client's response time, on the very requests that arrive in bulk.
+        val order = Mockito.inOrder(mockResponse, mockStorageService)
+        order.verify(mockResponse).end()
+        order.verify(mockStorageService).storedMetaData(MeasurementIdentifier(UUID.fromString(deviceId), 1L))
+    }
+
+    /**
+     * Sets up a pre-request for a measurement which is already stored, so the handler answers it with a conflict.
+     */
+    private fun arrangeConflictingPreRequest() {
+        whenever(mockRoutingContext.body()).thenReturn(mockBody)
+        whenever(mockBody.asJsonObject()).thenReturn(preRequestBody(deviceId))
+        whenever(mockRoutingContext.response()).thenReturn(mockResponse)
+        whenever(mockResponse.setStatusCode(anyInt())).thenReturn(mockResponse)
+        whenever(mockRequest.headers()).thenReturn(preRequestHeaders(50))
+        whenever(mockStorageService.isStored(deviceId, 1L)).thenReturn(Future.succeededFuture(true))
+        whenever(mockStorageService.storedMetaData(MeasurementIdentifier(UUID.fromString(deviceId), 1L)))
+            .thenReturn(Future.succeededFuture(null))
     }
 
     @Test

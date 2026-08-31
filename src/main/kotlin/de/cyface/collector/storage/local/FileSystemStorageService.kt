@@ -18,9 +18,12 @@
  */
 package de.cyface.collector.storage.local
 
+import de.cyface.collector.model.AttachmentIdentifier
+import de.cyface.collector.model.MeasurementIdentifier
 import de.cyface.collector.storage.CleanupOperation
 import de.cyface.collector.storage.DataStorageService
 import de.cyface.collector.storage.Status
+import de.cyface.collector.storage.StoredMetaData
 import de.cyface.collector.storage.UploadMetaData
 import io.vertx.core.Future
 import io.vertx.core.Vertx
@@ -73,6 +76,14 @@ class FileSystemStorageService(val vertx: Vertx) : DataStorageService {
     }
 
     override fun isStored(deviceId: String, measurementId: Long, attachmentId: Long): Future<Boolean> {
+        TODO("Not yet implemented")
+    }
+
+    override fun storedMetaData(identifier: MeasurementIdentifier): Future<StoredMetaData?> {
+        TODO("Not yet implemented")
+    }
+
+    override fun storedMetaData(identifier: AttachmentIdentifier): Future<StoredMetaData?> {
         TODO("Not yet implemented")
     }
 }

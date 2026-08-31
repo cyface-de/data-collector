@@ -33,6 +33,7 @@ import de.cyface.collector.model.metadata.AttachmentMetaData
 import de.cyface.collector.model.metadata.DeviceMetaData
 import de.cyface.collector.model.metadata.MeasurementMetaData
 import de.cyface.collector.storage.DataStorageService
+import de.cyface.collector.storage.StoredMetaData
 import io.vertx.core.Future
 import io.vertx.core.MultiMap
 import io.vertx.core.Promise
@@ -84,6 +85,10 @@ data class Measurement(
                 promise.complete(measurementExists)
             }.onFailure { promise.fail(it) }
         return promise.future()
+    }
+
+    override fun storedMetaData(storage: DataStorageService): Future<StoredMetaData?> {
+        return storage.storedMetaData(identifier)
     }
 
     override fun checkValidity(session: Session) {

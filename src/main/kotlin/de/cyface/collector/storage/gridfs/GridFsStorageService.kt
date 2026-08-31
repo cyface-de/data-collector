@@ -19,31 +19,26 @@
 package de.cyface.collector.storage.gridfs
 
 import com.mongodb.MongoWriteException
-import de.cyface.collector.model.Upload
+import de.cyface.collector.model.AttachmentIdentifier
+import de.cyface.collector.model.MeasurementIdentifier
 import de.cyface.collector.storage.CleanupOperation
 import de.cyface.collector.storage.DataStorageService
 import de.cyface.collector.storage.Status
-import de.cyface.collector.storage.StatusType
+import de.cyface.collector.storage.StoredMetaData
 import de.cyface.collector.storage.UploadMetaData
-import de.cyface.collector.storage.exception.ContentRangeNotMatchingFileSize
 import de.cyface.collector.storage.exception.UploadAlreadyExists
 import io.vertx.core.Future
 import io.vertx.core.Promise
 import io.vertx.core.Vertx
 import io.vertx.core.buffer.Buffer
-import io.vertx.core.file.AsyncFile
 import io.vertx.core.file.FileProps
 import io.vertx.core.file.FileSystem
 import io.vertx.core.file.OpenOptions
-import io.vertx.core.streams.Pipe
 import io.vertx.core.streams.ReadStream
-import org.bson.types.ObjectId
 import org.slf4j.LoggerFactory
 import java.nio.file.Path
-import java.util.Locale
 import java.util.UUID
 import kotlin.io.path.absolutePathString
-import kotlin.io.path.name
 
 /**
  * A storage service to write the data to Mongo database Grid FS.
@@ -61,6 +56,11 @@ class GridFsStorageService(
     private val uploadFolder: Path
 ) : DataStorageService {
 
+    /**
+     * Carries out the actual writing of an upload, which is involved enough to warrant its own object.
+     */
+    private val uploadOperation = GridFsUploadOperation(dao, fs)
+
     override fun store(
         sourceData: ReadStream<Buffer>,
         uploadMetaData: UploadMetaData
@@ -70,13 +70,14 @@ class GridFsStorageService(
         val temporaryStorageFile = pathToTemporaryFile(uploadMetaData.uploadIdentifier)
         val fsOpenCall = fs.open(temporaryStorageFile.absolutePathString(), OpenOptions().setAppend(true))
         fsOpenCall.onSuccess { asyncFile ->
-            val onTemporaryFileOpenedCall = onTemporaryFileOpened(
+            val storeCall = uploadOperation.store(
+                temporaryStorageFile,
                 asyncFile,
                 sourceToTempPipe,
                 uploadMetaData
             )
-            onTemporaryFileOpenedCall.onSuccess(ret::complete)
-            onTemporaryFileOpenedCall.onFailure { cause ->
+            storeCall.onSuccess(ret::complete)
+            storeCall.onFailure { cause ->
                 if (cause is MongoWriteException && cause.code == MONGO_DUPLICATE_ENTRY_ERROR_CODE) {
                     ret.fail(
                         UploadAlreadyExists(
@@ -104,6 +105,14 @@ class GridFsStorageService(
 
     override fun isStored(deviceId: String, measurementId: Long, attachmentId: Long): Future<Boolean> {
         return dao.exists(deviceId, measurementId, attachmentId)
+    }
+
+    override fun storedMetaData(identifier: MeasurementIdentifier): Future<StoredMetaData?> {
+        return dao.metaData(identifier)
+    }
+
+    override fun storedMetaData(identifier: AttachmentIdentifier): Future<StoredMetaData?> {
+        return dao.metaData(identifier)
     }
 
     override fun bytesUploaded(uploadIdentifier: UUID): Future<Long> {
@@ -143,121 +152,6 @@ class GridFsStorageService(
      */
     private fun pathToTemporaryFile(uploadIdentifier: UUID): Path {
         return uploadFolder.resolve(uploadIdentifier.toString())
-    }
-
-    /**
-     * Stores a [Upload] to a Mongo database. This method never fails. If a failure occurs it is logged and
-     * status code 422 is used for the response.
-     *
-     * @param upload The measured data to write to the Mongo database.
-     * @param temporaryStorage The temporary storage for the uploaded data to store.
-     */
-    private fun storeToMongoDB(upload: Upload, temporaryStorage: Path): Future<ObjectId> {
-        val promise = Promise.promise<ObjectId>()
-        LOGGER.debug("Insert upload {}!", upload.uploadable)
-
-        val temporaryFileOpenCall = fs.open(temporaryStorage.absolutePathString(), OpenOptions())
-        temporaryFileOpenCall.onFailure(promise::fail)
-        temporaryFileOpenCall.onSuccess { temporaryStorageFile ->
-            val storeCall = dao.store(upload, temporaryStorage.name, temporaryStorageFile)
-            storeCall.onSuccess(promise::complete)
-            storeCall.onFailure(promise::fail)
-            // GridFS never closes the read handle it is given, so we must close it ourselves once done.
-            storeCall.eventually { ->
-                temporaryStorageFile.close().recover { cause ->
-                    LOGGER.warn("Failed to close temporary file after upload to GridFS.", cause)
-                    Future.succeededFuture()
-                }
-            }
-        }
-        return promise.future()
-    }
-
-    /**
-     * Called when opening the local temporary storage has been completed.
-     * This function continues with storing the uploaded data provided as a Vertx `Pipe`.
-     */
-    private fun onTemporaryFileOpened(
-        asyncFile: AsyncFile,
-        sourceToTempPipe: Pipe<Buffer>,
-        uploadMetaData: UploadMetaData
-    ): Future<Status> {
-        val ret = Promise.promise<Status>()
-
-        // Pipe body to reduce memory usage and store body of interrupted connections (to support resume)
-        val pipeToCall = sourceToTempPipe.to(asyncFile)
-        pipeToCall.onSuccess {
-            LOGGER.debug("Finished Reading request!")
-            // Check if the upload is complete or if this was just a chunk
-            val temporaryStorageFile = pathToTemporaryFile(uploadMetaData.uploadIdentifier)
-            val fsPropsCall = fs.props(temporaryStorageFile.toString())
-            fsPropsCall.onSuccess {
-                onFilePropsLoaded(
-                    it,
-                    ret,
-                    uploadMetaData
-                )
-            }
-            fsPropsCall.onFailure(ret::fail)
-        }
-        pipeToCall.onFailure(ret::fail)
-        return ret.future()
-    }
-
-    /**
-     * Handles storage of data that is already inside temporary storage on the local disc.
-     */
-    private fun onFilePropsLoaded(
-        props: FileProps,
-        promise: Promise<Status>,
-        uploadMetaData: UploadMetaData
-    ) {
-        // Checking that the data was actually written successfully.
-        LOGGER.debug(
-            "Temporary storage contained {} and expected {}.",
-            props.size(),
-            uploadMetaData.contentRange.totalBytes
-        )
-        val byteSize = props.size()
-        val contentRange = uploadMetaData.contentRange
-        val uploadIdentifier = uploadMetaData.uploadIdentifier
-        if (byteSize - 1 != contentRange.toIndex) {
-            LOGGER.error(
-                "Response: 500, Content-Range ({}) not matching file size ({} - 1)",
-                contentRange,
-                byteSize
-            )
-            promise.fail(
-                ContentRangeNotMatchingFileSize(
-                    String.format(
-                        Locale.getDefault(),
-                        "Response: 500, Content-Range (%s) not matching file size (%d - 1)",
-                        contentRange,
-                        byteSize
-                    )
-                )
-            )
-        } else if (contentRange.toIndex != contentRange.totalBytes - 1) {
-            // This was not the final chunk of data
-            // Indicate that, e.g. for 100 received bytes, bytes 0-99 have been received
-            LOGGER.debug("Response: 308, Range bytes=0-{}", byteSize - 1)
-            promise.complete(Status(uploadIdentifier, StatusType.INCOMPLETE, byteSize))
-        } else {
-            // Persist data
-            val temporaryStorageFile = pathToTemporaryFile(uploadIdentifier)
-            val metaData = uploadMetaData.uploadable
-            val user = uploadMetaData.user
-            val upload = Upload(metaData, user.idString, temporaryStorageFile.toFile())
-            val storeToMongoDBResult = storeToMongoDB(upload, temporaryStorageFile)
-            storeToMongoDBResult.onSuccess {
-                LOGGER.debug("Stored upload {} under object id {}!", upload, it.toString())
-                promise.complete(Status(uploadIdentifier, StatusType.COMPLETE, byteSize))
-            }
-            storeToMongoDBResult.onFailure {
-                LOGGER.debug("Failed to store upload {}!", upload)
-                promise.fail(it)
-            }
-        }
     }
 
     companion object {

@@ -21,6 +21,7 @@ package de.cyface.collector.verticle
 import de.cyface.collector.auth.AuthHandlerBuilder
 import de.cyface.collector.handler.AuthorizationHandler
 import de.cyface.collector.handler.FailureHandler
+import de.cyface.collector.handler.upload.ConflictDiagnostics
 import de.cyface.collector.handler.upload.PreRequestHandler
 import de.cyface.collector.handler.upload.StatusHandler
 import de.cyface.collector.handler.upload.UploadHandler
@@ -72,6 +73,14 @@ class CollectorApiVerticle(
      * Creates [de.cyface.collector.model.Attachment] instances from the raw data received by the API.
      */
     private val attachmentFactory = AttachmentFactory()
+
+    /**
+     * Reports the uploads rejected as duplicates, while it is switched on.
+     *
+     * Measurements and attachments share one instance, so that the memory this diagnostic may occupy is bounded
+     * once for the whole API rather than once per endpoint.
+     */
+    private val conflictDiagnostics = ConflictDiagnostics()
 
     @Throws(Exception::class)
     override suspend fun start() {
@@ -163,7 +172,8 @@ class CollectorApiVerticle(
             measurementFactory,
             storageService,
             serverConfiguration.measurementPayloadLimit,
-            serverConfiguration.httpEndpoint
+            serverConfiguration.httpEndpoint,
+            conflictDiagnostics,
         )
         registerMeasurementPreRequestHandler(
             apiRouter,
@@ -202,7 +212,8 @@ class CollectorApiVerticle(
             attachmentFactory,
             storageService,
             serverConfiguration.measurementPayloadLimit,
-            serverConfiguration.httpEndpoint
+            serverConfiguration.httpEndpoint,
+            conflictDiagnostics,
         )
         registerAttachmentPreRequestHandler(
             apiRouter,

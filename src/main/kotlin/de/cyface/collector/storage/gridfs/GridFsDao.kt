@@ -18,8 +18,17 @@
  */
 package de.cyface.collector.storage.gridfs
 
+import de.cyface.collector.model.AttachmentIdentifier
+import de.cyface.collector.model.FormAttributes
+import de.cyface.collector.model.MeasurementIdentifier
 import de.cyface.collector.model.Upload
+import de.cyface.collector.storage.StoredMetaData
 import de.cyface.collector.storage.exception.DuplicatesInDatabase
+import de.cyface.collector.storage.lenientDate
+import de.cyface.collector.storage.lenientDouble
+import de.cyface.collector.storage.lenientInt
+import de.cyface.collector.storage.lenientLong
+import de.cyface.collector.storage.lenientString
 import io.vertx.core.CompositeFuture
 import io.vertx.core.Future
 import io.vertx.core.Promise
@@ -197,5 +206,76 @@ open class GridFsDao(private val mongoClient: MongoClient) {
         }
 
         return ret.future()
+    }
+
+    /**
+     * Load the metadata of the measurement stored under the provided [identifier].
+     *
+     * @return A [Future] providing the metadata, or `null` if no such measurement is stored.
+     */
+    fun metaData(identifier: MeasurementIdentifier): Future<StoredMetaData?> {
+        val query = JsonObject()
+            .put("metadata.deviceId", identifier.deviceIdentifier.toString())
+            .put("metadata.measurementId", identifier.measurementIdentifier.toString())
+            // Ensure we don't interpret attachments as measurements
+            .put("metadata.attachmentId", JsonObject().put("\$exists", false))
+        return metaData(query)
+    }
+
+    /**
+     * Load the metadata of the attachment stored under the provided [identifier].
+     *
+     * @return A [Future] providing the metadata, or `null` if no such attachment is stored.
+     */
+    fun metaData(identifier: AttachmentIdentifier): Future<StoredMetaData?> {
+        val query = JsonObject()
+            .put("metadata.deviceId", identifier.deviceIdentifier.toString())
+            .put("metadata.measurementId", identifier.measurementIdentifier.toString())
+            .put("metadata.attachmentId", identifier.attachmentIdentifier.toString())
+        return metaData(query)
+    }
+
+    /**
+     * Load the metadata of the first entry matching [query].
+     *
+     * Taking the first match is deliberate, where [exists] rejects several matches as a conflict. As long as the
+     * database still holds `v2` data, one measurement legitimately owns one entry per `fileType` (see
+     * [createIndices]); those entries describe the same measurement, so either one answers the question asked here.
+     * [exists] must be stricter because it guards the write path, where an unexpected second entry means an upload
+     * is about to be lost.
+     */
+    private fun metaData(query: JsonObject): Future<StoredMetaData?> {
+        val fields = JsonObject().put("metadata", 1).put("uploadDate", 1)
+        return mongoClient.findOne("fs.files", query, fields).map { file -> file?.let(::toStoredMetaData) }
+    }
+
+    /**
+     * Translate an entry of this storage into the storage independent [StoredMetaData].
+     *
+     * The translation exists so that callers can compare an incoming upload against the stored one without having to
+     * know how this class persists it. Grid FS dictates that shape rather than this application: the upload's own
+     * metadata is confined to a `metadata` sub document, `uploadDate` is maintained by Grid FS beside it, and the
+     * location timestamps sit one level deeper still, inside the GeoJSON documents that carry the start and end
+     * position. Flattening all of that here keeps a storage detail from reaching the callers.
+     *
+     * The values are read leniently because this collection accumulated entries from arbitrary earlier versions of
+     * the software: a field may be missing entirely, or held as a string where it is a number today. The caller is a
+     * diagnostic, and an incomplete picture of an old entry still tells it something, whereas an exception would
+     * tell it nothing — so anything unreadable becomes `null`.
+     */
+    private fun toStoredMetaData(file: JsonObject): StoredMetaData {
+        val metaData = file.getJsonObject("metadata") ?: JsonObject()
+        return StoredMetaData(
+            deviceType = metaData.lenientString(FormAttributes.DEVICE_TYPE.value),
+            operatingSystemVersion = metaData.lenientString(FormAttributes.OS_VERSION.value),
+            applicationVersion = metaData.lenientString(FormAttributes.APPLICATION_VERSION.value),
+            formatVersion = metaData.lenientInt(FormAttributes.FORMAT_VERSION.value),
+            length = metaData.lenientDouble(FormAttributes.LENGTH.value),
+            locationCount = metaData.lenientLong(FormAttributes.LOCATION_COUNT.value),
+            startLocationTimestamp = metaData.getJsonObject("start")?.lenientLong("timestamp"),
+            endLocationTimestamp = metaData.getJsonObject("end")?.lenientLong("timestamp"),
+            modality = metaData.lenientString(FormAttributes.MODALITY.value),
+            uploadDate = file.lenientDate("uploadDate"),
+        )
     }
 }
