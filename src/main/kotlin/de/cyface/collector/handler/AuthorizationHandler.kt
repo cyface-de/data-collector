@@ -18,44 +18,37 @@
  */
 package de.cyface.collector.handler
 
-import de.cyface.collector.handler.HTTPStatus.ENTITY_UNPARSABLE
 import de.cyface.collector.model.User
 import io.vertx.core.Handler
-import io.vertx.core.http.HttpServerRequest
-import io.vertx.ext.auth.oauth2.Oauth2Credentials
 import io.vertx.ext.web.RoutingContext
 import org.slf4j.LoggerFactory
 import java.util.UUID
 
 /**
- * A `RequestHandler` to ensure correct user authentication.
+ * A handler to ensure correct user authentication.
  * This should be one of the first handlers on each route requiring authorization.
  *
- * @author Klemens Muthmann
- * @author Armin Schnabel
- * @version 2.0.2
+ * Reads user identity from the JWT access token that was already decoded by the auth handler.
+ * Requires the token's `aud` claim to include the backend's configured client ID so that
+ * local JWT validation succeeds.
  */
 class AuthorizationHandler : Handler<RoutingContext> {
     override fun handle(context: RoutingContext) {
         try {
             LOGGER.info("Received new request.")
-            val request: HttpServerRequest = context.request()
-            val headers = request.headers()
-            LOGGER.debug("Request headers: {}", headers)
 
-            // Inform next handler which user is authenticated
-            val contextUser = context.user()
-            val principal = contextUser.principal()
-            val username = Oauth2Credentials(principal).username
-            // The "sub" is the subject claim which represents the unique id of the authenticated user.
-            val uuid = principal.getString("sub")
+            val claims = context.user()?.attributes()?.getJsonObject("accessToken")
+                ?: error("Missing decoded access token (JWT audience validation may have failed)")
+            val username = claims.getString("preferred_username")
+                ?: error("Missing preferred_username in access token")
+            val uuid = claims.getString("sub")
+                ?: error("Missing sub in access token")
             val user = User(UUID.fromString(uuid), username)
             context.put("logged-in-user", user)
 
             context.next()
-        } catch (e: NumberFormatException) {
-            LOGGER.error("Data was not parsable!")
-            context.fail(ENTITY_UNPARSABLE, e)
+        } catch (e: RuntimeException) {
+            context.fail(e)
         }
     }
 
