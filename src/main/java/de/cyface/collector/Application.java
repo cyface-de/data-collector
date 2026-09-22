@@ -20,10 +20,13 @@ package de.cyface.collector;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Tag;
+import io.micrometer.core.instrument.binder.jvm.ClassLoaderMetrics;
 import io.micrometer.core.instrument.binder.jvm.JvmGcMetrics;
 import io.micrometer.core.instrument.binder.jvm.JvmMemoryMetrics;
 import io.micrometer.core.instrument.binder.jvm.JvmThreadMetrics;
+import io.micrometer.core.instrument.binder.system.FileDescriptorMetrics;
 import io.micrometer.core.instrument.binder.system.ProcessorMetrics;
+import io.micrometer.core.instrument.binder.system.UptimeMetrics;
 import io.vertx.micrometer.Label;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -144,6 +147,9 @@ public class Application extends Launcher {
                 new JvmGcMetrics().bindTo(registry);
                 new JvmThreadMetrics().bindTo(registry);
                 new ProcessorMetrics().bindTo(registry);
+                new ClassLoaderMetrics().bindTo(registry);
+                new FileDescriptorMetrics().bindTo(registry);
+                new UptimeMetrics().bindTo(registry);
                 LOGGER.info("JVM metrics bound to Vert.x Prometheus registry");
             } else {
                 LOGGER.warn("Could not bind JVM metrics: Vert.x metrics registry not available");
