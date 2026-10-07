@@ -18,6 +18,7 @@
  */
 package de.cyface.collector.handler
 
+import de.cyface.collector.handler.HTTPStatus.UNAUTHORIZED
 import de.cyface.collector.model.User
 import io.vertx.core.Handler
 import io.vertx.ext.web.RoutingContext
@@ -38,19 +39,26 @@ class AuthorizationHandler : Handler<RoutingContext> {
             LOGGER.info("Received new request.")
 
             val claims = context.user()?.attributes()?.getJsonObject("accessToken")
-                ?: error("Missing decoded access token (JWT audience validation may have failed)")
+                ?: throw MissingClaim("Missing decoded access token (JWT audience validation may have failed)")
             val username = claims.getString("preferred_username")
-                ?: error("Missing preferred_username in access token")
+                ?: throw MissingClaim("Missing preferred_username in access token")
             val uuid = claims.getString("sub")
-                ?: error("Missing sub in access token")
+                ?: throw MissingClaim("Missing sub in access token")
             val user = User(UUID.fromString(uuid), username)
             context.put("logged-in-user", user)
 
             context.next()
+        } catch (e: MissingClaim) {
+            context.fail(UNAUTHORIZED, e)
         } catch (e: RuntimeException) {
             context.fail(e)
         }
     }
+
+    /**
+     * Thrown if the request carries no decoded access token or the token misses a required claim.
+     */
+    private class MissingClaim(message: String) : IllegalStateException(message)
 
     companion object {
         /**
