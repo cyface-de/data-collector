@@ -20,7 +20,9 @@
 
 package de.cyface.collector.storage
 
+import de.cyface.collector.model.AttachmentIdentifier
 import de.cyface.collector.model.ContentRange
+import de.cyface.collector.model.MeasurementIdentifier
 import de.cyface.collector.model.Uploadable
 import de.cyface.collector.model.User
 import io.vertx.core.Future
@@ -99,6 +101,28 @@ interface DataStorageService {
      * the result will be `true` and `false` otherwise.
      */
     fun isStored(deviceId: String, measurementId: Long, attachmentId: Long): Future<Boolean>
+
+    /**
+     * Load the metadata of an already stored measurement.
+     *
+     * Where [isStored] only answers whether something is stored, this provides what is stored, so a caller can
+     * compare a stored measurement against an incoming one. Each implementation translates its own storage format
+     * into the storage independent [StoredMetaData].
+     *
+     * @param identifier The identifier of the measurement to load the metadata for.
+     * @return A `Future` providing the metadata of the stored measurement, or `null` if nothing is stored under the
+     * provided identifier.
+     */
+    fun storedMetaData(identifier: MeasurementIdentifier): Future<StoredMetaData?>
+
+    /**
+     * Load the metadata of an already stored attachment.
+     *
+     * @param identifier The identifier of the attachment to load the metadata for.
+     * @return A `Future` providing the metadata of the stored attachment, or `null` if nothing is stored under the
+     * provided identifier.
+     */
+    fun storedMetaData(identifier: AttachmentIdentifier): Future<StoredMetaData?>
 }
 
 /**

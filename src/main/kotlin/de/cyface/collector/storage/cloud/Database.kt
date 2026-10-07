@@ -18,6 +18,9 @@
  */
 package de.cyface.collector.storage.cloud
 
+import de.cyface.collector.model.AttachmentIdentifier
+import de.cyface.collector.model.MeasurementIdentifier
+import de.cyface.collector.storage.StoredMetaData
 import de.cyface.collector.storage.UploadMetaData
 import io.vertx.core.CompositeFuture
 import io.vertx.core.Future
@@ -49,6 +52,20 @@ interface Database {
      * @return A [Future] that is called upon successful or failed completion of this operation.
      */
     fun exists(deviceIdentifier: String, measurementIdentifier: Long, attachmentId: Long): Future<Boolean>
+
+    /**
+     * Queries the database asynchronously for the metadata of the measurement stored under [identifier].
+     *
+     * @return A [Future] providing the metadata, or `null` if no such measurement is stored.
+     */
+    fun metaData(identifier: MeasurementIdentifier): Future<StoredMetaData?>
+
+    /**
+     * Queries the database asynchronously for the metadata of the attachment stored under [identifier].
+     *
+     * @return A [Future] providing the metadata, or `null` if no such attachment is stored.
+     */
+    fun metaData(identifier: AttachmentIdentifier): Future<StoredMetaData?>
 
     /**
      * Creates indices required by this application asynchronously, if they do not yet exist.

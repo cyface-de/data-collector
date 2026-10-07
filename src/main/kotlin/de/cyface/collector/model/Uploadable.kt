@@ -24,6 +24,7 @@ import de.cyface.collector.model.metadata.AttachmentMetaData
 import de.cyface.collector.model.metadata.DeviceMetaData
 import de.cyface.collector.model.metadata.MeasurementMetaData
 import de.cyface.collector.storage.DataStorageService
+import de.cyface.collector.storage.StoredMetaData
 import io.vertx.core.Future
 import io.vertx.core.MultiMap
 import io.vertx.core.json.JsonArray
@@ -57,6 +58,23 @@ interface Uploadable {
      * @return A future which resolves to true if no conflict was found, false otherwise.
      */
     fun checkConflict(storage: DataStorageService): Future<Boolean>
+
+    /**
+     * Loads the metadata of the already stored data this uploadable conflicts with.
+     *
+     * Where [checkConflict] reports *that* something is stored, this reports *what* is stored, so a caller can work
+     * out how the two differ. Each implementation knows its own kind of identifier and therefore which storage
+     * lookup to ask for.
+     *
+     * This is deliberately a second lookup rather than a richer result of [checkConflict]. A conflict is answered
+     * from an index alone, which is what makes it cheap enough to run on every single pre-request; loading the
+     * stored metadata reads an actual document. Callers ask for that only for the few conflicts they want to
+     * examine, so the rare case pays for itself instead of being charged to every request.
+     *
+     * @param storage The storage to load the metadata from.
+     * @return A future which resolves to the stored metadata, or to `null` if nothing is stored for this uploadable.
+     */
+    fun storedMetaData(storage: DataStorageService): Future<StoredMetaData?>
 
     /**
      * Checks if the uploadable matches the uploadable the session was bound to.

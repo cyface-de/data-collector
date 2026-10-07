@@ -2,6 +2,8 @@
 <configuration>
   <!-- Reduce mongo logging to INFO or else the console is spammed with repeating lines -->
   <logger name="org.mongodb.driver" level="INFO" />
+  <!-- Switch off the 409 conflict logger by default -->
+  <logger name="de.cyface.collector.diagnostics.PreRequestConflict" level="OFF" />
 
   <appender name="FILE" class="ch.qos.logback.core.FileAppender">
     <!-- deny all events with a level below INFO, that is DEBUG, TRACE -->

@@ -18,9 +18,17 @@
  */
 package de.cyface.collector.storage.cloud
 
+import de.cyface.collector.model.AttachmentIdentifier
 import de.cyface.collector.model.FormAttributes
+import de.cyface.collector.model.MeasurementIdentifier
+import de.cyface.collector.storage.StoredMetaData
 import de.cyface.collector.storage.UploadMetaData
 import de.cyface.collector.storage.exception.DuplicatesInDatabase
+import de.cyface.collector.storage.lenientDate
+import de.cyface.collector.storage.lenientDouble
+import de.cyface.collector.storage.lenientInt
+import de.cyface.collector.storage.lenientLong
+import de.cyface.collector.storage.lenientString
 import io.vertx.core.CompositeFuture
 import io.vertx.core.Future
 import io.vertx.core.Promise
@@ -162,6 +170,68 @@ class MongoDatabase(private val mongoClient: MongoClient, private val collection
         queryCall.onFailure(ret::fail)
 
         return ret.future()
+    }
+
+    override fun metaData(identifier: MeasurementIdentifier): Future<StoredMetaData?> {
+        val query = JsonObject()
+            .put("properties.${FormAttributes.DEVICE_ID.value}", identifier.deviceIdentifier.toString())
+            .put("properties.${FormAttributes.MEASUREMENT_ID.value}", identifier.measurementIdentifier.toString())
+            // Ensure we don't interpret attachments as measurements
+            .put("properties.${FormAttributes.ATTACHMENT_ID.value}", JsonObject().put("\$exists", false))
+        return metaData(query)
+    }
+
+    override fun metaData(identifier: AttachmentIdentifier): Future<StoredMetaData?> {
+        val query = JsonObject()
+            .put("properties.${FormAttributes.DEVICE_ID.value}", identifier.deviceIdentifier.toString())
+            .put("properties.${FormAttributes.MEASUREMENT_ID.value}", identifier.measurementIdentifier.toString())
+            .put("properties.${FormAttributes.ATTACHMENT_ID.value}", identifier.attachmentIdentifier.toString())
+        return metaData(query)
+    }
+
+    /**
+     * Load the metadata of the document matching [query].
+     *
+     * Asking for a single document is safe because the unique indices created by [createIndices] permit at most one
+     * document per identifier. That is also why this does not repeat the duplicate detection [exists] performs:
+     * [exists] guards the write path, where a second document would mean losing an upload, while a caller reading
+     * metadata back gains nothing from that distinction.
+     */
+    private fun metaData(query: JsonObject): Future<StoredMetaData?> {
+        val fields = JsonObject().put("properties", 1)
+        return mongoClient.findOne(collectionName, query, fields).map { document ->
+            document?.let(::toStoredMetaData)
+        }
+    }
+
+    /**
+     * Translate a document of this database into the storage independent [StoredMetaData].
+     *
+     * The translation exists so that callers can compare an incoming upload against the stored one without having to
+     * know how this class persists it. An upload is kept as a GeoJSON feature here, a shape chosen for storing and
+     * querying geodata rather than for that comparison: the descriptive values sit in the feature's `properties`
+     * next to entries that concern nobody outside this class, such as the name of the file in the object storage.
+     * Reducing the document to the values a caller actually compares keeps that choice a private matter.
+     *
+     * The values are read leniently because this collection accumulated documents from arbitrary earlier versions of
+     * the software: a field may be missing entirely, or held as a string where it is a number today. The caller is a
+     * diagnostic, and an incomplete picture of an old document still tells it something, whereas an exception would
+     * tell it nothing — so anything unreadable becomes `null`.
+     */
+    private fun toStoredMetaData(document: JsonObject): StoredMetaData {
+        val properties = document.getJsonObject("properties") ?: JsonObject()
+        return StoredMetaData(
+            deviceType = properties.lenientString(FormAttributes.DEVICE_TYPE.value),
+            operatingSystemVersion = properties.lenientString(FormAttributes.OS_VERSION.value),
+            applicationVersion = properties.lenientString(FormAttributes.APPLICATION_VERSION.value),
+            formatVersion = properties.lenientInt(FormAttributes.FORMAT_VERSION.value),
+            length = properties.lenientDouble(FormAttributes.LENGTH.value),
+            locationCount = properties.lenientLong(FormAttributes.LOCATION_COUNT.value),
+            startLocationTimestamp = properties.lenientLong(FormAttributes.START_LOCATION_TS.value),
+            endLocationTimestamp = properties.lenientLong(FormAttributes.END_LOCATION_TS.value),
+            modality = properties.lenientString(FormAttributes.MODALITY.value),
+            uploadDate = properties.lenientDate("uploadDate"),
+        )
     }
 
     override fun createIndices(): Future<CompositeFuture> {

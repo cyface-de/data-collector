@@ -38,7 +38,8 @@ import kotlin.test.Test
 
 /**
  * Integration test verifying that [MultiJWKAuthHandlerBuilder] accepts tokens from two identity
- * providers whose JWKs share the same `kid` value.
+ * providers whose JWKs have distinct `kid` values, relying on Vert.x's native kid-based key
+ * selection.
  *
  * RSA key pairs and JWTs are generated entirely at runtime using the JDK so that no real keys or
  * tokens need to be committed to the repository.
@@ -49,17 +50,19 @@ import kotlin.test.Test
 class MultiJWKAuthIT {
 
     @Test
-    fun `tokens from two IdPs with colliding kid are both accepted`(vertx: Vertx) = runTest {
+    fun `tokens from two IdPs with distinct kids are both accepted`(vertx: Vertx) = runTest {
         val keyGen = KeyPairGenerator.getInstance("RSA").also { it.initialize(2048) }
         val keyPair1 = keyGen.generateKeyPair()
         val keyPair2 = keyGen.generateKeyPair()
+        val unknownKeyPair = keyGen.generateKeyPair()
 
-        val token1 = generateToken(keyPair1)
-        val token2 = generateToken(keyPair2)
+        val token1 = generateToken(keyPair1, "kid-1")
+        val token2 = generateToken(keyPair2, "kid-2")
+        // Signed by a key that is not registered — Vert.x returns 401 for an unknown kid.
+        val unknownToken = generateToken(unknownKeyPair, "kid-unknown")
 
-        // Both JWKs intentionally share the same kid to reproduce the collision scenario.
-        val jwk1 = toJwk(keyPair1.public as RSAPublicKey)
-        val jwk2 = toJwk(keyPair2.public as RSAPublicKey)
+        val jwk1 = toJwk(keyPair1.public as RSAPublicKey, "kid-1")
+        val jwk2 = toJwk(keyPair2.public as RSAPublicKey, "kid-2")
 
         val router = Router.router(vertx)
         val authHandler = MultiJWKAuthHandlerBuilder(vertx, listOf(jwk1, jwk2)).create(router)
@@ -77,16 +80,16 @@ class MultiJWKAuthIT {
         assertThat("token from IdP 2 should be accepted", response2.statusCode(), equalTo(200))
 
         val response3 = client.get(port, "localhost", "/test")
-            .putHeader("Authorization", "Bearer not.a.valid.jwt").send().coAwait()
-        assertThat("invalid token should be rejected", response3.statusCode(), equalTo(401))
+            .putHeader("Authorization", "Bearer $unknownToken").send().coAwait()
+        assertThat("token from unregistered key should be rejected", response3.statusCode(), equalTo(401))
     }
 
     /**
      * Builds a minimal RS256 JWT signed with the given key pair's private key.
      * Uses only JDK APIs to avoid any dependency on Vert.x's internal token generation.
      */
-    private fun generateToken(keyPair: KeyPair): String {
-        val header = base64Url("""{"alg":"RS256","typ":"JWT"}""")
+    private fun generateToken(keyPair: KeyPair, kid: String): String {
+        val header = base64Url("""{"alg":"RS256","typ":"JWT","kid":"$kid"}""")
         val payload = base64Url("""{"sub":"test-user","iat":${System.currentTimeMillis() / 1000}}""")
         val signingInput = "$header.$payload"
 
@@ -98,7 +101,7 @@ class MultiJWKAuthIT {
         return "$signingInput.$sig"
     }
 
-    private fun toJwk(key: RSAPublicKey, kid: String = "collision-kid"): JsonObject =
+    private fun toJwk(key: RSAPublicKey, kid: String): JsonObject =
         JsonObject()
             .put("kty", "RSA")
             .put("alg", "RS256")

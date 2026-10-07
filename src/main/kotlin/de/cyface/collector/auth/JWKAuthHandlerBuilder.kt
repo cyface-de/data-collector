@@ -43,12 +43,9 @@ class JWKAuthHandlerBuilder(
     private val logger = LoggerFactory.getLogger(JWKAuthHandlerBuilder::class.java)
 
     override suspend fun create(apiRouter: Router): AuthenticationHandler {
-        // 2. JWTAuthOptions erstellen
         val jwtAuthOptions = JWTAuthOptions()
         logger.debug("Creating JWTAuthOptions with JWK: {}", jwkJson.encodePrettily())
         jwtAuthOptions.jwks = listOf(jwkJson)
-
-        // 3. JWTAuth erstellen
         val jwtAuth = JWTAuth.create(vertx, jwtAuthOptions)
         return JWTAuthHandler.create(jwtAuth)
     }

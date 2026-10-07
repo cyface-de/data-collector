@@ -77,12 +77,13 @@ Do this for either JWT or OAuth authentication using one of the two following co
 Now build the system as described in the "Building" section above:
 `./gradlew :clean :build :copyToDockerBuildFolder`
 
-For the JWT Setup you need to create an environment variable named `CYFACE_JWK` and set it to the JWK from the auth server issuing your keys.
+For the JWT setup you need to create an environment variable named `CYFACE_JWKS` and set it to the JSON array of JWKs from your auth server.
 For example use something like this:
 ```
-export CYFACE_JWK="{\"kty\":\"RSA\",\"alg\":\"RS256\",\"use\":\"sig\",\"kid\":\"1\",\"n\":\"a-very-long-string-containing-the-actual-public-key\",\"e\":\"AQAB\"}"
+export CYFACE_JWKS='[{"kty":"RSA","alg":"RS256","use":"sig","kid":"beta-2024","n":"a-very-long-string-containing-the-actual-public-key","e":"AQAB"}]'
 ```
-Remember to mask all the quotation marks, so they are kept verbatim.
+Each JWK in the array must have a unique `kid` value so that Vert.x can select the correct key from the JWT header.
+If you only have a single key you may also use the legacy variable `CYFACE_JWK` (a single JSON object without the surrounding array brackets); `CYFACE_JWKS` takes precedence when both are set.
 
 Then simply run `docker-compose up` inside `build/docker` for either JWT or OAuth authentication:
 * `cd build/docker/ && docker compose -f compose-jwt.yaml up -d --build --force-recreate`

@@ -21,10 +21,13 @@
 package de.cyface.collector.storage.cloud
 
 import com.mongodb.MongoWriteException
+import de.cyface.collector.model.AttachmentIdentifier
+import de.cyface.collector.model.MeasurementIdentifier
 import de.cyface.collector.storage.CleanupOperation
 import de.cyface.collector.storage.DataStorageService
 import de.cyface.collector.storage.Status
 import de.cyface.collector.storage.StatusType
+import de.cyface.collector.storage.StoredMetaData
 import de.cyface.collector.storage.UploadMetaData
 import de.cyface.collector.storage.exception.ContentRangeNotMatchingFileSize
 import de.cyface.collector.storage.exception.UploadAlreadyExists
@@ -167,7 +170,7 @@ class GoogleCloudStorageService(
                     clean(uploadIdentifier)
                         .onSuccess {
                             if (daoFailure is MongoWriteException && daoFailure.code == DUPLICATE_KEY) {
-                                resultPromise.fail(UploadAlreadyExists(daoFailure))
+                                resultPromise.fail(UploadAlreadyExists(e = daoFailure))
                             } else {
                                 resultPromise.fail(daoFailure)
                             }
@@ -236,6 +239,14 @@ class GoogleCloudStorageService(
         See: https://stackoverflow.com/questions/55337912/is-it-possible-to-query-google-cloud-storage-custom-metadata
          */
         return dao.exists(deviceId, measurementId, attachmentId)
+    }
+
+    override fun storedMetaData(identifier: MeasurementIdentifier): Future<StoredMetaData?> {
+        return dao.metaData(identifier)
+    }
+
+    override fun storedMetaData(identifier: AttachmentIdentifier): Future<StoredMetaData?> {
+        return dao.metaData(identifier)
     }
 
     companion object {
