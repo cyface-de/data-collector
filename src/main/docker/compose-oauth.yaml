@@ -87,24 +87,65 @@ services:
       test: [ "CMD", "curl", "-f", "http://localhost:8080/" ]
 
 
-  # Keycloak Authentication Server
+  # Keycloak Authentication Server.
+  #
+  # The realm export hardcodes `frontendUrl=http://authentication:8080`
+  # (see rfr-realm_VERSION_see-keycloak-image-repo.json). This is the
+  # original RFR-774 fix and supports the in-Docker API + "thin" external
+  # client (postman, Android, iOS, curl) flow:
+  #   - The collector API container reaches Keycloak at authentication:8080.
+  #   - External thin clients hit Keycloak via the host port mapping at
+  #     localhost:8081 and get a token whose `iss` is
+  #     `http://authentication:8080` regardless of the URL used.
+  #   - The API validates `iss` against authentication:8080 -> match.
+  #   - Thin clients never do OIDC discovery and never validate the token
+  #     themselves, so the unreachable-from-host authentication URL inside
+  #     the discovery doc does not matter for them.
+  #
+  # This setup will NOT work with a SPA / web-app client because SPAs DO
+  # fetch the OIDC discovery doc and validate JWKS -- with hardcoded
+  # frontendUrl those URLs point at unreachable-from-host
+  # authentication:8080. For SPA-friendly local dev, run the standalone
+  # Keycloak from cyface/keycloak-image (./start-dev.sh) which uses
+  # frontendUrl="" on the radsim realm.
+  #
+  # The realm JSON is a verbatim copy of the canonical version maintained
+  # in the cyface/keycloak-image repo (data/import/rfr-realm_VERSION.json)
+  # -- edit there first, re-sync here. The full RFR-774 explanation lives
+  # in cyface/keycloak-image/docker-compose.dev.yml.
   authentication:
     container_name: collector_authentication
     image: quay.io/keycloak/keycloak:22.0.1
-    # For the issuer of the auth token to be correct, Frontend-URL needs to be set to authentication:8080 [RFR-774]
-    # This is pre-configured in `/keycloak/data/import/rfr-realm.json`: `"frontendUrl": "http://authentication:8080",`
     ports:
       - "127.0.0.1:8081:8080"
     networks:
       - authentication
     environment:
-      - KEYCLOAK_ADMIN=admin 
+      - KEYCLOAK_ADMIN=admin
       - KEYCLOAK_ADMIN_PASSWORD=admin
     command: start-dev --import-realm
     volumes:
       - ./keycloak/providers:/opt/keycloak/providers
       - ./keycloak/data:/opt/keycloak/data
       - ./keycloak/themes:/opt/keycloak/themes
+    depends_on:
+      - mailpit
+
+  # Fake SMTP server that captures every outgoing email and exposes a web UI.
+  # Inspect mails at http://localhost:8025 (subject, from, to, body, HTML).
+  # Keycloak is configured to deliver mail to mailpit:1025 via the realm's
+  # smtpServer block (see keycloak/data/import/rfr-realm_VERSION_see-keycloak-image-repo.json).
+  mailpit:
+    container_name: collector_mailpit
+    image: axllent/mailpit:latest
+    ports:
+      - "127.0.0.1:8025:8025"  # Web UI
+      - "127.0.0.1:1025:1025"  # SMTP (also reachable from host for debugging)
+    networks:
+      - authentication
+    environment:
+      MP_SMTP_AUTH_ACCEPT_ANY: "true"
+      MP_SMTP_AUTH_ALLOW_INSECURE: "true"
 
 volumes:
   collector_mongo-db:
