@@ -36,10 +36,13 @@ class MockedHandlerBuilder : AuthHandlerBuilder {
     override suspend fun create(apiRouter: Router): AuthenticationHandler {
         val handler = object : AuthenticationHandler {
             override fun handle(event: RoutingContext) {
-                val principal = JsonObject()
-                    .put("username", "test-user")
-                    .put("sub", UUID.randomUUID()) // user id
-                val user = UserImpl(principal, JsonObject())
+                val userId = UUID.randomUUID()
+                val accessToken = JsonObject()
+                    .put("preferred_username", "test-user")
+                    .put("sub", userId.toString())
+                val principal = JsonObject().put("access_token", "mocked-token")
+                val attributes = JsonObject().put("accessToken", accessToken)
+                val user = UserImpl(principal, attributes)
                 event.setUser(user)
 
                 // From AuthenticationHandlerImpl.handle @ `authenticate(ctx, authN -> {..})`
