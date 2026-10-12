@@ -11,8 +11,8 @@ name: Gradle Publish
 on:
   push:
     tags:
-      - '[0-9]*.[0-9]*.[0-9]*' # glob not reg-ex
-      - '[0-9]*.[0-9]*.[0-9]*-*'
+      # GitHub filter pattern, not a reg-ex: `+` means one or more of the previous character, `*` means any text
+      - '[0-9]+.[0-9]+.[0-9]+*'
 
 # Explicit workflow permissions
 permissions:
@@ -54,14 +54,14 @@ jobs:
           USERNAME: ${{ github.actor }}
           PASSWORD: ${{ secrets.GITHUB_TOKEN }}
 
-      # Automatically mark this tag as release on Github. The message of the tag becomes the release notes.
+      # Automatically mark this tag as release on Github. The message of the tag, without its first line, becomes the release notes.
       - name: Mark tag as release on Github
         run: |
           # A tag with a suffix, for example `1.2.3-beta1`, is a pre-release
           case "$TAG" in *-*) PRERELEASE=--prerelease ;; *) PRERELEASE= ;; esac
           gh release create "$TAG" \
             --title "$TAG" \
-            --notes "$(git tag -l --format='%(contents)' "$TAG")" \
+            --notes "$(git tag -l --format='%(contents:body)' "$TAG")" \
             $PRERELEASE
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
