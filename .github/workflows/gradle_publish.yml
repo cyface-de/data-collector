@@ -22,7 +22,7 @@ permissions:
 jobs:
   publish:
     # No if-protection needed: write permission needed to push tags, not allowed for forks
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
 
     env:
       # Never use `github.ref_name` directly in a script: a tag name can contain shell commands
@@ -64,5 +64,6 @@ jobs:
             --notes "$(git tag -l --format='%(contents:body)' "$TAG")" \
             $PRERELEASE
         env:
+          # `gh` reads these variables: the token for the login, the repository which gets the release
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GH_REPO: ${{ github.repository }}

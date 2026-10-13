@@ -28,7 +28,7 @@ jobs:
   build:
     # Only for pushes (assumes protected branches) and for PRs from this repo (not from forks)
     if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
 
     steps:
       - name: Checkout commit
