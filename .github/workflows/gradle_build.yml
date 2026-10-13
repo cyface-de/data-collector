@@ -50,7 +50,7 @@ jobs:
           USERNAME: ${{ github.actor }}
           PASSWORD: ${{ secrets.GITHUB_TOKEN }}
           # Docker 29 on Ubuntu 26.04 refuses the old API version which Testcontainers 1.x uses by default.
-          # Remove this line after the update of Testcontainers.
+          # The update of Testcontainers is a separate task for the monthly update day. Remove this line after it.
           JAVA_TOOL_OPTIONS: -Dapi.version=1.44
 
       # This following fails with an OOM.
