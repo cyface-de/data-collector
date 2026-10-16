@@ -1,6 +1,6 @@
 # Module collector
 
-![https://vertx.io](https://img.shields.io/badge/vert.x-4.3.6-purple.svg)
+![https://vertx.io](https://img.shields.io/badge/vert.x-4.5.25-purple.svg)
 ![https://mongodb.com/](https://img.shields.io/badge/mongo-5.0.16-purple.svg)
 ![https://github.com/cyface-de/data-collector/actions](https://github.com/cyface-de/data-collector/actions/workflows/gradle_build.yml/badge.svg)
 
@@ -8,7 +8,7 @@ This application represents the [Cyface](https://cyface.de) data collector softw
 
 It is used to collect traffic data from Cyface measurement devices, such as our smartphone application.
 
-Our smartphone SDK is available as GPL application for [Android](https://github.com/cyface-de/android-backend) and [iOS](https://github.com/cyface-de/ios-backend) (or as [Podspec](https://github.com/cyface-de/ios-podspecs)) as well.
+Our smartphone SDK is available as GPL application for [Android](https://github.com/cyface-de/android-backend) and [iOS](https://github.com/cyface-de/ios-sensor-library) as well.
 
 If you require this software under a closed source license for you own projects, please [contact us](https://www.cyface.de/#kontakt).
 
@@ -16,11 +16,14 @@ Changes between versions are found in the [Release Section](https://github.com/c
 
 The project uses [Gradle](https://gradle.org/) as the build system.
 
+This README is also the module documentation of the Dokka API documentation (`includes.from("README.md")` in `build.gradle.kts`). Keep the headings `# Module collector` and `# Package ...`.
+
 ## Overview
 
 * [Collector](#collector)
-
-.General information
+* [Architecture](#architecture)
+* [Development](#development)
+* [GitHub Workflows](#github-workflows)
 * [Release a new Version](#release-a-new-version)
 * [Publishing Artifacts to GitHub Packages manually](#publishing-artifacts-to-github-packages-manually)
 * [To Do](#to-do)
@@ -59,6 +62,9 @@ For these execution variants you need the parameters explained in the preceding 
 #### Authentication
 
 The Cyface Data Collector supports two authentication methods:
+
+* **JWT** (`auth.type` = `jwt`): the collector validates the tokens against a set of JSON Web Keys (`auth.jwks`).
+* **OAuth** (`auth.type` = `oauth`, the default): the collector uses a Keycloak or other OIDC provider (`auth.site`, `auth.tenant`, `auth.client`, `auth.secret`).
 
 #### Running from Docker
 
@@ -118,7 +124,7 @@ For using such a setup in production, you may create your own Docker setup, base
 Running the Cyface Data Collector without Docker, like for example from the terminal or from within your IDE is a little more complex.
 It requires a few set up steps and command knowledge as explained in the following paragraphs.
 
-**Running a Keycloak instance for Authentication:** The keycloak instance needs to be already running and accessible, see `docker-compose.yml`.
+**Running a Keycloak instance for Authentication:** For OAuth, a Keycloak instance must run and be accessible, see the service `authentication` in `src/main/docker/compose-oauth.yaml`.
 
 Copy the `src/main/resources/logback.xml.template` to `logback.xml` and adjust if needed.
 
@@ -177,7 +183,7 @@ The following parameters are supported:
 * **http.host:** The hostname under which the Cyface Data Collector is running. This can be something like `localhost`.
 * **http.endpoint:** The path to the endpoint the Cyface Data Collector.
 * **mongo.db:** Settings for a Mongo database storing information about all the users capable of logging into the system and all data uploaded via the Cyface data collector. This defaults to a Mongo database available at `mongodb://127.0.0.1:27017`. The value of this should be a JSON object configured as described [here](https://vertx.io/docs/vertx-mongo-client/java/#_configuring_the_client).
-* **metrics.enabled:** Set to either `true` or `false`. If `true` the collector API publishes metrics using micrometer. These metrics are accessible by a [Prometheus](https://prometheus.io/) server (Which you need to set up yourself) at port `8081`.
+* **metrics.enabled:** Set to either `true` or `false`. If `true` the collector API publishes metrics using micrometer. A [Prometheus](https://prometheus.io/) server (which you need to set up yourself) can read these metrics at port `8081`, path `/metrics`.
 * **upload.expiration:** The time an interrupted upload is stored for continuation in the future in milliseconds. If this time expires, the upload must start from the beginning.
 * **measurement.payload.limit:** The size of a measurement in bytes up to which it is accepted as a single upload. Larger measurements are transmitted in chunks.
 * **storage-type:** The type of storage to use for the uploaded data. Currently, either `gridfs` or `google` is supported. The following parameter are required:
@@ -203,7 +209,7 @@ The following parameters are supported:
   * **secret:** Used for oauth type. The secret of the oauth client to contact.
   * **site:** Used for oauth type. The Root URL for the provider without trailing slashes. This defaults to `https://auth.cyface.de:8443/realms/{tenant}`.
   * **tenant:** Used for oauth type. The name of the oauth realm to contact. This defaults to `rfr`.
-  * **jwk:** Used for jwt type. The Java Web Key in the form of a JSON object.
+  * **jwks:** Used for jwt type. A JSON array of JSON Web Key objects. Each key needs a unique `kid`.
 
 #### Running from Command Line
 
@@ -255,7 +261,7 @@ In the Docker development environment, all containers communicate through the in
 
 Tokens issued to a client outside this network won't be valid within the network due to a mismatch in the issuer encoded into the token.
 For instance, it might use "localhost:8081" instead of the expected "authentication:8080" when requesting a token from outside.
-The `rfr` realm, which is initialized in this setup from `./src/main/docker/keycloak/data/import/rfr-realm.json`, addresses
+The `rfr` realm, which is initialized in this setup from `./src/main/docker/keycloak/data/import/rfr-realm_<version>_see-keycloak-image-repo.json` (a copy of the realm in the repository `keycloak-image`), addresses
 this problem by setting the "frontendUrl" to "http://authentication:8080". If you add more realms, ensure you do the same. 
 
 To obtain an authentication token from outside the Docker network, you can use the following command:
@@ -271,27 +277,83 @@ The output will look similar to this:
 ```
 From this it is possible to copy the access token and start the upload process.
 
+## Architecture
+
+The Data Collector is a **Vert.x 4 / Kotlin reactive REST API**. It receives traffic measurement data from the Cyface mobile SDKs and stores it in MongoDB (GridFS) or Google Cloud Storage.
+
+Startup flow: `Application.java` (Vert.x launcher, also starts the Prometheus metrics server) -> `MainVerticle` (deploys auth and storage) -> `CollectorApiVerticle` (HTTP router and endpoints) -> request `Handler` classes -> `DataStorageService`
+
+| Package | Responsibility |
+|---|---|
+| `verticle/` | Vert.x verticles: `MainVerticle` (entry point), `CollectorApiVerticle` (API wiring), `HttpServer` (server setup) |
+| `handler/` | HTTP request handlers for each endpoint; the sub-package `upload/` has `PreRequestHandler`, `StatusHandler`, `UploadHandler` |
+| `auth/` | Pluggable auth: `MultiJWKAuthHandlerBuilder` (JWT), `OAuth2HandlerBuilder` (Keycloak), `MockedHandlerBuilder` (tests) |
+| `storage/` | `DataStorageService` interface and implementations: `gridfs/` (MongoDB GridFS, default), `cloud/` (Google Cloud Storage), `local/` (placeholder) |
+| `model/` | Domain model: `Measurement`, `Attachment`, `Upload`, `ContentRange`, `FormAttributes`, and `metadata/` subtypes |
+| `configuration/` | `Configuration` maps `conf.json` to a typed configuration; `StorageType` sealed hierarchy |
+
+The upload follows the [Google resumable upload protocol](https://developers.google.com/gdata/docs/resumable_upload) in more than one step: `PreRequestHandler` starts the upload and stores the session state in MongoDB, `UploadHandler` receives the chunks, `StatusHandler` reports the progress. `CleanupOperation` implementations remove stale uploads.
+
+## Development
+
+Copy the templates before the first build:
+
+```bash
+cp conf.json.template conf.json
+cp src/main/resources/logback.xml.template src/main/resources/logback.xml
+cp gradle.properties.template gradle.properties  # then add your GitHub credentials (gpr.user, gpr.key)
+```
+
+Commands:
+
+```bash
+./gradlew clean test                                       # all tests
+./gradlew test --tests de.cyface.collector.SomeTestClass   # one test class
+./gradlew detekt                                           # static analysis
+./gradlew :clean :build :copyToDockerBuildFolder           # fat JAR and Docker artifacts
+```
+
+The tests use Testcontainers. With Docker 29 or newer, set `JAVA_TOOL_OPTIONS=-Dapi.version=1.44` until Testcontainers is updated.
+
+Code quality rules (Detekt, `config/detekt.yml`, baseline `detekt-baseline.xml`):
+
+- Line length: 120 characters at most
+- Cyclomatic complexity: 15 at most
+- Function length: 60 lines at most (without tests)
+- Forbidden comments: `FIXME`, `TODO`, `STOPSHIP`
+
+## GitHub Workflows
+
+- `gradle_build.yml` -- builds and tests each push and pull request to `main` and `release-*`. Pull requests from forks are skipped.
+- `gradle_publish.yml` -- runs on version tags: publishes the artifacts to GitHub Packages and creates the GitHub release.
+
+Rules of the workflows (hardening of CY-6748):
+
+- Do not use `${{ github.ref_name }}` or other event values directly in a `run:` script. Pass them through `env:` (for example `TAG`) and use `"$TAG"`.
+- Pass secrets through `env:` of the step that needs them, not through the script text.
+- The runner is pinned to `ubuntu-26.04`, not `ubuntu-latest`.
+
+The organization-wide cleanup in `cyface-de/production` (`.github/workflows/registry_cleanup.yml`) deletes old package versions. A version that a build or deployment file of the organization names stays.
+
 ## Release a new Version
 
 To release a new version:
 
-* `version`s in root `build.gradle` and `src/main/resources/webroot/*/openapi.yml` are automatically set by the CI
-* Just tag the new release version on the `main` branch. Follow the guidelines from ["Keep a Changelog"](https://keepachangelog.com) in your tag description
-* Push the release tag to GitHub. The artifacts are automatically published when a new version is tagged and pushed by our
-  [GitHub Actions](https://github.com/cyface-de/data-collector/actions) to the
-  [GitHub Registry](https://github.com/cyface-de/data-collector/packages).
-* The CI workflow automatically marks the release on Github
+* The CI sets the `version` in `build.gradle.kts` and in `src/main/resources/webroot/api/openapi.yml` from the tag. Do not change them manually.
+* Create an annotated tag with a semantic version (for example `7.10.1`) on the `main` branch. Follow the guidelines from ["Keep a Changelog"](https://keepachangelog.com) in the tag message.
+* Push the tag to GitHub. The workflow `gradle_publish.yml` publishes the artifacts to [GitHub Packages](https://github.com/cyface-de/data-collector/packages).
+* The workflow then creates the GitHub release. The body of the tag message becomes the release notes. A tag with a suffix (for example `7.10.1-beta1`) becomes a pre-release.
 
 
 ## Publishing artifacts to GitHub Packages manually
 
 The artifacts produced by this project are distributed via [GitHubPackages](https://github.com/features/packages).
 Before you can publish artifacts you need to rename `gradle.properties.template` to `gradle.properties` and enter your GitHub credentials.
-How to obtain these credentials is described [here](https://help.github.com/en/github/managing-packages-with-github-packages/about-github-packages#about-tokens).
+Use a personal access token (classic) with the scope `write:packages`, as described [here](https://docs.github.com/en/packages/working-with-a-github-packages-registry/working-with-the-gradle-registry#authenticating-to-github-packages).
 
 To publish a new version of an artifact you need to:
 
-1. Increase the version number of the subproject within the `build.gradle` file
+1. Increase the version number in the `build.gradle.kts` file
 2. Call `./gradlew publish`
 
 This will upload a new artifact to GitHub packages with the new version.
@@ -304,7 +366,7 @@ This project uses [semantic versioning](https://semver.org/).
 	* MongoDb
 
 ## Licensing
-Copyright 2018-2023 Cyface GmbH
+Copyright 2018-2026 Cyface GmbH
 
 This file is part of the Cyface Data Collector.
 
