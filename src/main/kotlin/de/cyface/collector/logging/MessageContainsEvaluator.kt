@@ -45,7 +45,7 @@ class MessageContainsEvaluator : EventEvaluatorBase<ILoggingEvent>() {
 
     override fun start() {
         if (text.isNullOrEmpty()) {
-            addError("No <text> set for the evaluator named [$name]")
+            addError("No <text> set for the MessageContainsEvaluator")
             return
         }
         super.start()

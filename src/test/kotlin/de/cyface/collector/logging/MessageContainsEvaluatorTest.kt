@@ -40,38 +40,61 @@ class MessageContainsEvaluatorTest {
     @Test
     fun `Filter with MessageContainsEvaluator, should deny only matching events`() {
         // Arrange
+        val configuration = configuration("<text>HetrixTools Uptime Monitoring Bot</text>")
+
+        // Act
+        val messages = logBothMessages(configuration)
+
+        // Assert
+        assertThat(messages, equalTo(listOf(OTHER_MESSAGE)))
+    }
+
+    /**
+     * Ensures that the filter keeps all events, when the configuration has no text.
+     */
+    @Test
+    fun `Filter with MessageContainsEvaluator without text, should keep all events`() {
+        // Arrange
+        val configuration = configuration("")
+
+        // Act
+        val messages = logBothMessages(configuration)
+
+        // Assert
+        assertThat(messages, equalTo(listOf(BOT_MESSAGE, OTHER_MESSAGE)))
+    }
+
+    private fun logBothMessages(configuration: String): List<String> {
         val context = LoggerContext()
         val configurator = JoranConfigurator()
         configurator.context = context
-        configurator.doConfigure(CONFIGURATION.byteInputStream())
+        configurator.doConfigure(configuration.byteInputStream())
         val logger = context.getLogger("test")
         val appender = context.getLogger(Logger.ROOT_LOGGER_NAME).getAppender("LIST") as ListAppender<*>
-
-        // Act
-        logger.info("GET /api/v4/ 200 HetrixTools Uptime Monitoring Bot")
-        logger.info("GET /api/v4/ 200 Mozilla/5.0")
-
-        // Assert
-        val messages = appender.list.map { (it as ILoggingEvent).message }
-        assertThat(messages, equalTo(listOf("GET /api/v4/ 200 Mozilla/5.0")))
+        logger.info(BOT_MESSAGE)
+        logger.info(OTHER_MESSAGE)
+        return appender.list.map { (it as ILoggingEvent).message }
     }
 
+    private fun configuration(text: String) = """
+        <configuration>
+          <appender name="LIST" class="ch.qos.logback.core.read.ListAppender">
+            <filter class="ch.qos.logback.core.filter.EvaluatorFilter">
+              <evaluator class="de.cyface.collector.logging.MessageContainsEvaluator">
+                $text
+              </evaluator>
+              <OnMatch>DENY</OnMatch>
+              <OnMismatch>NEUTRAL</OnMismatch>
+            </filter>
+          </appender>
+          <root level="INFO">
+            <appender-ref ref="LIST" />
+          </root>
+        </configuration>
+    """.trimIndent()
+
     companion object {
-        private val CONFIGURATION = """
-            <configuration>
-              <appender name="LIST" class="ch.qos.logback.core.read.ListAppender">
-                <filter class="ch.qos.logback.core.filter.EvaluatorFilter">
-                  <evaluator class="de.cyface.collector.logging.MessageContainsEvaluator">
-                    <text>HetrixTools Uptime Monitoring Bot</text>
-                  </evaluator>
-                  <OnMatch>DENY</OnMatch>
-                  <OnMismatch>NEUTRAL</OnMismatch>
-                </filter>
-              </appender>
-              <root level="INFO">
-                <appender-ref ref="LIST" />
-              </root>
-            </configuration>
-        """.trimIndent()
+        private const val BOT_MESSAGE = "GET /api/v4/ 200 HetrixTools Uptime Monitoring Bot"
+        private const val OTHER_MESSAGE = "GET /api/v4/ 200 Mozilla/5.0"
     }
 }
