@@ -36,7 +36,7 @@ buildscript {
   dependencies {
     // This is required to configure the dokka base plugin to include images.
     // classpath("<plugin coordinates>:<plugin version>")
-    classpath("org.jetbrains.dokka:dokka-base:1.9.10")
+    classpath("org.jetbrains.dokka:dokka-base:1.9.20")
   }
 }
 
@@ -44,19 +44,19 @@ plugins {
   id("idea")
   // Plugin to create executable jars
   //noinspection SpellCheckingInspection
-  id("com.github.johnrengelman.shadow").version("7.1.2")
+  id("com.gradleup.shadow").version("8.3.11")
   // Plugin to display the Gradle task graph
   //noinspection SpellCheckingInspection
-  id("org.barfuin.gradle.taskinfo").version("2.1.0")
+  id("org.barfuin.gradle.taskinfo").version("2.2.1")
 
   id("application")
   id("maven-publish")
-  kotlin("jvm").version("2.1.20")
+  kotlin("jvm").version("2.4.21")
 
   // For static code checks
-  id("io.gitlab.arturbosch.detekt").version("1.23.0")
+  id("io.gitlab.arturbosch.detekt").version("1.23.8")
   // For Generation of Documentation
-  id("org.jetbrains.dokka").version("1.9.10")
+  id("org.jetbrains.dokka").version("1.9.20")
 }
 // Vert.x Gradle redeploy on file changes, see https://github.com/vert-x3/vertx-examples/tree/master/gradle-redeploy
 application {
@@ -86,25 +86,24 @@ kotlin {
   jvmToolchain(17)
 }
 
-val vertxVersion = "4.5.25"
-val micrometerVersion = "1.10.6"
-val commonsLangVersion = "3.12.0"
-val logbackVersion = "1.4.14"
-val janinoVersion = "3.1.10"
-val gradleWrapperVersion = "7.6.3"
-val googleCloudLibrariesVersion = "26.58.0"
+val vertxVersion = "4.5.35"
+val micrometerVersion = "1.12.13"
+val commonsLangVersion = "3.21.0"
+val logbackVersion = "1.6.6"
+val gradleWrapperVersion = "8.14.6"
+val googleCloudLibrariesVersion = "26.91.0"
 
 // Versions of testing dependencies
-val junitVersion = "5.9.2"
-val mockitoVersion = "5.2.0"
+val junitVersion = "5.14.4"
+val mockitoVersion = "5.24.0"
 @Suppress("SpellCheckingInspection")
 val hamKrestVersion = "1.8.0.1"
 val mockitoKotlinVersion = "4.1.0"
-val dokkaVersion = "1.9.10"
-val detektVersion = "1.23.1"
-val cyfaceUploaderVersion = "1.4.1"
-val testContainerVersion = "1.20.1"
-val kotlinxVersion = "1.10.1"
+val dokkaVersion = "1.9.20"
+val detektVersion = "1.23.8"
+val cyfaceUploaderVersion = "1.6.2"
+val testContainerVersion = "1.21.4"
+val kotlinxVersion = "1.11.0"
 
 tasks.wrapper {
   gradleVersion = gradleWrapperVersion
@@ -118,6 +117,9 @@ dependencies {
 
   // Kotlin Support
   implementation("io.vertx:vertx-core:$vertxVersion")
+  // Kotlin 2.4 needs the annotations (for example `@Nullable`), which Vert.x declares as optional
+  compileOnly("io.vertx:vertx-codegen:$vertxVersion")
+  testCompileOnly("io.vertx:vertx-codegen:$vertxVersion")
   implementation("io.vertx:vertx-lang-kotlin:$vertxVersion")
   implementation("io.vertx:vertx-lang-kotlin-coroutines:$vertxVersion")
   implementation(kotlin("stdlib-jdk8"))
@@ -135,7 +137,6 @@ dependencies {
   // Logging
   implementation("ch.qos.logback:logback-classic:$logbackVersion")
   implementation("ch.qos.logback:logback-core:$logbackVersion")
-  implementation("org.codehaus.janino:janino:$janinoVersion") // logback.xml/EvaluatorFilter
 
   // Google Cloud Storage
   implementation(platform("com.google.cloud:libraries-bom:$googleCloudLibrariesVersion"))
@@ -148,6 +149,8 @@ dependencies {
   testImplementation(platform("org.junit:junit-bom:$junitVersion"))
   testImplementation("org.junit.jupiter:junit-jupiter-params")  // Required for parameterized tests
   testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine")
+  // Explicit declaration required, so that the launcher version matches the JUnit version
+  testRuntimeOnly("org.junit.platform:junit-platform-launcher")
   testImplementation("org.junit.jupiter:junit-jupiter:$junitVersion")
   testImplementation("com.natpryce:hamkrest:$hamKrestVersion")
   testImplementation(kotlin("reflect")) // Required by hamkrest
