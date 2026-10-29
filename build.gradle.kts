@@ -101,7 +101,7 @@ val hamKrestVersion = "1.8.0.1"
 val mockitoKotlinVersion = "4.1.0"
 val dokkaVersion = "1.9.20"
 val detektVersion = "1.23.8"
-val cyfaceUploaderVersion = "1.4.1"
+val cyfaceUploaderVersion = "1.6.2"
 val testContainerVersion = "1.21.4"
 val kotlinxVersion = "1.11.0"
 
