@@ -291,7 +291,6 @@
       } ],
       "collector" : [ ],
       "web-app" : [ ],
-      "incentives" : [ ],
       "postman" : [ ],
       "demo-client" : [ ],
       "provider" : [ {
@@ -669,16 +668,6 @@
         "id.token.claim" : "false",
         "access.token.claim" : "true"
       }
-    }, {
-      "name" : "incentives-audience",
-      "protocol" : "openid-connect",
-      "protocolMapper" : "oidc-audience-mapper",
-      "consentRequired" : false,
-      "config" : {
-        "included.client.audience" : "incentives",
-        "id.token.claim" : "false",
-        "access.token.claim" : "true"
-      }
     } ],
     "defaultClientScopes" : [ "web-origins", "acr", "profile", "roles", "email" ],
     "optionalClientScopes" : [ "address", "phone", "offline_access", "microprofile-jwt" ]
@@ -778,45 +767,6 @@
       "post.logout.redirect.uris" : "+",
       "oauth2.device.authorization.grant.enabled" : "false",
       "backchannel.logout.session.required" : "true",
-      "backchannel.logout.revoke.offline.tokens" : "false"
-    },
-    "authenticationFlowBindingOverrides" : { },
-    "fullScopeAllowed" : true,
-    "nodeReRegistrationTimeout" : -1,
-    "defaultClientScopes" : [ "web-origins", "acr", "profile", "roles", "email" ],
-    "optionalClientScopes" : [ "address", "phone", "offline_access", "microprofile-jwt" ]
-  }, {
-    "id" : "e9d2083a-1c0e-4cb3-8f2d-4b35f9227d10",
-    "clientId" : "incentives",
-    "name" : "",
-    "description" : "",
-    "rootUrl" : "http://localhost:8087",
-    "adminUrl" : "http://localhost:8087",
-    "baseUrl" : "",
-    "surrogateAuthRequired" : false,
-    "enabled" : true,
-    "alwaysDisplayInConsole" : false,
-    "clientAuthenticatorType" : "client-secret",
-    "secret" : "**********",
-    "redirectUris" : [ "/*" ],
-    "webOrigins" : [ "+" ],
-    "notBefore" : 0,
-    "bearerOnly" : false,
-    "consentRequired" : false,
-    "standardFlowEnabled" : true,
-    "implicitFlowEnabled" : false,
-    "directAccessGrantsEnabled" : false,
-    "serviceAccountsEnabled" : false,
-    "publicClient" : false,
-    "frontchannelLogout" : true,
-    "protocol" : "openid-connect",
-    "attributes" : {
-      "oidc.ciba.grant.enabled" : "false",
-      "client.secret.creation.time" : "1686811452",
-      "backchannel.logout.session.required" : "true",
-      "post.logout.redirect.uris" : "+",
-      "display.on.consent.screen" : "false",
-      "oauth2.device.authorization.grant.enabled" : "false",
       "backchannel.logout.revoke.offline.tokens" : "false"
     },
     "authenticationFlowBindingOverrides" : { },
@@ -927,16 +877,6 @@
       "consentRequired" : false,
       "config" : {
         "included.client.audience" : "collector",
-        "id.token.claim" : "false",
-        "access.token.claim" : "true"
-      }
-    }, {
-      "name" : "incentives-audience",
-      "protocol" : "openid-connect",
-      "protocolMapper" : "oidc-audience-mapper",
-      "consentRequired" : false,
-      "config" : {
-        "included.client.audience" : "incentives",
         "id.token.claim" : "false",
         "access.token.claim" : "true"
       }
@@ -1142,12 +1082,12 @@
     "description" : "",
     "rootUrl" : "",
     "adminUrl" : "",
-    "baseUrl" : "",
+    "baseUrl" : "https://cyface.de/app",
     "surrogateAuthRequired" : false,
     "enabled" : true,
     "alwaysDisplayInConsole" : false,
     "clientAuthenticatorType" : "client-secret",
-    "redirectUris" : [ "https://app.cyface.de/callback", "https://staging.cyface.de/callback" ],
+    "redirectUris" : [ "https://cyface.de/app/callback", "https://staging.cyface.de/app/callback" ],
     "webOrigins" : [ "+" ],
     "notBefore" : 0,
     "bearerOnly" : false,
@@ -1201,7 +1141,7 @@
     "enabled" : true,
     "alwaysDisplayInConsole" : false,
     "clientAuthenticatorType" : "client-secret",
-    "redirectUris" : [ "http://localhost:3000/callback" ],
+    "redirectUris" : [ "http://localhost:3000/app/callback" ],
     "webOrigins" : [ "+" ],
     "notBefore" : 0,
     "bearerOnly" : false,
